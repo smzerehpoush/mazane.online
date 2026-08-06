@@ -24,6 +24,9 @@ dev = [
 
 [project.scripts]
 mazane-collector = "mazane_collector.main:main"
+# بلیت ۱۳ — خط لوله‌ی محتوا: صف کردن دستی پیش‌نویس و پس‌گیری تک‌فرمانی.
+mazane-enqueue = "mazane_collector.content.queue:main"
+mazane-retract = "mazane_collector.content.retract:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

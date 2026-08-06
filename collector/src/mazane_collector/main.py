@@ -4,7 +4,7 @@
 و در شکست فقط لاگ — قطع منبع (و قطع وب‌سوکت) کهنگی است، نه خطا؛ هیچ
 حلقه‌ای هرگز نمی‌میرد.
 
-پنج تسک موازی:
+شش تسک موازی:
 - حلقه‌ی سکوها (۳۰ ثانیه): همه‌ی آداپترها + چک میانه + فهرست عمومی.
   fetch با `compose_fetch` ساخته می‌شود: داریک «دو خوراک، یک سکو» است —
   فریم تازه‌ی وب‌سوکت اگر بود، وگرنه REST؛ اینوی فقط وب‌سوکت است و سکوت
@@ -15,12 +15,19 @@
   فشرده‌سازی تکراری‌های متوالی + هرس خام کهنه‌تر از ۹۰ روز. نخستین اجرا
   در بوت، جاماندگی (ساعت‌های تجمیع‌نشده) را جبران می‌کند؛ سیاست و
   دروازه‌ها در `mazane_collector.retention` مستندند.
+- حلقه‌ی انتشار محتوا (هر ۱۵ دقیقه، بلیت ۱۳ — فقط روی پستگرس): صف
+  پیش‌نویس بلاگ را با سقف روزانه‌ی سمت سرور خالی می‌کند — مستقل از شمار
+  پیش‌نویس‌ها — و عمق صف را می‌سنجد (هشدار زیر ۵ روز). سیاست‌ها در
+  `mazane_collector.content` مستندند.
 - دو کلاینت وب‌سوکت reconnect دار (داریک SignalR، اینوی) که فقط کش فریم
   را پر می‌کنند.
 
 پیکربندی با متغیر محیطی:
-    MAZANE_REDIS_URL     (پیش‌فرض redis://127.0.0.1:6379/0)
-    MAZANE_DATABASE_URL  (پیش‌فرض postgresql://mazane:mazane@127.0.0.1:5432/mazane)
+    MAZANE_REDIS_URL          (پیش‌فرض redis://127.0.0.1:6379/0)
+    MAZANE_DATABASE_URL       (پیش‌فرض postgresql://mazane:mazane@127.0.0.1:5432/mazane)
+    MAZANE_DAILY_PUBLISH_CAP  (پیش‌فرض ۲ — سقف انتشار روزانه‌ی بلاگ)
+    MAZANE_REVALIDATE_URL     (پیش‌فرض http://127.0.0.1:3000/api/revalidate-blog)
+    MAZANE_REVALIDATE_TOKEN   (بدون پیش‌فرض — ست نباشد بازتولید وب فقط WARNING می‌دهد)
 
 اجرای محلی: `docker compose -f docker-compose.dev.yml up -d` سپس
 `mazane-collector` (یا `python -m mazane_collector.main`).
@@ -62,6 +69,9 @@ from .adapters.technogold import TechnogoldAdapter
 from .adapters.tlyn import TlynAdapter
 from .adapters.wallgold import WallgoldAdapter
 from .adapters.zarafza import ZarafzaAdapter
+from .content.gateway import PostgresContentGateway
+from .content.publisher import daily_publish_cap_from_env, drain_pass
+from .content.revalidate import revalidator_from_env
 from .pipeline import collect_round
 from .platforms import PLATFORMS
 from .references.pipeline import REFERENCE_SOURCES, collect_reference_round
@@ -79,6 +89,10 @@ REFERENCE_POLL_INTERVAL_SECONDS = 120
 # نگه‌داری بازه‌های «ساعتی» را تجمیع می‌کند ⟸ آهنگ ساعتی کافی است؛ هر گذر
 # خودش جاماندگی را جبران می‌کند، پس دیر شدن یک نوبت بی‌هزینه است.
 RETENTION_INTERVAL_SECONDS = 3600
+# آهنگ ثابت خالی کردن صف محتوا (بلیت ۱۳): هر گذر فقط چک می‌کند «سهم امروز
+# مانده؟» — سقف روزانه داخل publish_due است، پس گذر زودهنگام/جامانده بی‌ضرر
+# است و ۱۵ دقیقه تأخیر بدترین حالت انتشار سررسید است.
+CONTENT_DRAIN_INTERVAL_SECONDS = 900
 USER_AGENT = "MazaneBot/0.1 (+https://mazane.online/about)"
 HTTP_TIMEOUT_SECONDS = 15
 
@@ -155,6 +169,9 @@ async def run() -> None:
     # نگه‌داری (بلیت ۱۶) فقط با تاریخچه‌ی پستگرس کار دارد — ردیس تاریخچه ندارد.
     history_store = PostgresStore(pool)
     store = MultiStore(RedisStore(redis_client), history_store)
+    # صف محتوا (بلیت ۱۳) هم فقط پستگرسی است — همان pool، دروازه‌ی جدای posts.
+    content_gateway = PostgresContentGateway(pool)
+    daily_publish_cap = daily_publish_cap_from_env()
 
     # follow_redirects + cookie jar خود کلاینت: دست‌دهی ArvanCloud ملی‌گلد
     # (۳۰۷ + کوکی — auth نیست؛ سند تحقیق ۰۱، بند ۸.۲) و توکن /json بن‌بست.
@@ -241,10 +258,34 @@ async def run() -> None:
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, RETENTION_INTERVAL_SECONDS - elapsed))
 
+        # بازتولید ISR وب با همان کلاینت مشترک — بی‌توکن فقط WARNING می‌دهد.
+        revalidate_blog = revalidator_from_env(client)
+
+        async def content_loop() -> None:
+            while True:
+                started = time.monotonic()
+                try:
+                    published, depth = await drain_pass(
+                        content_gateway, revalidate_blog, daily_cap=daily_publish_cap
+                    )
+                    log.info(
+                        "نوبت انتشار محتوا: %s منتشر شد؛ عمق صف %.1f روز (%s پیش‌نویس ÷ سقف %s)",
+                        list(published) if published else "هیچ",
+                        depth.days,
+                        depth.drafts,
+                        depth.daily_cap,
+                    )
+                except Exception:
+                    # مثل بقیه‌ی حلقه‌ها: شکست فقط لاگ می‌شود؛ گذر بعدی جبران می‌کند.
+                    log.exception("نوبت انتشار محتوا شکست خورد")
+                elapsed = time.monotonic() - started
+                await asyncio.sleep(max(0.0, CONTENT_DRAIN_INTERVAL_SECONDS - elapsed))
+
         await asyncio.gather(
             platform_loop(),
             reference_loop(),
             retention_loop(),
+            content_loop(),
             daric_feed.run(),
             invi_feed.run(),
         )
