@@ -20,6 +20,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     { url: `${SITE_URL}/` },
+    // معیارهای پیشنهاد سردبیر (بلیت ۶) — ایستا؛ lastmod فقط با ویرایش واقعی
+    // معنا دارد که ردیابی نمی‌شود، پس مثل صفحه‌ی اصلی حذف شده است.
+    { url: `${SITE_URL}/darbare-pishnahad` },
     ...posts.map((post) => ({
       url: `${SITE_URL}/blog/${post.slug}`,
       lastModified: post.updated_at,

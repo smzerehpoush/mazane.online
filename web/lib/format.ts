@@ -23,6 +23,28 @@ export function formatToman(priceToman: number): string {
   return tomanFormatter.format(priceToman);
 }
 
+const fractionPercentFormatter = new Intl.NumberFormat("fa-IR", {
+  style: "percent",
+  maximumFractionDigits: 2,
+});
+
+/** کسر (مثلاً ۰٫۰۰۳۹) ⟸ «۰٫۳۹٪». خودِ کسر ورودی است — اینجا فقط قالب است. */
+export function formatPercentFa(fraction: number): string {
+  return fractionPercentFormatter.format(fraction);
+}
+
+const percentPointsFormatter = new Intl.NumberFormat("fa-IR", {
+  maximumFractionDigits: 3,
+});
+
+/**
+ * درصدِ آماده‌ی گردآورنده — رشته‌ای بر حسب واحد درصد (مثلاً "0.9950") ⟸
+ * «۰٫۹۹۵٪». فقط قالب‌بندی همان عدد؛ هیچ محاسبه‌ای در کار نیست.
+ */
+export function formatPercentPointsFa(points: string): string {
+  return `${percentPointsFormatter.format(Number(points))}٪`;
+}
+
 export function formatDateTimeFa(iso: string): string {
   return dateTimeFormatter.format(new Date(iso));
 }

@@ -10,7 +10,12 @@
  */
 
 export type Side = "BUY" | "SELL" | "MID";
-export type FeeSource = "API" | "MANUAL";
+/**
+ * `UNKNOWN` یعنی سکو کارمزدش را نه در API می‌دهد و نه جایی منتشر کرده
+ * (ملی‌گلد، دیجی‌کالا، همراه‌گلد): گردآورنده فقط MID می‌نویسد و قیمت مؤثر
+ * جعل نمی‌شود — «یک ردیف صادقانه با نامشخص بهتر از عدد ساختگی».
+ */
+export type FeeSource = "API" | "MANUAL" | "UNKNOWN";
 export type DataPolicy = "ALLOWED" | "RESTRICTED" | "PERMISSION_PENDING" | "BLOCKED";
 
 /**
@@ -36,13 +41,19 @@ export interface Quote {
 
 export interface PlatformTerms {
   platform_slug: string;
-  buy_fee_percent: string;
-  sell_fee_percent: string;
-  round_trip_percent: string;
+  /** فقط با `fee_source = "UNKNOWN"` تهی‌اند؛ در آن حالت هر سه تهی‌اند. */
+  buy_fee_percent: string | null;
+  sell_fee_percent: string | null;
+  round_trip_percent: string | null;
   fee_source: FeeSource;
   buy_enabled: boolean;
   sell_enabled: boolean;
   observed_at: string;
+  /**
+   * حدنصاب سفارش به تومان — گردآورنده هنوز نمی‌فرستد؛ اختیاری تا وقتی
+   * به payload اضافه شد، بدون تغییر این لایه رندر شود (غیبتش تحمل می‌شود).
+   */
+  min_order_toman?: string | number | null;
 }
 
 export interface PlatformSnapshot {
