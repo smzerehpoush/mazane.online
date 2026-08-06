@@ -46,6 +46,18 @@ class DataPolicy(StrEnum):
     BLOCKED = "BLOCKED"
 
 
+class MarketModel(StrEnum):
+    """مدل معاملاتی سکو — بند ۹.۲ نکته‌ی ۵ سند معماری.
+
+    داریک دفتر سفارش است نه OTC: قیمتش سرِ دفتر است (ممکن است نقدینگی
+    نداشته باشد و یک سمتش تهی باشد) و اسپردش هم‌جنس dealer ها نیست ⟸ لایه‌ی
+    وب با همین فیلد برچسب «دفتر سفارش» می‌زند. بقیه‌ی سکوها OTC اند.
+    """
+
+    OTC = "OTC"
+    ORDER_BOOK = "ORDER_BOOK"
+
+
 class Platform(BaseModel):
     """فراداده‌ی سکو — ثابت، دستی نگهداری می‌شود (بند ۲.۲ سند معماری)."""
 
@@ -54,6 +66,7 @@ class Platform(BaseModel):
     slug: str
     name_fa: str
     data_policy: DataPolicy
+    market_model: MarketModel = MarketModel.OTC
 
     @property
     def is_listed(self) -> bool:
@@ -126,9 +139,20 @@ class PlatformSnapshot(BaseModel):
 
     @model_validator(mode="after")
     def _no_effective_price_without_fee(self) -> PlatformSnapshot:
-        """کارمزد نامعلوم ⟸ قیمت مؤثر BUY/SELL وجود ندارد (جعل نمی‌شود)."""
-        if self.terms.fee_source is FeeSource.UNKNOWN and any(
-            quote.side is not Side.MID for quote in self.quotes
-        ):
-            raise ValueError("با کارمزد UNKNOWN فقط سطر MID مجاز است")
+        """کارمزد نامعلوم ⟸ قیمت مؤثر BUY/SELL **جعل نمی‌شود**.
+
+        جعل یعنی mid×(1±f) با f نامعلوم؛ پس با UNKNOWN دو شکل صادقانه مجاز
+        است: فقط MID (سکوی تک‌قیمتی)، یا **یک** سطر یک‌طرفه‌ی خودِ منبع —
+        دفتر سفارش داریک وقتی یک سمتش تهی است (بند ۹.۲ نکته‌ی ۵): قیمتِ
+        سمتِ موجود عین سفارشِ سرِ دفتر است، نه مشتق از کارمزد.
+        """
+        if self.terms.fee_source is not FeeSource.UNKNOWN:
+            return self
+        sides = [quote for quote in self.quotes if quote.side is not Side.MID]
+        if not sides:
+            return self
+        if any(quote.side is Side.MID for quote in self.quotes):
+            raise ValueError("با کارمزد UNKNOWN سطر BUY/SELL کنار MID یعنی قیمت جعلی")
+        if len(sides) > 1:
+            raise ValueError("با کارمزد UNKNOWN فقط یک سطر یک‌طرفه‌ی دفتر سفارش مجاز است")
         return self

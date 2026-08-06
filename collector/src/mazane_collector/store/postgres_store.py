@@ -1,8 +1,10 @@
 """استور پستگرس — تاریخچه (درج، بدون هرس؛ آرشیو الزام حقوقی است — بند ۷.۱).
 
-اسکیمای جدول‌ها: `collector/migrations/001_init.sql` و `002_multi_source.sql`.
+اسکیمای جدول‌ها: `collector/migrations/001_init.sql` تا `004_references.sql`.
 اسنپ‌شات سرکوب‌شده (رد چک میانه) هم درج می‌شود — با `suppressed = true` —
-ولی خواندن‌های «جاری» فقط ردیف‌های منتشرشده را می‌بینند.
+ولی خواندن‌های «جاری» فقط ردیف‌های منتشرشده را می‌بینند. مراجع قیمت
+(بند ۱۲.۲) جدول جدای خودشان را دارند و هر ردیفشان نشانی منبع را حمل
+می‌کند — عدد مرجع بدون ذکر منبع وجود ندارد (بند ۷.۱).
 """
 
 from __future__ import annotations
@@ -15,11 +17,17 @@ from ..models import (
     DataPolicy,
     FeeSource,
     Instrument,
+    MarketModel,
     Platform,
     PlatformSnapshot,
     PlatformTerms,
     Quote,
     Side,
+)
+from ..references import (
+    ReferenceInstrument,
+    ReferenceQuote,
+    ReferenceSnapshot,
 )
 
 _INSERT_QUOTE = """
@@ -48,16 +56,18 @@ where platform_slug = $1 and fetched_at = $2 and not suppressed
 """
 
 _UPSERT_PLATFORM = """
-insert into platforms (slug, name_fa, data_policy, is_listed)
-values ($1, $2, $3, $4)
+insert into platforms (slug, name_fa, data_policy, market_model, is_listed)
+values ($1, $2, $3, $4, $5)
 on conflict (slug) do update
     set name_fa = excluded.name_fa,
         data_policy = excluded.data_policy,
+        market_model = excluded.market_model,
         is_listed = excluded.is_listed
 """
 
 _SELECT_LISTED_PLATFORMS = """
-select slug, name_fa, data_policy from platforms where is_listed order by slug
+select slug, name_fa, data_policy, market_model
+from platforms where is_listed order by slug
 """
 
 _SELECT_LATEST_TERMS = """
@@ -67,6 +77,25 @@ from platform_terms
 where platform_slug = $1
 order by observed_at desc
 limit 1
+"""
+
+_INSERT_REFERENCE_QUOTE = """
+insert into reference_quotes
+    (reference_slug, name_fa, source_url, instrument, side, value,
+     raw_value, raw_scale, fetched_at)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+"""
+
+_SELECT_LATEST_REFERENCE_FETCHED_AT = """
+select max(fetched_at) as fetched_at from reference_quotes
+where reference_slug = $1
+"""
+
+_SELECT_REFERENCE_QUOTES_AT = """
+select reference_slug, name_fa, source_url, instrument, side, value,
+       raw_value, raw_scale, fetched_at
+from reference_quotes
+where reference_slug = $1 and fetched_at = $2
 """
 
 
@@ -157,7 +186,13 @@ class PostgresStore:
                 await conn.executemany(
                     _UPSERT_PLATFORM,
                     [
-                        (p.slug, p.name_fa, p.data_policy.value, p.is_listed)
+                        (
+                            p.slug,
+                            p.name_fa,
+                            p.data_policy.value,
+                            p.market_model.value,
+                            p.is_listed,
+                        )
                         for p in platforms
                     ],
                 )
@@ -170,6 +205,56 @@ class PostgresStore:
                 slug=row["slug"],
                 name_fa=row["name_fa"],
                 data_policy=DataPolicy(row["data_policy"]),
+                market_model=MarketModel(row["market_model"]),
             )
             for row in rows
+        )
+
+    async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.executemany(
+                    _INSERT_REFERENCE_QUOTE,
+                    [
+                        (
+                            q.reference_slug,
+                            snapshot.name_fa,
+                            snapshot.source_url,
+                            q.instrument.value,
+                            q.side.value,
+                            q.value,
+                            q.raw_value,
+                            q.raw_scale,
+                            q.fetched_at,
+                        )
+                        for q in snapshot.quotes
+                    ],
+                )
+
+    async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
+        async with self._pool.acquire() as conn:
+            latest = await conn.fetchrow(_SELECT_LATEST_REFERENCE_FETCHED_AT, reference_slug)
+            if latest is None or latest["fetched_at"] is None:
+                return None
+            fetched_at: datetime = latest["fetched_at"]
+            rows = await conn.fetch(_SELECT_REFERENCE_QUOTES_AT, reference_slug, fetched_at)
+        if not rows:
+            return None
+        return ReferenceSnapshot(
+            reference_slug=reference_slug,
+            name_fa=rows[0]["name_fa"],
+            source_url=rows[0]["source_url"],
+            quotes=tuple(
+                ReferenceQuote(
+                    reference_slug=row["reference_slug"],
+                    instrument=ReferenceInstrument(row["instrument"]),
+                    side=Side(row["side"]),
+                    value=row["value"],
+                    raw_value=row["raw_value"],
+                    raw_scale=row["raw_scale"],
+                    fetched_at=row["fetched_at"],
+                )
+                for row in rows
+            ),
+            fetched_at=fetched_at,
         )

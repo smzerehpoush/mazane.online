@@ -1,10 +1,12 @@
-"""سازنده‌های مشترک اسنپ‌شات — دو شکل تکرارشونده‌ی بلیت ۴.
+"""سازنده‌های مشترک اسنپ‌شات — سه شکل تکرارشونده (بلیت‌های ۴ و ۵).
 
 - **dealer اسپرددار** (تکنوگلد، طلاین، اکوگلد، زرافزا، بازر): API خودش دو
   قیمت مؤثر می‌دهد؛ BUY/SELL همان دو عددند (معتبرترین شکل ممکن)، mid میانگین
   آن‌هاست و کارمزد ضمنی از اسپرد در می‌آید ⟸ `fee_source = API`.
-- **تک‌قیمتی با کارمزد نامعلوم** (ملی‌گلد، دیجی‌کالا، همراه‌گلد): فقط MID
-  ذخیره می‌شود؛ قیمت مؤثر جعل نمی‌شود ⟸ `fee_source = UNKNOWN`.
+- **تک‌قیمتی با کارمزد نامعلوم** (ملی‌گلد، دیجی‌کالا، همراه‌گلد، اینوی): فقط
+  MID ذخیره می‌شود؛ قیمت مؤثر جعل نمی‌شود ⟸ `fee_source = UNKNOWN`.
+- **دفتر سفارش یک‌طرفه** (داریک وقتی `bestSell` تهی است — بند ۹.۲ نکته‌ی ۵):
+  فقط سمتِ موجودِ دفتر، بدون MID و بدون کارمزد ⟸ سمت غایب «در دسترس نیست».
 
 نگاشت سمت‌ها به عهده‌ی هر آداپتر نیست: `ask_bid` (قاعده‌ی ثابت بند ۳.۲ سند
 تحقیق ۰۱) اینجا اعمال می‌شود، پس منبعی با نام‌گذاری وارونه (طلاین، زرافزا)
@@ -73,6 +75,52 @@ def dealer_snapshot(
             quote(Side.MID, raw_mid),
             quote(Side.BUY, raw_ask),
             quote(Side.SELL, raw_bid),
+        ),
+        terms=terms,
+        fetched_at=fetched_at,
+    )
+
+
+def one_sided_book_snapshot(
+    *,
+    slug: str,
+    side: Side,
+    raw_value: Decimal,
+    scale: Decimal,
+    fetched_at: datetime,
+) -> PlatformSnapshot:
+    """اسنپ‌شات دفتر سفارش وقتی فقط یک سمتش سفارش دارد (بند ۹.۲ نکته‌ی ۵).
+
+    `bestSell` تهی داریک یعنی «این سمت الان در دسترس نیست»، نه خطا: سمتِ
+    موجود عین سفارشِ سرِ دفتر ذخیره می‌شود (جعل نیست — مدل همین تک‌سطر
+    یک‌طرفه را با UNKNOWN مجاز می‌داند)، سمتِ غایب `*_enabled = False`
+    می‌گیرد و چون MID وجود ندارد، سکو خودبه‌خود از رأی چک میانه بیرون است.
+    """
+    if side is Side.MID:
+        raise ValueError("سطر یک‌طرفه‌ی دفتر سفارش MID ندارد")
+    terms = PlatformTerms(
+        platform_slug=slug,
+        buy_fee_percent=None,
+        sell_fee_percent=None,
+        round_trip_percent=None,
+        fee_source=FeeSource.UNKNOWN,
+        buy_enabled=side is Side.BUY,
+        sell_enabled=side is Side.SELL,
+        observed_at=fetched_at,
+    )
+
+    return PlatformSnapshot(
+        platform_slug=slug,
+        quotes=(
+            Quote(
+                platform_slug=slug,
+                instrument=Instrument.GOLD_18K,
+                side=side,
+                price_toman=to_toman(raw_value * scale),
+                raw_value=raw_value,
+                raw_scale=scale,
+                fetched_at=fetched_at,
+            ),
         ),
         terms=terms,
         fetched_at=fetched_at,

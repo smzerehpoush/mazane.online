@@ -12,6 +12,7 @@ dependencies = [
     "pydantic>=2.7",
     "asyncpg>=0.30",
     "redis>=5.0",
+    "websockets>=12",
 ]
 
 [project.optional-dependencies]

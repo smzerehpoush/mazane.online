@@ -8,6 +8,9 @@
     mazane:current:{slug}     ← JSON کامل PlatformSnapshot، با TTL
     mazane:updated_at:{slug}  ← ISO-8601، بدون TTL
     mazane:listed             ← آرایه‌ی JSON سکوهای قابل نمایش (فقط ALLOWED)
+    mazane:reference:{slug}   ← JSON کامل ReferenceSnapshot (با ذکر منبع)، با TTL
+                                — مرجع قیمت سکو نیست و هرگز در mazane:listed
+                                یا mazane:current نمی‌آید (بند ۱۲.۲)
 
 وب `mazane:listed` را همان‌طور که هست رندر می‌کند — فیلتر نمایش عمومی
 (گلدیکا و هر PERMISSION_PENDING دیگر) همین‌جا اعمال شده است، نه در وب.
@@ -21,8 +24,12 @@ from datetime import datetime
 from typing import Any
 
 from ..models import Platform, PlatformSnapshot
+from ..references import ReferenceSnapshot
 
 DEFAULT_PRICE_TTL_SECONDS = 120
+# مراجع با آهنگ کندتر (مؤدبانه) گردآوری می‌شوند ⟸ TTL بلندتر؛ کهنگی را
+# fetched_at داخل خود اسنپ‌شات نشان می‌دهد.
+DEFAULT_REFERENCE_TTL_SECONDS = 900
 
 LISTED_KEY = "mazane:listed"
 
@@ -35,11 +42,21 @@ def updated_at_key(platform_slug: str) -> str:
     return f"mazane:updated_at:{platform_slug}"
 
 
+def reference_key(reference_slug: str) -> str:
+    return f"mazane:reference:{reference_slug}"
+
+
 class RedisStore:
-    def __init__(self, client: Any, price_ttl_seconds: int = DEFAULT_PRICE_TTL_SECONDS) -> None:
+    def __init__(
+        self,
+        client: Any,
+        price_ttl_seconds: int = DEFAULT_PRICE_TTL_SECONDS,
+        reference_ttl_seconds: int = DEFAULT_REFERENCE_TTL_SECONDS,
+    ) -> None:
         """`client` یک `redis.asyncio.Redis` است (تزریقی، برای تست‌پذیری)."""
         self._client = client
         self._price_ttl_seconds = price_ttl_seconds
+        self._reference_ttl_seconds = reference_ttl_seconds
 
     async def save_snapshot(self, snapshot: PlatformSnapshot) -> None:
         if snapshot.suppressed:
@@ -81,3 +98,16 @@ class RedisStore:
             return ()
         text = raw.decode() if isinstance(raw, bytes) else raw
         return tuple(Platform.model_validate(item) for item in json.loads(text))
+
+    async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
+        await self._client.set(
+            reference_key(snapshot.reference_slug),
+            snapshot.model_dump_json(),
+            ex=self._reference_ttl_seconds,
+        )
+
+    async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
+        raw = await self._client.get(reference_key(reference_slug))
+        if raw is None:
+            return None
+        return ReferenceSnapshot.model_validate_json(raw)

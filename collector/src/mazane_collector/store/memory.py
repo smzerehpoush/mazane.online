@@ -1,7 +1,9 @@
 """فیک درون‌حافظه‌ای استور — برای تست‌ها و اجرای بدون سرویس زنده.
 
 `history` همه‌ی اسنپ‌شات‌ها را (سرکوب‌شده یا نه) نگه می‌دارد — معادل تاریخچه‌ی
-پستگرس؛ تست‌ها پرچم `suppressed` را از همین‌جا می‌بینند.
+پستگرس؛ تست‌ها پرچم `suppressed` را از همین‌جا می‌بینند. مراجع قیمت جدا از
+سکوها نگه داشته می‌شوند (`reference_history` + کلید جاری خودشان) و هرگز در
+فهرست عمومی نمی‌آیند — همان قرارداد ردیس/پستگرس.
 """
 
 from __future__ import annotations
@@ -10,6 +12,7 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from ..models import Platform, PlatformSnapshot
+from ..references import ReferenceSnapshot
 
 
 class InMemoryStore:
@@ -17,7 +20,9 @@ class InMemoryStore:
         self._snapshots: dict[str, PlatformSnapshot] = {}
         self._updated_at: dict[str, datetime] = {}
         self._platforms: tuple[Platform, ...] = ()
+        self._references: dict[str, ReferenceSnapshot] = {}
         self.history: list[PlatformSnapshot] = []
+        self.reference_history: list[ReferenceSnapshot] = []
 
     async def save_snapshot(self, snapshot: PlatformSnapshot) -> None:
         self.history.append(snapshot)
@@ -39,3 +44,10 @@ class InMemoryStore:
 
     async def get_listed_platforms(self) -> tuple[Platform, ...]:
         return tuple(p for p in self._platforms if p.is_listed)
+
+    async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
+        self.reference_history.append(snapshot)
+        self._references[snapshot.reference_slug] = snapshot
+
+    async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
+        return self._references.get(reference_slug)

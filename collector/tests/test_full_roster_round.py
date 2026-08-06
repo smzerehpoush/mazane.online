@@ -1,9 +1,13 @@
-"""مرز گردآورنده — نوبت کامل ۱۲منبعی بلیت ۴: هر هشت سکوی جدید کنار چهار
-سکوی قبلی از فیکسچرهای واقعی می‌گذرند، با میانه سازگارند و در فهرست عمومی
-ظاهر می‌شوند؛ سکوهای کارمزد-نامعلوم **بعد از** سکوهای دارای قیمت مؤثر می‌آیند.
+"""مرز گردآورنده — نوبت کامل ۱۴منبعی (بلیت‌های ۴ و ۵): همه‌ی سکوها از
+فیکسچرها می‌گذرند، با میانه سازگارند و در فهرست عمومی ظاهر می‌شوند؛
+سکوهای کارمزد-نامعلوم **بعد از** سکوهای دارای قیمت مؤثر می‌آیند.
 
-همه‌ی payload ها فیکسچرهای واقعی ضبط‌شده‌ی ۲۰۲۶-۰۸-۰۶ هستند. هیچ تماس
-شبکه‌ای نیست.
+بلیت ۵ دو سکو اضافه کرد: داریک (REST + وب‌سوکت دفتر سفارش — در این نوبت
+از خوراک REST) و اینوی (فقط وب‌سوکت — payload فریمش با کلید همان آدرس
+wss در فچر فیکسچری می‌آید، مثل هر endpoint دیگر).
+
+payload ها فیکسچرهای واقعی ضبط‌شده‌ی ۲۰۲۶-۰۸-۰۶ هستند، جز فریم اینوی که
+دست‌نویس است (شکل تأییدنشده — docstring آداپترش). هیچ تماس شبکه‌ای نیست.
 """
 
 import json
@@ -12,10 +16,12 @@ from pathlib import Path
 from typing import Any
 
 from mazane_collector.adapters.baazar import BAAZAR_ENDPOINT, BaazarAdapter
+from mazane_collector.adapters.daric import DARIC_REST_ENDPOINT, DaricAdapter
 from mazane_collector.adapters.digikala import DIGIKALA_ENDPOINT, DigikalaAdapter
 from mazane_collector.adapters.ecogold import ECOGOLD_ENDPOINT, EcogoldAdapter
 from mazane_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
 from mazane_collector.adapters.hamrahgold import HAMRAHGOLD_ENDPOINT, HamrahgoldAdapter
+from mazane_collector.adapters.invi import INVI_WS_ENDPOINT, InviAdapter
 from mazane_collector.adapters.melligold import MELLIGOLD_ENDPOINT, MelligoldAdapter
 from mazane_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
 from mazane_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
@@ -41,9 +47,11 @@ ALL_ADAPTERS = (
     EcogoldAdapter(),
     ZarafzaAdapter(),
     BaazarAdapter(),
+    DaricAdapter(),
     MelligoldAdapter(),
     DigikalaAdapter(),
     HamrahgoldAdapter(),
+    InviAdapter(),
 )
 
 FIXTURE_BY_ENDPOINT = {
@@ -56,9 +64,11 @@ FIXTURE_BY_ENDPOINT = {
     ECOGOLD_ENDPOINT: "ecogold_prices_otc.json",
     ZARAFZA_ENDPOINT: "zarafza_prices.json",
     BAAZAR_ENDPOINT: "baazar_price_daily.json",
+    DARIC_REST_ENDPOINT: "daric_topprice.json",
     MELLIGOLD_ENDPOINT: "melligold_buy_sell_price.json",
     DIGIKALA_ENDPOINT: "digikala_prices.json",
     HAMRAHGOLD_ENDPOINT: "hamrahgold_xau_changes.json",
+    INVI_WS_ENDPOINT: "invi_ws_price.json",
 }
 
 # سکوهایی که قیمت مؤثر دارند، به همان ترتیبی که باید در فهرست عمومی بیایند.
@@ -71,9 +81,10 @@ KNOWN_FEE_LISTED = (
     "ecogold",
     "zarafza",
     "baazar",
+    "daric",
 )
 # کارمزد نامعلوم ⟸ قیمت مؤثر ندارند و باید **بعد از** بقیه بیایند.
-UNKNOWN_FEE_LISTED = ("melligold", "digikala", "hamrahgold")
+UNKNOWN_FEE_LISTED = ("melligold", "digikala", "hamrahgold", "invi")
 
 
 def make_fetcher() -> Any:
@@ -84,17 +95,17 @@ def make_fetcher() -> Any:
     return fetch_json
 
 
-async def test_healthy_round_publishes_all_twelve_sources() -> None:
-    """معیار پذیرش بلیت ۴: هر هشت سکوی جدید با داده‌ی (فیکسچر) زنده کنار
-    چهار سکوی قبلی منتشر می‌شوند و هیچ‌کدام از چک میانه رد نمی‌شوند —
-    یعنی mid همه با میانه‌ی سایر منابع سازگار است."""
+async def test_healthy_round_publishes_all_fourteen_sources() -> None:
+    """معیارهای پذیرش بلیت‌های ۴ و ۵: هر ۱۴ سکو — از جمله داریک (دفتر
+    سفارش) و اینوی (وب‌سوکت) — با داده‌ی فیکسچر منتشر می‌شوند و هیچ‌کدام
+    از چک میانه رد نمی‌شوند — یعنی mid همه با میانه‌ی سایر منابع سازگار است."""
     store = InMemoryStore()
 
     saved = await collect_round(
         ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT
     )
 
-    assert len(saved) == 12
+    assert len(saved) == 14
     assert all(not snapshot.suppressed for snapshot in saved)
     for adapter in ALL_ADAPTERS:
         assert await store.get_snapshot(adapter.slug) is not None
@@ -134,13 +145,18 @@ async def test_listed_payload_orders_unknown_fee_platforms_last() -> None:
     assert "goldika" not in {p.slug for p in listed}
 
 
-async def test_listed_payload_shape_stays_backward_compatible() -> None:
-    """قرارداد با `web/lib/prices.ts` (ListedPlatform): دقیقاً همان سه فیلد
-    قبلی — سکوی جدید فیلد تازه‌ای به فهرست اضافه نمی‌کند."""
+async def test_listed_payload_shape_carries_market_model() -> None:
+    """قرارداد با `web/lib/prices.ts` (ListedPlatform): بلیت ۵ یک فیلد به
+    فهرست اضافه کرد — `market_model` — تا وب بتواند برچسب «دفتر سفارش»
+    بزند (بند ۹.۲ نکته‌ی ۵). داریک تنها ORDER_BOOK است؛ بقیه OTC."""
     store = InMemoryStore()
     await store.save_platforms(PLATFORMS)
 
-    for platform in await store.get_listed_platforms():
+    listed = await store.get_listed_platforms()
+    for platform in listed:
         payload = platform.model_dump(mode="json")
-        assert set(payload) == {"slug", "name_fa", "data_policy"}
+        assert set(payload) == {"slug", "name_fa", "data_policy", "market_model"}
         assert payload["data_policy"] == "ALLOWED"
+        expected = "ORDER_BOOK" if payload["slug"] == "daric" else "OTC"
+        assert payload["market_model"] == expected
+    assert "daric" in {p.slug for p in listed}

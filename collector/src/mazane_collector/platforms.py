@@ -7,13 +7,17 @@
 
 **ترتیب این تاپل، ترتیب فهرست عمومی است** (استورها همین ترتیب را حفظ
 می‌کنند): اول سکوهایی که قیمت مؤثر دارند، بعد سکوهای کارمزد-نامعلوم
-(`fee_source = UNKNOWN`: ملی‌گلد، دیجی‌کالا، همراه‌گلد) که ردیفشان «قیمت
-در دسترس نیست» رندر می‌شود — ردیف بی‌قیمت نباید بالای ردیف قیمت‌دار بنشیند.
+(`fee_source = UNKNOWN`: ملی‌گلد، دیجی‌کالا، همراه‌گلد، اینوی) که ردیفشان
+«قیمت در دسترس نیست» رندر می‌شود — ردیف بی‌قیمت نباید بالای ردیف قیمت‌دار
+بنشیند.
+
+مراجع قیمت (طلا دات‌آی‌آر، بن‌بست — بند ۱۲.۲) سکو نیستند و **اینجا نمی‌آیند**؛
+فهرستشان در `mazane_collector.references` است و هرگز وارد فهرست عمومی نمی‌شود.
 """
 
 from __future__ import annotations
 
-from .models import DataPolicy, Platform
+from .models import DataPolicy, MarketModel, Platform
 
 PLATFORMS: tuple[Platform, ...] = (
     # ― قیمت مؤثر معلوم (کارمزد از API یا ثبت دستی) ―
@@ -25,10 +29,21 @@ PLATFORMS: tuple[Platform, ...] = (
     Platform(slug="ecogold", name_fa="اکوگلد", data_policy=DataPolicy.ALLOWED),
     Platform(slug="zarafza", name_fa="زرافزا", data_policy=DataPolicy.ALLOWED),
     Platform(slug="baazar", name_fa="بازر", data_policy=DataPolicy.ALLOWED),
+    # داریک دو خوراک (REST + وب‌سوکت دفتر سفارش) و **یک** سکو است (بند ۱۲.۳)؛
+    # تنها ORDER_BOOK فهرست: لایه‌ی وب از همین فیلد برچسب «دفتر سفارش» می‌زند.
+    Platform(
+        slug="daric",
+        name_fa="داریک",
+        data_policy=DataPolicy.ALLOWED,
+        market_model=MarketModel.ORDER_BOOK,
+    ),
     # ― کارمزد نامعلوم (UNKNOWN): بعد از قیمت‌دارها ―
     Platform(slug="melligold", name_fa="ملی‌گلد", data_policy=DataPolicy.ALLOWED),
     Platform(slug="digikala", name_fa="دیجی‌کالا", data_policy=DataPolicy.ALLOWED),
     Platform(slug="hamrahgold", name_fa="همراه‌گلد", data_policy=DataPolicy.ALLOWED),
+    # اینوی فقط وب‌سوکت دارد (بند ۱۲.۱ ردیف ۱۴)؛ کارمزدش هیچ‌جا منتشر نشده
+    # ⟸ فقط MID (سند تحقیق ۰۱، بند ۲.۲: «تأییدنشده» — شکل فریم فرضی است).
+    Platform(slug="invi", name_fa="اینوی", data_policy=DataPolicy.ALLOWED),
     # شرایط استفاده‌ی گلدیکا استخراج داده را صریحاً ممنوع کرده (سند تحقیق ۰۱،
     # بند ۵) ⟸ تا اجازه‌ی کتبی، نمایش عمومی ندارد (بند ۱۳، تصمیم ۱۲).
     Platform(slug="goldika", name_fa="گلدیکا", data_policy=DataPolicy.PERMISSION_PENDING),

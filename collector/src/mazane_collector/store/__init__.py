@@ -1,15 +1,17 @@
 """لایه‌ی ذخیره — اینترفیس کوچک، پیاده‌سازی‌های عمیق.
 
 قرارداد: اسنپ‌شات جاری هر سکو + شرایط سکو + `updated_at` هر منبع +
-فهرست عمومی سکوها. تست‌ها فیک درون‌حافظه‌ای همین اینترفیس را می‌گیرند و به
-هیچ سرویس زنده‌ای وابسته نیستند. پیاده‌سازی‌های واقعی: ردیس (قیمت جاری) و
-پستگرس (تاریخچه).
+فهرست عمومی سکوها + اسنپ‌شات جاری مراجع قیمت. تست‌ها فیک درون‌حافظه‌ای همین
+اینترفیس را می‌گیرند و به هیچ سرویس زنده‌ای وابسته نیستند. پیاده‌سازی‌های
+واقعی: ردیس (قیمت جاری) و پستگرس (تاریخچه).
 
-دو قاعده‌ی مشترک همه‌ی پیاده‌سازی‌ها:
+سه قاعده‌ی مشترک همه‌ی پیاده‌سازی‌ها:
 - اسنپ‌شات `suppressed` (رد چک میانه) **هرگز** به قیمت جاری/`updated_at`
   نمی‌رسد؛ فقط در تاریخچه با همان پرچم می‌ماند.
 - فهرست عمومی فقط سکوهای `is_listed` را دارد — لایه‌ی وب هیچ فیلتری ندارد،
   چون داده‌ای که می‌خواند از اینجا از قبل فیلترشده است.
+- مرجع قیمت (بند ۱۲.۲) کلید جدای خودش را دارد (`mazane:reference:{slug}`)
+  و **هرگز** وارد فهرست عمومی یا کلیدهای سکوها نمی‌شود — سکو نیست.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from datetime import datetime
 from typing import Protocol
 
 from ..models import Platform, PlatformSnapshot
+from ..references import ReferenceSnapshot
 
 
 class Store(Protocol):
@@ -40,6 +43,14 @@ class Store(Protocol):
 
     async def get_listed_platforms(self) -> tuple[Platform, ...]:
         """سکوهای قابل نمایش عمومی — `PERMISSION_PENDING` (گلدیکا) هرگز برنمی‌گردد."""
+        ...
+
+    async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
+        """اسنپ‌شات مرجع قیمت — تاریخچه + کلید جاری خودش، هرگز فهرست عمومی."""
+        ...
+
+    async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
+        """آخرین اسنپ‌شات جاری مرجع، یا None — همیشه با ذکر منبع داخل داده."""
         ...
 
 
@@ -65,3 +76,10 @@ class MultiStore:
 
     async def get_listed_platforms(self) -> tuple[Platform, ...]:
         return await self._stores[0].get_listed_platforms()
+
+    async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
+        for store in self._stores:
+            await store.save_reference(snapshot)
+
+    async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
+        return await self._stores[0].get_reference(reference_slug)
