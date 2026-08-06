@@ -20,11 +20,7 @@ import type { PublishedPost } from "./blog";
 import type { HistoryQuery, PlatformHistory } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
 import type { Row } from "./rows";
-import {
-  CHART_PLATFORM_SLUGS,
-  HOME_CHART_HOURS,
-  HOME_INSTRUMENT,
-} from "./site-content";
+import { chartSeriesConfig, HOME_CHART_HOURS, HOME_INSTRUMENT } from "./site-content";
 import type { SlugResolution } from "./slugs";
 import type { ViewCounts } from "./views";
 
@@ -56,10 +52,11 @@ export interface HomeReaders {
 }
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
+  const chartPlatforms = chartSeriesConfig();
   const [rows, history, posts, viewCounts] = await Promise.all([
     read.fetchRows(),
     read.getPlatformHistory({
-      platformSlugs: [...CHART_PLATFORM_SLUGS],
+      platformSlugs: chartPlatforms.map((platform) => platform.slug),
       instrument: HOME_INSTRUMENT,
       hours: HOME_CHART_HOURS,
     }),
@@ -71,6 +68,7 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     history,
     posts,
     viewCounts,
+    chartPlatforms,
     generated_at: new Date().toISOString(),
   };
 }

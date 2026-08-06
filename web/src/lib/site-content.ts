@@ -49,7 +49,7 @@ export interface ChartPlatformConfig {
   color: string;
 }
 
-export const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
+const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
   { slug: "milli", name_fa: "میلی", color: "#1d6fe0" },
   { slug: "melligold", name_fa: "ملی‌گلد", color: "#0bb0d4" },
   { slug: "talasea", name_fa: "طلاسی", color: "#9b8ce8" },
@@ -57,9 +57,20 @@ export const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
   { slug: "wallgold", name_fa: "وال‌گلد", color: "#e0921d" },
 ];
 
-export const CHART_PLATFORM_SLUGS: readonly string[] = CHART_PLATFORMS.map(
-  (platform) => platform.slug,
-);
+/**
+ * تک نقطه‌ی دسترسی به پیکربندی سری‌های نمودار — **هر دو** مصرف‌کننده
+ * (ساخت نمای خط‌ها در `home-view.tsx` و ساخت پرس‌وجوی تاریخچه در
+ * `page-data.ts`) فقط از اینجا می‌خوانند، نه مستقیم از ثابت کد.
+ *
+ * امروز فقط همان فهرست ثابت را برمی‌گرداند — هنوز هیچ منبع داده‌ای در کار
+ * نیست. تیکت پیگیر (تنظیمات سکو، #21) بدنه‌ی همین تابع را به یک منبع
+ * تزریق‌پذیر (تنظیمات سکو در پستگرس) وصل می‌کند تا مالک سایت از پنل مدیریت
+ * عضویت و رنگ نمودار را عوض کند؛ امضای این تابع و مصرف‌کننده‌هایش دست‌نخورده
+ * می‌ماند.
+ */
+export function chartSeriesConfig(): readonly ChartPlatformConfig[] {
+  return CHART_PLATFORMS;
+}
 
 /**
  * ارقام فارسی نمایش (قراردادها، بخش استک). ارقام داخل JSON-LD و URL لاتین
