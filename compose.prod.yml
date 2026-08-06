@@ -38,7 +38,7 @@ services:
     volumes:
       - mazane-postgres-data:/var/lib/postgresql/data
       # همان الگوی docker-compose.dev.yml: در «اولین» بوتِ volume خالی،
-      # پستگرس همه‌ی ‎*.sql‎ها را به ترتیب واژه‌نگاری (001 تا 011) اجرا
+      # پستگرس همه‌ی ‎*.sql‎ها را به ترتیب واژه‌نگاری (001 تا 012) اجرا
       # می‌کند. برای volume از قبل مقداردهی‌شده، مهاجرت‌های جدید دستی اجرا
       # می‌شوند (رانبوک، گام «مهاجرت‌ها») — mount خواندنی همین را ساده می‌کند.
       - ./collector/migrations:/docker-entrypoint-initdb.d:ro

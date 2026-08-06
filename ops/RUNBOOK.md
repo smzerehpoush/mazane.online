@@ -147,11 +147,11 @@ docker compose -f compose.prod.yml up -d postgres redis
 docker compose -f compose.prod.yml ps              # هر دو باید healthy شوند
 ```
 
-### مهاجرت‌ها (001 تا 011)
+### مهاجرت‌ها (001 تا 012)
 
 volume تازه است ⟸ پستگرس در اولین بوت **همه‌ی** فایل‌های
 `/docker-entrypoint-initdb.d/*.sql` را به ترتیب واژه‌نگاری اجرا می‌کند
-(001، 002، 003، 004، 010، 011 — شکاف شماره‌ها عمدی است). راستی‌آزمایی:
+(001، 002، 003، 004، 010، 011، 012 — شکاف شماره‌ها عمدی است). راستی‌آزمایی:
 
 ```bash
 docker compose -f compose.prod.yml exec postgres \
@@ -164,7 +164,7 @@ docker compose -f compose.prod.yml exec postgres \
 
 ```bash
 docker compose -f compose.prod.yml exec postgres \
-  psql -U mazane -d mazane -f /docker-entrypoint-initdb.d/012_xxx.sql
+  psql -U mazane -d mazane -f /docker-entrypoint-initdb.d/013_xxx.sql
 ```
 
 ### بالا آوردن وب و گردآورنده
