@@ -1,5 +1,6 @@
 /**
- * مرز وب — تنظیمات نمودار پنل مدیریت (بلیت ۲۱): منبع تزریق‌شده ⟸ پاسخ endpoint.
+ * مرز وب — تنظیمات نمودار پنل مدیریت (بلیت ۲۱) + نشانی معرف (بلیت ۲۳):
+ * منبع تزریق‌شده ⟸ پاسخ endpoint.
  *
  * همان مرز `post-view.ts`/`admin-login.ts`: منطق در
  * `lib/server/admin-platform-settings.ts` مستقیم از تست صدا زده می‌شود،
@@ -16,6 +17,8 @@
  *   ۵. اسلاگ ناشناخته/غیرقابل‌نمایش ⟸ ۴۰۰.
  *   ۶. نوشتن معتبر ⟸ ۲۰۰، رنگ lower و غیرفعال‌ها رنگ/ترتیب null می‌شوند.
  *   ۷. همه‌ی پاسخ‌ها بی‌کش و بدون اجازه‌ی نمایه‌سازی‌اند.
+ *   ۸. (بلیت ۲۳) طرح ناامن/دامنه‌ی نامرتبط نشانی معرف ⟸ ۴۰۰؛ زیردامنه‌ی
+ *      همان سکو پذیرفته می‌شود؛ نشانی معرف هرگز در پاسخ چاپ نمی‌شود.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,12 +38,13 @@ import {
 import { ADMIN_SESSION_COOKIE } from "../src/lib/server/admin-session";
 
 const SECRET = "test-session-secret";
+const REFERRAL_CODE = "MZN-SECRET-4242";
 
 const PLATFORMS: PlatformOption[] = [
-  { slug: "wallgold", name_fa: "وال‌گلد" },
-  { slug: "talasea", name_fa: "طلاسی" },
-  { slug: "milli", name_fa: "میلی" },
-  { slug: "tlyn", name_fa: "طلاین" },
+  { slug: "wallgold", name_fa: "وال‌گلد", website_url: "https://wallgold.ir" },
+  { slug: "talasea", name_fa: "طلاسی", website_url: "https://talasea.ir" },
+  { slug: "milli", name_fa: "میلی", website_url: "https://milli.gold" },
+  { slug: "tlyn", name_fa: "طلاین", website_url: "https://taline.ir" },
 ];
 
 class FakeSource implements PlatformSettingsSource {
@@ -91,10 +95,10 @@ function anonRequest(method: string, body?: unknown): Request {
 }
 
 const VALID_ENTRIES: PlatformSettingEntry[] = [
-  { slug: "wallgold", in_chart: true, chart_color: "#E0921D", chart_order: 0 },
-  { slug: "talasea", in_chart: true, chart_color: "#9b8ce8", chart_order: 1 },
-  { slug: "milli", in_chart: false, chart_color: null, chart_order: null },
-  { slug: "tlyn", in_chart: false, chart_color: null, chart_order: null },
+  { slug: "wallgold", in_chart: true, chart_color: "#E0921D", chart_order: 0, referral_url: null },
+  { slug: "talasea", in_chart: true, chart_color: "#9b8ce8", chart_order: 1, referral_url: null },
+  { slug: "milli", in_chart: false, chart_color: null, chart_order: null, referral_url: null },
+  { slug: "tlyn", in_chart: false, chart_color: null, chart_order: null, referral_url: null },
 ];
 
 beforeEach(() => {
@@ -114,7 +118,15 @@ describe("GET /api/admin-platform-settings", () => {
   });
 
   it("با نشست معتبر ⟸ ۲۰۰، فهرست سکوها با تنظیمات ذخیره‌شده ادغام می‌شود", async () => {
-    seedSettings([{ slug: "wallgold", in_chart: true, chart_color: "#e0921d", chart_order: 0 }]);
+    seedSettings([
+      {
+        slug: "wallgold",
+        in_chart: true,
+        chart_color: "#e0921d",
+        chart_order: 0,
+        referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}`,
+      },
+    ]);
 
     const response = await adminPlatformSettingsGetResponse(authedRequest("GET"));
     expect(response.status).toBe(200);
@@ -130,6 +142,7 @@ describe("GET /api/admin-platform-settings", () => {
       in_chart: true,
       chart_color: "#e0921d",
       chart_order: 0,
+      referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}`,
     });
 
     // سکوی بی‌ردیف در platform_settings پیش‌فرض «هنوز تنظیم نشده» می‌گیرد.
@@ -139,6 +152,7 @@ describe("GET /api/admin-platform-settings", () => {
       in_chart: false,
       chart_color: null,
       chart_order: null,
+      referral_url: null,
     });
   });
 });
@@ -186,6 +200,7 @@ describe("POST /api/admin-platform-settings", () => {
     const platforms: PlatformOption[] = Array.from({ length: 7 }, (_, i) => ({
       slug: `p${i}`,
       name_fa: `سکو ${i}`,
+      website_url: null,
     }));
     fake.listPlatforms = async () => platforms;
     const entries: PlatformSettingEntry[] = platforms.map((p, i) => ({
@@ -193,6 +208,7 @@ describe("POST /api/admin-platform-settings", () => {
       in_chart: true,
       chart_color: "#123456",
       chart_order: i,
+      referral_url: null,
     }));
     const response = await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
     expect(response.status).toBe(400);
@@ -213,7 +229,13 @@ describe("POST /api/admin-platform-settings", () => {
     const fake = seedSettings();
     const entries = [
       ...VALID_ENTRIES,
-      { slug: "goldika", in_chart: false, chart_color: null, chart_order: null },
+      {
+        slug: "goldika",
+        in_chart: false,
+        chart_color: null,
+        chart_order: null,
+        referral_url: null,
+      },
     ];
     const response = await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
     expect(response.status).toBe(400);
@@ -253,5 +275,113 @@ describe("POST /api/admin-platform-settings", () => {
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
     }
+  });
+
+  describe("نشانی معرف (بلیت ۲۳)", () => {
+    it("طرح ناامن (http) را با پیام روشن رد می‌کند، چیزی نوشته نمی‌شود", async () => {
+      const fake = seedSettings();
+      const entries = VALID_ENTRIES.map((e) =>
+        e.slug === "wallgold" ? { ...e, referral_url: `http://wallgold.ir/r/${REFERRAL_CODE}` } : e,
+      );
+      const response = await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
+      expect(response.status).toBe(400);
+      expect(fake.written).toBeNull();
+      const body = (await response.json()) as { error: string };
+      expect(body.error).toContain("wallgold");
+      expect(body.error).not.toContain(REFERRAL_CODE);
+    });
+
+    it("دامنه‌ی نامرتبط را با پیام روشن رد می‌کند، چیزی نوشته نمی‌شود", async () => {
+      const fake = seedSettings();
+      const entries = VALID_ENTRIES.map((e) =>
+        e.slug === "wallgold"
+          ? { ...e, referral_url: `https://evil.example/r/${REFERRAL_CODE}` }
+          : e,
+      );
+      const response = await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
+      expect(response.status).toBe(400);
+      expect(fake.written).toBeNull();
+    });
+
+    it("زیردامنه‌ی همان سکو را می‌پذیرد و ذخیره می‌کند", async () => {
+      const fake = seedSettings();
+      const entries = VALID_ENTRIES.map((e) =>
+        e.slug === "wallgold"
+          ? { ...e, referral_url: `https://app.wallgold.ir/r/${REFERRAL_CODE}` }
+          : e,
+      );
+      const response = await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
+      expect(response.status).toBe(200);
+      const wallgold = fake.written!.find((entry) => entry.slug === "wallgold")!;
+      expect(wallgold.referral_url).toBe(`https://app.wallgold.ir/r/${REFERRAL_CODE}`);
+    });
+
+    it("خالی‌کردن نشانی معرف موجود، override را حذف می‌کند (null ذخیره می‌شود)", async () => {
+      const fake = seedSettings([
+        {
+          slug: "wallgold",
+          in_chart: true,
+          chart_color: "#e0921d",
+          chart_order: 0,
+          referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}`,
+        },
+      ]);
+      const entries = VALID_ENTRIES.map((e) =>
+        e.slug === "wallgold" ? { ...e, referral_url: "" } : e,
+      );
+      const response = await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
+      expect(response.status).toBe(200);
+      const wallgold = fake.written!.find((entry) => entry.slug === "wallgold")!;
+      expect(wallgold.referral_url).toBeNull();
+    });
+
+    it("پاسخ موفق خودِ نشانی معرف را چاپ نمی‌کند", async () => {
+      seedSettings();
+      const entries = VALID_ENTRIES.map((e) =>
+        e.slug === "wallgold"
+          ? { ...e, referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}` }
+          : e,
+      );
+      const response = await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
+      const raw = await response.clone().text();
+      expect(raw).not.toContain(REFERRAL_CODE);
+    });
+
+    it("نشانی معرف تغییرکرده را لاگ می‌کند، بدون چاپ خودِ نشانی", async () => {
+      seedSettings();
+      const spy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+      const entries = VALID_ENTRIES.map((e) =>
+        e.slug === "wallgold"
+          ? { ...e, referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}` }
+          : e,
+      );
+      await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
+
+      expect(spy).toHaveBeenCalled();
+      const loggedText = spy.mock.calls.map((call) => call.join(" ")).join("\n");
+      expect(loggedText).toContain("wallgold");
+      expect(loggedText).not.toContain(REFERRAL_CODE);
+    });
+
+    it("بدون تغییر نشانی معرف، چیزی لاگ نمی‌شود", async () => {
+      seedSettings([
+        {
+          slug: "wallgold",
+          in_chart: true,
+          chart_color: "#e0921d",
+          chart_order: 0,
+          referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}`,
+        },
+      ]);
+      const spy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+      const entries = VALID_ENTRIES.map((e) =>
+        e.slug === "wallgold"
+          ? { ...e, referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}` }
+          : e,
+      );
+      await adminPlatformSettingsPostResponse(authedRequest("POST", { entries }));
+
+      expect(spy).not.toHaveBeenCalled();
+    });
   });
 });

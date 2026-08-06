@@ -1,15 +1,20 @@
 /**
  * تنظیمات سکو روی پستگرس — جدول `platform_settings` که مهاجرت
- * `collector/migrations/015_platform_settings.sql` می‌سازد (بلیت ۲۱).
+ * `collector/migrations/015_platform_settings.sql` می‌سازد (بلیت ۲۱ + نشانی
+ * معرف بلیت ۲۳؛ ستون `referral_url` را مهاجرت #۲۱ از قبل ساخته).
  *
  * **فقط سمت سرور** (همان دلیل `blog-source.ts`/`view-counter.ts`: `pg`
  * هرگز به باندل مرورگر نمی‌رود). از همان استخر مشترک استفاده می‌کند تا
  * سرور تک‌هسته‌ای استخر تازه باز نکند. فهرست سکوهای قابل نمایش از
  * `price-source.ts` می‌آید (زنده‌ی ردیس مقدم، رجیستری بیلد کف — بند ۵
- * طراحی تیکت ۲۱: «اسلاگ باید در فهرست سکوهای واقعاً قابل نمایش باشد»).
+ * طراحی تیکت ۲۱: «اسلاگ باید در فهرست سکوهای واقعاً قابل نمایش باشد»)؛
+ * همان منبع `website_url` هر سکو را هم می‌دهد — اعتبارسنجی نشانی معرف
+ * (`lib/platform-settings.ts::validateReferralUrls`) دقیقاً همین را
+ * می‌خواهد.
  *
  * ⚠️ این فایل هرگز به ردیس نمی‌نویسد — نوشتن پنل فقط پستگرس است؛ گردآورنده
- * خودش با تأخیر ~۲۰ ثانیه `mazane:chart_config` را همگام می‌کند.
+ * خودش با تأخیر ~۲۰ ثانیه `mazane:chart_config` را همگام می‌کند و override
+ * نشانی معرف را روی رجیستری زنده می‌نشاند (`mazane_collector.settings`).
  */
 import "@tanstack/react-start/server-only";
 
@@ -29,17 +34,20 @@ interface SettingRow {
   in_chart: boolean;
   chart_color: string | null;
   chart_order: number | null;
+  referral_url: string | null;
 }
 
-const SELECT_SETTINGS = "select slug, in_chart, chart_color, chart_order from platform_settings";
+const SELECT_SETTINGS =
+  "select slug, in_chart, chart_color, chart_order, referral_url from platform_settings";
 
 const UPSERT_SETTING = `
-  insert into platform_settings (slug, in_chart, chart_color, chart_order, updated_at)
-  values ($1, $2, $3, $4, now())
+  insert into platform_settings (slug, in_chart, chart_color, chart_order, referral_url, updated_at)
+  values ($1, $2, $3, $4, $5, now())
   on conflict (slug) do update
     set in_chart = excluded.in_chart,
         chart_color = excluded.chart_color,
         chart_order = excluded.chart_order,
+        referral_url = excluded.referral_url,
         updated_at = now()
 `;
 
@@ -49,7 +57,11 @@ export function createPgPlatformSettingsSource(): PlatformSettingsSource {
   return {
     async listPlatforms(): Promise<PlatformOption[]> {
       const listed = await getListedPlatforms();
-      return listed.map((platform) => ({ slug: platform.slug, name_fa: platform.name_fa }));
+      return listed.map((platform) => ({
+        slug: platform.slug,
+        name_fa: platform.name_fa,
+        website_url: platform.website_url ?? null,
+      }));
     },
 
     async readSettings(): Promise<PlatformSettingEntry[]> {
@@ -59,6 +71,7 @@ export function createPgPlatformSettingsSource(): PlatformSettingsSource {
         in_chart: row.in_chart,
         chart_color: row.chart_color,
         chart_order: row.chart_order,
+        referral_url: row.referral_url,
       }));
     },
 
@@ -72,6 +85,7 @@ export function createPgPlatformSettingsSource(): PlatformSettingsSource {
             entry.in_chart,
             entry.chart_color,
             entry.chart_order,
+            entry.referral_url,
           ]);
         }
         await client.query("commit");

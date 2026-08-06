@@ -14,6 +14,7 @@ from mazane_collector.settings import (
     ChartConfigEntry,
     PlatformSettingRow,
     chart_config_from_settings,
+    platforms_with_referral_overrides,
 )
 from mazane_collector.store.memory import InMemoryStore
 
@@ -34,13 +35,14 @@ def row(
     in_chart: bool = True,
     color: str | None = "#1d6fe0",
     order: int | None = 0,
+    referral_url: str | None = None,
 ) -> PlatformSettingRow:
     return PlatformSettingRow(
         slug=slug,
         in_chart=in_chart,
         chart_color=color,
         chart_order=order,
-        referral_url=None,
+        referral_url=referral_url,
         updated_at=NOW,
     )
 
@@ -159,3 +161,70 @@ async def test_store_get_chart_config_is_empty_before_any_write() -> None:
     """نبودِ تنظیمات ⟸ تهی، نه خطا — وب در این حالت به پیش‌فرض کد برمی‌گردد."""
     store = InMemoryStore()
     assert await store.get_chart_config() == ()
+
+
+# ------------------------------------------------ platforms_with_referral_overrides (بلیت ۲۳)
+
+
+def test_referral_override_replaces_registry_value() -> None:
+    rows = (row("wallgold", referral_url="https://wallgold.ir/r/mzn"),)
+    merged = platforms_with_referral_overrides(rows, LISTED)
+    by_slug = {p.slug: p for p in merged}
+    assert by_slug["wallgold"].referral_url == "https://wallgold.ir/r/mzn"
+    # بقیه دست‌نخورده می‌مانند — همان شیء رجیستری.
+    assert by_slug["talasea"] is TALASEA
+
+
+def test_referral_override_ignores_empty_or_missing_rows() -> None:
+    """`referral_url=None` (هنوز ذخیره نشده) یا `""` (پاک‌شده) ⟸ بدون override
+    — یعنی رجیستری همان‌طور که هست عبور می‌کند (فرود امن به website_url در وب)."""
+    rows = (row("wallgold", referral_url=None), row("talasea", referral_url=""))
+    merged = platforms_with_referral_overrides(rows, LISTED)
+    assert merged == LISTED
+
+
+def test_referral_override_ignores_unknown_slug() -> None:
+    rows = (row("no-such-platform", referral_url="https://evil.example/x"),)
+    merged = platforms_with_referral_overrides(rows, LISTED)
+    assert merged == LISTED
+
+
+def test_referral_override_preserves_registry_order() -> None:
+    rows = (row("milli", referral_url="https://milli.gold/r/mzn"),)
+    merged = platforms_with_referral_overrides(rows, LISTED)
+    assert [p.slug for p in merged] == [p.slug for p in LISTED]
+
+
+def test_referral_override_applies_regardless_of_listing_status() -> None:
+    """`is_listed` فیلتر نمایش عمومی است، نه شرط override — merge روی کل
+    رجیستری اجرا می‌شود؛ فیلتر نمایش خودش در `save_platforms`/`is_listed`
+    اعمال می‌شود، نه اینجا."""
+    full_registry = LISTED + (GOLDIKA,)
+    rows = (row("goldika", referral_url="https://goldika.example/r/x"),)
+    merged = platforms_with_referral_overrides(rows, full_registry)
+    goldika = next(p for p in merged if p.slug == "goldika")
+    assert goldika.referral_url == "https://goldika.example/r/x"
+
+
+async def test_referral_override_reaches_listed_platforms_via_save_platforms() -> None:
+    """مسیر کامل بلیت ۲۳: تنظیمات پنل ⟸ merge با رجیستری ⟸ همان مسیر
+    `save_platforms` که `platform_loop` هر نوبت صدا می‌زند ⟸ `mazane:listed`
+    (اینجا: `store.get_listed_platforms`) — بدون کلید ردیس تازه، و بدون
+    اثر روی سکوهایی که override ندارند."""
+    gateway = FakeSettingsGateway(
+        (row("wallgold", referral_url="https://wallgold.ir/r/mzn-secret"),)
+    )
+    store = InMemoryStore()
+
+    # همان بدنه‌ی settings_sync_loop، بدون asyncio.sleep — یک نوبت دستی.
+    settings_rows = await gateway.list_platform_settings()
+    merged = platforms_with_referral_overrides(settings_rows, LISTED)
+    # همان بدنه‌ی platform_loop (collect_round) که این فهرست merge‌شده را
+    # به store.save_platforms می‌دهد.
+    await store.save_platforms(merged)
+
+    listed = await store.get_listed_platforms()
+    wallgold = next(p for p in listed if p.slug == "wallgold")
+    assert wallgold.referral_url == "https://wallgold.ir/r/mzn-secret"
+    talasea = next(p for p in listed if p.slug == "talasea")
+    assert talasea.referral_url is None

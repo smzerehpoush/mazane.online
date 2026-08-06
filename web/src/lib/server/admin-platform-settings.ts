@@ -1,5 +1,6 @@
 /**
- * منطق ‎GET/POST /api/admin-platform-settings‎ — تنظیمات نمودار پنل (بلیت ۲۱).
+ * منطق ‎GET/POST /api/admin-platform-settings‎ — تنظیمات نمودار پنل (بلیت ۲۱)
+ * + نشانی معرف (بلیت ۲۳).
  *
  * جدا از مسیر، تا مرز تست وب بتواند رفتار را با منبع تزریق‌شده بسنجد —
  * همان الگوی `post-view.ts`/`admin-login.ts`.
@@ -9,7 +10,8 @@
  *     ← 200  {"platforms":[...], "settings":[...]}   نشست معتبر
  *     ← 401  {"error": "..."}                          نشست معتبر نیست
  *
- *     POST /api/admin-platform-settings   {"entries": [{slug, in_chart, chart_color, chart_order}, ...]}
+ *     POST /api/admin-platform-settings
+ *          {"entries": [{slug, in_chart, chart_color, chart_order, referral_url}, ...]}
  *     ← 200  {"ok": true}                               ذخیره شد
  *     ← 400  {"error": "..."}                           بدنه/اعتبارسنجی نامعتبر
  *     ← 401  {"error": "..."}                           نشست معتبر نیست
@@ -21,8 +23,9 @@
  * فقط `isAdminPath` یعنی مسیرهای زیر `/admin` را می‌پوشاند).
  *
  * ⚠️ قاعده‌ی سخت ۱: این مسیر هیچ عدد قیمتی نمی‌سازد یا تغییر نمی‌دهد —
- * فقط اسلاگ/رنگ/ترتیب. ⚠️ قاعده‌ی سخت ۲: عضویت نمودار هرگز روی جدول قیمت
- * اثر نمی‌گذارد — این مسیر اصلاً به جدول قیمت دسترسی ندارد.
+ * فقط اسلاگ/رنگ/ترتیب/لینک. ⚠️ قاعده‌ی سخت ۲: عضویت نمودار هرگز روی جدول
+ * قیمت اثر نمی‌گذارد — این مسیر اصلاً به جدول قیمت دسترسی ندارد. اعتبارسنجی
+ * واقعی نشانی معرف (https + هم‌دامنه) در `savePlatformSettings` است، نه اینجا.
  */
 import "@tanstack/react-start/server-only";
 
@@ -78,11 +81,15 @@ function parseEntry(raw: unknown): PlatformSettingEntry {
   const rawOrder = obj["chart_order"];
   if (rawOrder !== null && typeof rawOrder !== "number") throw new Error("bad entry");
 
+  const rawReferral = obj["referral_url"];
+  if (rawReferral !== null && typeof rawReferral !== "string") throw new Error("bad entry");
+
   return {
     slug: obj["slug"],
     in_chart: obj["in_chart"],
     chart_color: rawColor ?? null,
     chart_order: rawOrder ?? null,
+    referral_url: rawReferral ?? null,
   };
 }
 

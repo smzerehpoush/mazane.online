@@ -1,11 +1,14 @@
-"""تنظیمات سکو از پنل مدیریت (بلیت ۲۱): عضویت نمودار، رنگ، ترتیب.
+"""تنظیمات سکو از پنل مدیریت (بلیت ۲۱ + بلیت ۲۳): عضویت نمودار/رنگ/ترتیب و
+لینک معرف.
 
 پنل فقط پستگرس (جدول `platform_settings` — مهاجرت `015_platform_settings.sql`)
 را می‌نویسد؛ هرگز مستقیم به ردیس. گردآورنده این ماژول را هر ~۲۰ ثانیه
 (`main.py::settings_sync_loop`) صدا می‌زند: کل ردیف‌های `platform_settings`
 را می‌خواند (نه فقط ستون‌های چارت — `PlatformSettingRow` کامل است، از جمله
-`referral_url`، تا تیکت پیگیر #۲۳ بدون کوئری دوباره از همین خواندن استفاده
-کند) و فقط عضویت نمودار را به `Store.save_chart_config` می‌سپارد.
+`referral_url`) و دو کار می‌کند: عضویت نمودار را به `Store.save_chart_config`
+می‌سپارد، و override نشانی معرف را با `platforms_with_referral_overrides`
+روی رجیستری زنده‌ی سکوها می‌نشاند تا از همان مسیر موجود `Store.save_platforms`
+⟸ `mazane:listed` ⟸ `/go/<slug>` به وب برسد (بدون کلید ردیس تازه).
 
 `chart_config_from_settings` دروازه‌ی دومِ دفاعی است (اولی نوشتن پنل است):
 حتی اگر ردیفی با رنگ بدشکل یا اسلاگ ناشناخته/غیرقابل‌نمایش در جدول نشست
@@ -15,6 +18,12 @@
 منتقل می‌شود و فرود امنِ «کمتر از ۲ یا بیش از ۶» در خواننده‌ی وب
 (`web/src/lib/server/chart-config-source.ts`) اعمال می‌شود — قطع/بدشکلی
 تنظیمات یعنی کهنگی، نه خطا (قاعده‌ی ۳ قراردادها).
+
+`platforms_with_referral_overrides` دروازه‌ی دوم ندارد — طرح/دامنه‌ی نشانی
+(https + هم‌دامنه یا زیردامنه‌ی `website_url`) فقط سمت نوشتن پنل سنجیده
+می‌شود (`web/src/lib/platform-settings.ts::validateReferralUrls`، پیش از
+insert/update)؛ اینجا فقط جایگزینی رشته‌به‌رشته است، به همان اعتماد نوشتن
+پنل که `chart_color`/`chart_order` هم به آن تکیه دارند.
 """
 
 from __future__ import annotations
@@ -40,8 +49,9 @@ class PlatformSettingRow(BaseModel):
     in_chart: bool
     chart_color: str | None
     chart_order: int | None
-    # ⚠️ فقط برای تیکت پیگیر #۲۳ نگه داشته می‌شود — هیچ کد/UI ای امروز
-    # آن را نمی‌خواند یا نمایش نمی‌دهد.
+    # لینک معرف (بلیت ۲۳): تهی یعنی «override ندارد» — رجیستری/website_url
+    # همان رفتار امروز می‌ماند. `platforms_with_referral_overrides` مصرفش
+    # می‌کند.
     referral_url: str | None
     updated_at: datetime
 
@@ -136,3 +146,27 @@ def chart_config_from_settings(
             )
         )
     return tuple(entries)
+
+
+def platforms_with_referral_overrides(
+    rows: Sequence[PlatformSettingRow],
+    platforms: Sequence[Platform],
+) -> tuple[Platform, ...]:
+    """رجیستری سکوها + override نشانی معرف پنل (بلیت ۲۳).
+
+    برای هر ردیف با `referral_url` غیرخالی، سکوی هم‌اسلاگ رجیستری با
+    `model_copy(update={"referral_url": ...})` جایگزین می‌شود؛ بقیه‌ی سکوها
+    همان شیء رجیستری می‌مانند. اسلاگ ناشناخته (در `platform_settings` هست
+    ولی در رجیستری نیست) نادیده گرفته می‌شود — رجیستری تنها منبع فهرست سکوهاست.
+
+    خروجی همان ترتیب و همان اعضای ورودی `platforms` است (فقط سکوهای override
+    شده جایگزین می‌شوند) — این تابع فیلتر نمایش (`is_listed`) اعمال نمی‌کند؛
+    آن مرز جای دیگری است (`Store.save_platforms`/`get_listed_platforms`).
+    """
+    overrides = {row.slug: row.referral_url for row in rows if row.referral_url}
+    if not overrides:
+        return tuple(platforms)
+    return tuple(
+        p.model_copy(update={"referral_url": overrides[p.slug]}) if p.slug in overrides else p
+        for p in platforms
+    )
