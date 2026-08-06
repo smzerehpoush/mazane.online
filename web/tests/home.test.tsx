@@ -494,6 +494,47 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
     });
     expect(html).not.toContain("پیش‌نویس منتشرنشده");
   });
+
+  it("عکس شاخص در ستون کناری و کارت‌های پایانی: img با src/width/height/alt (بلیت ۲۵)", async () => {
+    const html = await renderHome(healthyStore(), {
+      posts: [
+        {
+          slug: "hazine-raft-o-bargasht",
+          title_fa: "هزینه‌ی رفت‌وبرگشت چیست؟",
+          body_md: "هزینه‌ی رفت‌وبرگشت یعنی مجموع اثر کارمزد خرید و فروش.",
+          status: "published",
+          published_at: "2026-08-01T09:00:00.000Z",
+          updated_at: "2026-08-01T09:00:00.000Z",
+          image_url: "https://cdn.mazane.online/posts/hazine/h.webp",
+          image_alt: "هزینه‌ی رفت‌وبرگشت طلا",
+          image_width: 1600,
+          image_height: 900,
+        },
+      ],
+    });
+    expect(html).toMatch(
+      /<img[^>]*src="https:\/\/cdn\.mazane\.online\/posts\/hazine\/h\.webp"[^>]*>/,
+    );
+    expect(html).toContain('width="1600"');
+    expect(html).toContain('height="900"');
+    expect(html).toContain('alt="هزینه‌ی رفت‌وبرگشت طلا"');
+  });
+
+  it("پستِ بدون عکس شاخص: نه در ستون کناری نه در کارت‌های پایانی img نیست", async () => {
+    const html = await renderHome(healthyStore(), {
+      posts: [
+        {
+          slug: "hazine-raft-o-bargasht",
+          title_fa: "هزینه‌ی رفت‌وبرگشت چیست؟",
+          body_md: "هزینه‌ی رفت‌وبرگشت یعنی مجموع اثر کارمزد خرید و فروش.",
+          status: "published",
+          published_at: "2026-08-01T09:00:00.000Z",
+          updated_at: "2026-08-01T09:00:00.000Z",
+        },
+      ],
+    });
+    expect(html).not.toContain("<img");
+  });
 });
 
 describe("پوسته‌ی ریشه — فارسی و راست‌به‌چپ (قاعده‌ی ۶)", () => {

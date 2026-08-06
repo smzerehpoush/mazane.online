@@ -68,9 +68,11 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
         </p>
       ) : (
         <ul className="space-y-3">
-          {posts.map((post) => (
-            <li key={post.slug}>
-              <article className="glass-surface lift-hover px-5 py-5 sm:px-6">
+          {posts.map((post) => {
+            // بلیت ۲۵: پستِ بدون عکس همان چیدمان امروز است — بدون هیچ جای خالی.
+            const image = postImageAsset(post);
+            const text = (
+              <>
                 <h2 className="text-[15px] leading-7 font-semibold sm:text-base">
                   <a
                     href={`/blog/${post.slug}`}
@@ -85,9 +87,34 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
                     {formatDateFa(post.published_at)}
                   </time>
                 </p>
-              </article>
-            </li>
-          ))}
+              </>
+            );
+            return (
+              <li key={post.slug}>
+                <article
+                  className={`glass-surface lift-hover px-5 py-5 sm:px-6 ${
+                    image !== null ? "flex items-center gap-4" : ""
+                  }`}
+                >
+                  {image !== null ? (
+                    <>
+                      <img
+                        src={image.url}
+                        width={image.width}
+                        height={image.height}
+                        alt={image.alt}
+                        loading="lazy"
+                        className="size-16 shrink-0 rounded-xl object-cover sm:size-20"
+                      />
+                      <div className="min-w-0 flex-1">{text}</div>
+                    </>
+                  ) : (
+                    text
+                  )}
+                </article>
+              </li>
+            );
+          })}
         </ul>
       )}
     </>
@@ -98,6 +125,8 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
 
 function blogPostingJsonLd(post: PublishedPost): string {
   const url = `${SITE_URL}/blog/${post.slug}`;
+  // بلیت ۲۵: image فقط وقتی عکس شاخص هست — فیلد غایب، نه تهی.
+  const image = postImageAsset(post);
   // سریال‌سازی و escape در lib/structured-data.ts (بلیت ۱۰) — همان رسم قبلی.
   return jsonLdString({
     "@context": "https://schema.org",
@@ -107,6 +136,7 @@ function blogPostingJsonLd(post: PublishedPost): string {
     datePublished: post.published_at,
     dateModified: post.updated_at,
     url,
+    ...(image !== null ? { image: image.url } : {}),
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     author: { "@type": "Organization", name: "مظنه آنلاین", url: SITE_URL },
     publisher: { "@type": "Organization", name: "مظنه آنلاین", url: SITE_URL },
@@ -123,6 +153,9 @@ export function blogPostHead(post: PublishedPost | undefined) {
   }
   const url = `${SITE_URL}/blog/${post.slug}`;
   const description = excerptFa(post.body_md);
+  // بلیت ۲۵: og:image/twitter:image فقط وقتی عکس شاخص هست — تگ‌ها اصلاً
+  // نمی‌آیند، نه با مقدار خالی (همان قید postImageAsset: چهار فیلد یا هیچ‌کدام).
+  const image = postImageAsset(post);
   return {
     meta: [
       { title: post.title_fa },
@@ -130,6 +163,15 @@ export function blogPostHead(post: PublishedPost | undefined) {
       { property: "og:title", content: post.title_fa },
       { property: "og:description", content: description },
       { property: "og:type", content: "article" },
+      ...(image !== null
+        ? [
+            { property: "og:image", content: image.url },
+            { property: "og:image:width", content: String(image.width) },
+            { property: "og:image:height", content: String(image.height) },
+            { name: "twitter:image", content: image.url },
+            { name: "twitter:card", content: "summary_large_image" },
+          ]
+        : []),
     ],
     links: [{ rel: "canonical", href: url }],
     scripts: [

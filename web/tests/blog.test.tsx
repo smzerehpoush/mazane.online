@@ -137,6 +137,30 @@ describe("فهرست بلاگ — /blog", () => {
     expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/blog` });
     expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
   });
+
+  it("کارت پست با عکس شاخص: img با src/width/height/alt (بلیت ۲۵)", async () => {
+    seedBlog([
+      {
+        ...PUBLISHED_NEW,
+        image_url: "https://cdn.mazane.online/posts/x/h.webp",
+        image_alt: "توضیح عکس",
+        image_width: 1600,
+        image_height: 900,
+      },
+      PUBLISHED_OLD,
+    ]);
+    const html = await renderIndex();
+    expect(html).toMatch(/<img[^>]*src="https:\/\/cdn\.mazane\.online\/posts\/x\/h\.webp"[^>]*>/);
+    expect(html).toContain('width="1600"');
+    expect(html).toContain('height="900"');
+    expect(html).toContain('alt="توضیح عکس"');
+  });
+
+  it("کارت پست بدون عکس: هیچ img ای نیست و چیدمان امروز دست‌نخورده می‌ماند", async () => {
+    seedBlog([PUBLISHED_OLD]);
+    const html = await renderIndex();
+    expect(html).not.toContain("<img");
+  });
 });
 
 describe("صفحه‌ی پست — /blog/[slug]", () => {
