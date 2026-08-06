@@ -138,6 +138,9 @@ services:
       MAZANE_REDIS_URL: redis://redis:6379/0
       MAZANE_DATABASE_URL: postgresql://${POSTGRES_USER:-mazane}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-mazane}
       MAZANE_REVALIDATE_TOKEN: ${MAZANE_REVALIDATE_TOKEN:?}
+      # پنل مدیریت (بلیت ۲۰) — هش رمز، نه خودِ رمز؛ تولیدش در رانبوک (۱.۴).
+      MAZANE_ADMIN_PASSWORD_HASH: ${MAZANE_ADMIN_PASSWORD_HASH:?MAZANE_ADMIN_PASSWORD_HASH را در .env مقدار بدهید — رانبوک بند ۱.۴}
+      MAZANE_ADMIN_SESSION_SECRET: ${MAZANE_ADMIN_SESSION_SECRET:?MAZANE_ADMIN_SESSION_SECRET را در .env مقدار بدهید — رانبوک بند ۱.۴}
     # فقط loopback میزبان — برای راستی‌آزمایی از خود سرور (curl 127.0.0.1:3300).
     # مظنه ۸۰/۴۴۳ را نمی‌گیرد؛ ترافیک واقعی از کدیِ لبه روی شبکه‌ی mazane-edge
     # می‌آید، نه از این درگاه. (اتصال کدی به loopback میزبان از داخل کانتینر

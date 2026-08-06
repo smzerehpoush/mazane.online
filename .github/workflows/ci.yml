@@ -79,6 +79,16 @@ jobs:
             exit 1
           fi
 
+      # قاعده‌ی سخت ۶ قراردادها: باندل کلاینت هیچ ردی از احراز هویت/نشست
+      # پنل مدیریت (بلیت ۲۰) ندارد. گرپ روی خروجی بیلد است تا از راه یک
+      # import اشتباه هم برنگردد — نه فقط منبع.
+      - name: No admin-auth secrets in the client bundle
+        run: |
+          if grep -rIlE "scryptSync|MAZANE_ADMIN_PASSWORD_HASH|MAZANE_ADMIN_SESSION_SECRET|mazane_admin_session" .output/public; then
+            echo "::error::ردی از منطق/env احراز هویت پنل در باندل کلاینت پیدا شد"
+            exit 1
+          fi
+
       - name: Typecheck
         run: npm run typecheck
 

@@ -11,10 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as DarbarePishnahadRouteImport } from './routes/darbare-pishnahad'
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as ApiAdminLoginRouteImport } from './routes/api/admin-login'
+import { Route as ApiAdminLogoutRouteImport } from './routes/api/admin-logout'
 import { Route as ApiPostViewRouteImport } from './routes/api/post-view'
 import { Route as ApiPricesRouteImport } from './routes/api/prices'
 import { Route as ApiRevalidateBlogRouteImport } from './routes/api/revalidate-blog'
@@ -30,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
 const SlugRoute = SlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DarbarePishnahadRoute = DarbarePishnahadRouteImport.update({
@@ -50,6 +60,26 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const ApiAdminLoginRoute = ApiAdminLoginRouteImport.update({
+  id: '/api/admin-login',
+  path: '/api/admin-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminLogoutRoute = ApiAdminLogoutRouteImport.update({
+  id: '/api/admin-logout',
+  path: '/api/admin-logout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPostViewRoute = ApiPostViewRouteImport.update({
@@ -85,16 +115,21 @@ const GoSlugRoute = GoSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
   '/darbare-pishnahad': typeof DarbarePishnahadRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/go/$slug': typeof GoSlugRoute
+  '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRoutesByTo {
@@ -104,42 +139,56 @@ export interface FileRoutesByTo {
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/go/$slug': typeof GoSlugRoute
+  '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
   '/darbare-pishnahad': typeof DarbarePishnahadRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/go/$slug': typeof GoSlugRoute
+  '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/$slug'
     | '/darbare-pishnahad'
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/login'
+    | '/api/admin-login'
+    | '/api/admin-logout'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
     | '/blog/$slug'
     | '/go/$slug'
+    | '/admin/'
     | '/blog/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -149,35 +198,47 @@ export interface FileRouteTypes {
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/login'
+    | '/api/admin-login'
+    | '/api/admin-logout'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
     | '/blog/$slug'
     | '/go/$slug'
+    | '/admin'
     | '/blog'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/$slug'
     | '/darbare-pishnahad'
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/admin/login'
+    | '/api/admin-login'
+    | '/api/admin-logout'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
     | '/blog/$slug'
     | '/go/$slug'
+    | '/admin/'
     | '/blog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   SlugRoute: typeof SlugRoute
   DarbarePishnahadRoute: typeof DarbarePishnahadRoute
   MazaneChistRoute: typeof MazaneChistRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiAdminLoginRoute: typeof ApiAdminLoginRoute
+  ApiAdminLogoutRoute: typeof ApiAdminLogoutRoute
   ApiPostViewRoute: typeof ApiPostViewRoute
   ApiPricesRoute: typeof ApiPricesRoute
   ApiRevalidateBlogRoute: typeof ApiRevalidateBlogRoute
@@ -200,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/$slug'
       fullPath: '/$slug'
       preLoaderRoute: typeof SlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/darbare-pishnahad': {
@@ -228,6 +296,34 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/api/admin-login': {
+      id: '/api/admin-login'
+      path: '/api/admin-login'
+      fullPath: '/api/admin-login'
+      preLoaderRoute: typeof ApiAdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin-logout': {
+      id: '/api/admin-logout'
+      path: '/api/admin-logout'
+      fullPath: '/api/admin-logout'
+      preLoaderRoute: typeof ApiAdminLogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/post-view': {
@@ -275,13 +371,30 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteRouteChildren {
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminLoginRoute: AdminLoginRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   SlugRoute: SlugRoute,
   DarbarePishnahadRoute: DarbarePishnahadRoute,
   MazaneChistRoute: MazaneChistRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiAdminLoginRoute: ApiAdminLoginRoute,
+  ApiAdminLogoutRoute: ApiAdminLogoutRoute,
   ApiPostViewRoute: ApiPostViewRoute,
   ApiPricesRoute: ApiPricesRoute,
   ApiRevalidateBlogRoute: ApiRevalidateBlogRoute,

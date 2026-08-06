@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "start": "node .output/server/index.mjs",
     "test": "vitest run",
+    "admin:hash-password": "node scripts/hash-admin-password.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
