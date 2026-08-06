@@ -18,11 +18,23 @@
  * الزام بند ۶.۲ سند معماری.
  *
  * جزئیات هر ردیف با <details> باز می‌شود — بدون هیچ جاوااسکریپتی.
- * ISR + به‌روزرسان کلاینت بلیت‌های بعدی‌اند (بلیت ۸)؛ این صفحه client JS ندارد.
+ *
+ * بلیت ۸ — ISR شصت‌ثانیه‌ای + به‌روزرسان زنده (بند ۶.۲؛ تصمیم ۱۳):
+ * صفحه با revalidate=60 رندر می‌شود، پس ردیس حداکثر یک بار در دقیقه خوانده
+ * می‌شود و build بدون ردیس هم از مسیر «استور در دسترس نیست» (کهنگی، نه
+ * خطا) سبز است. بعد از hydration، <LivePricesUpdater> هر ۳۰ ثانیه
+ * ‎/api/prices‎ را می‌خواند و فقط متن گره‌های data-live (قیمت/برچسب زمان)
+ * را درجا عوض می‌کند. انتخاب عمدی و مستند: ترتیب ردیف‌ها، دلتاها و
+ * داده‌ی ساخت‌یافته (بلیت ۱۰) فقط با رندر ISR تازه می‌شوند — اگر
+ * ارزان‌ترین سکو بین دو رندر جابه‌جا شود، ترتیب تا رندر بعدی (حداکثر ۶۰
+ * ثانیه) قدیمی می‌ماند؛ بازمرتب‌سازی کلاینتی با سمانتیک ترتیبِ سروررندر
+ * تناقض دارد. suppressHydrationWarning فقط روی همان گره‌های متنی است که
+ * به‌روزرسان ممکن است پیش از پایان hydration عوض کرده باشد.
  */
 import { Fragment } from "react";
 
 import { AdSlot, type EditorialPick } from "./ad-slot";
+import { LivePricesUpdater } from "./live-prices-updater";
 import {
   formatDateFa,
   formatMinutesAgoFa,
@@ -32,41 +44,27 @@ import {
   isStale,
   minutesSince,
 } from "../lib/format";
+import { STALE_SUFFIX_FA } from "../lib/live-update";
 import {
-  getListedPlatforms,
-  getPlatformSnapshot,
-  getUpdatedAt,
   type ListedPlatform,
   type PlatformSnapshot,
   type PlatformTerms,
-  type Quote,
 } from "../lib/prices";
+import {
+  effectiveBuy,
+  fetchRows,
+  findQuote,
+  hasUnknownFee,
+  midPrice,
+  type Row,
+} from "../lib/rows";
 
-export const dynamic = "force-dynamic";
-
-interface Row {
-  platform: ListedPlatform;
-  snapshot: PlatformSnapshot | null;
-  updatedAt: string | null;
-}
-
-function findQuote(quotes: Quote[], side: Quote["side"]): Quote | null {
-  return quotes.find((q) => q.side === side && q.instrument === "GOLD_18K") ?? null;
-}
-
-function effectiveBuy(row: Row): number | null {
-  if (row.snapshot === null) return null;
-  return findQuote(row.snapshot.quotes, "BUY")?.price_toman ?? null;
-}
-
-function midPrice(row: Row): number | null {
-  if (row.snapshot === null) return null;
-  return findQuote(row.snapshot.quotes, "MID")?.price_toman ?? null;
-}
-
-function hasUnknownFee(row: Row): boolean {
-  return row.snapshot !== null && row.snapshot.terms.fee_source === "UNKNOWN";
-}
+/**
+ * ISR شصت‌ثانیه‌ای (بند ۶.۲ — تصمیم قطعی رندر). force-dynamic برداشته شد؛
+ * درخواستِ بعد از انقضا نسخه‌ی کهنه را فوری می‌گیرد و بازتولید در پس‌زمینه
+ * انجام می‌شود — هیچ خزنده/کاربری منتظر ردیس نمی‌ماند.
+ */
+export const revalidate = 60;
 
 /**
  * سه گروه نمایش (تصمیم ۱۸): مؤثرِ معلوم‌ها صعودی؛ بعد «کارمزد نامشخص»
@@ -119,15 +117,27 @@ function editorialPick(rows: Row[]): EditorialPick | null {
   };
 }
 
+/**
+ * برچسب زمان داخل خود HTML (الزام بند ۶.۲) با قلاب‌های data-live برای
+ * به‌روزرسان زنده (بلیت ۸). گره‌ی کهنگی همیشه هست (وقتی تازه است تهی) تا
+ * سوآپ کلاینت فقط متن عوض کند، نه ساختار DOM.
+ */
 function Staleness({ updatedAt, nowMs }: { updatedAt: string | null; nowMs: number }) {
   if (updatedAt === null) {
+    // سکوی بی‌سابقه قلاب زنده ندارد — با آمدن اولین داده، رندر بعدی ISR
+    // (حداکثر ۶۰ ثانیه بعد) نشانش می‌دهد.
     return <span>هنوز داده‌ای ثبت نشده است</span>;
   }
   const minutes = minutesSince(updatedAt, nowMs);
   return (
     <>
-      به‌روزرسانی: <time dateTime={updatedAt}>{formatMinutesAgoFa(minutes)}</time>
-      {isStale(minutes) ? <strong> (کهنه)</strong> : null}
+      به‌روزرسانی:{" "}
+      <time dateTime={updatedAt} data-live="updated-at" suppressHydrationWarning>
+        {formatMinutesAgoFa(minutes)}
+      </time>
+      <strong data-live="stale" suppressHydrationWarning>
+        {isStale(minutes) ? STALE_SUFFIX_FA : null}
+      </strong>
     </>
   );
 }
@@ -298,7 +308,13 @@ function KnownRow({
           <MarketModelBadge platform={row.platform} />
           <ClosedBadges terms={snapshot.terms} />
         </th>
-        <td>{formatToman(buy)} تومان</td>
+        <td>
+          {/* فقط خود عدد قلاب زنده دارد؛ «تومان» و دلتا مال رندر ISR اند. */}
+          <span data-live="price" suppressHydrationWarning>
+            {formatToman(buy)}
+          </span>{" "}
+          تومان
+        </td>
         <DeltaCell buy={buy} cheapestBuy={cheapestBuy} />
         <td>
           <Staleness updatedAt={row.updatedAt} nowMs={nowMs} />
@@ -325,7 +341,10 @@ function UnknownFeeRow({ row, nowMs }: { row: Row; nowMs: number }) {
             "قیمت در دسترس نیست"
           ) : (
             <>
-              {formatToman(mid)} تومان{" "}
+              <span data-live="price" suppressHydrationWarning>
+                {formatToman(mid)}
+              </span>{" "}
+              تومان{" "}
               <span
                 title="کارمزد این سکو اعلام نشده است؛ این قیمت میانیِ بدون کارمزد است و با قیمت‌های مؤثر ستون بالا هم‌مقایسه نیست."
                 style={{ fontSize: "0.8em", color: "#8a6d1a" }}
@@ -363,18 +382,9 @@ function UnpricedRow({ row, nowMs }: { row: Row; nowMs: number }) {
 }
 
 export default async function Home() {
-  const platforms = await getListedPlatforms();
+  // همان لایه‌ی مشترک ‎lib/rows.ts‎ که ‎/api/prices‎ هم می‌خواند (بلیت ۸).
+  const rows: Row[] = await fetchRows();
   const nowMs = Date.now();
-
-  const rows: Row[] = await Promise.all(
-    platforms.map(async (platform) => {
-      const [snapshot, updatedAt] = await Promise.all([
-        getPlatformSnapshot(platform.slug),
-        getUpdatedAt(platform.slug),
-      ]);
-      return { platform, snapshot, updatedAt };
-    }),
-  );
 
   const { known, unknown, unpriced } = groupRows(rows);
   const cheapestBuy = known.length > 0 ? (effectiveBuy(known[0]) as number) : null;
@@ -445,6 +455,9 @@ export default async function Home() {
       </section>
 
       <AdSlot position="bottom" pick={pick} />
+
+      {/* هیچ HTML ای ندارد — polling سی‌ثانیه‌ای بعد از hydration (بلیت ۸). */}
+      <LivePricesUpdater />
     </main>
   );
 }
