@@ -23,6 +23,7 @@ from typing import Protocol
 from ..instruments import InstrumentListing
 from ..models import Platform, PlatformSnapshot
 from ..references import ReferenceSnapshot
+from ..settings import ChartConfigEntry
 
 
 class Store(Protocol):
@@ -64,6 +65,17 @@ class Store(Protocol):
         قاعده‌ی نمایش (404 برای دروازه‌ی رد) با لایه‌ی وب است ولی پرچمش اینجاست."""
         ...
 
+    async def save_chart_config(self, entries: Sequence[ChartConfigEntry]) -> None:
+        """سری‌های نمودار صفحه‌ی اصلی (بلیت ۲۱) — همگام‌شده از تنظیمات پنل
+        (`platform_settings` در پستگرس) به‌وسیله‌ی `settings_sync_loop`.
+        فراداده است نه قیمت: بدون TTL، مثل `mazane:listed`."""
+        ...
+
+    async def get_chart_config(self) -> tuple[ChartConfigEntry, ...]:
+        """آخرین سری‌های نمودار همگام‌شده — تهی یعنی «هنوز تنظیم نشده»،
+        نه خطا؛ وب در این حالت به فهرست پیش‌فرض کد برمی‌گردد."""
+        ...
+
 
 class MultiStore:
     """یک نوشتن، چند مقصد (ردیس + پستگرس). خواندن از مقصد اول."""
@@ -101,3 +113,10 @@ class MultiStore:
 
     async def get_instruments(self) -> tuple[InstrumentListing, ...]:
         return await self._stores[0].get_instruments()
+
+    async def save_chart_config(self, entries: Sequence[ChartConfigEntry]) -> None:
+        for store in self._stores:
+            await store.save_chart_config(entries)
+
+    async def get_chart_config(self) -> tuple[ChartConfigEntry, ...]:
+        return await self._stores[0].get_chart_config()

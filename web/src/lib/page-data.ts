@@ -20,7 +20,12 @@ import type { PublishedPost } from "./blog";
 import type { HistoryQuery, PlatformHistory } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
 import type { Row } from "./rows";
-import { chartSeriesConfig, HOME_CHART_HOURS, HOME_INSTRUMENT } from "./site-content";
+import {
+  chartSeriesConfig,
+  HOME_CHART_HOURS,
+  HOME_INSTRUMENT,
+  type ChartPlatformConfig,
+} from "./site-content";
 import type { SlugResolution } from "./slugs";
 import type { ViewCounts } from "./views";
 
@@ -49,10 +54,17 @@ export interface HomeReaders {
    * (فیک‌های قدیمی تست بدون این هم معتبرند.)
    */
   getViewCounts?(): Promise<ViewCounts>;
+  /**
+   * اختیاری: پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱، `mazane:chart_config`
+   * ردیس). `undefined` یا نبودِ این خواننده یعنی فهرست پیش‌فرض کد
+   * (`chartSeriesConfig()` بدون آرگومان) — نه خطا؛ فرود امن در
+   * `chartSeriesConfig` است.
+   */
+  getChartPlatforms?(): Promise<readonly ChartPlatformConfig[] | undefined>;
 }
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
-  const chartPlatforms = chartSeriesConfig();
+  const chartPlatforms = chartSeriesConfig(await read.getChartPlatforms?.());
   const [rows, history, posts, viewCounts] = await Promise.all([
     read.fetchRows(),
     read.getPlatformHistory({
@@ -97,9 +109,7 @@ export async function assembleSlugPage(
   const generatedAt = new Date().toISOString();
 
   if (resolved.kind === "instrument") {
-    const rows = await read.fetchRowsForPlatforms(
-      resolved.listing.supporting_platform_slugs,
-    );
+    const rows = await read.fetchRowsForPlatforms(resolved.listing.supporting_platform_slugs);
     return {
       kind: "instrument",
       listing: resolved.listing,
@@ -120,9 +130,7 @@ export async function assembleSlugPage(
     snapshot,
     updatedAt,
     hasOutbound: (platform.referral_url ?? platform.website_url) != null,
-    instrumentNames: Object.fromEntries(
-      instruments.map((item) => [item.instrument, item.name_fa]),
-    ),
+    instrumentNames: Object.fromEntries(instruments.map((item) => [item.instrument, item.name_fa])),
     generated_at: generatedAt,
   };
 }

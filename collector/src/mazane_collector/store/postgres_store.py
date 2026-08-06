@@ -37,6 +37,7 @@ from ..references import (
     ReferenceSnapshot,
 )
 from ..retention import HourlyRollup, RawRow, RollupKey, SourceKind
+from ..settings import ChartConfigEntry
 
 _INSERT_QUOTE = """
 insert into quotes
@@ -319,6 +320,16 @@ class PostgresStore:
                         for q in snapshot.quotes
                     ],
                 )
+
+    async def save_chart_config(self, entries: Sequence[ChartConfigEntry]) -> None:
+        """No-op عمدی: منبع حقیقت تنظیمات نمودار همین جدول `platform_settings`
+        پستگرس است (که پنل مستقیم می‌نویسد) — این استور چیز تازه‌ای برای
+        ذخیره ندارد، فقط ردیس (استور اول در MultiStore) کلید جاری را نگه
+        می‌دارد (همان دلیل `save_instruments`)."""
+
+    async def get_chart_config(self) -> tuple[ChartConfigEntry, ...]:
+        """خواندن از مقصد اول (ردیس) انجام می‌شود؛ اینجا چیزی ذخیره نیست."""
+        return ()
 
     async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
         async with self._pool.acquire() as conn:

@@ -16,6 +16,7 @@ import { setViewCounter, type ViewCounts } from "../../src/lib/views";
 import { getPlatformHistory, setHistorySource, type PlatformHistory } from "../../src/lib/history";
 import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
 import { listInstruments } from "../../src/lib/catalog";
+import type { ChartPlatformConfig } from "../../src/lib/site-content";
 import {
   getPlatformSnapshot,
   getUpdatedAt,
@@ -170,12 +171,25 @@ export function seedEmptyPrices(): void {
  */
 export async function homeData(
   store: SeededStore,
-  extra: { history?: PlatformHistory[]; posts?: BlogPost[]; views?: ViewCounts } = {},
+  extra: {
+    history?: PlatformHistory[];
+    posts?: BlogPost[];
+    views?: ViewCounts;
+    /**
+     * پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱) — `undefined` یعنی خواننده
+     * اصلاً صدا زده نمی‌شود (همان مسیر پیش از این تیکت)؛ مقدار داده‌شده
+     * (حتی `undefined` صریح از سمت خودِ خواننده) یعنی خواننده هست ولی
+     * ممکن است چیزی نداشته باشد — فرود امن در `chartSeriesConfig` سنجیده
+     * می‌شود.
+     */
+    chartPlatforms?: readonly ChartPlatformConfig[] | undefined;
+  } = {},
 ): Promise<HomePageData> {
   seed(store);
   seedHistory(extra.history ?? []);
   seedBlog(extra.posts ?? []);
   const views = extra.views;
+  const hasChartPlatformsReader = "chartPlatforms" in extra;
   return assembleHomeData({
     fetchRows,
     getPlatformHistory,
@@ -183,6 +197,7 @@ export async function homeData(
     // نبودِ خواننده عمداً حالت معتبری است — همان مسیری که تا پیش از آمدن
     // شمارنده اجرا می‌شد و باید همچنان کار کند.
     ...(views === undefined ? {} : { getViewCounts: async () => views }),
+    ...(hasChartPlatformsReader ? { getChartPlatforms: async () => extra.chartPlatforms } : {}),
   });
 }
 

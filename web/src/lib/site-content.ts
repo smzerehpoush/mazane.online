@@ -57,19 +57,78 @@ const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
   { slug: "wallgold", name_fa: "وال‌گلد", color: "#e0921d" },
 ];
 
+/** بازه‌ی مجاز شمار سکوی نمودار (بند ۵ طراحی بلیت ۲۱). */
+export const MIN_CHART_PLATFORMS = 2;
+export const MAX_CHART_PLATFORMS = 6;
+
+const CHART_COLOR_RE = /^#[0-9a-f]{6}$/i;
+
+/** رنگ نمودار معتبر است؟ (`#rrggbb`، بی‌حساسیت به حروف بزرگ/کوچک). */
+export function isValidChartColor(color: string): boolean {
+  return CHART_COLOR_RE.test(color);
+}
+
+/**
+ * فهرستی از پیکربندی نمودار برای رندر واقعاً معتبر است؟ شمار در بازه‌ی
+ * مجاز، هر عضو اسلاگ/رنگ درست‌شکل دارد و اسلاگ‌ها یکتا هستند. خالص و
+ * بی‌وابستگی — هم در `chartSeriesConfig` (فرود امن) و هم در
+ * `lib/server/chart-config-source.ts` (پارس payload ردیس) استفاده می‌شود.
+ */
+export function isValidChartPlatformList(list: readonly ChartPlatformConfig[]): boolean {
+  if (list.length < MIN_CHART_PLATFORMS || list.length > MAX_CHART_PLATFORMS) return false;
+  const seen = new Set<string>();
+  for (const platform of list) {
+    if (typeof platform !== "object" || platform === null) return false;
+    if (typeof platform.slug !== "string" || platform.slug.length === 0) return false;
+    if (typeof platform.name_fa !== "string") return false;
+    if (typeof platform.color !== "string" || !isValidChartColor(platform.color)) return false;
+    if (seen.has(platform.slug)) return false;
+    seen.add(platform.slug);
+  }
+  return true;
+}
+
 /**
  * تک نقطه‌ی دسترسی به پیکربندی سری‌های نمودار — **هر دو** مصرف‌کننده
  * (ساخت نمای خط‌ها در `home-view.tsx` و ساخت پرس‌وجوی تاریخچه در
  * `page-data.ts`) فقط از اینجا می‌خوانند، نه مستقیم از ثابت کد.
  *
- * امروز فقط همان فهرست ثابت را برمی‌گرداند — هنوز هیچ منبع داده‌ای در کار
- * نیست. تیکت پیگیر (تنظیمات سکو، #21) بدنه‌ی همین تابع را به یک منبع
- * تزریق‌پذیر (تنظیمات سکو در پستگرس) وصل می‌کند تا مالک سایت از پنل مدیریت
- * عضویت و رنگ نمودار را عوض کند؛ امضای این تابع و مصرف‌کننده‌هایش دست‌نخورده
- * می‌ماند.
+ * `override` پیکربندی زنده‌ای است که `page-data.ts::assembleHomeData` از
+ * تنظیمات پنل (`HomeReaders.getChartPlatforms?`) می‌گیرد. فرود امن اینجاست:
+ * نبودِ override یا نامعتبر بودنش (شمار خارج از بازه، رنگ بدشکل، اسلاگ
+ * تکراری) ⟸ همان فهرست ثابت کد، **نه خطا** (قاعده‌ی ۵ قراردادها — تنظیمات
+ * هم مثل قیمت، قطع/کهنگی یعنی برگشت به پیش‌فرض). صدا زدن بدون آرگومان
+ * همیشه همان فهرست ثابت پیشین را می‌دهد.
  */
-export function chartSeriesConfig(): readonly ChartPlatformConfig[] {
+export function chartSeriesConfig(
+  override?: readonly ChartPlatformConfig[],
+): readonly ChartPlatformConfig[] {
+  if (override !== undefined && isValidChartPlatformList(override)) return override;
   return CHART_PLATFORMS;
+}
+
+/**
+ * پارس payload خام کلید ردیس `mazane:chart_config` (گردآورنده هر ~۲۰ ثانیه
+ * از تنظیمات پنل می‌نویسد — `collector/src/mazane_collector/settings.py`).
+ *
+ * خالص و بی‌وابستگی به `ioredis` تا فرود امن («کلید نبود، JSON بدشکل، یا
+ * کمتر از ۲/بیش از ۶ ورودی معتبر ⟸ `undefined`») بدون ردیس واقعی تست شود.
+ * مصرف‌کننده: `lib/server/chart-config-source.ts`.
+ */
+export function parseChartConfigPayload(
+  raw: string | null,
+): readonly ChartPlatformConfig[] | undefined {
+  if (raw === null) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  if (!Array.isArray(parsed)) return undefined;
+  return isValidChartPlatformList(parsed as ChartPlatformConfig[])
+    ? (parsed as ChartPlatformConfig[])
+    : undefined;
 }
 
 /**

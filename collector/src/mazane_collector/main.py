@@ -5,7 +5,7 @@
 مستند)، و در شکست فقط لاگ — قطع منبع (و قطع وب‌سوکت) کهنگی است، نه خطا؛
 هیچ حلقه‌ای هرگز نمی‌میرد.
 
-شش تسک موازی:
+هفت تسک موازی:
 - حلقه‌ی سکوها (۳۰ ثانیه): همه‌ی آداپترها + چک میانه + فهرست عمومی.
   fetch با `compose_fetch` ساخته می‌شود: داریک «دو خوراک، یک سکو» است —
   فریم تازه‌ی وب‌سوکت اگر بود، وگرنه REST؛ اینوی فقط وب‌سوکت است و سکوت
@@ -20,6 +20,11 @@
   پیش‌نویس بلاگ را با سقف روزانه‌ی سمت سرور خالی می‌کند — مستقل از شمار
   پیش‌نویس‌ها — و عمق صف را می‌سنجد (هشدار زیر ۵ روز). سیاست‌ها در
   `mazane_collector.content` مستندند.
+- حلقه‌ی تنظیمات سکو (۲۰ ثانیه، بلیت ۲۱ — فقط روی پستگرس + ردیس): جدول
+  `platform_settings` را می‌خواند (پنل نوشته)، عضویت/رنگ/ترتیب نمودار را
+  می‌سازد و به `mazane:chart_config` ردیس می‌نویسد — بدون انتشار تازه‌ی
+  وب، تغییر پنل تا نیم دقیقه بعد روی سایت زنده دیده می‌شود. سیاست در
+  `mazane_collector.settings` مستند است.
 - دو کلاینت وب‌سوکت reconnect دار (داریک SignalR، اینوی) که فقط کش فریم
   را پر می‌کنند.
 
@@ -79,6 +84,7 @@ from .references.pipeline import REFERENCE_SOURCES, collect_reference_round
 from .references.transport import HttpxReferenceTransport, RobotsCheckedTransport
 from .retention import retention_pass
 from .robots import RobotsGate, robots_checked_fetch
+from .settings import PostgresSettingsGateway, chart_config_from_settings
 from .store import MultiStore
 from .store.postgres_store import PostgresStore
 from .store.redis_store import RedisStore
@@ -95,6 +101,10 @@ RETENTION_INTERVAL_SECONDS = 3600
 # مانده؟» — سقف روزانه داخل publish_due است، پس گذر زودهنگام/جامانده بی‌ضرر
 # است و ۱۵ دقیقه تأخیر بدترین حالت انتشار سررسید است.
 CONTENT_DRAIN_INTERVAL_SECONDS = 900
+# تنظیمات پنل (بلیت ۲۱): فقط یک کپی‌کردن جدول کوچک به ردیس است، نه گردآوری
+# شبکه‌ای — ۲۰ ثانیه یعنی تغییر پنل «تا نیم دقیقه بعد» روی سایت زنده دیده
+# می‌شود (معیار پذیرش تیکت)، بدون فشار محسوس روی پستگرس.
+SETTINGS_SYNC_INTERVAL_SECONDS = 20
 USER_AGENT = "MazaneBot/0.1 (+https://mazane.online/about)"
 HTTP_TIMEOUT_SECONDS = 15
 
@@ -174,6 +184,8 @@ async def run() -> None:
     # صف محتوا (بلیت ۱۳) هم فقط پستگرسی است — همان pool، دروازه‌ی جدای posts.
     content_gateway = PostgresContentGateway(pool)
     daily_publish_cap = daily_publish_cap_from_env()
+    # تنظیمات پنل (بلیت ۲۱) هم همان pool مشترک — جدول جدای platform_settings.
+    settings_gateway = PostgresSettingsGateway(pool)
 
     # follow_redirects + cookie jar خود کلاینت: دست‌دهی ArvanCloud ملی‌گلد
     # (۳۰۷ + کوکی — auth نیست؛ سند تحقیق ۰۱، بند ۸.۲) و توکن /json بن‌بست.
@@ -289,11 +301,34 @@ async def run() -> None:
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, CONTENT_DRAIN_INTERVAL_SECONDS - elapsed))
 
+        async def settings_sync_loop() -> None:
+            """پنل ⟸ پستگرس (`platform_settings`) ⟸ (این حلقه) ⟸ ردیس
+            (`mazane:chart_config`) ⟸ نمودار زنده — بدون انتشار تازه (بلیت ۲۱).
+
+            `listed_platforms` عمداً از رجیستری کد است، نه از استور: ثابت و
+            بی‌نیاز به ردیس گرم‌شده، و همان تعریف «قابل نمایش» (data_policy=
+            ALLOWED) که بقیه‌ی گردآورنده استفاده می‌کند.
+            """
+            listed_platforms = tuple(p for p in PLATFORMS if p.is_listed)
+            while True:
+                started = time.monotonic()
+                try:
+                    settings_rows = await settings_gateway.list_platform_settings()
+                    config = chart_config_from_settings(settings_rows, listed_platforms)
+                    await store.save_chart_config(config)
+                    log.info("نوبت تنظیمات سکو: %s سری در نمودار", len(config))
+                except Exception:
+                    # مثل بقیه‌ی حلقه‌ها: شکست فقط لاگ می‌شود؛ کلید قبلی می‌ماند.
+                    log.exception("نوبت تنظیمات سکو شکست خورد")
+                elapsed = time.monotonic() - started
+                await asyncio.sleep(max(0.0, SETTINGS_SYNC_INTERVAL_SECONDS - elapsed))
+
         await asyncio.gather(
             platform_loop(),
             reference_loop(),
             retention_loop(),
             content_loop(),
+            settings_sync_loop(),
             daric_feed.run(),
             invi_feed.run(),
         )

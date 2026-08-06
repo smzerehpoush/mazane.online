@@ -18,8 +18,10 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
+import { Route as AdminPlatformsRouteImport } from './routes/admin/platforms'
 import { Route as ApiAdminLoginRouteImport } from './routes/api/admin-login'
 import { Route as ApiAdminLogoutRouteImport } from './routes/api/admin-logout'
+import { Route as ApiAdminPlatformSettingsRouteImport } from './routes/api/admin-platform-settings'
 import { Route as ApiPostViewRouteImport } from './routes/api/post-view'
 import { Route as ApiPricesRouteImport } from './routes/api/prices'
 import { Route as ApiRevalidateBlogRouteImport } from './routes/api/revalidate-blog'
@@ -72,6 +74,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminPlatformsRoute = AdminPlatformsRouteImport.update({
+  id: '/platforms',
+  path: '/platforms',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const ApiAdminLoginRoute = ApiAdminLoginRouteImport.update({
   id: '/api/admin-login',
   path: '/api/admin-login',
@@ -82,6 +89,12 @@ const ApiAdminLogoutRoute = ApiAdminLogoutRouteImport.update({
   path: '/api/admin-logout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminPlatformSettingsRoute =
+  ApiAdminPlatformSettingsRouteImport.update({
+    id: '/api/admin-platform-settings',
+    path: '/api/admin-platform-settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPostViewRoute = ApiPostViewRouteImport.update({
   id: '/api/post-view',
   path: '/api/post-view',
@@ -122,8 +135,10 @@ export interface FileRoutesByFullPath {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/platforms': typeof AdminPlatformsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
+  '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -140,8 +155,10 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/platforms': typeof AdminPlatformsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
+  '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -160,8 +177,10 @@ export interface FileRoutesById {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/login': typeof AdminLoginRoute
+  '/admin/platforms': typeof AdminPlatformsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
+  '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -181,8 +200,10 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/admin/login'
+    | '/admin/platforms'
     | '/api/admin-login'
     | '/api/admin-logout'
+    | '/api/admin-platform-settings'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -199,8 +220,10 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/admin/login'
+    | '/admin/platforms'
     | '/api/admin-login'
     | '/api/admin-logout'
+    | '/api/admin-platform-settings'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -218,8 +241,10 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/admin/login'
+    | '/admin/platforms'
     | '/api/admin-login'
     | '/api/admin-logout'
+    | '/api/admin-platform-settings'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -239,6 +264,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminLogoutRoute: typeof ApiAdminLogoutRoute
+  ApiAdminPlatformSettingsRoute: typeof ApiAdminPlatformSettingsRoute
   ApiPostViewRoute: typeof ApiPostViewRoute
   ApiPricesRoute: typeof ApiPricesRoute
   ApiRevalidateBlogRoute: typeof ApiRevalidateBlogRoute
@@ -312,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/platforms': {
+      id: '/admin/platforms'
+      path: '/platforms'
+      fullPath: '/admin/platforms'
+      preLoaderRoute: typeof AdminPlatformsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/api/admin-login': {
       id: '/api/admin-login'
       path: '/api/admin-login'
@@ -324,6 +357,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin-logout'
       fullPath: '/api/admin-logout'
       preLoaderRoute: typeof ApiAdminLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin-platform-settings': {
+      id: '/api/admin-platform-settings'
+      path: '/api/admin-platform-settings'
+      fullPath: '/api/admin-platform-settings'
+      preLoaderRoute: typeof ApiAdminPlatformSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/post-view': {
@@ -373,11 +413,13 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
+  AdminPlatformsRoute: typeof AdminPlatformsRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
+  AdminPlatformsRoute: AdminPlatformsRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
@@ -395,6 +437,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminLogoutRoute: ApiAdminLogoutRoute,
+  ApiAdminPlatformSettingsRoute: ApiAdminPlatformSettingsRoute,
   ApiPostViewRoute: ApiPostViewRoute,
   ApiPricesRoute: ApiPricesRoute,
   ApiRevalidateBlogRoute: ApiRevalidateBlogRoute,

@@ -14,6 +14,9 @@
     mazane:reference:{slug}   ← JSON کامل ReferenceSnapshot (با ذکر منبع)، با TTL
                                 — مرجع قیمت سکو نیست و هرگز در mazane:listed
                                 یا mazane:current نمی‌آید (بند ۱۲.۲)
+    mazane:chart_config       ← آرایه‌ی JSON سری‌های نمودار صفحه‌ی اصلی (بلیت
+                                ۲۱)، همگام‌شده از تنظیمات پنل — بدون TTL،
+                                فراداده است نه قیمت
 
 وب `mazane:listed` را همان‌طور که هست رندر می‌کند — فیلتر نمایش عمومی
 (گلدیکا و هر PERMISSION_PENDING دیگر) همین‌جا اعمال شده است، نه در وب.
@@ -29,6 +32,7 @@ from typing import Any
 from ..instruments import InstrumentListing
 from ..models import Platform, PlatformSnapshot
 from ..references import ReferenceSnapshot
+from ..settings import ChartConfigEntry
 
 DEFAULT_PRICE_TTL_SECONDS = 120
 # مراجع با آهنگ کندتر (مؤدبانه) گردآوری می‌شوند ⟸ TTL بلندتر؛ کهنگی را
@@ -37,6 +41,7 @@ DEFAULT_REFERENCE_TTL_SECONDS = 900
 
 LISTED_KEY = "mazane:listed"
 INSTRUMENTS_KEY = "mazane:instruments"
+CHART_CONFIG_KEY = "mazane:chart_config"
 
 
 def current_key(platform_slug: str) -> str:
@@ -129,3 +134,15 @@ class RedisStore:
         if raw is None:
             return None
         return ReferenceSnapshot.model_validate_json(raw)
+
+    async def save_chart_config(self, entries: Sequence[ChartConfigEntry]) -> None:
+        payload = [entry.model_dump(mode="json") for entry in entries]
+        # بدون TTL — فراداده‌ی نمودار است نه قیمت، مثل mazane:listed.
+        await self._client.set(CHART_CONFIG_KEY, json.dumps(payload, ensure_ascii=False))
+
+    async def get_chart_config(self) -> tuple[ChartConfigEntry, ...]:
+        raw = await self._client.get(CHART_CONFIG_KEY)
+        if raw is None:
+            return ()
+        text = raw.decode() if isinstance(raw, bytes) else raw
+        return tuple(ChartConfigEntry.model_validate(item) for item in json.loads(text))

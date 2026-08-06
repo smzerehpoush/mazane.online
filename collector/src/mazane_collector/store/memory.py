@@ -20,6 +20,7 @@ from ..instruments import InstrumentListing
 from ..models import Platform, PlatformSnapshot
 from ..references import ReferenceSnapshot
 from ..retention import HourlyRollup, RawRow, RollupKey, SourceKind
+from ..settings import ChartConfigEntry
 
 
 class InMemoryStore:
@@ -29,6 +30,7 @@ class InMemoryStore:
         self._platforms: tuple[Platform, ...] = ()
         self._instruments: tuple[InstrumentListing, ...] = ()
         self._references: dict[str, ReferenceSnapshot] = {}
+        self._chart_config: tuple[ChartConfigEntry, ...] = ()
         self.history: list[PlatformSnapshot] = []
         self.reference_history: list[ReferenceSnapshot] = []
         self._raw_rows: list[RawRow] = []
@@ -101,6 +103,12 @@ class InMemoryStore:
 
     async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
         return self._references.get(reference_slug)
+
+    async def save_chart_config(self, entries: Sequence[ChartConfigEntry]) -> None:
+        self._chart_config = tuple(entries)
+
+    async def get_chart_config(self) -> tuple[ChartConfigEntry, ...]:
+        return self._chart_config
 
     # --- سطح تماس RetentionStore (بلیت ۱۶) — همان قرارداد پستگرس ---
 
