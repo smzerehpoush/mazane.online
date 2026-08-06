@@ -7,7 +7,7 @@
 
 ```
 collector/   # پایتون ۳.۱۲+ — گردآورنده: آداپترها، نرمال‌سازی، چک میانه، ذخیره
-web/         # Next.js App Router + TypeScript — فقط می‌خوانَد و رندر می‌کند
+web/         # TanStack Start (SSR با نیترو) + TypeScript — فقط می‌خوانَد و رندر می‌کند
 docs/        # اسناد (دست نزنید مگر بلیت بخواهد)
 web-crawler/ # مرجع الگو — کد کارفرماست؛ کپی ممنوع، کامیت ممنوع، .env.sample را هرگز باز نکنید
 ```
@@ -37,7 +37,11 @@ web-crawler/ # مرجع الگو — کد کارفرماست؛ کپی ممنوع
 
 - **collector:** httpx (async)، pydantic v2، asyncpg (پستگرس)، redis-py؛ pytest + pytest-asyncio؛
   `pyproject.toml` با نصب `pip install -e ".[dev]"`؛ تایپ‌چک: `mypy` (پیکربندی آسان‌گیر).
-- **web:** Next.js (App Router، TypeScript strict)، vitest؛ تایپ‌چک: `tsc --noEmit`.
+- **web:** TanStack Start (رندر سمت سرور با نیترو، پریست `node-server`؛ TypeScript strict)،
+  Tailwind + shadcn/ui، vitest؛ تایپ‌چک: `tsc --noEmit`.
+  ⚠️ **قاعده‌ی باندل:** منطق سروری (ioredis، pg، متغیرهای محیط) فقط زیر `src/lib/server/`؛
+  کامپوننت‌ها هرگز مستقیم از آن import نمی‌کنند — از راه `createServerFn` یا loader مسیر.
+  پلاگین import-protection تنکستک نقضش را در بیلد می‌شکند، نه در زمان اجرا.
 - Postgres 16 و Redis 7 (هم‌نسخه با سرور). `docker-compose.dev.yml` برای اجرای محلی؛ تست‌ها به آن وابسته نیستند.
 - UI فارسی و راست‌به‌چپ؛ ارقام نمایش با `Intl.NumberFormat('fa-IR')`؛ ارقام لاتین در JSON-LD و URL.
 - `normalizeFa()` روی مرز هر ورودی متنی فارسی.

@@ -48,7 +48,9 @@ async def test_fixture_payload_is_stored_with_explicit_x100_scale() -> None:
     assert stored.platform_slug == "milli"
 
     by_side = {quote.side: quote for quote in stored.quotes}
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL}
+    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
+    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
+    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
 
     # مقدار خام و ضریب صریح آداپتر — میلی ریال بر میلی‌گرم، ×۱۰۰
     # (سند تحقیق ۰۱، بند ۳.۳).

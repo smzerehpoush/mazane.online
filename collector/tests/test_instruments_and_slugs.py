@@ -53,8 +53,10 @@ FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
 
 
 async def test_reference_price_is_mean_of_platforms_own_effective_buy_and_sell() -> None:
-    """برای هر سکوی قیمت‌دارِ نوبت کامل، قیمت مرجع ذخیره‌شده دقیقاً میانگین
-    مؤثر خرید و فروش **همان سکو** است (گرد نیم‌بالا) — هیچ عدد دیگری نه."""
+    """سکوی دوقیمتی: قیمت مرجع ذخیره‌شده دقیقاً میانگین مؤثر خرید و فروش
+    **همان سکو** است (گرد نیم‌بالا) — هیچ عدد دیگری نه. `reference_prices_toman`
+    فقط سطر MEAN را انتخاب می‌کند، پس JSON و جدول `quotes` نمی‌توانند
+    واگرا شوند."""
     store = InMemoryStore()
     await collect_round(
         ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT
@@ -69,11 +71,18 @@ async def test_reference_price_is_mean_of_platforms_own_effective_buy_and_sell()
             (Decimal(buy + sell) / 2).quantize(Decimal("1"), rounding="ROUND_HALF_UP")
         )
         assert snapshot.reference_prices_toman == {"GOLD_18K": expected}
+        mean = next(q for q in snapshot.quotes if q.side is Side.MEAN)
+        assert mean.price_toman == expected
+        assert mean.platform_slug == slug  # منتسب به همین سکو، نه هیچ‌جای دیگر
 
 
-async def test_reference_price_absent_for_unknown_fee_and_one_sided() -> None:
-    """کارمزد نامعلوم (فقط MID) یا دفتر یک‌طرفه ⟸ قیمت مرجع **وجود ندارد**؛
-    جعل از MID یا از یک سمت ممنوع است."""
+async def test_single_price_platform_reference_price_is_its_only_number() -> None:
+    """سکوی تک‌قیمتی: همان تک‌عددی که منتشر می‌کند قیمت مرجع اوست (قاعده‌ی
+    قطعی صاحب کسب‌وکار ۲۰۲۶-۰۸-۰۶) — حتی وقتی کارمزدش نامعلوم است.
+
+    این جعل نیست: هیچ کارمزدی روی عدد نرفته و هیچ سطر BUY/SELL ساخته نشده؛
+    فقط همان عدد با برچسب «نماینده‌ی این سکو» ثبت می‌شود تا خطش روی نمودار
+    ۲۴ ساعته وجود داشته باشد."""
     store = InMemoryStore()
     await collect_round(
         ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT
@@ -81,8 +90,26 @@ async def test_reference_price_absent_for_unknown_fee_and_one_sided() -> None:
     for slug in UNKNOWN_FEE_LISTED:
         snapshot = await store.get_snapshot(slug)
         assert snapshot is not None
-        assert snapshot.reference_prices_toman == {}
+        mid = next(q.price_toman for q in snapshot.quotes if q.side is Side.MID)
+        assert snapshot.reference_prices_toman == {"GOLD_18K": mid}
+        assert not any(q.side in (Side.BUY, Side.SELL) for q in snapshot.quotes)
 
+    mid_only = unknown_fee_snapshot(
+        slug="digikala",
+        raw_mid=Decimal("18520000"),
+        scale=Decimal("1"),
+        fetched_at=FETCHED_AT,
+    )
+    assert mid_only.reference_prices_toman == {"GOLD_18K": 18520000}
+    mean = next(q for q in mid_only.quotes if q.side is Side.MEAN)
+    # مقدار خام و ضریب همان سطر MID اند — چیزی محاسبه نشده که بازسازی‌ناپذیر باشد.
+    assert (mean.raw_value, mean.raw_scale) == (Decimal("18520000"), Decimal("1"))
+
+
+async def test_reference_price_absent_for_one_sided_order_book() -> None:
+    """دفتر سفارش یک‌طرفه هیچ «عدد نماینده»ای ندارد: نه دو عدد که میانگینشان
+    را بگیریم، نه عددی دوطرفه ⟸ قیمت مرجع غایب می‌ماند و از یک سمتِ تنها
+    جعل نمی‌شود."""
     one_sided = one_sided_book_snapshot(
         slug="daric",
         side=Side.BUY,
@@ -91,14 +118,7 @@ async def test_reference_price_absent_for_unknown_fee_and_one_sided() -> None:
         fetched_at=FETCHED_AT,
     )
     assert one_sided.reference_prices_toman == {}
-
-    mid_only = unknown_fee_snapshot(
-        slug="digikala",
-        raw_mid=Decimal("18520000"),
-        scale=Decimal("1"),
-        fetched_at=FETCHED_AT,
-    )
-    assert mid_only.reference_prices_toman == {}
+    assert [q.side for q in one_sided.quotes] == [Side.BUY]
 
 
 def test_reference_price_serialized_in_canonical_json() -> None:

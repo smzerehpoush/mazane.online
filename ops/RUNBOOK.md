@@ -34,26 +34,39 @@
 
 ## ۱. پیش‌نیازها — قبل از جلسه‌ی استقرار
 
-### ۱.۱ یک خط پیکربندی نکست (پیش‌نیاز مسدودکننده‌ی ساخت ایمیج)
+### ۱.۱ لایه‌ی وب دیگر نکست نیست — چه چیزی عوض شد
 
-`Dockerfile.web` از خروجی **standalone** نکست استفاده می‌کند؛ در لحظه‌ی نوشتن
-این سند `web/next.config.ts` این گزینه را **ندارد**. یک خط به آبجکت
-`nextConfig` اضافه شود (کامیت جدا، پیش از اولین ساخت ایمیج):
+اپ وب به **TanStack Start + Vite + Nitro** مهاجرت کرده. پیامدهای عملیاتی:
 
-```ts
-const nextConfig: NextConfig = {
-  output: "standalone",   // ← این خط
-  expireTime: 360,
-  ...
-};
-```
+| قبل (نکست) | حالا |
+|---|---|
+| خروجی `.next/standalone` | خروجی `.output/` |
+| `node server.js` | `node .output/server/index.mjs` |
+| نیاز به `output: "standalone"` در `next.config.ts` | چیزی لازم نیست — پریست در `web/vite.config.ts` است |
+| `.next/static` و `public` جدا کپی می‌شدند | `.output` **خودبسنده** است: نه `node_modules`، نه کد منبع |
 
-بدون آن، ساخت `Dockerfile.web` عمداً با پیام روشن شکست می‌خورد (دروازه‌ی
-`test -d .next/standalone`).
+پیش‌نیاز پیکربندی قبلی (یک خط `output: "standalone"`) **منتفی شد**.
+جایش یک قید تازه نشسته که همان اندازه مسدودکننده است:
+
+> پریست Nitro باید `node-server` باشد. پیش‌فرض تاریخی این استک
+> `cloudflare-module` بود که نه `ioredis` در آن کار می‌کند نه `pg`.
+> در `web/vite.config.ts` صریح تنظیم شده و **سه‌جا** نگهبان دارد:
+> یک مرحله در `Dockerfile.web`، یک گام در CI، و همین سند.
+
+اندازه‌ها و مصرف واقعی (اندازه‌گیری‌شده، نه تخمین):
+
+- ایمیج وب: **~۱۶۰MB** برای `linux/amd64` (پایه `node:22-alpine`).
+- حافظه‌ی کانتینر وب: **~۳۱MB** بی‌کار، **~۶۱MB** پس از ۲۰۰ درخواست SSR.
+  سقف `compose.prod.yml` از ۳۸۴M به **۲۵۶M** آمد؛ جمع سقف چهار سرویس
+  ۹۹۲MB ← **۸۶۴MB**.
+- `NODE_OPTIONS=--max-old-space-size=192` در `Dockerfile.web`. این عدد
+  **جفت** سقف ۲۵۶M است: V8 وگرنه سقف heap را از رم میزبان حدس می‌زند و
+  می‌تواند تا نزدیک ۲GB رشد کند — یعنی OOM-killer به‌جای این پروسه سراغ
+  پادل‌یار برود. هر کدام عوض شد، دیگری هم.
 
 ### ۱.۲ 👤 تصمیم رجیستری ایمیج
 
-ساخت روی سرور **گزینه نیست** (۱ هسته/۲GB — `next build` بیش از رم آزاد سرور
+ساخت روی سرور **گزینه نیست** (۱ هسته/۲GB — `vite build` بیش از رم آزاد سرور
 حافظه می‌خواهد). دو مسیر برای رساندن ایمیج به سرور:
 
 | مسیر | خوبی | ریسک |
@@ -75,13 +88,32 @@ docker build --platform linux/amd64 -f Dockerfile.collector -t mazane-collector:
 docker build --platform linux/amd64 -f Dockerfile.web       -t mazane-web:v1 .
 ```
 
+راستی‌آزمایی ایمیج وب **پیش از** فرستادن به سرور — عمداً بدون ردیس و بدون
+پستگرس، چون انتظار ۲۰۰ است نه ۵۰۰ (قاعده‌ی سخت ۵: قطع منبع کهنگی است نه خطا):
+
+```bash
+docker run --rm -d --name mazane-web-smoke \
+  --memory 256m --cpus 0.5 -p 127.0.0.1:3399:3000 mazane-web:v1
+sleep 5
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3399/            # ۲۰۰
+curl -sI http://127.0.0.1:3399/fonts/vazirmatn-variable-33.0.3.woff2 \
+  | grep -iE 'HTTP|cache-control'      # ۲۰۰ + immutable — فونت خودمیزبان
+docker stats --no-stream mazane-web-smoke                                  # ~۳۱MB
+docker rm -f mazane-web-smoke
+```
+
+همین دود-تست در CI (جاب `images`) هم اجرا می‌شود.
+
 ### ۱.۴ 👤 آماده‌سازی `‎.env‎`
 
 از روی `.env.example`. نکات:
 
 - `POSTGRES_PASSWORD` و `MAZANE_REVALIDATE_TOKEN` با `openssl rand -hex 32`.
 - `MAZANE_REVALIDATE_TOKEN` بین گردآورنده و وب مشترک است (compose خودش به هر
-  دو می‌دهد) — بدون آن انتشار بلاگ فقط WARNING می‌دهد و ISR بازتولید نمی‌شود.
+  دو می‌دهد). مسیر `/api/revalidate-blog` بدون توکنِ تنظیم‌شده **همیشه ۴۰۱**
+  می‌دهد (fail closed) — پس اشتباه‌بودنش در لاگ گردآورنده دیده می‌شود.
+  با مهاجرت از نکست دیگر کش صفحه‌ای در مبدأ نیست: پست تازه در بدترین حالت
+  ۶۰ ثانیه (پنجره‌ی `s-maxage` لبه) دیرتر دیده می‌شود.
 - `MAZANE_DAILY_PUBLISH_CAP` سقف انتشار روزانه‌ی بلاگ (پیش‌فرض ۲ — تصمیم ۱۶).
 - `MAZANE_WEB_PORT` (پیش‌فرض ۳۳۰۰) نباید با درگاه‌های پادل‌یار تصادم کند —
   روی سرور چک شود: `ss -ltn | grep 3300`.
@@ -113,7 +145,7 @@ free -m ; df -h /            # رم و دیسک آزاد — انتظار: ~1.2G
 curl -sI https://<دامنه‌ی پادل‌یار>/ | head -5   # پادل‌یار از بیرون ۲۰۰ می‌دهد
 ```
 
-اگر رم آزاد زیر ~۱GB بود توقف و بررسی — سقف‌های compose ما ۹۹۲MB است.
+اگر رم آزاد زیر ~۱GB بود توقف و بررسی — سقف‌های compose ما ۸۶۴MB است.
 
 ---
 
@@ -174,10 +206,14 @@ docker compose -f compose.prod.yml up -d web collector
 docker compose -f compose.prod.yml ps    # همه healthy (گردآورنده تا ~۲ دقیقه start_period دارد)
 
 curl -s http://127.0.0.1:3300/ | head -20         # HTML فارسی صفحه‌ی اصلی
-# نکته: ایمیج در زمان ساخت بدون دیتابیس prerender شده (طراحی stale-first —
-# next build بدون سرویس زنده سبز می‌شود)؛ پس «اولین» پاسخ ممکن است جدول
-# خالی/کهنه باشد و بعد از یک چرخه‌ی ISR (~۶۰ ثانیه) قیمت‌های واقعی بیاید.
+# نکته: دیگر prerender زمان‌ساخت در کار نیست — هر درخواست SSR می‌شود و لودر
+# همان لحظه ردیس/پستگرس را می‌خواند. اگر گردآورنده هنوز نوبتی نزده باشد،
+# جدول خالی/کهنه است ولی پاسخ **۲۰۰** است، نه خطا (قاعده‌ی سخت ۵).
+# پس «صفحه بالا آمد ولی قیمت ندارد» در دقیقه‌ی اول طبیعی است؛
+# «صفحه ۵۰۰ داد» طبیعی نیست.
 curl -s http://127.0.0.1:3300/robots.txt           # شامل Disallow: /go/ و Sitemap:
+curl -sI http://127.0.0.1:3300/fonts/vazirmatn-variable-33.0.3.woff2 \
+  | grep -iE 'HTTP|cache-control'   # ۲۰۰ + immutable — فونت از خود مبدأ می‌آید
 docker compose -f compose.prod.yml logs --tail 50 collector   # «نوبت گردآوری» با قیمت‌ها
 ```
 
@@ -236,9 +272,12 @@ docker exec $CADDY wget -qO- --header 'Host: mazane.online' http://127.0.0.1/ | 
 2. **HTTPS لبه:** گواهی لبه‌ی آروان فعال؛ ارتباط لبه⟸مبدأ روی HTTPS (گواهی
    معتبر کدی از گام ۵) یا مطابق گزینه‌های پنل.
 3. **کش:** حالت «پیروی از هدر مبدأ» — صفحه‌ی اصلی
-   `Cache-Control: public, s-maxage=60, stale-while-revalidate=300` می‌دهد
-   (بند ۶.۲؛ در `web/next.config.ts` مستند است). قانون کش دستی جداگانه برای
-   HTML لازم نیست و **نباید** هدر مبدأ override شود.
+   `Cache-Control: public, s-maxage=60, stale-while-revalidate=600, stale-if-error=86400`
+   می‌دهد (بند ۶.۲؛ منبع حقیقتش `web/src/lib/seo/cache-headers.ts` است).
+   قانون کش دستی جداگانه برای HTML لازم نیست و **نباید** هدر مبدأ override
+   شود — به‌ویژه `stale-if-error` که همان پیش‌شرط سخت گام ۷ است.
+   دارایی‌های ایستا (`/assets/**` هش‌دار و `/fonts/**` نسخه‌دار) خودشان
+   `max-age=31536000, immutable` می‌دهند؛ آن‌ها هم دست‌نخورده رد شوند.
 4. راستی‌آزمایی از بیرون: `curl -sI https://mazane.online/` ⟸ ۲۰۰ + همان
    `Cache-Control` + هدرهای کش آروان (`X-Cache` یا `Ar-Cache`؛ بار دوم HIT).
 
@@ -346,7 +385,8 @@ docker compose -f /opt/mazane/compose.prod.yml down
 
 ## ۱۲. چک‌لیست جمع‌بندی جلسه‌ی استقرار
 
-- [ ] ۱.۱ `output: "standalone"` کامیت شده و CI سبز است
+- [ ] ۱.۱ CI سبز است و `.output/nitro.json` پریست `node-server` دارد
+      (دود-تست ایمیج وب در جاب `images` پاس شده)
 - [ ] ۱.۲ 👤 تصمیم رجیستری + سیم‌کشی push (در صورت GHCR)
 - [ ] ۲ 👤 عکس وضعیت پادل‌یار ثبت شد
 - [ ] ۳ 👤 چهار سرویس healthy؛ مهاجرت‌ها اعمال؛ `127.0.0.1:3300` پاسخ ۲۰۰

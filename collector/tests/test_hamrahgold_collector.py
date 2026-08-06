@@ -47,10 +47,19 @@ async def test_fixture_payload_stores_only_mid_with_rial_div10_scale() -> None:
     assert stored is not None
     assert stored.platform_slug == "hamrahgold"
 
-    # کارمزد نامعلوم ⟸ قیمت مؤثر BUY/SELL جعل نمی‌شود: فقط MID.
-    assert [quote.side for quote in stored.quotes] == [Side.MID]
+    # کارمزد نامعلوم ⟸ فقط MID و سطر MEAN که بازتاب همان تک‌عدد است
+    # (سکوی تک‌قیمتی: عددی که منتشر می‌کند قیمت مرجع اوست). قیمت مؤثر
+    # همچنان جعل نمی‌شود — نه BUY هست نه SELL.
+    assert [quote.side for quote in stored.quotes] == [Side.MID, Side.MEAN]
 
-    (mid,) = stored.quotes
+    mid, mean = stored.quotes
+    # سطر MEAN بازتاب بی‌کم‌وکاست همان MID است — نه گردی تازه‌ای، نه ضریبی.
+    assert (mean.price_toman, mean.raw_value, mean.raw_scale, mean.fetched_at) == (
+        mid.price_toman,
+        mid.raw_value,
+        mid.raw_scale,
+        mid.fetched_at,
+    )
     assert mid.instrument == Instrument.GOLD_18K
     # ضریب صریح این منبع: **ریال** بر گرم، ÷۱۰ به تومان
     # (سند تحقیق ۰۱، بند ۳.۳).

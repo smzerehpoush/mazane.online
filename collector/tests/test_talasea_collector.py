@@ -45,7 +45,9 @@ async def test_fixture_payload_is_stored_with_explicit_x1000_scale() -> None:
     assert stored.suppressed is False
 
     by_side = {quote.side: quote for quote in stored.quotes}
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL}
+    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
+    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
+    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
 
     # مقدار خام و ضریب صریح آداپتر — طلاسی تومان بر میلی‌گرم، ×۱۰۰۰
     # (سند تحقیق ۰۱، بند ۳.۳).

@@ -1,11 +1,23 @@
 /**
- * seed مشترک تست‌های بلیت ۸ — همان الگوی home.test.tsx در نسخه‌ی کمینه:
- * منبع داده با ‎setPriceSource‎ تزریق می‌شود؛ هیچ ردیس/شبکه‌ای در کار نیست
- * و اعداد همان شکل JSON کانونی گردآورنده‌اند (مؤثرها از قبل محاسبه شده).
+ * seed مشترک مرز وب: منبع داده با ‎setPriceSource‎ / ‎setBlogSource‎ /
+ * ‎setHistorySource‎ تزریق می‌شود؛ هیچ ردیس/پستگرس/شبکه‌ای در کار نیست و
+ * `ioredis`/`pg` اصلاً به گراف تست نمی‌آیند (تست‌ها فقط اجزای خالص زیر
+ * `src/components/` و توابع `src/lib/` را import می‌کنند، نه مسیرها).
+ *
+ * اعداد همان شکل JSON کانونی گردآورنده‌اند — قیمت‌های مؤثر و «قیمت مرجع سکو»
+ * از قبل آنجا محاسبه شده‌اند (قاعده‌ی ۱ قراردادها).
  *
  * این فایل تست نیست (الگوی ‎*.test.*‎ را ندارد) — فقط کمک‌کار مرز وب است.
  */
+import type { SlugPageData } from "../../src/components/content/SlugPageView";
+import type { HomePageData } from "../../src/components/mazane/HomePage";
+import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
+import { getPlatformHistory, setHistorySource, type PlatformHistory } from "../../src/lib/history";
+import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
+import { listInstruments } from "../../src/lib/catalog";
 import {
+  getPlatformSnapshot,
+  getUpdatedAt,
   setPriceSource,
   type FeeSource,
   type InstrumentListing,
@@ -13,7 +25,9 @@ import {
   type PlatformSnapshot,
   type Quote,
   type Side,
-} from "../../lib/prices";
+} from "../../src/lib/prices";
+import { fetchRows, fetchRowsForPlatforms } from "../../src/lib/rows";
+import { resolveSlug } from "../../src/lib/slugs";
 
 export function quote(
   slug: string,
@@ -40,16 +54,22 @@ export function makeSnapshot(opts: {
   buy?: number;
   sell?: number;
   feeSource?: FeeSource;
+  feeObservedAt?: string;
   fetchedAt?: string;
+  buyFee?: string;
+  sellFee?: string;
+  roundTrip?: string;
   /** پیش‌فرض GOLD_18K — صفحه‌ی دارایی (بلیت ۷) کد خودش را می‌دهد. */
   instrument?: string;
   /**
-   * قیمت مرجع سکو — عدد آماده‌ی گردآورنده (میانگین مؤثر خرید و فروش خودش،
-   * تصمیم ۱۹). نده ⟸ کلیدی در payload نیست (کارمزد نامعلوم/یک‌طرفه).
+   * قیمت مرجع سکو — عدد آماده‌ی گردآورنده (تصمیم مالک ۲۰۲۶-۰۸-۰۶: تک‌قیمتی
+   * همان تک‌عددش، دوقیمتی میانگین دو عدد خودش). نده ⟸ کلیدی در payload نیست
+   * (کارمزد نامعلوم / دفتر یک‌طرفه).
    */
   reference?: number;
   buyEnabled?: boolean;
   sellEnabled?: boolean;
+  minOrderToman?: string;
 }): PlatformSnapshot {
   const fetchedAt = opts.fetchedAt ?? new Date().toISOString();
   const feeSource = opts.feeSource ?? "API";
@@ -67,13 +87,15 @@ export function makeSnapshot(opts: {
     quotes,
     terms: {
       platform_slug: opts.slug,
-      buy_fee_percent: unknown ? null : "0.5",
-      sell_fee_percent: unknown ? null : "0.5",
-      round_trip_percent: unknown ? null : "0.9950",
+      // کارمزد UNKNOWN یعنی هر سه تهی — عدد نصفه‌نیمه در گردآورنده باگ است.
+      buy_fee_percent: unknown ? null : (opts.buyFee ?? "0.5"),
+      sell_fee_percent: unknown ? null : (opts.sellFee ?? "0.5"),
+      round_trip_percent: unknown ? null : (opts.roundTrip ?? "0.9950"),
       fee_source: feeSource,
       buy_enabled: opts.buyEnabled ?? true,
       sell_enabled: opts.sellEnabled ?? true,
-      observed_at: fetchedAt,
+      observed_at: opts.feeObservedAt ?? fetchedAt,
+      ...(opts.minOrderToman !== undefined ? { min_order_toman: opts.minOrderToman } : {}),
     },
     fetched_at: fetchedAt,
     suppressed: false,
@@ -121,6 +143,57 @@ export function seed(store: SeededStore): void {
 }
 
 /**
+ * فیک بلاگ عمداً «گنگ» است: هرچه seed شده را با هر وضعیتی برمی‌گرداند، تا
+ * قاعده‌ی نمایش (فقط published) در لایه‌ی وب سنجیده شود، نه در فیک.
+ */
+export function seedBlog(posts: BlogPost[]): void {
+  setBlogSource({
+    listPosts: async () => posts,
+    getPost: async (slug) => posts.find((post) => post.slug === slug) ?? null,
+  });
+}
+
+export function seedHistory(entries: PlatformHistory[]): void {
+  setHistorySource({ getPlatformHistory: async () => entries });
+}
+
+/** منبع قیمت خالی — برای تست‌هایی که فقط بلاگ را می‌سنجند. */
+export function seedEmptyPrices(): void {
+  seed({ listed: [], snapshots: {}, updatedAt: {}, instruments: [] });
+}
+
+/**
+ * `HomePageData` از استور seed شده — **همان** `assembleHomeData` ای که
+ * `loadHomeData` روی سرور صدا می‌زند، فقط با خواننده‌های دامنه‌ی تزریق‌شده،
+ * پس هیچ ماژول نودی وارد گراف تست نمی‌شود.
+ */
+export async function homeData(
+  store: SeededStore,
+  extra: { history?: PlatformHistory[]; posts?: BlogPost[] } = {},
+): Promise<HomePageData> {
+  seed(store);
+  seedHistory(extra.history ?? []);
+  seedBlog(extra.posts ?? []);
+  return assembleHomeData({ fetchRows, getPlatformHistory, listPublishedPosts });
+}
+
+/**
+ * `SlugPageData` از استور seed شده — همان `assembleSlugPage` مسیر ‎/<slug>‎.
+ * `null` یعنی ۴۰۴.
+ */
+export async function slugPageData(slug: string): Promise<SlugPageData | null> {
+  return assembleSlugPage(slug, {
+    resolveSlug,
+    fetchRowsForPlatforms,
+    getPlatformSnapshot,
+    getUpdatedAt,
+    // همان خواننده‌ای که `content-data.ts` روی سرور می‌دهد: فهرست دارایی‌ها
+    // از کاتالوگ می‌آید (زنده مقدم، رجیستری بیلد کف) نه مستقیم از استور.
+    getInstruments: listInstruments,
+  });
+}
+
+/**
  * یک سطر payload دارایی — همان شکلی که گردآورنده می‌نویسد؛ `published`
  * از قبل آنجا محاسبه شده (وب فقط می‌خواند).
  */
@@ -151,10 +224,37 @@ export function healthyStore(): SeededStore {
   const now = freshIso();
   return {
     snapshots: {
-      wallgold: makeSnapshot({ slug: "wallgold", mid: 18611000, buy: 18704055, sell: 18517945, fetchedAt: now }),
-      talasea: makeSnapshot({ slug: "talasea", mid: 18530000, buy: 18715300, sell: 18344700, fetchedAt: now }),
-      milli: makeSnapshot({ slug: "milli", mid: 18538000, buy: 18630690, sell: 18445310, fetchedAt: now }),
-      goldika: makeSnapshot({ slug: "goldika", mid: 18514235, buy: 18736406, sell: 18292064, fetchedAt: now }),
+      wallgold: makeSnapshot({
+        slug: "wallgold",
+        mid: 18611000,
+        buy: 18704055,
+        sell: 18517945,
+        reference: 18611000,
+        fetchedAt: now,
+      }),
+      talasea: makeSnapshot({
+        slug: "talasea",
+        mid: 18530000,
+        buy: 18715300,
+        sell: 18344700,
+        reference: 18530000,
+        fetchedAt: now,
+      }),
+      milli: makeSnapshot({
+        slug: "milli",
+        mid: 18538000,
+        buy: 18630690,
+        sell: 18445310,
+        reference: 18538000,
+        fetchedAt: now,
+      }),
+      goldika: makeSnapshot({
+        slug: "goldika",
+        mid: 18514235,
+        buy: 18736406,
+        sell: 18292064,
+        fetchedAt: now,
+      }),
     },
     updatedAt: { wallgold: now, talasea: now, milli: now, goldika: now },
   };
@@ -165,21 +265,21 @@ export function storeWithUnknownFee(): SeededStore {
   const store = healthyStore();
   const now = freshIso();
   store.listed = [...LISTED, DIGIKALA];
-  store.snapshots.digikala = makeSnapshot({
+  // mid دیجی‌کالا عمداً از همه‌ی مؤثرخریدها پایین‌تر است تا ثابت شود ستون
+  // «قیمت خرید» عدد اسمی را جدا نمی‌کند و کارت «بهترین» نامزدش نمی‌کند.
+  store.snapshots["digikala"] = makeSnapshot({
     slug: "digikala",
     mid: 18520000,
     feeSource: "UNKNOWN",
     fetchedAt: now,
   });
-  store.updatedAt.digikala = now;
+  store.updatedAt["digikala"] = now;
   return store;
 }
 
-/** ردیف اصلی یک سکو در HTML رندرشده (تا اولین ‎</tr>‎ — ردیف جزئیات جدا است). */
+/** ردیف اصلی یک سکو در HTML رندرشده (تا اولین ‎</tr>‎). */
 export function rowOf(html: string, slug: string): string {
-  const match = html.match(
-    new RegExp(`<tr[^>]*data-platform="${slug}"[\\s\\S]*?</tr>`),
-  );
+  const match = html.match(new RegExp(`<tr[^>]*data-platform="${slug}"[\\s\\S]*?</tr>`));
   if (!match) throw new Error(`ردیف ${slug} در HTML نیست`);
   return match[0];
 }

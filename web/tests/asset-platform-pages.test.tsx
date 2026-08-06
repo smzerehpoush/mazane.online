@@ -6,35 +6,32 @@
  * دروازه (`published`) هم آنجا محاسبه شده (تصمیم ۱۰) — این تست‌ها فقط
  * می‌سنجند که وب همان داده را درست رندر/رد می‌کند و هیچ عدد بین‌سکویی‌ای
  * نمی‌سازد.
+ *
+ * مسیر ‎src/routes/$slug.tsx‎ فقط سیم‌کشی است (لودر + ۴۰۴ + پوسته)؛ نما و
+ * سرصفحه در `components/content/SlugPageView.tsx` اند و همین‌جا سنجیده
+ * می‌شوند. «۴۰۴» در این مرز یعنی `slugPageData(...) === null` — مسیر همان را
+ * به `notFound()` ترجمه می‌کند.
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import SlugPage, {
-  generateMetadata,
-  generateStaticParams,
-} from "../app/[slug]/page";
-import sitemap from "../app/sitemap";
-import { setBlogSource } from "../lib/blog";
-import type { InstrumentListing, ListedPlatform } from "../lib/prices";
-import { SITE_URL } from "../lib/site";
-import { isReservedSlug, resolveSlug } from "../lib/slugs";
+import { NotFoundPanel } from "../src/components/content/NotFoundPanel";
+import { SlugPageView, slugHead } from "../src/components/content/SlugPageView";
+import type { SlugPageData } from "../src/components/content/SlugPageView";
+import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
+import { buildSitemapEntries } from "../src/lib/seo/sitemap";
+import { SITE_URL } from "../src/lib/site";
+import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
 import {
   freshIso,
   makeListing,
   makeSnapshot,
   rowOf,
   seed,
+  slugPageData,
   staleIso,
   type SeededStore,
 } from "./support/seed";
-
-/** خطای notFound نکست — digest بسته به نسخه NEXT_NOT_FOUND یا ‎…;404 است. */
-const NOT_FOUND_DIGEST = /NEXT_NOT_FOUND|404/;
-
-function pageProps(slug: string): { params: Promise<{ slug: string }> } {
-  return { params: Promise.resolve({ slug }) };
-}
 
 const PLATFORMS: ListedPlatform[] = [
   {
@@ -95,7 +92,7 @@ function assetStore(): SeededStore {
     listed: PLATFORMS,
     instruments: [TALA18, NOGHRE_SINGLE],
     snapshots: {
-      // مرجع هر سکو = میانگین مؤثر خرید/فروش خودش — عدد آماده‌ی گردآورنده.
+      // مرجع هر سکو = عدد آماده‌ی گردآورنده برای همان سکو (تصمیم ۱۹).
       wallgold: makeSnapshot({
         slug: "wallgold",
         mid: 18611000,
@@ -132,8 +129,15 @@ function assetStore(): SeededStore {
   };
 }
 
-function seedBlogEmpty(): void {
-  setBlogSource({ listPosts: async () => [], getPost: async () => null });
+/** داده‌ی صفحه را می‌خواند و اگر ۴۰۴ باشد تست را می‌شکند. */
+async function pageOf(slug: string): Promise<SlugPageData> {
+  const data = await slugPageData(slug);
+  if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
+  return data;
+}
+
+async function renderSlug(slug: string): Promise<string> {
+  return renderToStaticMarkup(<SlugPageView data={await pageOf(slug)} />);
 }
 
 describe("حل‌کننده‌ی اسلاگ تخت (تصمیم ۱۱)", () => {
@@ -154,34 +158,33 @@ describe("حل‌کننده‌ی اسلاگ تخت (تصمیم ۱۱)", () => {
     for (const word of ["blog", "go", "api", "sitemap.xml", "robots.txt", "_next", "about"]) {
       expect(isReservedSlug(word)).toBe(true);
       expect(await resolveSlug(word)).toBeNull();
+      expect(await slugPageData(word)).toBeNull();
     }
     // صفحه‌ی ایستای سطح ریشه هم هرگز از مسیر داینامیک حل نمی‌شود.
-    expect(await resolveSlug("darbare-pishnahad")).toBeNull();
+    expect(await slugPageData("darbare-pishnahad")).toBeNull();
   });
 
-  it("اسلاگ دارایی ⟸ دارایی، اسلاگ سکو ⟸ سکو، ناشناخته ⟸ null", async () => {
+  it("اسلاگ دارایی ⟸ دارایی، اسلاگ سکو ⟸ سکو، ناشناخته ⟸ ۴۰۴", async () => {
     seed(assetStore());
-    const asset = await resolveSlug("tala-18");
-    expect(asset?.kind).toBe("instrument");
-    const platform = await resolveSlug("wallgold");
-    expect(platform?.kind).toBe("platform");
-    expect(await resolveSlug("hich-vaght-nabude")).toBeNull();
+    expect((await pageOf("tala-18")).kind).toBe("instrument");
+    expect((await pageOf("wallgold")).kind).toBe("platform");
+    expect(await slugPageData("hich-vaght-nabude")).toBeNull();
   });
 
-  it("اسلاگ ناشناخته در خود صفحه 404 می‌دهد", async () => {
-    seed(assetStore());
-    await expect(SlugPage(pageProps("hich-vaght-nabude"))).rejects.toMatchObject({
-      digest: expect.stringMatching(NOT_FOUND_DIGEST),
-    });
+  it("سرصفحه‌ی ۴۰۴ صریحاً noindex است تا صفحه‌ی نبوده ایندکس نشود", () => {
+    const head = slugHead(undefined);
+    expect(head.meta).toContainEqual({ name: "robots", content: "noindex" });
+    expect(head.links).toBeUndefined();
+    const html = renderToStaticMarkup(<NotFoundPanel />);
+    expect(html).toContain("۴۰۴");
+    expect(html).toContain("صفحه پیدا نشد");
   });
 });
 
 describe("دروازه‌ی انتشار — دارایی تک‌سکویی صفحه نمی‌گیرد (تصمیم ۱۰)", () => {
-  it("دارایی با published=false ⟸ 404", async () => {
+  it("دارایی با published=false ⟸ ۴۰۴", async () => {
     seed(assetStore());
-    await expect(SlugPage(pageProps("noghre"))).rejects.toMatchObject({
-      digest: expect.stringMatching(NOT_FOUND_DIGEST),
-    });
+    expect(await slugPageData("noghre")).toBeNull();
   });
 
   it("با فعال شدن سکوی دوم (پرچم گردآورنده) صفحه ساخته می‌شود — مرز وب", async () => {
@@ -199,7 +202,7 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
         purity: "990",
       }),
     ];
-    store.snapshots.wallgold = makeSnapshot({
+    store.snapshots["wallgold"] = makeSnapshot({
       slug: "wallgold",
       instrument: "SILVER_990",
       mid: 210000,
@@ -208,7 +211,7 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
       reference: 210000,
       fetchedAt: now,
     });
-    store.snapshots.talasea = makeSnapshot({
+    store.snapshots["talasea"] = makeSnapshot({
       slug: "talasea",
       instrument: "SILVER_990",
       mid: 209000,
@@ -219,28 +222,31 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
     });
     seed(store);
 
-    const html = renderToStaticMarkup(await SlugPage(pageProps("noghre")));
-    expect(html).toContain("<h1>قیمت نقره‌ی ۹۹۰</h1>");
+    const html = await renderSlug("noghre");
+    expect(html).toContain("قیمت نقره‌ی ۹۹۰");
     expect(html).toContain("۲۱۱٬۰۵۰"); // مؤثر خرید وال‌گلد
     expect(html).toContain("۲۱۰٬۰۴۵"); // مؤثر خرید طلاسی
   });
 
-  it("generateStaticParams فقط دارایی‌های دروازه‌گذشته + سکوها را می‌دهد", async () => {
-    seed(assetStore());
-    const slugs = (await generateStaticParams()).map((p) => p.slug);
-    expect(slugs).toContain("tala-18");
-    expect(slugs).not.toContain("noghre"); // دروازه بسته
-    expect(slugs).toContain("wallgold");
-    expect(slugs).toContain("digikala");
+  it("سایت‌مپ فقط دارایی‌های دروازه‌گذشته + سکوها را دارد", () => {
+    const paths = buildSitemapEntries({
+      posts: [],
+      instruments: [TALA18, NOGHRE_SINGLE],
+      platforms: PLATFORMS,
+    }).map((entry) => entry.path);
+    expect(paths).toContain("/tala-18");
+    expect(paths).not.toContain("/noghre"); // دروازه بسته
+    expect(paths).toContain("/wallgold");
+    expect(paths).toContain("/digikala");
   });
 });
 
 describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
   it("h1 فارسی دارد و هر سکو مؤثر خرید، مؤثر فروش و قیمت مرجع خودش را نشان می‌دهد", async () => {
     seed(assetStore());
-    const html = renderToStaticMarkup(await SlugPage(pageProps("tala-18")));
+    const html = await renderSlug("tala-18");
 
-    expect(html).toContain("<h1>قیمت طلای ۱۸ عیار</h1>");
+    expect(html).toMatch(/<h1[^>]*>قیمت طلای ۱۸ عیار<\/h1>/);
     const wallgold = rowOf(html, "wallgold");
     expect(wallgold).toContain("۱۸٬۷۰۴٬۰۵۵"); // مؤثر خرید
     expect(wallgold).toContain("۱۸٬۵۱۷٬۹۴۵"); // مؤثر فروش
@@ -253,7 +259,7 @@ describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
 
   it("ردیف‌ها صعودی بر اساس مؤثر خرید مرتب‌اند", async () => {
     seed(assetStore());
-    const html = renderToStaticMarkup(await SlugPage(pageProps("tala-18")));
+    const html = await renderSlug("tala-18");
     // داریک (۱۸٬۵۷۹٬۸۸۴) < وال‌گلد (۱۸٬۷۰۴٬۰۵۵) < طلاسی (۱۸٬۷۱۵٬۳۰۰)
     expect(html.indexOf('data-platform="daric"')).toBeLessThan(
       html.indexOf('data-platform="wallgold"'),
@@ -265,7 +271,7 @@ describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
 
   it("سکوی کارمزد-نامعلوم در گروه جدا: قیمت میانی، بدون قیمت مرجع جعلی", async () => {
     seed(assetStore());
-    const html = renderToStaticMarkup(await SlugPage(pageProps("tala-18")));
+    const html = await renderSlug("tala-18");
     expect(html).toContain("کارمزد نامشخص");
     // دیجی‌کالا (mid از همه پایین‌تر) باز هم بعد از همه‌ی معلوم‌ها.
     expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
@@ -279,29 +285,44 @@ describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
 
   it("برچسب دفتر سفارش و کهنگی از تکه‌های مشترک بازاستفاده می‌شوند", async () => {
     const store = assetStore();
-    store.updatedAt.daric = staleIso();
+    store.updatedAt["daric"] = staleIso();
     seed(store);
-    const html = renderToStaticMarkup(await SlugPage(pageProps("tala-18")));
+    const html = await renderSlug("tala-18");
     const daric = rowOf(html, "daric");
     expect(daric).toContain('data-badge="order-book"');
     expect(daric).toContain("کهنه");
   });
 
-  it("قیمت مرجع صریحاً «مالِ همان سکو» توضیح داده می‌شود و متادیتا canonical تخت دارد", async () => {
+  it("قیمت مرجع صریحاً «مالِ همان سکو» توضیح داده می‌شود و سرصفحه canonical تخت دارد", async () => {
     seed(assetStore());
-    const html = renderToStaticMarkup(await SlugPage(pageProps("tala-18")));
+    const html = await renderSlug("tala-18");
     expect(html).toContain("هیچ میانگین بین‌سکویی");
 
-    const metadata = await generateMetadata(pageProps("tala-18"));
-    expect(metadata.title).toContain("طلای ۱۸ عیار");
-    expect(metadata.alternates?.canonical).toBe(`${SITE_URL}/tala-18`);
+    const head = slugHead(await pageOf("tala-18"));
+    expect(head.meta?.[0]).toMatchObject({ title: expect.stringContaining("طلای ۱۸ عیار") });
+    expect(head.links).toContainEqual({
+      rel: "canonical",
+      href: `${SITE_URL}/tala-18`,
+    });
+  });
+
+  it("جدول با هیچ سکوی پشتیبانِ داده‌دار هم ۲۰۰ می‌ماند", async () => {
+    const store = assetStore();
+    for (const slug of ["wallgold", "talasea", "daric", "digikala"]) {
+      store.snapshots[slug] = null;
+      store.updatedAt[slug] = staleIso();
+    }
+    seed(store);
+    const html = await renderSlug("tala-18");
+    expect(html).toContain("قیمت در دسترس نیست");
+    expect(html).toContain("کهنه");
   });
 });
 
 describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
   it("نام، لینک وب‌سایت (با rel کامل)، شرایط، هویت حقوقی و تحویل فیزیکی را دارد", async () => {
     seed(assetStore());
-    const html = renderToStaticMarkup(await SlugPage(pageProps("talasea")));
+    const html = await renderSlug("talasea");
 
     expect(html).toContain("طلاسی");
     // بلیت ۹ (تصمیم ۲۱): لینک وب‌سایت از ‎/go/‎ می‌گذرد، با rel کامل بند ۶.۴؛
@@ -326,14 +347,14 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
 
   it("فراداده‌ی مستندنشده صادقانه «ثبت نشده است» می‌شود، نه جعل", async () => {
     seed(assetStore());
-    const html = renderToStaticMarkup(await SlugPage(pageProps("wallgold")));
+    const html = await renderSlug("wallgold");
     expect(html).toContain("ثبت نشده است");
   });
 
   it("نشان‌های باز/بسته و کهنگی روی صفحه‌ی سکو هم هستند", async () => {
     const store = assetStore();
     const now = freshIso();
-    store.snapshots.wallgold = makeSnapshot({
+    store.snapshots["wallgold"] = makeSnapshot({
       slug: "wallgold",
       mid: 18611000,
       buy: 18704055,
@@ -342,48 +363,65 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
       sellEnabled: false,
       fetchedAt: now,
     });
-    store.updatedAt.wallgold = staleIso();
+    store.updatedAt["wallgold"] = staleIso();
     seed(store);
-    const html = renderToStaticMarkup(await SlugPage(pageProps("wallgold")));
+    const html = await renderSlug("wallgold");
     expect(html).toContain("فروش بسته است");
     expect(html).toContain("کهنه");
   });
 
-  it("متادیتای صفحه‌ی سکو canonical تخت دارد", async () => {
+  it("سرصفحه‌ی صفحه‌ی سکو canonical تخت دارد و Product نمی‌سازد", async () => {
     seed(assetStore());
-    const metadata = await generateMetadata(pageProps("wallgold"));
-    expect(metadata.title).toContain("وال‌گلد");
-    expect(metadata.alternates?.canonical).toBe(`${SITE_URL}/wallgold`);
+    const head = slugHead(await pageOf("wallgold"));
+    expect(head.meta?.[0]).toMatchObject({ title: expect.stringContaining("وال‌گلد") });
+    expect(head.links).toContainEqual({
+      rel: "canonical",
+      href: `${SITE_URL}/wallgold`,
+    });
+    // ما فروشنده نیستیم: فقط BreadcrumbList.
+    expect(head.scripts).toHaveLength(1);
+    expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
   });
 
   it("قطع کامل منبع ⟸ صفحه‌ی سکو ۲۰۰ می‌ماند (کهنگی، نه خطا)", async () => {
     const store = assetStore();
-    store.snapshots.talasea = null;
-    store.updatedAt.talasea = staleIso();
+    store.snapshots["talasea"] = null;
+    store.updatedAt["talasea"] = staleIso();
     seed(store);
-    const html = renderToStaticMarkup(await SlugPage(pageProps("talasea")));
+    const html = await renderSlug("talasea");
     expect(html).toContain("طلاسی");
     expect(html).toContain("قیمت در دسترس نیست");
     expect(html).toContain("کهنه");
   });
+
+  it("سکوی بدون هیچ مقصد خروجی، دکمه‌ی مرده نمی‌سازد", async () => {
+    const store = assetStore();
+    store.listed = [{ slug: "wallgold", name_fa: "وال‌گلد", data_policy: "ALLOWED" }];
+    seed(store);
+    const data = await pageOf("wallgold");
+    expect(data.kind === "platform" && data.hasOutbound).toBe(false);
+    const html = renderToStaticMarkup(<SlugPageView data={data} />);
+    expect(html).not.toContain('href="/go/wallgold"');
+  });
 });
 
 describe("سایت‌مپ — فقط صفحات دروازه‌گذشته (بند ۶.۷ + تصمیم ۱۰)", () => {
-  it("دارایی منتشرشده و سکوها را دارد؛ دارایی تک‌سکویی غایب است؛ بدون lastmod", async () => {
-    seedBlogEmpty();
-    seed(assetStore());
-    const entries = await sitemap();
-    const urls = entries.map((e) => e.url);
+  it("دارایی منتشرشده و سکوها را دارد؛ دارایی تک‌سکویی غایب است؛ بدون lastmod", () => {
+    const entries = buildSitemapEntries({
+      posts: [],
+      instruments: [TALA18, NOGHRE_SINGLE],
+      platforms: PLATFORMS,
+    });
+    const paths = entries.map((entry) => entry.path);
 
-    expect(urls).toContain(`${SITE_URL}/tala-18`);
-    expect(urls).not.toContain(`${SITE_URL}/noghre`); // دروازه بسته ⟸ غایب
-    expect(urls).toContain(`${SITE_URL}/wallgold`);
-    expect(urls).toContain(`${SITE_URL}/talasea`);
+    expect(paths).toContain("/tala-18");
+    expect(paths).not.toContain("/noghre"); // دروازه بسته ⟸ غایب
+    expect(paths).toContain("/wallgold");
+    expect(paths).toContain("/talasea");
 
     // نوسان قیمت lastmod نیست: صفحات دارایی/سکو اصلاً lastModified ندارند.
-    for (const url of [`${SITE_URL}/tala-18`, `${SITE_URL}/wallgold`]) {
-      const entry = entries.find((e) => e.url === url);
-      expect(entry?.lastModified).toBeUndefined();
+    for (const path of ["/tala-18", "/wallgold"]) {
+      expect(entries.find((entry) => entry.path === path)?.lastModified).toBeUndefined();
     }
   });
 });

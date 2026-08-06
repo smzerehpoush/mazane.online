@@ -1,19 +1,23 @@
 /**
- * مرز وب — ‎GET /api/prices‎ (بلیت ۸): استور seed شده ⟸ payload JSON.
+ * مرز وب — ‎GET /api/prices‎: استور seed شده ⟸ payload JSON.
  *
  * این نقطه فقط برای مصرف به‌روزرسان کلاینت است: بدون کش (no-store)، همان
  * فهرست سکوها و همان اعداد نمایشیِ رندر سرور (هیچ فرمولی)، و قطع منبع ⟸
  * ردیف با قیمت تهی — نه خطا.
+ *
+ * تست به `lib/server/live-prices.ts` می‌زند، نه به فایل مسیر: مسیر
+ * ‎src/routes/api/prices.ts‎ عمداً پوسته‌ی نازکی است که همین تابع را صدا
+ * می‌زند، و بالا آوردن روتر تنکستک برای سنجیدن یک payload بی‌مورد است.
  */
 import { describe, expect, it } from "vitest";
 
-import { GET } from "../app/api/prices/route";
-import { formatToman } from "../lib/format";
-import type { LivePricesPayload } from "../lib/live-update";
+import { formatToman } from "../src/lib/format";
+import type { LivePricesPayload } from "../src/lib/live-update";
+import { livePricesResponse } from "../src/lib/server/live-prices";
 import { healthyStore, seed, staleIso, storeWithUnknownFee } from "./support/seed";
 
 async function getPayload(): Promise<{ response: Response; payload: LivePricesPayload }> {
-  const response = await GET();
+  const response = await livePricesResponse();
   return { response, payload: (await response.json()) as LivePricesPayload };
 }
 
@@ -29,7 +33,7 @@ describe("GET /api/prices", () => {
     const store = healthyStore();
     seed(store);
     // پیش‌شرط: اسنپ‌شات گلدیکا واقعاً در استور هست ولی در فهرست نیست.
-    expect(store.snapshots.goldika).not.toBeNull();
+    expect(store.snapshots["goldika"]).not.toBeNull();
     const { payload } = await getPayload();
     expect(payload.rows.map((row) => row.platform_slug)).toEqual([
       "wallgold",
@@ -46,7 +50,7 @@ describe("GET /api/prices", () => {
     expect(wallgold).toMatchObject({
       price_toman: 18704055,
       price_display: formatToman(18704055), // «۱۸٬۷۰۴٬۰۵۵»
-      updated_at: store.updatedAt.wallgold,
+      updated_at: store.updatedAt["wallgold"],
     });
     expect(wallgold?.price_display).toBe("۱۸٬۷۰۴٬۰۵۵");
   });
@@ -64,8 +68,8 @@ describe("GET /api/prices", () => {
   it("قطع منبع ⟸ قیمت تهی و updated_at قدیمی، نه خطا (قاعده‌ی ۵)", async () => {
     const store = healthyStore();
     const stale = staleIso();
-    store.snapshots.talasea = null; // TTL قیمت جاری گذشته
-    store.updatedAt.talasea = stale; // ولی updated_at بدون TTL مانده
+    store.snapshots["talasea"] = null; // TTL قیمت جاری گذشته
+    store.updatedAt["talasea"] = stale; // ولی updated_at بدون TTL مانده
     seed(store);
     const { response, payload } = await getPayload();
     expect(response.status).toBe(200);

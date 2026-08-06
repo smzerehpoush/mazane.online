@@ -96,8 +96,10 @@ def one_sided_book_snapshot(
     یک‌طرفه را با UNKNOWN مجاز می‌داند)، سمتِ غایب `*_enabled = False`
     می‌گیرد و چون MID وجود ندارد، سکو خودبه‌خود از رأی چک میانه بیرون است.
     """
-    if side is Side.MID:
-        raise ValueError("سطر یک‌طرفه‌ی دفتر سفارش MID ندارد")
+    if side not in (Side.BUY, Side.SELL):
+        # MID یعنی «قیمت اسمی» و MEAN یعنی «قیمت مرجع سکو» — هیچ‌کدام سفارشِ
+        # سرِ دفتر نیستند؛ سطر MEAN را هم فقط خود مدل می‌سازد، نه آداپتر.
+        raise ValueError(f"سطر یک‌طرفه‌ی دفتر سفارش فقط BUY یا SELL است، نه {side.value}")
     terms = PlatformTerms(
         platform_slug=slug,
         buy_fee_percent=None,

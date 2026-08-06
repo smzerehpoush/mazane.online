@@ -46,6 +46,10 @@ FAR = BASE + timedelta(days=365)
 # قیمت مؤثر دو سمت از یک mid مصنوعی ساخته می‌شود تا هر سری قابل تشخیص باشد.
 BUY_DELTA = 1_000
 SELL_DELTA = -1_000
+# هر اسنپ‌شات **سه** سطر خام می‌نویسد، نه دو: مدل سطر MEAN (قیمت مرجع خود
+# سکو) را هم می‌سازد و اینجا چون دو دلتا قرینه‌اند مقدارش دقیقاً همان mid است.
+# همین سری MEAN است که نمودار ۲۴ ساعته از تجمیع ساعتی‌اش می‌خواند.
+SIDES_PER_SNAPSHOT = 3
 
 
 def make_snapshot(
@@ -151,7 +155,8 @@ async def test_rollup_rerun_is_idempotent() -> None:
     second = await store.get_hourly_rollups(SourceKind.PLATFORM, "wallgold")
 
     assert first == second
-    assert len(second) == 2  # فقط BUY و SELL همان یک ساعت — بدون ردیف تکراری
+    # BUY و SELL و MEAN همان یک ساعت — بدون ردیف تکراری.
+    assert len(second) == SIDES_PER_SNAPSHOT
 
 
 async def test_rollup_excludes_suppressed_rows() -> None:
@@ -205,7 +210,7 @@ async def test_prune_only_after_rollup_of_same_interval() -> None:
     pruned = await prune_expired_raw(store, now=later)
 
     remaining = await store.load_raw_rows(until=FAR)
-    assert pruned == 2  # دو سمتِ ساعتِ تجمیع‌شده‌ی ۱۰
+    assert pruned == SIDES_PER_SNAPSHOT  # سه سطرِ ساعتِ تجمیع‌شده‌ی ۱۰
     assert all(hour_floor(r.fetched_at) != BASE for r in remaining)
     # ساعت ۱۱ با اینکه ۹۱ روز کهنه است، بدون تجمیع هرس نشده.
     assert any(hour_floor(r.fetched_at) == BASE + timedelta(hours=1) for r in remaining)
@@ -226,7 +231,7 @@ async def test_prune_keeps_rows_inside_retention_window() -> None:
     pruned = await prune_expired_raw(store, now=now)
 
     remaining = await store.load_raw_rows(until=FAR)
-    assert pruned == 2  # فقط ردیف‌های ساعتِ ۹۰ روز پیش
+    assert pruned == SIDES_PER_SNAPSHOT  # فقط ردیف‌های ساعتِ ۹۰ روز پیش
     assert {r.fetched_at for r in remaining} == {fresh_at}
 
 
@@ -244,7 +249,7 @@ async def test_prune_never_touches_suppressed_rows() -> None:
     await prune_expired_raw(store, now=later)
 
     remaining = await store.load_raw_rows(until=FAR)
-    assert len(remaining) == 2
+    assert len(remaining) == SIDES_PER_SNAPSHOT
     assert all(r.suppressed for r in remaining)
 
 
@@ -260,7 +265,7 @@ async def test_compression_keeps_first_and_last_of_each_run() -> None:
 
     removed = await compress_duplicate_runs(store, now=now)
 
-    assert removed == 4  # دو ردیف میانی × دو سمت
+    assert removed == 2 * SIDES_PER_SNAPSHOT  # دو ردیف میانی × سه سمت
     remaining = await store.load_raw_rows(until=FAR)
     buy_times = sorted(r.fetched_at for r in remaining if r.side == "BUY")
     assert buy_times == [run_times[0], run_times[-1], BASE + timedelta(minutes=40)]
@@ -289,7 +294,7 @@ async def test_compression_requires_rollup_of_the_hour() -> None:
     current_hour_rows = [
         r for r in remaining if hour_floor(r.fetched_at) == BASE + timedelta(hours=1)
     ]
-    assert len(current_hour_rows) == 6  # سه نوبت × دو سمت، دست‌نخورده
+    assert len(current_hour_rows) == 3 * SIDES_PER_SNAPSHOT  # سه نوبت × سه سمت
 
 
 async def test_retention_pass_preserves_hourly_history_after_prune() -> None:
@@ -310,9 +315,9 @@ async def test_retention_pass_preserves_hourly_history_after_prune() -> None:
 
     report = await retention_pass(store, now=later)
 
-    # هر دو ساعتِ سکو (۲ سمت) + یک ساعتِ مرجع در همان گذر تجمیع و سپس هرس شدند.
-    assert report.rollups_written == 5
-    assert report.rows_pruned == 9
+    # هر دو ساعتِ سکو (۳ سمت) + یک ساعتِ مرجع در همان گذر تجمیع و سپس هرس شدند.
+    assert report.rollups_written == 2 * SIDES_PER_SNAPSHOT + 1
+    assert report.rows_pruned == 4 * SIDES_PER_SNAPSHOT + 1
     assert await store.load_raw_rows(until=FAR) == ()
     history = await store.get_hourly_rollups(SourceKind.PLATFORM, "wallgold")
     assert [r.hour_start for r in history if r.side == "BUY"] == [

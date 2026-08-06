@@ -1,0 +1,183 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+/* ---------------------------------------------------------------------------
+ * وزیرمتن — خودمیزبان (بلیت ۱۱)
+ *
+ * چرا نه fonts.googleapis.com: کاربر ایرانی یا کند بارگذاری می‌کند یا اصلاً
+ * نمی‌تواند، و هر درخواست بیرونی یک وابستگی و یک نقطه‌ی نشت است. فایل در
+ * `public/fonts/` است و از همان مبدأ سایت سرو می‌شود.
+ *
+ * یک فایل «متغیر» به‌جای چهار فایل ثابت: ‎111KB‎ در برابر ‎~200KB‎ برای وزن‌های
+ * ۴۰۰/۵۰۰/۶۰۰/۷۰۰، و همه‌ی وزن‌های ۱۰۰ تا ۹۰۰ را هم پوشش می‌دهد.
+ *
+ * `font-display: swap` عمدی است: متن باید فوراً با فونت جایگزین دیده شود.
+ * قیمت هرگز نباید پشت بارگذاری فونت پنهان بماند.
+ *
+ * شماره‌ی نسخه عمداً داخل نام فایل است: این فایل هش محتوا ندارد (از `public/`
+ * سرو می‌شود، نه از باندل ویت) و با `immutable` یک‌ساله کش می‌شود؛ تنها راه
+ * بی‌خطر برای ارتقای فونت، عوض‌شدن نشانی است. (قاعده در `vite.config.ts`.)
+ *
+ * پروانه: SIL Open Font License 1.1 — متن کامل در `public/fonts/OFL.txt`.
+ * منبع: بسته‌ی npm ‏`vazirmatn@33.0.3` (rastikerdar/vazirmatn).
+ * ------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/fonts/vazirmatn-variable-33.0.3.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  /* جایگزین‌ها برای لحظه‌ی swap و برای مرورگری که فونت متغیر را نمی‌فهمد:
+     Tahoma تنها فونت فارسی‌خوانِ همه‌جا-موجود روی ویندوز است. */
+  --font-sans: "Vazirmatn", ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --shadow-soft: var(--shadow-soft);
+  --shadow-card: var(--shadow-card);
+  --shadow-lift: var(--shadow-lift);
+  --shadow-glass: var(--shadow-glass);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+}
+
+:root {
+  --radius: 0.875rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.23 0.035 258);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.23 0.035 258);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.23 0.035 258);
+  --primary: oklch(0.55 0.17 256);
+  --primary-foreground: oklch(0.99 0.005 250);
+  --secondary: oklch(0.968 0.011 250);
+  --secondary-foreground: oklch(0.32 0.05 256);
+  --muted: oklch(0.972 0.008 250);
+  --muted-foreground: oklch(0.56 0.028 256);
+  --accent: oklch(0.955 0.022 250);
+  --accent-foreground: oklch(0.38 0.09 256);
+  --destructive: oklch(0.6 0.2 27);
+  --destructive-foreground: oklch(0.99 0.005 250);
+  --border: oklch(0.925 0.012 252);
+  --input: oklch(0.925 0.012 252);
+  --ring: oklch(0.7 0.09 256);
+  --surface: oklch(0.985 0.007 250);
+  --surface-2: oklch(0.968 0.014 250);
+  --gold: oklch(0.76 0.13 84);
+  --gold-soft: oklch(0.93 0.06 88);
+  --shadow-soft: 0 1px 2px oklch(0.45 0.06 256 / 0.05);
+  --shadow-card: 0 1px 2px oklch(0.45 0.06 256 / 0.05), 0 8px 24px -12px oklch(0.45 0.08 256 / 0.18);
+  --shadow-glass: 0 1px 1px oklch(1 0 0 / 0.6) inset, 0 2px 8px oklch(0.45 0.06 256 / 0.06), 0 20px 48px -24px oklch(0.45 0.1 256 / 0.3);
+  --positive: oklch(0.53 0.11 163);
+  --positive-soft: oklch(0.955 0.045 165);
+  --negative: oklch(0.56 0.12 18);
+  --negative-soft: oklch(0.958 0.035 18);
+  --shadow-lift: 0 2px 6px oklch(0.45 0.06 256 / 0.07), 0 18px 40px -18px oklch(0.45 0.1 256 / 0.28);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility card-surface {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+}
+
+@utility transition-smooth {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition-duration: 180ms;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility rise-in {
+  animation: rise-in 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@utility glass-surface {
+  background-color: color-mix(in oklab, var(--color-card) 72%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-border) 80%, transparent);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-glass);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+@utility glow-primary {
+  text-shadow: 0 0 24px color-mix(in oklab, var(--color-primary) 32%, transparent);
+}
+
+@utility lift-hover {
+  transition:
+    transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-color 200ms ease;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lift);
+    border-color: color-mix(in oklab, var(--color-primary) 28%, var(--color-border));
+  }
+}

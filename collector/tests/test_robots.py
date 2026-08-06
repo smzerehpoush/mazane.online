@@ -42,6 +42,7 @@ from mazane_collector.references.pipeline import (
 from mazane_collector.references.talair import TALAIR_ENDPOINT
 from mazane_collector.references.transport import RobotsCheckedTransport
 from mazane_collector.robots import (
+    PERMISSION_OVERRIDE_HOSTS,
     ROBOTS_TTL_SECONDS,
     RobotsGate,
     robots_checked_fetch,
@@ -54,6 +55,16 @@ ROBOTS_LOGGER = "mazane.collector.robots"
 
 ALL_ADAPTERS = (WallgoldAdapter(), TalaseaAdapter(), MilliAdapter(), GoldikaAdapter())
 ALL_ENDPOINTS = (WALLGOLD_ENDPOINT, TALASEA_ENDPOINT, MILLI_ENDPOINT, GOLDIKA_ENDPOINT)
+
+# میزبانی که اجازه‌نامه‌ی کتبی مالک دارد اصلاً robots.txt‌اش خوانده نمی‌شود
+# (`PERMISSION_OVERRIDE_HOSTS` در ماژول robots — طلاسی از ۲۰۲۶-۰۸-۰۶).
+# شمارش‌های «هر میزبان یک‌بار» باید از همین مجموعه مشتق شوند، نه عدد ثابت،
+# تا افزودن اجازه‌نامه‌ی بعدی تست را بی‌دلیل قرمز نکند.
+ROBOTS_CHECKED_ENDPOINTS = tuple(
+    endpoint
+    for endpoint in ALL_ENDPOINTS
+    if urlsplit(endpoint).hostname not in PERMISSION_OVERRIDE_HOSTS
+)
 
 
 def fixture_text(name: str) -> str:
@@ -171,7 +182,7 @@ async def test_allowed_robots_leaves_the_round_untouched_one_fetch_per_host() ->
 
     assert {s.platform_slug for s in saved} == {"wallgold", "talasea", "milli", "goldika"}
     # هر میزبان دقیقاً یک‌بار خوانده شد — کرال مؤدب برای خود robots هم.
-    assert set(robots_client.calls) == {robots_url(e) for e in ALL_ENDPOINTS}
+    assert set(robots_client.calls) == {robots_url(e) for e in ROBOTS_CHECKED_ENDPOINTS}
     assert len(robots_client.calls) == len(set(robots_client.calls))
 
 
@@ -248,7 +259,7 @@ async def test_cache_ttl_and_url_that_becomes_disallowed(caplog: Any) -> None:
         ALL_ADAPTERS, fetch, store, platforms=PLATFORMS, now=FETCHED_AT
     )
     assert len(first) == 4
-    assert len(robots_client.calls) == 4
+    assert len(robots_client.calls) == len(ROBOTS_CHECKED_ENDPOINTS)
 
     # میزبان والدگلد مسیر را می‌بندد؛ تا سررسید TTL همان برداشت کش معتبر است.
     robots_client.responses[robots_url(WALLGOLD_ENDPOINT)] = RobotsResponse(
@@ -258,7 +269,8 @@ async def test_cache_ttl_and_url_that_becomes_disallowed(caplog: Any) -> None:
         ALL_ADAPTERS, fetch, store, platforms=PLATFORMS, now=second_at
     )
     assert "wallgold" in {s.platform_slug for s in second}
-    assert len(robots_client.calls) == 4  # درون TTL هیچ خواندن تازه‌ای نیست.
+    # درون TTL هیچ خواندن تازه‌ای نیست.
+    assert len(robots_client.calls) == len(ROBOTS_CHECKED_ENDPOINTS)
 
     # پس از TTL خواندن تازه ممنوعیت را می‌بیند: لاگ + کهنگی، نه سقوط.
     clock.advance(ROBOTS_TTL_SECONDS + 1)
@@ -266,7 +278,7 @@ async def test_cache_ttl_and_url_that_becomes_disallowed(caplog: Any) -> None:
         third = await collect_round(
             ALL_ADAPTERS, fetch, store, platforms=PLATFORMS, now=third_at
         )
-    assert len(robots_client.calls) == 8
+    assert len(robots_client.calls) == 2 * len(ROBOTS_CHECKED_ENDPOINTS)
     assert {s.platform_slug for s in third} == {"talasea", "milli", "goldika"}
     # کهنگی یعنی آخرین داده‌ی مجاز می‌ماند و جلو نمی‌رود؛ بقیه تازه می‌شوند.
     assert await store.get_updated_at("wallgold") == second_at

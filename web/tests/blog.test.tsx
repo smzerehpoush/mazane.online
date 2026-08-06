@@ -5,35 +5,30 @@
  * فیک عمداً «گنگ» است (هرچه seed شده را برمی‌گرداند، با هر وضعیتی) تا قاعده‌ی
  * نمایش — فقط published؛ draft/retracted ⟸ 404/غایب — واقعاً در لایه‌ی وب
  * سنجیده شود، نه در فیک.
+ *
+ * مسیرهای ‎/blog‎ و ‎/blog/<slug>‎ فقط سیم‌کشی‌اند؛ «۴۰۴» در این مرز یعنی
+ * `getPublishedPost(...) === null` و مسیر همان را به `notFound()` ترجمه می‌کند.
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import BlogIndex from "../app/blog/page";
-import BlogPostPage, {
-  generateMetadata,
-  generateStaticParams,
-} from "../app/blog/[slug]/page";
-import sitemap from "../app/sitemap";
-import { formatDateFa } from "../lib/format";
-import { setBlogSource, type BlogPost } from "../lib/blog";
-import { setPriceSource } from "../lib/prices";
-import { SITE_URL } from "../lib/site";
-
-/**
- * سایت‌مپ از بلیت ۷ به بعد صفحات دارایی/سکو را هم می‌خواند؛ این تست‌ها
- * فقط رفتار بلاگ را می‌سنجند، پس منبع قیمتِ خالی تزریق می‌شود تا ردیس
- * (منبع پیش‌فرض تنبل) هرگز load نشود. رفتار دارایی/سکوی سایت‌مپ در
- * tests/asset-platform-pages.test.tsx سنجیده می‌شود.
- */
-function seedEmptyPrices(): void {
-  setPriceSource({
-    getListedPlatforms: async () => [],
-    getSnapshot: async () => null,
-    getUpdatedAt: async () => null,
-    getInstruments: async () => [],
-  });
-}
+import {
+  BlogIndexView,
+  BlogPostView,
+  blogIndexHead,
+  blogPostHead,
+} from "../src/components/content/BlogViews";
+import {
+  getPublishedPost,
+  listPublishedPosts,
+  setBlogSource,
+  type BlogPost,
+  type PublishedPost,
+} from "../src/lib/blog";
+import { formatDateFa } from "../src/lib/format";
+import { buildSitemapEntries } from "../src/lib/seo/sitemap";
+import { SITE_URL } from "../src/lib/site";
+import { seedBlog } from "./support/seed";
 
 const PUBLISHED_OLD: BlogPost = {
   slug: "moghayese-karmozd-sakooha",
@@ -82,31 +77,28 @@ const RETRACTED: BlogPost = {
 
 const ALL_POSTS: BlogPost[] = [PUBLISHED_OLD, PUBLISHED_NEW, DRAFT, RETRACTED];
 
-function seedBlog(posts: BlogPost[]): void {
-  seedEmptyPrices();
-  setBlogSource({
-    listPosts: async () => posts,
-    getPost: async (slug) => posts.find((p) => p.slug === slug) ?? null,
-  });
+/** فهرست بلاگ همان‌طور که مسیر می‌سازدش: قاعده‌ی نمایش در `lib/blog.ts`. */
+async function renderIndex(): Promise<string> {
+  return renderToStaticMarkup(<BlogIndexView posts={await listPublishedPosts()} />);
 }
 
-function postPageProps(slug: string): { params: Promise<{ slug: string }> } {
-  return { params: Promise.resolve({ slug }) };
+/** صفحه‌ی پست — `null` یعنی ۴۰۴ و مسیر همان‌جا `notFound()` می‌اندازد. */
+async function renderPost(slug: string): Promise<string> {
+  const post = await getPublishedPost(slug);
+  if (post === null) throw new Error(`پست ${slug} ۴۰۴ شد`);
+  return renderToStaticMarkup(<BlogPostView post={post} />);
 }
 
-/** خطای notFound نکست — digest بسته به نسخه NEXT_NOT_FOUND یا ‎…;404 است. */
-const NOT_FOUND_DIGEST = /NEXT_NOT_FOUND|404/;
-
-function extractJsonLd(html: string): Record<string, unknown> {
-  const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-  expect(match).not.toBeNull();
-  return JSON.parse((match as RegExpMatchArray)[1]) as Record<string, unknown>;
+function jsonLdOf(head: ReturnType<typeof blogPostHead>): Record<string, unknown>[] {
+  return (head.scripts ?? []).map(
+    (script) => JSON.parse(script.children) as Record<string, unknown>,
+  );
 }
 
 describe("فهرست بلاگ — /blog", () => {
   it("پست‌های منتشرشده را با عنوان فارسی، تاریخ فارسی و لینک تخت نشان می‌دهد", async () => {
     seedBlog(ALL_POSTS);
-    const html = renderToStaticMarkup(await BlogIndex());
+    const html = await renderIndex();
 
     expect(html).toContain(PUBLISHED_OLD.title_fa);
     expect(html).toContain(PUBLISHED_NEW.title_fa);
@@ -120,7 +112,7 @@ describe("فهرست بلاگ — /blog", () => {
 
   it("نو به کهنه مرتب است — پست تازه‌تر بالاتر", async () => {
     seedBlog(ALL_POSTS);
-    const html = renderToStaticMarkup(await BlogIndex());
+    const html = await renderIndex();
     expect(html.indexOf(PUBLISHED_NEW.title_fa)).toBeGreaterThan(-1);
     expect(html.indexOf(PUBLISHED_NEW.title_fa)).toBeLessThan(
       html.indexOf(PUBLISHED_OLD.title_fa),
@@ -129,26 +121,32 @@ describe("فهرست بلاگ — /blog", () => {
 
   it("پیش‌نویس و پس‌گرفته در فهرست نیستند", async () => {
     seedBlog(ALL_POSTS);
-    const html = renderToStaticMarkup(await BlogIndex());
+    const html = await renderIndex();
     expect(html).not.toContain(DRAFT.title_fa);
     expect(html).not.toContain(RETRACTED.title_fa);
   });
 
   it("بلاگ خالی هم صفحه‌ی سالم می‌دهد", async () => {
     seedBlog([]);
-    const html = renderToStaticMarkup(await BlogIndex());
+    const html = await renderIndex();
     expect(html).toContain("هنوز پستی منتشر نشده است");
+  });
+
+  it("سرصفحه‌اش canonical و BreadcrumbList دارد (بند ۶.۵)", () => {
+    const head = blogIndexHead();
+    expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/blog` });
+    expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
   });
 });
 
 describe("صفحه‌ی پست — /blog/[slug]", () => {
   it("عنوان، بدنه‌ی مارک‌داون رندرشده و تاریخ فارسی دارد", async () => {
     seedBlog(ALL_POSTS);
-    const html = renderToStaticMarkup(
-      await BlogPostPage(postPageProps(PUBLISHED_OLD.slug)),
-    );
+    const html = await renderPost(PUBLISHED_OLD.slug);
 
-    expect(html).toContain(`<h1>${PUBLISHED_OLD.title_fa}</h1>`);
+    expect(html).toMatch(
+      new RegExp(`<h1[^>]*>${PUBLISHED_OLD.title_fa.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}</h1>`),
+    );
     // مارک‌داون واقعاً رندر شده، نه متن خام:
     expect(html).toContain("<h2>چرا کارمزد مهم است</h2>");
     expect(html).toContain("<strong>کارمزد</strong>");
@@ -160,26 +158,34 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(html).toMatch(/<time [^>]*datetime="2026-07-20T08:30:00.000Z"/i);
   });
 
-  it("BlogPosting معتبر در همان رندر سرور — تاریخ‌ها ISO با ارقام لاتین و هم‌ارز داده‌ی seed", async () => {
+  it("BlogPosting معتبر با تاریخ‌های ISO لاتین و هم‌ارز داده‌ی seed", async () => {
     seedBlog(ALL_POSTS);
-    const html = renderToStaticMarkup(
-      await BlogPostPage(postPageProps(PUBLISHED_OLD.slug)),
-    );
-    const jsonLd = extractJsonLd(html);
+    const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;
+    const [blogPosting] = jsonLdOf(blogPostHead(post));
 
-    expect(jsonLd["@context"]).toBe("https://schema.org");
-    expect(jsonLd["@type"]).toBe("BlogPosting");
-    expect(jsonLd.headline).toBe(PUBLISHED_OLD.title_fa);
-    expect(jsonLd.inLanguage).toBe("fa");
-    expect(jsonLd.datePublished).toBe(PUBLISHED_OLD.published_at);
-    expect(jsonLd.dateModified).toBe(PUBLISHED_OLD.updated_at);
+    expect(blogPosting?.["@context"]).toBe("https://schema.org");
+    expect(blogPosting?.["@type"]).toBe("BlogPosting");
+    expect(blogPosting?.["headline"]).toBe(PUBLISHED_OLD.title_fa);
+    expect(blogPosting?.["inLanguage"]).toBe("fa");
+    expect(blogPosting?.["datePublished"]).toBe(PUBLISHED_OLD.published_at);
+    expect(blogPosting?.["dateModified"]).toBe(PUBLISHED_OLD.updated_at);
     // ارقام لاتین (\d فقط ASCII می‌گیرد):
-    expect(jsonLd.datePublished).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-    expect(jsonLd.dateModified).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
-    expect(jsonLd.mainEntityOfPage).toEqual({
+    expect(blogPosting?.["datePublished"]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    expect(blogPosting?.["dateModified"]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
+    expect(blogPosting?.["mainEntityOfPage"]).toEqual({
       "@type": "WebPage",
       "@id": `${SITE_URL}/blog/${PUBLISHED_OLD.slug}`,
     });
+  });
+
+  it("ترتیب اسکریپت‌ها عمدی است: BlogPosting اول، BreadcrumbList بعد", async () => {
+    seedBlog(ALL_POSTS);
+    const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;
+    const blocks = jsonLdOf(blogPostHead(post));
+    expect(blocks.map((block) => block["@type"])).toEqual([
+      "BlogPosting",
+      "BreadcrumbList",
+    ]);
   });
 
   it("HTML خام داخل مارک‌داون escape می‌شود، نه اجرا", async () => {
@@ -189,57 +195,47 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
         body_md: 'یک پاراگراف با <script>alert("x")</script> داخلش.',
       },
     ]);
-    const html = renderToStaticMarkup(
-      await BlogPostPage(postPageProps(PUBLISHED_NEW.slug)),
-    );
+    const html = await renderPost(PUBLISHED_NEW.slug);
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>alert");
   });
 
-  it("پیش‌نویس ⟸ 404", async () => {
+  it("پیش‌نویس ⟸ ۴۰۴", async () => {
     seedBlog(ALL_POSTS);
-    await expect(BlogPostPage(postPageProps(DRAFT.slug))).rejects.toMatchObject({
-      digest: expect.stringMatching(NOT_FOUND_DIGEST),
+    await expect(getPublishedPost(DRAFT.slug)).resolves.toBeNull();
+  });
+
+  it("پس‌گرفته ⟸ ۴۰۴", async () => {
+    seedBlog(ALL_POSTS);
+    await expect(getPublishedPost(RETRACTED.slug)).resolves.toBeNull();
+  });
+
+  it("اسلاگ ناموجود ⟸ ۴۰۴", async () => {
+    seedBlog(ALL_POSTS);
+    await expect(getPublishedPost("hich-vaght-nabude")).resolves.toBeNull();
+  });
+
+  it("سرصفحه‌ی ۴۰۴ صریحاً noindex است — صفحه‌ی نبوده ایندکس نمی‌شود", () => {
+    const head = blogPostHead(undefined);
+    expect(head.meta).toContainEqual({ name: "robots", content: "noindex" });
+    expect(head.scripts).toBeUndefined();
+  });
+
+  it("سرصفحه‌ی پست canonical تخت زیر /blog/ دارد", async () => {
+    seedBlog(ALL_POSTS);
+    const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;
+    const head = blogPostHead(post);
+    expect(head.meta?.[0]).toEqual({ title: PUBLISHED_OLD.title_fa });
+    expect(head.links).toContainEqual({
+      rel: "canonical",
+      href: `${SITE_URL}/blog/${PUBLISHED_OLD.slug}`,
     });
-  });
-
-  it("پس‌گرفته ⟸ 404", async () => {
-    seedBlog(ALL_POSTS);
-    await expect(BlogPostPage(postPageProps(RETRACTED.slug))).rejects.toMatchObject({
-      digest: expect.stringMatching(NOT_FOUND_DIGEST),
-    });
-  });
-
-  it("اسلاگ ناموجود ⟸ 404", async () => {
-    seedBlog(ALL_POSTS);
-    await expect(BlogPostPage(postPageProps("hich-vaght-nabude"))).rejects.toMatchObject({
-      digest: expect.stringMatching(NOT_FOUND_DIGEST),
-    });
-  });
-
-  it("متادیتای پست canonical تخت زیر /blog/ دارد", async () => {
-    seedBlog(ALL_POSTS);
-    const metadata = await generateMetadata(postPageProps(PUBLISHED_OLD.slug));
-    expect(metadata.title).toBe(PUBLISHED_OLD.title_fa);
-    expect(metadata.alternates?.canonical).toBe(
-      `${SITE_URL}/blog/${PUBLISHED_OLD.slug}`,
-    );
-  });
-
-  it("generateStaticParams فقط اسلاگ‌های منتشرشده را می‌دهد", async () => {
-    seedBlog(ALL_POSTS);
-    const params = await generateStaticParams();
-    const slugs = params.map((p) => p.slug);
-    expect(slugs).toContain(PUBLISHED_OLD.slug);
-    expect(slugs).toContain(PUBLISHED_NEW.slug);
-    expect(slugs).not.toContain(DRAFT.slug);
-    expect(slugs).not.toContain(RETRACTED.slug);
   });
 });
 
 describe("استور بلاگ از دسترس خارج (مثلاً build بیرون از سرور) — کهنگی/خالی، نه شکست", () => {
+  /** ⚠️ مستقیم `setBlogSource` — کمک‌کار seed فقط منبع سالم می‌سازد. */
   function seedBrokenSource(): void {
-    seedEmptyPrices();
     setBlogSource({
       listPosts: async () => {
         throw new Error("pg down");
@@ -252,53 +248,45 @@ describe("استور بلاگ از دسترس خارج (مثلاً build بیر�
 
   it("فهرست بلاگ باز هم ۲۰۰ می‌دهد — حالت خالی", async () => {
     seedBrokenSource();
-    const html = renderToStaticMarkup(await BlogIndex());
+    const html = await renderIndex();
     expect(html).toContain("هنوز پستی منتشر نشده است");
-  });
-
-  it("سایت‌مپ باز هم ساخته می‌شود و صفحه‌ی اصلی را دارد", async () => {
-    seedBrokenSource();
-    const urls = (await sitemap()).map((e) => e.url);
-    expect(urls).toContain(`${SITE_URL}/`);
-  });
-
-  it("generateStaticParams خالی می‌دهد (اسلاگ‌ها بعداً on-demand ساخته می‌شوند)", async () => {
-    seedBrokenSource();
-    await expect(generateStaticParams()).resolves.toEqual([]);
   });
 
   it("صفحه‌ی پست خطای استور را ۴۰۴ جا نمی‌زند — خطا بالا می‌رود تا ایندکس نسوزد", async () => {
     seedBrokenSource();
-    await expect(BlogPostPage(postPageProps(PUBLISHED_OLD.slug))).rejects.toThrow(
-      "pg down",
-    );
+    await expect(getPublishedPost(PUBLISHED_OLD.slug)).rejects.toThrow("pg down");
   });
 });
 
-describe("سایت‌مپ — حداقلی و درست (بلیت ۱۰ گسترش می‌دهد)", () => {
-  it("صفحه‌ی اصلی و پست‌های منتشرشده را دارد؛ lastmod پست = updated_at خودش، نه now()", async () => {
+describe("سایت‌مپ بلاگ (بند ۶.۷)", () => {
+  it("lastmod پست = updated_at خودش، نه now()؛ صفحات دیگر lastmod ندارند", async () => {
     seedBlog(ALL_POSTS);
-    const entries = await sitemap();
+    const entries = buildSitemapEntries({
+      posts: await listPublishedPosts(),
+      instruments: [],
+      platforms: [],
+    });
+    const paths = entries.map((entry) => entry.path);
 
-    const urls = entries.map((e) => e.url);
-    expect(urls).toContain(`${SITE_URL}/`);
-    expect(urls).toContain(`${SITE_URL}/blog/${PUBLISHED_OLD.slug}`);
-    expect(urls).toContain(`${SITE_URL}/blog/${PUBLISHED_NEW.slug}`);
+    expect(paths).toContain("/");
+    expect(paths).toContain(`/blog/${PUBLISHED_OLD.slug}`);
+    expect(paths).toContain(`/blog/${PUBLISHED_NEW.slug}`);
+    expect(
+      entries.find((entry) => entry.path === `/blog/${PUBLISHED_OLD.slug}`)?.lastModified,
+    ).toBe(PUBLISHED_OLD.updated_at);
 
-    const oldEntry = entries.find(
-      (e) => e.url === `${SITE_URL}/blog/${PUBLISHED_OLD.slug}`,
-    );
-    expect(oldEntry?.lastModified).toBe(PUBLISHED_OLD.updated_at);
-
-    // قیمت لحظه‌ای lastmod نیست: صفحه‌ی اصلی اصلاً lastModified ندارد (بند ۶.۷).
-    const homeEntry = entries.find((e) => e.url === `${SITE_URL}/`);
-    expect(homeEntry?.lastModified).toBeUndefined();
+    // قیمت لحظه‌ای lastmod نیست: صفحه‌ی اصلی اصلاً lastModified ندارد.
+    expect(entries.find((entry) => entry.path === "/")?.lastModified).toBeUndefined();
   });
 
   it("پیش‌نویس و پس‌گرفته در سایت‌مپ نیستند", async () => {
     seedBlog(ALL_POSTS);
-    const urls = (await sitemap()).map((e) => e.url);
-    expect(urls).not.toContain(`${SITE_URL}/blog/${DRAFT.slug}`);
-    expect(urls).not.toContain(`${SITE_URL}/blog/${RETRACTED.slug}`);
+    const paths = buildSitemapEntries({
+      posts: await listPublishedPosts(),
+      instruments: [],
+      platforms: [],
+    }).map((entry) => entry.path);
+    expect(paths).not.toContain(`/blog/${DRAFT.slug}`);
+    expect(paths).not.toContain(`/blog/${RETRACTED.slug}`);
   });
 });

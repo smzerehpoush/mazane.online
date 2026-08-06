@@ -16,7 +16,27 @@
 # جزئیات در رانبوک، گام ۵.
 
 mazane.online {
-	encode zstd gzip
+	# ‎match‎ عمدی است، نه ‎encode zstd gzip‎ خالی. سرور یک هسته دارد و بزرگ‌ترین
+	# دارایی ایستای ما فونت ‎woff2‎ (~۱۱۱KB) است که خودش فشرده است؛ فشرده‌سازی
+	# دوباره‌اش فقط CPU می‌سوزاند و حجم را کم نمی‌کند. همین برای تصویر و
+	# ‎favicon‎ هم صادق است. فشرده‌سازی فقط روی چیزی که واقعاً کوچک می‌شود:
+	encode {
+		zstd
+		gzip
+		match {
+			header Content-Type text/*
+			header Content-Type application/json*
+			header Content-Type application/javascript*
+			header Content-Type application/xml*
+			header Content-Type image/svg+xml*
+		}
+	}
+
+	# هدرهای کش را مبدأ می‌گذارد و اینجا دست‌نخورده رد می‌شوند:
+	#   HTML ⟸ s-maxage=60 + stale-while-revalidate + stale-if-error (بند ۱۰)
+	#   /assets/** و /fonts/** ⟸ max-age یک‌ساله + immutable
+	# هیچ ‎header‎ ای برای override اینجا اضافه نشود؛ ‎stale-if-error‎ همان
+	# چیزی است که در قطعی مبدأ جلوی حذف‌شدن سایت از ایندکس را می‌گیرد.
 
 	# ---- لاگ بازدیدهای مبدأ — الزام بند ۱۰ و بند ۱۳ تصمیم ۱۴ سند معماری ----
 	# «بیمه‌ی Crawl Stats خودمیزبان»: فرمت JSON کدی همه‌ی هدرهای درخواست را ثبت

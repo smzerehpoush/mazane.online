@@ -45,7 +45,9 @@ async def test_fixture_payload_is_stored_with_user_view_side_mapping() -> None:
     assert stored.suppressed is False
 
     by_side = {quote.side: quote for quote in stored.quotes}
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL}
+    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
+    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
+    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
 
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K

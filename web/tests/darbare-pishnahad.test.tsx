@@ -4,15 +4,21 @@
  * پیشنهادی که معیارش منتشر نشده باشد تحریریه نیست؛ این صفحه همان معیار را
  * علنی می‌کند: کمترین هزینه‌ی رفت‌وبرگشت میان سکوهایی با کارمزد API و
  * خریدوفروش باز. صفحه ایستاست — هیچ استوری لازم ندارد.
+ *
+ * ⚠️ امروز هیچ جزء «پیشنهاد سردبیر» ای روی صفحه‌ی اصلی نیست (جایگاه تبلیغ در
+ * طرح تازه جایی ندارد)، ولی صفحه‌ی معیار طبق تصمیم ۹ حذف نمی‌شود و در ناوبری
+ * سرصفحه هم هست — پس متن و حضورش در سایت‌مپ همچنان دروازه دارند.
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import DarbarePishnahad from "../app/darbare-pishnahad/page";
-import sitemap from "../app/sitemap";
-import { setBlogSource } from "../lib/blog";
-import { setPriceSource } from "../lib/prices";
-import { SITE_URL } from "../lib/site";
+import {
+  DarbarePishnahad,
+  darbarePishnahadHead,
+} from "../src/routes/darbare-pishnahad";
+import { buildSitemapEntries } from "../src/lib/seo/sitemap";
+import { SITE_URL } from "../src/lib/site";
+import { nav } from "../src/lib/site-content";
 
 describe("صفحه‌ی معیارهای پیشنهاد سردبیر", () => {
   it("معیار انتخاب را صریح اعلام می‌کند", () => {
@@ -30,16 +36,23 @@ describe("صفحه‌ی معیارهای پیشنهاد سردبیر", () => {
     expect(html).toContain("تبلیغ");
   });
 
-  it("در سایت‌مپ هست (محتوای ایستا، بدون lastmod قیمتی)", async () => {
-    setBlogSource({ listPosts: async () => [], getPost: async () => null });
-    // سایت‌مپ از بلیت ۷ منبع قیمت را هم می‌خواند — خالی تزریق تا ردیس load نشود.
-    setPriceSource({
-      getListedPlatforms: async () => [],
-      getSnapshot: async () => null,
-      getUpdatedAt: async () => null,
-      getInstruments: async () => [],
+  it("canonical تخت لاتین و BreadcrumbList دارد (بند ۶.۵)", () => {
+    const head = darbarePishnahadHead();
+    expect(head.links).toContainEqual({
+      rel: "canonical",
+      href: `${SITE_URL}/darbare-pishnahad`,
     });
-    const urls = (await sitemap()).map((entry) => entry.url);
-    expect(urls).toContain(`${SITE_URL}/darbare-pishnahad`);
+    expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
+  });
+
+  it("در سایت‌مپ هست (محتوای ایستا، بدون lastmod قیمتی)", () => {
+    const entries = buildSitemapEntries({ posts: [], instruments: [], platforms: [] });
+    const entry = entries.find((item) => item.path === "/darbare-pishnahad");
+    expect(entry).toBeDefined();
+    expect(entry?.lastModified).toBeUndefined();
+  });
+
+  it("از ناوبری سرصفحه در دسترس است — صفحه‌ی یتیم نمی‌ماند", () => {
+    expect(nav.map((item) => item.href)).toContain("/darbare-pishnahad");
   });
 });

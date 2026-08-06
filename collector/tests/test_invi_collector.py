@@ -57,8 +57,10 @@ async def test_fixture_frame_is_stored_mid_only_with_unknown_fee() -> None:
     assert stored is not None
     assert await store.get_updated_at("invi") == FETCHED_AT
 
-    # کارمزد اینوی هیچ‌جا منتشر نشده ⟸ فقط MID؛ قیمت مؤثر جعل نمی‌شود.
-    assert [q.side for q in stored.quotes] == [Side.MID]
+    # کارمزد نامعلوم ⟸ فقط MID و سطر MEAN که بازتاب همان تک‌عدد است
+    # (سکوی تک‌قیمتی: عددی که منتشر می‌کند قیمت مرجع اوست). قیمت مؤثر
+    # همچنان جعل نمی‌شود — نه BUY هست نه SELL.
+    assert [q.side for q in stored.quotes] == [Side.MID, Side.MEAN]
     quote = stored.quotes[0]
     assert quote.instrument == Instrument.GOLD_18K
     # ضریب فرضی این منبع: تومان بر گرم، ×۱ — ریاضی مقیاس قفل می‌شود.

@@ -7,19 +7,42 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, computed_field, model_validator
 
 from .pricing import reference_price_toman
 
 
 class Side(StrEnum):
+    """سمت یک سطر قیمت.
+
+    - `BUY` / `SELL`: قیمت **مؤثر** خرید/فروش (با کارمزد) — بند ۱ سند معماری.
+    - `MID`: قیمت اسمی، همان عددی که خود سکو منتشر می‌کند.
+    - `MEAN`: **قیمت مرجع خودِ همان سکو** — عدد واحدی که آن سکو را روی نمودار
+      و در محتوا نمایندگی می‌کند (CONTEXT.md، «قیمت مرجع سکو»؛ تصمیم صاحب
+      کسب‌وکار ۲۰۲۶-۰۸-۰۶): سکوی دوقیمتی ⟸ میانگین دو عدد خودش، سکوی
+      تک‌قیمتی ⟸ همان تک‌عدد.
+
+    ⚠️ `MEAN` **هرگز میانگین بین‌سکویی نیست** (قاعده‌ی ۴ قراردادها، خط قرمز
+    حقوقی بند ۷.۱): هر سطر MEAN `platform_slug` خودش را دارد و فقط از سطرهای
+    همان یک سکو ساخته می‌شود؛ هیچ‌جا عددی از دو سکو با هم میانگین نمی‌گیرد.
+
+    ⚠️ با جدول `reference_quotes` هم اشتباه نشود: آن جدول مالِ **مرجع قیمت**
+    است (tala.ir، بن‌بست) — منبع بیرونیِ اعتبارسنجی که اصلاً سکو نیست، در
+    جدول مقایسه ردیف ندارد و در رأی چک میانه شرکت نمی‌کند. `MEAN` برعکس،
+    سطر خودِ سکو در جدول `quotes` است؛ آن هم در رأی چک میانه نمی‌آید — رأی
+    فقط با `MID` است (`sanity.py`).
+    """
+
     BUY = "BUY"
     SELL = "SELL"
     MID = "MID"
+    MEAN = "MEAN"
 
 
 class Instrument(StrEnum):
@@ -151,12 +174,73 @@ class PlatformTerms(BaseModel):
         return self
 
 
+def _mean_of_pair(buy: Quote, sell: Quote) -> Quote:
+    """سطر MEAN یک دارایی دوسمته: میانگین مؤثر خرید و فروش **همان سکو**.
+
+    `raw_value` میانگین دو مقدار خام است و برای همین `raw_scale` هر دو سمت
+    باید یکی باشد — وگرنه میانگینِ خام دو مقیاسِ متفاوت عددی بی‌معناست
+    (قاعده‌ی ۲ قراردادها: مقدار خام و ضریبش باید همیشه با هم بخوانند).
+    `fetched_at` و `platform_slug` از همان سطرهای مبدأ می‌آیند — همه‌ی سطرهای
+    یک اسنپ‌شات از یک نوبت گردآوری‌اند و زمانشان یکی است.
+    """
+    if buy.raw_scale != sell.raw_scale:
+        raise ValueError(
+            f"قیمت مرجع {buy.platform_slug}/{buy.instrument.value}: ضریب دو سمت یکی "
+            f"نیست ({buy.raw_scale} ≠ {sell.raw_scale}) — میانگین خام بی‌معناست"
+        )
+    return Quote(
+        platform_slug=buy.platform_slug,
+        instrument=buy.instrument,
+        side=Side.MEAN,
+        price_toman=reference_price_toman(buy.price_toman, sell.price_toman),
+        raw_value=(buy.raw_value + sell.raw_value) / 2,
+        raw_scale=buy.raw_scale,
+        fetched_at=buy.fetched_at,
+    )
+
+
+def _missing_mean_quotes(quotes: Sequence[Quote]) -> tuple[Quote, ...]:
+    """سطرهای MEAN غایب را برای هر دارایی می‌سازد (قاعده‌ی بالای `Side.MEAN`).
+
+    ۱. هر دو سمت BUY و SELL ⟸ میانگینشان (همان `reference_price_toman`).
+    ۲. وگرنه MID ⟸ خودِ MID (سکوی تک‌قیمتی: عددی که منتشر کرده مرجع اوست،
+       چه کارمزدش معلوم باشد چه نامعلوم — این تفسیر «تک عدد» است، نه جعلِ
+       قیمت مؤثر: هیچ کارمزدی به آن اعمال نشده).
+    ۳. وگرنه (دفتر سفارش یک‌طرفه) ⟸ هیچ: سکو در این نوبت قیمت مرجع ندارد و
+       عدد ساختگی ساخته نمی‌شود.
+
+    دارایی‌ای که از قبل سطر MEAN دارد دست‌نخورده می‌ماند — همین idempotency
+    است که بازسازی اسنپ‌شات از JSON ردیس یا ردیف‌های پستگرس را بی‌خطر می‌کند.
+    """
+    by_instrument: dict[Instrument, dict[Side, Quote]] = {}
+    for quote in quotes:
+        by_instrument.setdefault(quote.instrument, {})[quote.side] = quote
+
+    built: list[Quote] = []
+    for sides in by_instrument.values():
+        if Side.MEAN in sides:
+            continue
+        buy, sell = sides.get(Side.BUY), sides.get(Side.SELL)
+        if buy is not None and sell is not None:
+            built.append(_mean_of_pair(buy, sell))
+            continue
+        mid = sides.get(Side.MID)
+        if mid is not None:
+            # model_copy اعتبارسنجی را دوباره اجرا نمی‌کند — فقط سمت عوض می‌شود.
+            built.append(mid.model_copy(update={"side": Side.MEAN}))
+    return tuple(built)
+
+
 class PlatformSnapshot(BaseModel):
     """خروجی یک نوبت گردآوری موفق برای یک سکو: قیمت‌ها + شرایط.
 
     `suppressed=True` یعنی چک میانه‌ی تقاطعی (قاعده‌ی ۳ قراردادها) این نوبت را
     رد کرده: در استور قیمت جاری منتشر نمی‌شود، فقط در تاریخچه با همین پرچم
     ثبت می‌ماند.
+
+    سطر `MEAN` (قیمت مرجع سکو) را **خود مدل** می‌سازد، نه آداپترها: یک آداپترِ
+    فراموش‌کار یعنی سکویی بی‌خط روی نمودار، و دو مسیرِ ساخت یعنی واگرایی JSON
+    کانونی با پستگرس. مدل تنها دروازه‌ی هر دو مقصد است، پس فرمول یک‌جا می‌ماند.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -167,24 +251,50 @@ class PlatformSnapshot(BaseModel):
     fetched_at: datetime
     suppressed: bool = False
 
+    @model_validator(mode="before")
+    @classmethod
+    def _add_reference_price_rows(cls, data: Any) -> Any:
+        """سطرهای غایبِ `MEAN` را پیش از ساخت نمونه به `quotes` اضافه می‌کند.
+
+        چرا `mode="before"` و نه `mode="after"`: پایدانتیک ۲ از اعتبارسنجِ
+        `after` سطح-مدل چیزی جز `self` نمی‌پذیرد — نمونه‌ی تازه هنگام ساخت با
+        `__init__` دور ریخته می‌شود (فقط هشدار می‌دهد). پس افزودن سطر باید
+        پیش از ساخته‌شدن نمونه‌ی frozen انجام شود.
+
+        **idempotent است**: اسنپ‌شات از JSON ردیس یا از ردیف‌های پستگرس دوباره
+        ساخته می‌شود و آن سطرهای MEAN را همراه دارد ⟸ `_missing_mean_quotes`
+        دارایی‌های دارای MEAN را رد می‌کند و هیچ سطر تکراری‌ای اضافه نمی‌شود.
+        `model_copy` (مثلاً پرچم‌زدن سرکوب در خط لوله) اصلاً اعتبارسنجی را
+        دوباره اجرا نمی‌کند، پس آن مسیر هم امن است.
+        """
+        if not isinstance(data, dict) or "quotes" not in data:
+            return data
+        try:
+            quotes = tuple(Quote.model_validate(quote) for quote in data["quotes"])
+        except (TypeError, ValidationError):
+            # ورودی خراب: دست نمی‌زنیم تا پیام خطای عادی پایدانتیک برسد.
+            return data
+        missing = _missing_mean_quotes(quotes)
+        if not missing:
+            return data
+        return {**data, "quotes": quotes + missing}
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def reference_prices_toman(self) -> dict[str, int]:
-        """قیمت مرجع این سکو به‌ازای هر دارایی = میانگین مؤثر خرید و فروش
-        **خودش** (بند ۱۳، تصمیم ۱۹) — computed_field است تا در JSON کانونی
-        (همان که ردیس/وب می‌خوانند) همیشه حاضر باشد و فرمول فقط همین‌جا،
-        در گردآورنده، زندگی کند (قاعده‌ی ۱ قراردادها).
+        """قیمت مرجع این سکو به‌ازای هر دارایی — computed_field است تا در JSON
+        کانونی (همان که ردیس/وب می‌خوانند) همیشه حاضر باشد و شکل payload برای
+        وب دقیقاً مثل قبل بماند.
 
-        فقط دارایی‌هایی که هر دو سمت BUY و SELL دارند کلید می‌گیرند: کارمزد
-        نامعلوم (فقط MID) یا دفتر یک‌طرفه ⟸ غایب، جعل نمی‌شود. MID هرگز در
-        این میانگین دخالت ندارد و هیچ عدد بین‌سکویی‌ای اینجا وجود ندارد.
+        فقط **انتخابِ** سطرهای `MEAN` است، نه محاسبه‌ی دوباره: تنها منبع
+        حقیقتِ قیمت مرجع همان سطرهای جدول `quotes` اند، پس JSON و پستگرس
+        هرگز واگرا نمی‌شوند. دارایی بدون سطر MEAN (دفتر سفارش یک‌طرفه) کلید
+        نمی‌گیرد — جعل نمی‌شود. هیچ عدد بین‌سکویی‌ای اینجا وجود ندارد.
         """
-        buys = {q.instrument.value: q.price_toman for q in self.quotes if q.side is Side.BUY}
-        sells = {q.instrument.value: q.price_toman for q in self.quotes if q.side is Side.SELL}
         return {
-            instrument: reference_price_toman(buys[instrument], sells[instrument])
-            for instrument in buys
-            if instrument in sells
+            quote.instrument.value: quote.price_toman
+            for quote in self.quotes
+            if quote.side is Side.MEAN
         }
 
     @model_validator(mode="after")
@@ -195,10 +305,14 @@ class PlatformSnapshot(BaseModel):
         است: فقط MID (سکوی تک‌قیمتی)، یا **یک** سطر یک‌طرفه‌ی خودِ منبع —
         دفتر سفارش داریک وقتی یک سمتش تهی است (بند ۹.۲ نکته‌ی ۵): قیمتِ
         سمتِ موجود عین سفارشِ سرِ دفتر است، نه مشتق از کارمزد.
+
+        `MEAN` موضوع این چک نیست و صریحاً بیرون گذاشته می‌شود: قیمت مؤثر
+        نیست، بازتاب همان عددِ منتشرشده است و هیچ کارمزدی رویش نرفته — پس
+        نه با MID تعارض دارد نه «سمتِ دوم» به شمار می‌آید.
         """
         if self.terms.fee_source is not FeeSource.UNKNOWN:
             return self
-        sides = [quote for quote in self.quotes if quote.side is not Side.MID]
+        sides = [quote for quote in self.quotes if quote.side in (Side.BUY, Side.SELL)]
         if not sides:
             return self
         if any(quote.side is Side.MID for quote in self.quotes):

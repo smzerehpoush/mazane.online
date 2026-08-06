@@ -120,13 +120,15 @@ async def test_unknown_fee_platforms_have_mid_only_and_unknown_terms() -> None:
     for slug in UNKNOWN_FEE_LISTED:
         snapshot = await store.get_snapshot(slug)
         assert snapshot is not None
-        assert [q.side for q in snapshot.quotes] == [Side.MID]
+        # قیمت مؤثر همچنان جعل نمی‌شود: نه BUY هست نه SELL. سطر MEAN مشتق
+        # نیست بلکه بازتاب همان تک‌عددِ منتشرشده است — قیمت مرجع این سکو.
+        assert [q.side for q in snapshot.quotes] == [Side.MID, Side.MEAN]
         assert snapshot.terms.fee_source == FeeSource.UNKNOWN
 
     for slug in KNOWN_FEE_LISTED:
         snapshot = await store.get_snapshot(slug)
         assert snapshot is not None
-        assert {q.side for q in snapshot.quotes} == {Side.MID, Side.BUY, Side.SELL}
+        assert {q.side for q in snapshot.quotes} == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
         assert snapshot.terms.fee_source != FeeSource.UNKNOWN
         assert snapshot.terms.round_trip_percent is not None
 

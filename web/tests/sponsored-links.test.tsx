@@ -4,14 +4,14 @@
  * «یک تست خودکار در CI بنویسید که اگر لینک خروجی بدون sponsored پیدا شد
  * شکست بخورد» — و دقیقاً از آن چیزهایی است که در بازنویسی‌ها بی‌سروصدا از
  * بین می‌رود. برای همین این تست لینک‌ها را **برنمی‌شمارد**: HTML رندرشده‌ی
- * صفحه‌ی اصلی، صفحات سکو، صفحه‌ی دارایی و جایگاه‌های تبلیغ را عمومی برای
- * الگوی ‎href="http‎ می‌کاود؛ هر لینک خروجی به میزبان یک سکو (دور زدن
- * ‎/go/‎) یا هر لینک خروجی بدون rel کامل، شکست است. لینک ارجاع غیر درآمدزا
- * به مراجع قیمت (tala.ir / bonbast — بند ۱۲.۲) تنها استثناست: ساده ولی
- * حتماً nofollow.
+ * صفحه‌ی اصلی، صفحات سکو و صفحه‌ی دارایی را عمومی برای الگوی ‎href="http‎
+ * می‌کاود؛ هر لینک خروجی به میزبان یک سکو (دور زدن ‎/go/‎) یا هر لینک خروجی
+ * بدون rel کامل، شکست است. لینک ارجاع غیر درآمدزا به مراجع قیمت (tala.ir /
+ * bonbast — بند ۱۲.۲) تنها استثناست: ساده ولی حتماً nofollow.
  *
  * همین‌جا قاعده‌ی مکمل بند ۶.۴ هم تست می‌شود: مرتب‌سازی هیچ ورودی‌ای از
- * فیلدهای معرف (referral_url / referral_param) نمی‌گیرد.
+ * فیلدهای معرف (referral_url / referral_param) نمی‌گیرد، و آن فیلدها اصلاً
+ * به payload کلاینت نمی‌رسند.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -19,15 +19,17 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import SlugPage from "../app/[slug]/page";
-import { AdSlot } from "../app/ad-slot";
-import Home from "../app/page";
-import type { InstrumentListing, ListedPlatform } from "../lib/prices";
+import { SlugPageView } from "../src/components/content/SlugPageView";
+import type { SlugPageData } from "../src/components/content/SlugPageView";
+import { HomePage } from "../src/components/mazane/HomePage";
+import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import {
   freshIso,
+  homeData,
   makeListing,
   makeSnapshot,
   seed,
+  slugPageData,
   type SeededStore,
 } from "./support/seed";
 
@@ -46,7 +48,7 @@ const NON_REVENUE_REFERENCE_HOSTS: ReadonlySet<string> = new Set([
 
 function attrOf(tag: string, name: string): string | null {
   const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
-  return match === null ? null : match[1];
+  return match === null ? null : (match[1] ?? null);
 }
 
 function relTokens(tag: string): Set<string> {
@@ -194,25 +196,28 @@ function seededStore(): SeededStore {
   };
 }
 
-function pageProps(slug: string): { params: Promise<{ slug: string }> } {
-  return { params: Promise.resolve({ slug }) };
+async function renderSlug(slug: string): Promise<string> {
+  const data = await slugPageData(slug);
+  if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
+  return renderToStaticMarkup(<SlugPageView data={data as SlugPageData} />);
 }
 
 /* ---------- تست وجودی بند ۶.۴ ---------- */
 
 describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدون sponsored یا بیرون /go/ نیست", () => {
-  it("صفحه‌ی اصلی (با جایگاه‌های تبلیغ) از کاونده می‌گذرد و دست‌کم یک لینک /go/ دارد", async () => {
-    seed(seededStore());
-    const html = renderToStaticMarkup(await Home());
+  it("صفحه‌ی اصلی از کاونده می‌گذرد و برای هر سکو یک لینک /go/ دارد", async () => {
+    const html = renderToStaticMarkup(<HomePage data={await homeData(seededStore())} />);
     const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "صفحه‌ی اصلی");
-    // پیشنهاد سردبیر در دو جایگاه تبلیغ — لینک درآمدزا و فقط از /go/.
-    expect(goLinks).toBeGreaterThanOrEqual(2);
+    // دکمه‌ی «رفتن به سایت» هر ردیف جدول — لینک درآمدزا و فقط از /go/.
+    expect(goLinks).toBe(PLATFORMS.length);
+    // کد معرف هرگز در HTML عمومی نمی‌نشیند — فقط سمت ریدایرکت است.
+    expect(html).not.toContain(REFERRAL_CODE);
   });
 
   it("صفحه‌ی هر سکو از کاونده می‌گذرد و لینک وب‌سایتش /go/ است", async () => {
     for (const platform of PLATFORMS) {
       seed(seededStore());
-      const html = renderToStaticMarkup(await SlugPage(pageProps(platform.slug)));
+      const html = await renderSlug(platform.slug);
       const goLinks = assertOutboundLinkPolicy(
         html,
         PLATFORM_HOSTS,
@@ -220,27 +225,33 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
       );
       expect(goLinks).toBeGreaterThanOrEqual(1);
       expect(html).toContain(`href="/go/${platform.slug}"`);
-      // کد معرف هرگز در HTML عمومی نمی‌نشیند — فقط سمت ریدایرکت است.
       expect(html).not.toContain(REFERRAL_CODE);
     }
   });
 
   it("صفحه‌ی دارایی از کاونده می‌گذرد", async () => {
     seed(seededStore());
-    const html = renderToStaticMarkup(await SlugPage(pageProps("tala-18")));
+    const html = await renderSlug("tala-18");
     assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "صفحه‌ی دارایی");
+    expect(html).not.toContain(REFERRAL_CODE);
   });
 
-  it("جایگاه تبلیغ به‌تنهایی: پیشنهاد سردبیر فقط از /go/ با rel کامل", () => {
-    const html = renderToStaticMarkup(
-      <AdSlot
-        position="top"
-        pick={{ slug: "milli", name_fa: "میلی", round_trip_percent: "0.9950" }}
-      />,
-    );
-    const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "جایگاه تبلیغ");
-    expect(goLinks).toBe(1);
-    expect(html).toContain('href="/go/milli"');
+  it("فیلدهای معرف اصلاً وارد payload کلاینت نمی‌شوند (نه فقط نمایش)", async () => {
+    const data = await homeData(seededStore());
+    for (const row of data.rows) {
+      expect(row.platform).not.toHaveProperty("referral_url");
+      expect(row.platform).not.toHaveProperty("referral_param");
+    }
+    seed(seededStore());
+    const platformPage = await slugPageData("milli");
+    expect(platformPage?.kind).toBe("platform");
+    if (platformPage?.kind === "platform") {
+      expect(platformPage.platform).not.toHaveProperty("referral_url");
+      // ولی «مقصدی هست» روی سرور حساب شده تا لینک مرده نماند.
+      expect(platformPage.hasOutbound).toBe(true);
+    }
+    // payload سریال‌شده هم هیچ ردی از کد معرف ندارد.
+    expect(JSON.stringify(data)).not.toContain(REFERRAL_CODE);
   });
 });
 
@@ -289,7 +300,31 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     const store = seededStore();
     const now = freshIso();
     // میلی (تنها سکوی referral_url دار) را گران‌ترین کن — باید آخر بماند.
-    store.snapshots.milli = makeSnapshot({
+    store.snapshots["milli"] = makeSnapshot({
+      slug: "milli",
+      mid: 18800000,
+      buy: 18894000,
+      sell: 18706000,
+      reference: 18800000,
+      fetchedAt: now,
+    });
+    const html = renderToStaticMarkup(<HomePage data={await homeData(store)} />);
+    // ترتیب فقط از قیمت خرید: وال‌گلد < طلاسی < میلی (با وجود کد معرفش).
+    expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
+      html.indexOf('data-platform="talasea"'),
+    );
+    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
+      html.indexOf('data-platform="milli"'),
+    );
+    // نشان «ارزان‌ترین» هم به وال‌گلد می‌رسد، نه به سکوی کد-معرف‌دار.
+    expect(html).toContain('data-platform="wallgold" data-cheapest="true"');
+    expect(html).not.toContain('data-platform="milli" data-cheapest="true"');
+  });
+
+  it("صفحه‌ی دارایی هم همین ترتیب را دارد — کد معرف در گروه‌بندی اثر ندارد", async () => {
+    const store = seededStore();
+    const now = freshIso();
+    store.snapshots["milli"] = makeSnapshot({
       slug: "milli",
       mid: 18800000,
       buy: 18894000,
@@ -298,42 +333,24 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
       fetchedAt: now,
     });
     seed(store);
-    const html = renderToStaticMarkup(await Home());
-    // ترتیب فقط از مؤثر خرید: وال‌گلد < طلاسی < میلی (با وجود کد معرفش).
+    const html = await renderSlug("tala-18");
     expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
-      html.indexOf('data-platform="talasea"'),
-    );
-    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
       html.indexOf('data-platform="milli"'),
     );
-    expect(html).not.toContain('data-cheapest="true" data-platform="milli"');
-  });
-
-  it("پیشنهاد سردبیر هم فقط از رفت‌وبرگشت گردآورنده می‌آید، نه از کد معرف", async () => {
-    const store = seededStore();
-    const now = freshIso();
-    // وال‌گلد (بدون کد معرف) رفت‌وبرگشت بهتر — باید همان انتخاب شود.
-    store.snapshots.wallgold = makeSnapshot({
-      slug: "wallgold",
-      mid: 18611000,
-      buy: 18704055,
-      sell: 18517945,
-      reference: 18611000,
-      fetchedAt: now,
-    });
-    store.snapshots.wallgold.terms.round_trip_percent = "0.5000";
-    seed(store);
-    const html = renderToStaticMarkup(await Home());
-    const slot = html.match(/<aside[^>]*data-ad-slot="top"[\s\S]*?<\/aside>/);
-    expect(slot?.[0]).toContain('href="/go/wallgold"');
-    expect(slot?.[0]).not.toContain('href="/go/milli"');
   });
 
   it("توابع مرتب‌سازی حتی نام فیلدهای معرف را نمی‌شناسند (نگهبان سطح کد)", () => {
     // بند ۶.۴: «referral_url نباید هیچ ورودی‌ای به منطق مرتب‌سازی داشته
     // باشد.» این نگهبان وجودی است: اگر روزی کسی referral را وارد
-    // groupRows/editorialPick یا لایه‌ی ردیف کند، همین‌جا قرمز می‌شود.
-    for (const file of ["app/page.tsx", "app/[slug]/asset-page.tsx", "lib/rows.ts"]) {
+    // tableView/bestView/groupRows یا لایه‌ی ردیف کند، همین‌جا قرمز می‌شود.
+    // ⚠️ مسیرها با بازنویسی تنکستک به‌روز شدند؛ اگر فایلی جابه‌جا شد،
+    // مسیر تازه‌اش را اینجا بگذارید — این فهرست حذف‌شدنی نیست.
+    for (const file of [
+      "src/components/mazane/home-view.tsx",
+      "src/components/mazane/ComparisonTable.tsx",
+      "src/components/content/AssetPage.tsx",
+      "src/lib/rows.ts",
+    ]) {
       const source = readFileSync(join(__dirname, "..", file), "utf8");
       expect(source, `${file} نباید فیلد معرف بخواند`).not.toMatch(/referral/);
     }

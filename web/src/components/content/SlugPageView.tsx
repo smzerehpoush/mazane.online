@@ -1,0 +1,160 @@
+/**
+ * نمای مسیر تخت ‎/<slug>‎ — صفحه‌ی دارایی یا صفحه‌ی سکو — و سرصفحه‌ی آن.
+ *
+ * **بدون هیچ وابستگی به روتر** (همان دلیل `mazane/HomePage.tsx`): مرز تست وب
+ * «استور seed شده ⟸ خروجی رندرشده» است و مسیر تنکستک بدون بستر روتر رندر
+ * نمی‌شود. مسیر فقط سیم‌کشی می‌ماند.
+ *
+ * قرارداد props همین‌جا تعریف شده و `lib/content-data.ts` از اینجا می‌خواندش —
+ * پس این ماژول هیچ ارجاعی به لایه‌ی سروری ندارد و `ioredis`/`pg` هرگز به گراف
+ * تست نمی‌آیند.
+ *
+ * ⚠️ بند ۶.۴: هیچ فیلد معرفی (referral) ورودی مرتب‌سازی نیست و اصلاً به این
+ * لایه نمی‌رسد — `content-data.ts` پیش از serialize حذفش می‌کند.
+ */
+import { AssetPage, groupRows } from "@/components/content/AssetPage";
+import { Breadcrumbs } from "@/components/content/PageShell";
+import { PlatformPage } from "@/components/content/PlatformPage";
+import type {
+  InstrumentListing,
+  ListedPlatform,
+  PlatformSnapshot,
+} from "@/lib/prices";
+import type { Row } from "@/lib/rows";
+import { SITE_URL } from "@/lib/site";
+import { assetProductJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
+
+/** صفحه‌ی دارایی — جدول همه‌ی سکوهای پشتیبان همین دارایی. */
+export interface InstrumentPageData {
+  kind: "instrument";
+  listing: InstrumentListing;
+  /** ردیف‌های سکوهای پشتیبان، به ترتیب فهرست عمومی گردآورنده. */
+  rows: Row[];
+  /** زمان تولید payload — مبنای «چند دقیقه پیش»، یکی در سرور و کلاینت. */
+  generated_at: string;
+}
+
+/** صفحه‌ی سکو — فراداده، شرایط تجاری و قیمت‌های جاری همان سکو. */
+export interface PlatformPageData {
+  kind: "platform";
+  platform: ListedPlatform;
+  snapshot: PlatformSnapshot | null;
+  updatedAt: string | null;
+  /**
+   * آیا ‎/go/<slug>‎ مقصدی دارد (نشانی معرف یا وب‌سایت)؟ روی سرور حساب
+   * می‌شود چون `referral_url` عمداً از payload حذف شده است. بدون مقصد،
+   * ریدایرکت ۴۰۴ می‌شد و لینک مرده می‌ماند.
+   */
+  hasOutbound: boolean;
+  /** نام فارسی هر کد دارایی — برای ستون «دارایی» جدول قیمت‌ها. */
+  instrumentNames: Record<string, string>;
+  generated_at: string;
+}
+
+export type SlugPageData = InstrumentPageData | PlatformPageData;
+
+interface HeadTag {
+  type: string;
+  children: string;
+}
+
+/**
+ * اسکریپت‌های داده‌ی ساخت‌یافته‌ی همین صفحه (بند ۶.۵).
+ *
+ * `Product` + `AggregateOffer` فقط صفحه‌ی دارایی، و از **همان** گروه
+ * «معلوم‌ها»یی که جدول رندر می‌کند (`groupRows` مشترک است) — پس عدد JSON-LD
+ * با عدد قابل‌مشاهده یکی است، بدون هیچ fetch جدا. برای سکو هیچ Product/Offer
+ * ساخته نمی‌شود: ما فروشنده نیستیم.
+ */
+export function slugJsonLdTags(data: SlugPageData): HeadTag[] {
+  if (data.kind === "instrument") {
+    const { known } = groupRows(data.rows, data.listing.instrument);
+    const product = assetProductJsonLd(data.listing, known);
+    const tags: HeadTag[] = [
+      {
+        type: "application/ld+json",
+        children: breadcrumbJsonLd([
+          { name: "خانه", url: `${SITE_URL}/` },
+          { name: data.listing.name_fa, url: `${SITE_URL}/${data.listing.slug}` },
+        ]),
+      },
+    ];
+    if (product !== null) tags.push({ type: "application/ld+json", children: product });
+    return tags;
+  }
+  return [
+    {
+      type: "application/ld+json",
+      children: breadcrumbJsonLd([
+        { name: "خانه", url: `${SITE_URL}/` },
+        { name: data.platform.name_fa, url: `${SITE_URL}/${data.platform.slug}` },
+      ]),
+    },
+  ];
+}
+
+/** سرصفحه — متا، canonical تخت لاتین و اسکریپت‌های بالا. */
+export function slugHead(data: SlugPageData | undefined) {
+  if (data === undefined) {
+    return {
+      meta: [{ title: "صفحه یافت نشد" }, { name: "robots", content: "noindex" }],
+    };
+  }
+  const [title, description, slug] =
+    data.kind === "instrument"
+      ? ([
+          `قیمت ${data.listing.name_fa} در سکوهای آنلاین — مظنه آنلاین`,
+          `مقایسه‌ی قیمت مؤثر خرید و فروش ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران — با احتساب کارمزد و قیمت مرجع هر سکو.`,
+          data.listing.slug,
+        ] as const)
+      : ([
+          `${data.platform.name_fa} — شرایط، کارمزد و قیمت‌ها — مظنه آنلاین`,
+          `شرایط تجاری ${data.platform.name_fa}: کارمزد خرید و فروش با منبع، تحویل فیزیکی، هویت حقوقی و قیمت‌های مؤثر لحظه‌ای.`,
+          data.platform.slug,
+        ] as const);
+
+  return {
+    meta: [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+    ],
+    links: [{ rel: "canonical", href: `${SITE_URL}/${slug}` }],
+    scripts: slugJsonLdTags(data),
+  };
+}
+
+export function SlugPageView({ data }: { data: SlugPageData }) {
+  // مبنای «چند دقیقه پیش» از payload سرور می‌آید، نه ساعت مرورگر — پس متن
+  // سرور و کلاینت یکی است.
+  const nowMs = Date.parse(data.generated_at);
+
+  if (data.kind === "instrument") {
+    return (
+      <>
+        <Breadcrumbs
+          items={[{ label: "خانه", href: "/" }, { label: data.listing.name_fa }]}
+        />
+        <AssetPage listing={data.listing} rows={data.rows} nowMs={nowMs} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Breadcrumbs
+        items={[{ label: "خانه", href: "/" }, { label: data.platform.name_fa }]}
+      />
+      <PlatformPage
+        platform={data.platform}
+        snapshot={data.snapshot}
+        updatedAt={data.updatedAt}
+        hasOutbound={data.hasOutbound}
+        instrumentNames={data.instrumentNames}
+        nowMs={nowMs}
+      />
+    </>
+  );
+}

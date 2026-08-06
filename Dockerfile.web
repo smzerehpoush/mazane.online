@@ -3,64 +3,80 @@
 # (عمداً بدون ‎# syntax=docker/dockerfile:1‎ — frontend داخلی BuildKit کافی است؛
 # دلیل در Dockerfile.collector.)
 #
-#   docker build -f Dockerfile.web -t mazane-web .
+#   docker build --platform linux/amd64 -f Dockerfile.web -t mazane-web:v1 .
 #
 # context = ریشه‌ی مخزن (فیلترشده با ‎.dockerignore‎ ریشه).
 #
-# ⚠️ حافظه/پردازنده: ‎next build‎ به‌راحتی >1GB رم می‌خواهد. سرور تولید ۱ هسته و
+# اپ TanStack Start + Nitro است، نه نکست: ‎vite build‎ پوشه‌ی ‎.output‎ می‌سازد
+# که «خودبسنده» است — همه‌ی وابستگی‌ها (ioredis، pg، ری‌اکت) داخلش باندل شده و
+# مرحله‌ی اجرا هیچ ‎node_modules‎ ای لازم ندارد. راستی‌آزمایی شد: کپی تنها
+# ‎.output‎ به یک پوشه‌ی خالی و ‎node .output/server/index.mjs‎ ⟸ ۲۰۰.
+#
+# ⚠️ حافظه/پردازنده: ‎vite build‎ به‌راحتی >1GB رم می‌خواهد. سرور تولید ۱ هسته و
 # ۲GB رم مشترک با پادل‌یار دارد (بند ۱۳ سند معماری، تصمیم ۵) — پس ساخت این
 # ایمیج «همیشه» در CI یا روی لپ‌تاپ انجام می‌شود (‎--platform linux/amd64‎)،
 # هرگز روی سرور. سرور فقط ‎docker load/pull‎ و ‎compose up‎ می‌کند.
-#
-# ⚠️ پیش‌نیاز: ‎web/next.config.ts‎ باید ‎output: "standalone"‎ داشته باشد
-# (یک خط — رانبوک ops/RUNBOOK.md، پیش‌نیاز ۱). بدون آن، مرحله‌ی ساخت پایین
-# با پیام روشن شکست می‌خورد؛ این عمدی است تا ایمیج ناقص ساخته نشود.
 
 ########## مرحله‌ی وابستگی‌ها ##########
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY web/package.json web/package-lock.json ./
-# npm ci: نصب بازتولیدپذیر دقیقاً از lock — شامل devDependencies (typescript
-# برای next build لازم است)؛ NODE_ENV اینجا عمداً production نیست.
-RUN npm ci
+# npm ci: نصب بازتولیدپذیر دقیقاً از lock — شامل devDependencies، چون
+# ‎vite‎/‎nitro‎/‎typescript‎ برای ساخت لازم‌اند. NODE_ENV اینجا عمداً production
+# نیست، وگرنه npm اصلاً devDependencies را نصب نمی‌کند و ساخت می‌شکند.
+RUN npm ci --no-audit --no-fund
 
 ########## مرحله‌ی ساخت ##########
 FROM node:22-alpine AS build
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY web/ ./
 RUN npm run build
-# دروازه‌ی صریح: خروجی standalone باید وجود داشته باشد (پیش‌نیاز بالا).
-RUN test -d .next/standalone || { \
-      echo "ERROR: .next/standalone ساخته نشد —" \
-           "خط 'output: \"standalone\"' را به web/next.config.ts اضافه کنید" \
-           "(ops/RUNBOOK.md، پیش‌نیاز ۱)"; \
-      exit 1; }
-# web فعلاً پوشه‌ی public ندارد؛ برای اینکه COPY مرحله‌ی بعد بدون شرط بماند
-# (و اگر بعداً public اضافه شد خودکار سوار شود) اینجا تضمینش می‌کنیم.
-RUN mkdir -p public
 
-########## مرحله‌ی اجرا: فقط خروجی standalone روی ایمیج لاغر ##########
+# دو دروازه‌ی صریح — بهتر است ساخت اینجا با پیام روشن بشکند تا اینکه ایمیج
+# ناقص یا با هدف اشتباه به سرور برسد:
+#
+#   ۱) خروجی سرور نود باید وجود داشته باشد.
+#   ۲) پریست باید ‎node-server‎ باشد. پیش‌فرض تاریخی این استک
+#      ‎cloudflare-module‎ بوده که نه ioredis در آن کار می‌کند نه pg؛ اگر روزی
+#      ‎web/vite.config.ts‎ دست بخورد و پریست برگردد، اینجا لو می‌رود.
+RUN test -f .output/server/index.mjs || { \
+      echo "ERROR: .output/server/index.mjs ساخته نشد — خروجی nitro خالی است"; \
+      exit 1; }
+RUN grep -q '"preset": "node-server"' .output/nitro.json || { \
+      echo "ERROR: پریست nitro برابر node-server نیست."; \
+      echo "       nitro({ preset: \"node-server\" }) در web/vite.config.ts لازم است."; \
+      cat .output/nitro.json; \
+      exit 1; }
+
+########## مرحله‌ی اجرا: فقط ‎.output‎ روی ایمیج لاغر ##########
 FROM node:22-alpine AS runtime
 WORKDIR /app
+
+# HOST=0.0.0.0 لازم است: کدیِ لبه از شبکه‌ی mazane-edge به این کانتینر وصل
+# می‌شود، پس گوش‌دادن روی loopback کافی نیست.
+#
+# ‎--max-old-space-size=192‎ عمدی و مهم است: V8 سقف heap خود را از رم «میزبان»
+# حدس می‌زند نه از سقف cgroup کانتینر. بدون این پرچم، یک نشتی یا یک بار سنگین
+# می‌تواند تا نزدیک ۲GB رشد کند و OOM-killer به‌جای این پروسه، کانتینر پادل‌یار
+# را بکشد. این عدد جفتِ ‎memory: 256M‎ در compose.prod.yml است (کمی زیر آن، تا
+# V8 زودتر GC کند و پیش از cgroup به سقف بخورد) — هر کدام عوض شد، دیگری هم.
+# اندازه‌گیری واقعی: ۶۱MB پس از ۲۰۰ درخواست SSR در کانتینر ۲۵۶MB.
 ENV NODE_ENV=production \
     PORT=3000 \
-    HOSTNAME=0.0.0.0 \
-    NEXT_TELEMETRY_DISABLED=1
+    HOST=0.0.0.0 \
+    NODE_OPTIONS=--max-old-space-size=192
 
-# ‎--chown=node‎ حیاتی است: سرور standalone برای کش ISR داخل ‎.next‎ می‌نویسد؛
-# مالکیت root با ‎USER node‎ یعنی EACCES در بازتولید صفحات.
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+# ‎.output‎ خودبسنده است — نه ‎node_modules‎، نه ‎package.json‎، نه کد منبع.
+# مالکیت node:node چون پروسه با کاربر غیر-root اجرا می‌شود.
+COPY --from=build --chown=node:node /app/.output ./.output
 
 USER node
 EXPOSE 3000
 
-# صفحه‌ی اصلی طبق طراحی «همیشه ۲۰۰» است (قاعده‌ی ۵ قراردادها) — پس شکست این
-# چک یعنی خود پروسه‌ی وب مشکل دارد، نه قطعی یک منبع داده.
-HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+# صفحه‌ی اصلی طبق طراحی «همیشه ۲۰۰» است (قاعده‌ی ۵ قراردادها) — قطع ردیس یا
+# پستگرس کهنگی است نه خطا. پس شکست این چک یعنی خود پروسه‌ی وب مشکل دارد.
+HEALTHCHECK --interval=60s --timeout=10s --start-period=20s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:3000/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["node", "server.js"]
+CMD ["node", ".output/server/index.mjs"]

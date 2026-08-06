@@ -4,20 +4,25 @@
  * ۱) منطق سوآپ به‌روزرسان زنده به‌صورت تابع خالص: «مقادیر فعلی DOM +
  *    ردیف payload ⟸ مقادیر جدید» — بدون DOM و بدون شبکه.
  * ۲) HTML سروررندر همان قلاب‌های ‎data-live‎ ای را دارد که سوآپ لازم دارد
- *    (قیمت، برچسب زمان، پسوند کهنگی) — و فقط همان‌ها؛ دلتا قلاب ندارد چون
- *    عمداً تا رندر بعدی ISR ثابت می‌ماند.
- * ۳) پیکربندی رندر صفحه: ISR شصت‌ثانیه‌ای، نه force-dynamic (بند ۶.۲).
+ *    (قیمت، برچسب زمان، پسوند کهنگی) — و فقط همان‌ها.
+ * ۳) رشته‌ی `price_display` که ‎/api/prices‎ می‌دهد بیت‌به‌بیت همان است که
+ *    رندر سرور در سلول قیمت گذاشته — وگرنه سوآپ عدد را «می‌پراند».
+ *
+ * ⚠️ تست پیکربندی رندر (`revalidate = 60`) حذف شد: ISR مفهومی مالِ نکست بود
+ * و در تنکستک استارت وجود ندارد. جایگزینش سیاست کش لبه است که در
+ * `tests/seo.test.ts` سنجیده می‌شود (‎s-maxage=60‎ + ‎stale-if-error‎).
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import Home, * as homePage from "../app/page";
+import { HomePage } from "../src/components/mazane/HomePage";
 import {
   nextRowDomState,
   STALE_SUFFIX_FA,
   type LiveRowDomState,
-} from "../lib/live-update";
-import { healthyStore, rowOf, seed, storeWithUnknownFee } from "./support/seed";
+} from "../src/lib/live-update";
+import { livePricesPayload } from "../src/lib/server/live-prices";
+import { healthyStore, homeData, rowOf, storeWithUnknownFee } from "./support/seed";
 
 const NOW = Date.parse("2026-08-06T12:00:00Z");
 
@@ -34,13 +39,6 @@ function domState(overrides: Partial<LiveRowDomState> = {}): LiveRowDomState {
     ...overrides,
   };
 }
-
-describe("پیکربندی رندر صفحه‌ی اصلی — ISR شصت‌ثانیه‌ای (بند ۶.۲)", () => {
-  it("revalidate=60 و دیگر force-dynamic نیست", () => {
-    expect(homePage.revalidate).toBe(60);
-    expect("dynamic" in homePage).toBe(false);
-  });
-});
 
 describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
   it("payload تازه ⟸ قیمت و برچسب زمان هر دو عوض می‌شوند", () => {
@@ -131,40 +129,49 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
 });
 
 describe("قلاب‌های data-live در HTML سروررندر", () => {
-  it("سلول قیمت هر ردیف معلوم قلاب price و زمانش قلاب updated-at و stale دارد", async () => {
-    seed(healthyStore());
-    const html = renderToStaticMarkup(await Home());
+  it("سلول قیمت هر ردیف قلاب price و زمانش قلاب updated-at و stale دارد", async () => {
+    const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     for (const [slug, buy] of [
       ["wallgold", "۱۸٬۷۰۴٬۰۵۵"],
       ["talasea", "۱۸٬۷۱۵٬۳۰۰"],
       ["milli", "۱۸٬۶۳۰٬۶۹۰"],
     ] as const) {
       const row = rowOf(html, slug);
-      expect(row).toMatch(
-        new RegExp(`<span[^>]*data-live="price"[^>]*>${buy}</span>`),
-      );
+      expect(row).toMatch(new RegExp(`<span[^>]*data-live="price"[^>]*>${buy}</span>`));
       expect(row).toMatch(/<time[^>]*data-live="updated-at"/);
       expect(row).toMatch(/<strong[^>]*data-live="stale"/);
     }
   });
 
-  it("ردیف «کارمزد نامشخص» هم قلاب price دارد (قیمت میانی‌اش زنده می‌شود)", async () => {
-    seed(storeWithUnknownFee());
-    const html = renderToStaticMarkup(await Home());
+  it("ردیف «کارمزد نامشخص» هم قلاب price دارد (تک‌عددش زنده می‌شود)", async () => {
+    const html = renderToStaticMarkup(
+      <HomePage data={await homeData(storeWithUnknownFee())} />,
+    );
     expect(rowOf(html, "digikala")).toMatch(
       /<span[^>]*data-live="price"[^>]*>۱۸٬۵۲۰٬۰۰۰<\/span>/,
     );
   });
 
-  it("دلتا و جزئیات قلاب زنده ندارند — عمداً فقط با رندر ISR تازه می‌شوند", async () => {
-    seed(healthyStore());
-    const html = renderToStaticMarkup(await Home());
-    // هر ردیف معلوم دقیقاً یک قلاب قیمت دارد: ۳ سکو ⟸ ۳ قلاب، نه بیشتر.
+  it("فقط ستون خرید قلاب زنده دارد — ستون فروش و کارت‌ها عمداً بی‌قلاب‌اند", async () => {
+    const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
+    // هر ردیف دقیقاً یک قلاب قیمت دارد: ۳ سکو ⟸ ۳ قلاب، نه بیشتر.
     expect(html.match(/data-live="price"/g)).toHaveLength(3);
-    // بعد از سلول قیمت (سلول دلتا و باقی ردیف) هیچ قلاب قیمتی نیست.
     const milli = rowOf(html, "milli");
-    expect(milli).toContain("ارزان‌ترین");
-    const afterPriceCell = milli.slice(milli.indexOf("</span>"));
+    const afterPriceCell = milli.slice(milli.indexOf('data-live="price"') + 1);
     expect(afterPriceCell).not.toContain('data-live="price"');
+  });
+});
+
+describe("هم‌ارزی رشته‌ی payload با رشته‌ی رندر سرور", () => {
+  it("price_display هر سکو بیت‌به‌بیت همان چیزی است که در سلول قیمت رندر شده", async () => {
+    const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
+    const payload = await livePricesPayload();
+    expect(payload.rows).not.toHaveLength(0);
+    for (const row of payload.rows) {
+      if (row.price_display === null) continue;
+      expect(rowOf(html, row.platform_slug)).toMatch(
+        new RegExp(`<span[^>]*data-live="price"[^>]*>${row.price_display}</span>`),
+      );
+    }
   });
 });

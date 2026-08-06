@@ -48,6 +48,7 @@ PERMISSION_OVERRIDE_HOSTS: frozenset[str] = frozenset(
     {
         "price.tlyn.ir",  # طلاین — خوراک قیمت
         "pwa.hamrahgold.com",  # همراه‌گلد — خوراک قیمت
+        "api.talasea.ir",  # طلاسی — خوراک قیمت (اعلام مالک ۲۰۲۶-۰۸-۰۶)
     }
 )
 
