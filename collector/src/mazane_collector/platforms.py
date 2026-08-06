@@ -126,7 +126,7 @@ PLATFORMS: tuple[Platform, ...] = (
         name_fa="دیجی‌کالا",
         data_policy=DataPolicy.ALLOWED,
         name_en="Digikala",
-        website_url="https://www.digikala.com",
+        website_url="https://www.digikala.com/wealth/",
         # سند تحقیق ۰۱، بند ۸ (تأییدشده): تحویل طلا از ۵٫۴ گرم؛ کارمزد ضرب و
         # تحویل ۴۰۰ میلی‌گرم به‌ازای هر شمش ۵ گرمی (عملاً حدود ۸٪).
         delivery_note_fa=(
@@ -163,3 +163,15 @@ PLATFORMS: tuple[Platform, ...] = (
         website_url="https://goldika.ir",
     ),
 )
+
+# مرجع حقیقت فراداده‌ی سکو همین رجیستری کد است (بند ۲.۲: «ثابت، دستی نگهداری
+# می‌شود»). جدول پستگرس فقط عضویت/وضعیت را آینه می‌کند و ستون‌های فراداده را
+# ندارد؛ هر بازسازی از ردیف دیتابیس باید از این نگاشت کامل شود، وگرنه
+# فیلدهایی مثل `delivery_note_fa` بی‌صدا گم می‌شوند.
+PLATFORM_BY_SLUG: dict[str, Platform] = {p.slug: p for p in PLATFORMS}
+_REGISTRY_ORDER: dict[str, int] = {p.slug: i for i, p in enumerate(PLATFORMS)}
+
+
+def registry_order(slug: str) -> int:
+    """جایگاه سکو در ترتیب عمومی رجیستری — ناشناس‌ها آخر."""
+    return _REGISTRY_ORDER.get(slug, len(_REGISTRY_ORDER))

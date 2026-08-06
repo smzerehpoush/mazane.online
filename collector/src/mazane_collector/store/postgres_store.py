@@ -19,6 +19,7 @@ from datetime import datetime
 from typing import Any
 
 from ..instruments import InstrumentListing
+from ..platforms import PLATFORM_BY_SLUG, registry_order
 from ..models import (
     DataPolicy,
     FeeSource,
@@ -76,6 +77,26 @@ _SELECT_LISTED_PLATFORMS = """
 select slug, name_fa, data_policy, market_model
 from platforms where is_listed order by slug
 """
+
+
+def platform_from_listed_row(row: Any) -> Platform:
+    """بازسازی سکو از ردیف دیتابیس، کامل‌شده از رجیستری کد.
+
+    جدول `platforms` ستون‌های فراداده (نشانی، هویت حقوقی، یادداشت تحویل،
+    فیلدهای معرف) را ندارد — مرجع حقیقتشان رجیستری کد است. اگر فقط از ردیف
+    بسازیم، این فیلدها بی‌صدا گم می‌شوند (باگ واقعی: مولد محتوا موضوع تحویل
+    فیزیکی را «بدون داده» می‌دید). اسلاگ ناشناخته (ردیف قدیمی از نسخه‌ای که
+    سکویش از رجیستری حذف شده) به بازسازی حداقلی برمی‌گردد.
+    """
+    registry = PLATFORM_BY_SLUG.get(row["slug"])
+    if registry is not None:
+        return registry
+    return Platform(
+        slug=row["slug"],
+        name_fa=row["name_fa"],
+        data_policy=DataPolicy(row["data_policy"]),
+        market_model=MarketModel(row["market_model"]),
+    )
 
 _SELECT_LATEST_TERMS = """
 select platform_slug, buy_fee_percent, sell_fee_percent, round_trip_percent,
@@ -263,13 +284,10 @@ class PostgresStore:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(_SELECT_LISTED_PLATFORMS)
         return tuple(
-            Platform(
-                slug=row["slug"],
-                name_fa=row["name_fa"],
-                data_policy=DataPolicy(row["data_policy"]),
-                market_model=MarketModel(row["market_model"]),
+            sorted(
+                (platform_from_listed_row(row) for row in rows),
+                key=lambda p: registry_order(p.slug),
             )
-            for row in rows
         )
 
     async def save_instruments(self, listings: Sequence[InstrumentListing]) -> None:

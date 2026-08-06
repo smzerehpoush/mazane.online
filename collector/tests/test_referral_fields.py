@@ -85,3 +85,27 @@ async def test_memory_store_round_trips_referral_fields() -> None:
     assert by_slug["talasea"].referral_param == "r"
     assert by_slug["wallgold"].referral_param is None
     assert all(platform.referral_url is None for platform in listed)
+
+
+def test_platform_from_listed_row_merges_registry_metadata() -> None:
+    """بازسازی از ردیف دیتابیس نباید فراداده‌ی رجیستری را گم کند.
+
+    باگ واقعی: مولد محتوا از مسیر پستگرس سکوها را بدون `delivery_note_fa`
+    می‌دید و موضوع «تحویل فیزیکی» را «بدون داده» رد می‌کرد.
+    """
+    from mazane_collector.store.postgres_store import platform_from_listed_row
+
+    row = {"slug": "milli", "name_fa": "میلی", "data_policy": "ALLOWED", "market_model": "OTC"}
+    platform = platform_from_listed_row(row)
+    assert platform.delivery_note_fa is not None
+    assert platform.website_url == "https://milli.gold"
+
+    unknown = {
+        "slug": "ghost",
+        "name_fa": "شبح",
+        "data_policy": "ALLOWED",
+        "market_model": "OTC",
+    }
+    fallback = platform_from_listed_row(unknown)
+    assert fallback.slug == "ghost"
+    assert fallback.delivery_note_fa is None
