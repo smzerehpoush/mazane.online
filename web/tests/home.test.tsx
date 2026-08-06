@@ -517,3 +517,30 @@ describe("لایه‌ی ریشه", () => {
     expect(html).toContain('<html lang="fa" dir="rtl"');
   });
 });
+
+describe("صفحه‌ی اصلی — برچسب «دفتر سفارش» (بند ۹.۲)", () => {
+  it("سکوی ORDER_BOOK برچسب دفتر سفارش می‌گیرد و سکوهای OTC نمی‌گیرند", async () => {
+    const store = healthyStore();
+    const now = freshIso();
+    store.listed = [
+      ...LISTED,
+      { slug: "daric", name_fa: "داریک", data_policy: "ALLOWED", market_model: "ORDER_BOOK" },
+    ];
+    store.snapshots.daric = makeSnapshot({
+      slug: "daric",
+      mid: 18501633,
+      buy: 18579884,
+      sell: 18423383,
+      fetchedAt: now,
+    });
+    store.updatedAt.daric = now;
+    seed(store);
+
+    const html = renderToStaticMarkup(await Home());
+
+    expect(rowOf(html, "daric")).toContain('data-badge="order-book"');
+    expect(rowOf(html, "daric")).toContain("دفتر سفارش");
+    // غیبت فیلد = OTC (payload پیش از مهاجرت ۰۰۴) — بدون برچسب.
+    expect(rowOf(html, "wallgold")).not.toContain('data-badge="order-book"');
+  });
+});

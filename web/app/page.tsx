@@ -148,6 +148,32 @@ function FeeSourceLabel({ terms }: { terms: PlatformTerms }) {
   return <span>از API سکو</span>;
 }
 
+/**
+ * برچسب صریح دفتر سفارش (بند ۹.۲، شکاف ۵ رقبا): قیمت داریک از سفارش‌های
+ * کاربران است، نه قیمت‌گذاری فروشنده — بدون این برچسب، اسپرد ناهم‌جنس
+ * به‌عنوان قیمت رقیب خوانده می‌شود.
+ */
+function MarketModelBadge({ platform }: { platform: ListedPlatform }) {
+  if (platform.market_model !== "ORDER_BOOK") return null;
+  return (
+    <span
+      data-badge="order-book"
+      title="قیمت این سکو از دفتر سفارش کاربران می‌آید؛ ممکن است نقدشوندگی محدود باشد و اسپردش با سکوهای فروشنده هم‌جنس نیست."
+      style={{
+        background: "#e8eaf6",
+        color: "#283593",
+        borderRadius: "4px",
+        padding: "1px 6px",
+        marginInlineStart: "6px",
+        fontSize: "0.75em",
+        whiteSpace: "nowrap",
+      }}
+    >
+      دفتر سفارش
+    </span>
+  );
+}
+
 /** نشان باز/بسته — از buy_enabled/sell_enabled داده‌ی زنده (بند ۹.۲). */
 function ClosedBadges({ terms }: { terms: PlatformTerms }) {
   const badgeStyle = {
@@ -269,6 +295,7 @@ function KnownRow({
       >
         <th scope="row">
           {row.platform.name_fa}
+          <MarketModelBadge platform={row.platform} />
           <ClosedBadges terms={snapshot.terms} />
         </th>
         <td>{formatToman(buy)} تومان</td>
@@ -290,6 +317,7 @@ function UnknownFeeRow({ row, nowMs }: { row: Row; nowMs: number }) {
       <tr data-platform={row.platform.slug}>
         <th scope="row">
           {row.platform.name_fa}
+          <MarketModelBadge platform={row.platform} />
           <ClosedBadges terms={snapshot.terms} />
         </th>
         <td>
@@ -321,7 +349,10 @@ function UnknownFeeRow({ row, nowMs }: { row: Row; nowMs: number }) {
 function UnpricedRow({ row, nowMs }: { row: Row; nowMs: number }) {
   return (
     <tr data-platform={row.platform.slug}>
-      <th scope="row">{row.platform.name_fa}</th>
+      <th scope="row">
+        {row.platform.name_fa}
+        <MarketModelBadge platform={row.platform} />
+      </th>
       <td>قیمت در دسترس نیست</td>
       <td>—</td>
       <td>

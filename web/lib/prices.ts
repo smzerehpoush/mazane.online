@@ -17,6 +17,12 @@ export type Side = "BUY" | "SELL" | "MID";
  */
 export type FeeSource = "API" | "MANUAL" | "UNKNOWN";
 export type DataPolicy = "ALLOWED" | "RESTRICTED" | "PERMISSION_PENDING" | "BLOCKED";
+/**
+ * مدل معاملاتی سکو (بند ۹.۲): داریک دفتر سفارش است، بقیه فروشنده (OTC).
+ * قیمت دفتر سفارش از سفارش کاربران می‌آید و اسپردش با بقیه هم‌جنس نیست —
+ * باید در جدول برچسب صریح بخورد.
+ */
+export type MarketModel = "OTC" | "ORDER_BOOK";
 
 /**
  * یک سکوی قابل نمایش عمومی — عضو فهرستی که گردآورنده می‌نویسد.
@@ -27,6 +33,8 @@ export interface ListedPlatform {
   slug: string;
   name_fa: string;
   data_policy: DataPolicy;
+  /** غیبت = OTC — پیش از مهاجرت ۰۰۴ این فیلد در payload نبود. */
+  market_model?: MarketModel;
 }
 
 export interface Quote {
