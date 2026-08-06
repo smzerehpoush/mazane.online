@@ -27,37 +27,13 @@
 import "@tanstack/react-start/server-only";
 
 import { isValidSlug } from "../admin-posts";
-import { NO_STORE } from "../seo/cache-headers";
+import { json, notFound, unauthorized } from "./admin-http";
 import { getAdminPost, setPostImage } from "./admin-posts";
 import { hasValidSession } from "./admin-session";
 import { publicImageUrl, uploadImage } from "./image-store";
 
 /** سقف اندازه‌ی ورودی — بلیت ۲۴، بند طراحی: پیش از پردازش کامل رد شود. */
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-
-const ADMIN_NO_INDEX_HEADERS = {
-  "Cache-Control": NO_STORE,
-  "X-Robots-Tag": "noindex, nofollow",
-} as const;
-
-function json(body: unknown, status: number, extra: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...ADMIN_NO_INDEX_HEADERS,
-      ...extra,
-    },
-  });
-}
-
-function unauthorized(): Response {
-  return json({ error: "نشست معتبر نیست" }, 401);
-}
-
-function notFound(): Response {
-  return json({ error: "پست پیدا نشد" }, 404);
-}
 
 function tooLarge(): Response {
   return json({ error: "حجم عکس بیش از سقف ۸ مگابایتی است" }, 413);

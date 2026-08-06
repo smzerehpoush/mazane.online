@@ -11,13 +11,8 @@
  */
 import "@tanstack/react-start/server-only";
 
-import { NO_STORE } from "../seo/cache-headers";
+import { ADMIN_NO_INDEX_HEADERS } from "./admin-http";
 import { buildLogoutCookie } from "./admin-session";
-
-const ADMIN_NO_INDEX_HEADERS = {
-  "Cache-Control": NO_STORE,
-  "X-Robots-Tag": "noindex, nofollow",
-} as const;
 
 export function adminLogoutResponse(): Response {
   return new Response(null, {

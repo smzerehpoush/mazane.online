@@ -18,7 +18,11 @@
  * فقط پوسته‌ی نازکش باشد و همین قاعده مستقیماً تست شود (رسم `robots.ts`).
  */
 
-const ADMIN_NO_INDEX_HEADERS: Readonly<Record<string, string>> = {
+/**
+ * export شده تا `server/admin-http.ts` (هلپرهای مشترک پاسخ API پنل) همین
+ * شیء را بازاستفاده کند، نه دوباره تعریف — تنها منبع حقیقت این هدرهاست.
+ */
+export const ADMIN_NO_INDEX_HEADERS: Readonly<Record<string, string>> = {
   "Cache-Control": "no-store",
   "X-Robots-Tag": "noindex, nofollow",
 };

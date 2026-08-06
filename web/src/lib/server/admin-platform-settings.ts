@@ -29,33 +29,13 @@
  */
 import "@tanstack/react-start/server-only";
 
-import { NO_STORE } from "../seo/cache-headers";
+import { json, unauthorized } from "./admin-http";
 import { hasValidSession } from "./admin-session";
 import { loadPlatformSettingsView, savePlatformSettings } from "./platform-settings-admin";
 import type { PlatformSettingEntry } from "../platform-settings";
 
 /** بدنه‌ی معتبر چند صد بایت است (حداکثر ۶ ردیف)؛ بقیه‌اش سوءاستفاده است. */
 const MAX_BODY_BYTES = 8192;
-
-const ADMIN_NO_INDEX_HEADERS = {
-  "Cache-Control": NO_STORE,
-  "X-Robots-Tag": "noindex, nofollow",
-} as const;
-
-function json(body: unknown, status: number, extra: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...ADMIN_NO_INDEX_HEADERS,
-      ...extra,
-    },
-  });
-}
-
-function unauthorized(): Response {
-  return json({ error: "نشست معتبر نیست" }, 401);
-}
 
 function requireSession(request: Request): boolean {
   return hasValidSession(request.headers.get("cookie"));

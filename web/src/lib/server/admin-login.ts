@@ -21,7 +21,7 @@
  */
 import "@tanstack/react-start/server-only";
 
-import { NO_STORE } from "../seo/cache-headers";
+import { ADMIN_NO_INDEX_HEADERS, json } from "./admin-http";
 import {
   buildSessionCookie,
   isLoginLocked,
@@ -32,22 +32,6 @@ import {
 
 /** بدنه‌ی معتبر چند ده بایت است؛ بقیه‌اش سوءاستفاده است. */
 const MAX_BODY_BYTES = 1024;
-
-const ADMIN_NO_INDEX_HEADERS = {
-  "Cache-Control": NO_STORE,
-  "X-Robots-Tag": "noindex, nofollow",
-} as const;
-
-function json(body: unknown, status: number, extra: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...ADMIN_NO_INDEX_HEADERS,
-      ...extra,
-    },
-  });
-}
 
 export async function adminLoginResponse(request: Request): Promise<Response> {
   if (isLoginLocked()) {

@@ -28,7 +28,7 @@
 import "@tanstack/react-start/server-only";
 
 import { isValidSlug } from "../admin-posts";
-import { NO_STORE } from "../seo/cache-headers";
+import { json, notFound, unauthorized } from "./admin-http";
 import {
   createPost,
   getAdminPost,
@@ -41,30 +41,6 @@ import { hasValidSession } from "./admin-session";
 
 /** بدنه‌ی معتبر چند کیلوبایت است (تیتر + متن مارک‌داون)؛ بقیه‌اش سوءاستفاده است. */
 const MAX_BODY_BYTES = 262_144;
-
-const ADMIN_NO_INDEX_HEADERS = {
-  "Cache-Control": NO_STORE,
-  "X-Robots-Tag": "noindex, nofollow",
-} as const;
-
-function json(body: unknown, status: number, extra: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...ADMIN_NO_INDEX_HEADERS,
-      ...extra,
-    },
-  });
-}
-
-function unauthorized(): Response {
-  return json({ error: "نشست معتبر نیست" }, 401);
-}
-
-function notFound(): Response {
-  return json({ error: "پست پیدا نشد" }, 404);
-}
 
 function requireSession(request: Request): boolean {
   return hasValidSession(request.headers.get("cookie"));
