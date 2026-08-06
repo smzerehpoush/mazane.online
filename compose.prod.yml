@@ -1,0 +1,157 @@
+# compose.prod.yml — استقرار تولید مظنه آنلاین روی سرور اشتراکی (بلیت ۱۱)
+#
+#   docker compose -f compose.prod.yml up -d
+#
+# واقعیت سرور (بند ۱۳ سند معماری، تصمیم ۵): اوبونتو ۲۴.۰۴، «۱ هسته، ۲GB رم»
+# (~۱٫۲GB آزاد)، ~۸GB دیسک آزاد، و ۱۱ کانتینر پادل‌یار همین حالا روی آن است؛
+# کدیِ لبه‌ی پادل‌یار درگاه‌های ۸۰/۴۴۳ را گرفته. پیامدها:
+#   - مظنه «هرگز» ۸۰/۴۴۳ را نمی‌گیرد؛ وب فقط روی 127.0.0.1 منتشر می‌شود و
+#     کدیِ موجود از طریق شبکه‌ی خارجی mazane-edge به آن reverse_proxy می‌کند
+#     (ops/caddy-snippet.Caddyfile + رانبوک).
+#   - سقف‌های منابع عمداً محافظه‌کارند: جمع سقف حافظه‌ی چهار سرویس ≈ 992MB تا
+#     پادل‌یار خفه نشود؛ سقف CPU نرم است (بالاتر از ۱ جمع می‌شود چون سقف است
+#     نه رزرو — همه هم‌زمان peak نمی‌کنند).
+#   - ایمیج‌ها بیرون از سرور ساخته می‌شوند (CI/لپ‌تاپ)؛ این فایل فقط اجرا می‌کند.
+#
+# پیکربندی از فایل ‎.env‎ کنار همین فایل می‌آید (نمونه: ‎.env.example‎).
+
+name: mazane
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mazane}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD را در .env مقدار بدهید}
+      POSTGRES_DB: ${POSTGRES_DB:-mazane}
+    # تنظیم برای میزبان کم‌رم: پیش‌فرض shared_buffers=128MB برای این سرور
+    # زیاده‌روی است؛ بار ما چند INSERT در ۳۰ ثانیه + چند SELECT سبک است.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - effective_cache_size=192MB
+      - -c
+      - max_connections=30
+    volumes:
+      - mazane-postgres-data:/var/lib/postgresql/data
+      # همان الگوی docker-compose.dev.yml: در «اولین» بوتِ volume خالی،
+      # پستگرس همه‌ی ‎*.sql‎ها را به ترتیب واژه‌نگاری (001 تا 011) اجرا
+      # می‌کند. برای volume از قبل مقداردهی‌شده، مهاجرت‌های جدید دستی اجرا
+      # می‌شوند (رانبوک، گام «مهاجرت‌ها») — mount خواندنی همین را ساده می‌کند.
+      - ./collector/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-mazane} -d $${POSTGRES_DB:-mazane}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    # چرا این پرچم‌ها (میزبان ۲GB اشتراکی):
+    #   --maxmemory 64mb + allkeys-lru: کل داده‌ی ردیس چند صد کلید کوچک است
+    #     (قیمت جاری/فهرست/مراجع — بند ۳ سند معماری)؛ در کار عادی هرگز به سقف
+    #     نمی‌رسد. سقف + LRU «سوپاپ اطمینان» است: اگر باگی کلید تولید کند،
+    #     ردیس قدیمی‌ترین‌ها را می‌اندازد به‌جای اینکه رم میزبان مشترک را بخورد.
+    #   --save "" --appendonly no: ماندگاری لازم نیست — گردآورنده هر ۳۰ ثانیه
+    #     همه‌چیز را بازمی‌نویسد؛ خاموشی ردیس فقط یعنی حداکثر یک نوبت کهنگی.
+    #     خاموش‌کردن snapshot از fork و جهش مصرف حافظه هم جلوگیری می‌کند.
+    command:
+      - redis-server
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 96M
+
+  collector:
+    # ایمیج بیرون از سرور ساخته می‌شود؛ مرجعش از ‎.env‎ می‌آید (GHCR یا ایمیج
+    # load شده — تصمیم رجیستری در رانبوک، پیش‌نیاز ۲).
+    image: ${MAZANE_IMAGE_COLLECTOR:-ghcr.io/smzerehpoush/mazane-collector:latest}
+    restart: unless-stopped
+    environment:
+      MAZANE_REDIS_URL: redis://redis:6379/0
+      MAZANE_DATABASE_URL: postgresql://${POSTGRES_USER:-mazane}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-mazane}
+      MAZANE_REVALIDATE_URL: http://web:3000/api/revalidate-blog
+      MAZANE_REVALIDATE_TOKEN: ${MAZANE_REVALIDATE_TOKEN:?MAZANE_REVALIDATE_TOKEN را در .env مقدار بدهید}
+      MAZANE_DAILY_PUBLISH_CAP: ${MAZANE_DAILY_PUBLISH_CAP:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # به اینترنت بیرون نیاز دارد (کرال سکوها) — پس شبکه internal:true «نیست»؛
+    # فقط drivers پیش‌فرض bridge بدون انتشار هیچ درگاهی.
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+
+  web:
+    image: ${MAZANE_IMAGE_WEB:-ghcr.io/smzerehpoush/mazane-web:latest}
+    # نام ثابت تا کدیِ لبه‌ی پادل‌یار روی شبکه‌ی mazane-edge با همین نام
+    # DNS-اش کند: ‎reverse_proxy mazane-web:3000‎ (ops/caddy-snippet.Caddyfile).
+    container_name: mazane-web
+    restart: unless-stopped
+    environment:
+      MAZANE_REDIS_URL: redis://redis:6379/0
+      MAZANE_DATABASE_URL: postgresql://${POSTGRES_USER:-mazane}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-mazane}
+      MAZANE_REVALIDATE_TOKEN: ${MAZANE_REVALIDATE_TOKEN:?}
+    # فقط loopback میزبان — برای راستی‌آزمایی از خود سرور (curl 127.0.0.1:3300).
+    # مظنه ۸۰/۴۴۳ را نمی‌گیرد؛ ترافیک واقعی از کدیِ لبه روی شبکه‌ی mazane-edge
+    # می‌آید، نه از این درگاه. (اتصال کدی به loopback میزبان از داخل کانتینر
+    # ممکن نیست — به همین دلیل شبکه‌ی خارجی مشترک لازم است؛ رانبوک، گام کدی.)
+    ports:
+      - "127.0.0.1:${MAZANE_WEB_PORT:-3300}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [internal, edge]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 384M
+
+networks:
+  internal:
+    driver: bridge
+  # شبکه‌ی مشترک با کدیِ لبه‌ی پادل‌یار؛ باید قبل از up ساخته و کانتینر کدی به
+  # آن وصل شده باشد:
+  #   docker network create mazane-edge
+  #   docker network connect mazane-edge <نام کانتینر کدی پادل‌یار>
+  edge:
+    external: true
+    name: mazane-edge
+
+volumes:
+  mazane-postgres-data:

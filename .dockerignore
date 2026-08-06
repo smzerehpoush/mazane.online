@@ -1,0 +1,44 @@
+# ‎.dockerignore ریشه — context ساخت «هر دو» ایمیج، ریشه‌ی مخزن است:
+#   docker build -f Dockerfile.collector .
+#   docker build -f Dockerfile.web .
+# هرچه اینجا مستثنی شود اصلاً وارد build context نمی‌شود.
+
+# کد اختصاصی کارفرما — هرگز وارد context/ایمیج نشود (بند ۱۳ سند معماری، تصمیم ۳)
+web-crawler/
+
+.git/
+.github/
+.idea/
+.vscode/
+docs/
+*.md
+*.iml
+logs/
+.scratch/
+
+# خروجی‌ها و وابستگی‌های محلی — داخل ایمیج از نو و برای linux/amd64 ساخته می‌شوند
+**/node_modules/
+**/.next/
+**/*.tsbuildinfo
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/*.egg-info/
+
+# تست‌ها در ایمیج تولید جایی ندارند (CI جدا اجرایشان می‌کند)
+collector/tests/
+web/tests/
+
+# فایل‌های استقرار و رازها — در ایمیج جایی ندارند
+compose.prod.yml
+docker-compose.dev.yml
+Dockerfile.*
+.dockerignore
+.env
+.env.*
+
+# از ops فقط اسکریپت healthcheck گردآورنده لازم است (نگیشن، الگوی مستند داکر)
+ops/
+!ops/collector-healthcheck.py

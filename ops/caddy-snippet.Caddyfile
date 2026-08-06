@@ -1,0 +1,48 @@
+# ops/caddy-snippet.Caddyfile — بلوک سایت مظنه برای «کدیِ لبه‌ی موجود» پادل‌یار
+#
+# این فایل مستقیماً import نمی‌شود؛ محتوایش در جلسه‌ی استقرار نظارت‌شده به
+# Caddyfile موجودِ پادل‌یار «اضافه» می‌شود (ops/RUNBOOK.md، گام ۵). مظنه هرگز
+# خودش ۸۰/۴۴۳ را bind نمی‌کند — همین کدی لبه است که TLS و درگاه‌ها را دارد.
+#
+# پیش‌نیازهای شبکه (رانبوک، گام ۵):
+#   docker network create mazane-edge            # یک‌بار روی سرور
+#   docker network connect mazane-edge <کانتینر کدی پادل‌یار>
+# بعد از این، نام ‎mazane-web‎ (container_name ثابت در compose.prod.yml) از
+# داخل کانتینر کدی resolve می‌شود.
+#
+# نکته‌ی TLS: چون آروان جلوی دامنه است، صدور گواهی ACME از مسیر HTTP-01 باید
+# از لبه‌ی آروان رد شود (مسیر ‎/.well-known/acme-challenge/*‎ نباید کش یا مسدود
+# شود)، یا هنگام صدور اولیه رکورد DNS موقتاً «فقط DNS» (بدون پراکسی) شود —
+# جزئیات در رانبوک، گام ۵.
+
+mazane.online {
+	encode zstd gzip
+
+	# ---- لاگ بازدیدهای مبدأ — الزام بند ۱۰ و بند ۱۳ تصمیم ۱۴ سند معماری ----
+	# «بیمه‌ی Crawl Stats خودمیزبان»: فرمت JSON کدی همه‌ی هدرهای درخواست را ثبت
+	# می‌کند، از جمله User-Agent (برای فیلتر Googlebot) و X-Forwarded-For /
+	# Ar-Real-Ip (IP واقعی کلاینت پشت آروان — remote_ip اینجا IP لبه‌ی آروان
+	# است، نه گوگل‌بات).
+	#
+	# تأیید اصالت گوگل‌بات همین‌جا انجام «نمی‌شود» — آنلاین در مسیر درخواست
+	# هزینه دارد و لازم نیست. تأیید reverse-DNS + forward-confirm به‌صورت
+	# آفلاین/دوره‌ای با ‎ops/verify-googlebot.py‎ روی همین فایل لاگ اجرا می‌شود
+	# (رانبوک، گام ۹).
+	#
+	# ⚠️ مسیر لاگ داخل کانتینر کدی است؛ باید در compose پادل‌یار یک bind/volume
+	# برای ‎/var/log/caddy‎ داشته باشد تا لاگ با ری‌استارت نپرد (رانبوک، گام ۵).
+	log {
+		output file /var/log/caddy/mazane-access.log {
+			roll_size 20MiB
+			roll_keep 10
+		}
+		format json
+	}
+
+	reverse_proxy mazane-web:3000
+}
+
+# اختیاری — فقط اگر رکورد www در آروان تعریف شد:
+# www.mazane.online {
+# 	redir https://mazane.online{uri} permanent
+# }

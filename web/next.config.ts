@@ -22,6 +22,9 @@ import type { NextConfig } from "next";
  * به‌روزکردن این‌جا یعنی هدر دروغ می‌گوید.
  */
 const nextConfig: NextConfig = {
+  // خروجی standalone برای Dockerfile.web (بلیت ۱۱): ساخت بیرون از سرور،
+  // اجرای سبک روی سرور تک‌هسته‌ای — پیش‌نیاز ۱.۱ ops/RUNBOOK.md.
+  output: "standalone",
   expireTime: 360,
   async headers() {
     return [
