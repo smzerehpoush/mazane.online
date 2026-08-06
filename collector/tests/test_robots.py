@@ -359,3 +359,26 @@ async def test_allowed_robots_leaves_reference_round_untouched() -> None:
     )
 
     assert {s.reference_slug for s in saved} == {"talair", "bonbast"}
+
+
+async def test_permission_override_hosts_bypass_full_disallow() -> None:
+    """اجازه‌نامه‌ی کتبی مالک (۲۰۲۶-۰۸-۰۶) بر Disallow کامل robots مقدم است.
+
+    طلاین و همراه‌گلد در robots.txt واقعی‌شان `Disallow: /` دارند؛ بدون
+    override این تست قرمز می‌شود (رفتار پیش از اجازه‌نامه).
+    """
+    disallow_all = "User-agent: *\nDisallow: /"
+    client = FakeRobotsClient(
+        {"https://other.example/robots.txt": RobotsResponse(200, disallow_all)}
+    )
+    gate = RobotsGate(client, user_agent=USER_AGENT)
+
+    # میزبان‌های اجازه‌نامه‌دار حتی بدون خواندن robots مجازند (کلاینت پاسخی
+    # برایشان ندارد — اگر خوانده می‌شد KeyError می‌داد).
+    assert await gate.allows("https://price.tlyn.ir/api/v1/price") is True
+    assert (
+        await gate.allows("https://pwa.hamrahgold.com/api/v1/market/price/xau/changes")
+        is True
+    )
+    # میزبان بدون اجازه‌نامه همچنان داوری می‌شود.
+    assert await gate.allows("https://other.example/x") is False

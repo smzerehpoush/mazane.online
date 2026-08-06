@@ -38,6 +38,19 @@ from .pipeline import FetchJson
 # یک‌بار در روز برای هر میزبان — هم مؤدب، هم به‌قدر کافی تازه (docstring).
 ROBOTS_TTL_SECONDS = 24 * 60 * 60
 
+# میزبان‌هایی که صاحب کسب‌وکار برایشان **اجازه‌نامه‌ی کتبی** دارد
+# (اعلام او، ۲۰۲۶-۰۸-۰۶): «برای سوال قبلی من اجازه‌نامه دارم.» — هر دو
+# میزبان در robots.txt خود `Disallow: /` کامل دارند و بدون این اجازه، قاعده‌ی
+# ۶ قراردادها fetchشان را رد می‌کرد. اجازه‌ی صریح مالک داده بر منع عمومی
+# robots مقدم است (RFC 9309 §2.3: robots برای خزنده‌های «ناخوانده» است).
+# میزبان جدید فقط با اجازه‌نامه‌ی جدید به این مجموعه اضافه شود.
+PERMISSION_OVERRIDE_HOSTS: frozenset[str] = frozenset(
+    {
+        "price.tlyn.ir",  # طلاین — خوراک قیمت
+        "pwa.hamrahgold.com",  # همراه‌گلد — خوراک قیمت
+    }
+)
+
 log = logging.getLogger("mazane.collector.robots")
 
 
@@ -73,6 +86,9 @@ class RobotsGate:
         parts = urlsplit(url)
         if parts.scheme not in ("http", "https"):
             # robots.txt فقط برای HTTP معناست — خوراک وب‌سوکت داوری نمی‌شود.
+            return True
+        if parts.hostname in PERMISSION_OVERRIDE_HOSTS:
+            # اجازه‌نامه‌ی کتبی مالک داده بر منع عمومی robots مقدم است.
             return True
         parser = await self._parser_for(f"{parts.scheme}://{parts.netloc}")
         if parser is None or parser.can_fetch(self._user_agent, url):
