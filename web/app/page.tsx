@@ -143,40 +143,39 @@ function DetailsRow({ snapshot }: { snapshot: PlatformSnapshot }) {
   const unknown = terms.fee_source === "UNKNOWN";
   const sell = findQuote(snapshot.quotes, "SELL");
   const minOrder = terms.min_order_toman ?? null;
-  const dtStyle = { fontWeight: 600 as const };
   return (
     <tr data-details-for={snapshot.platform_slug}>
-      <td colSpan={COLUMN_COUNT} style={{ padding: "0 8px 8px" }}>
+      <td colSpan={COLUMN_COUNT}>
         <details>
           <summary>جزئیات کارمزد و فروش</summary>
-          <dl style={{ margin: "8px 0 0" }}>
-            <dt style={dtStyle}>کارمزد خرید</dt>
+          <dl>
+            <dt>کارمزد خرید</dt>
             <dd>
               {terms.buy_fee_percent === null
                 ? "نامشخص"
                 : formatPercentPointsFa(terms.buy_fee_percent)}
             </dd>
-            <dt style={dtStyle}>کارمزد فروش</dt>
+            <dt>کارمزد فروش</dt>
             <dd>
               {terms.sell_fee_percent === null
                 ? "نامشخص"
                 : formatPercentPointsFa(terms.sell_fee_percent)}
             </dd>
-            <dt style={dtStyle}>هزینه‌ی رفت‌وبرگشت</dt>
+            <dt>هزینه‌ی رفت‌وبرگشت</dt>
             <dd>
               {terms.round_trip_percent === null
                 ? "نامشخص"
                 : formatPercentPointsFa(terms.round_trip_percent)}
             </dd>
-            <dt style={dtStyle}>قیمت مؤثر فروش (می‌گیرید)</dt>
+            <dt>قیمت مؤثر فروش (می‌گیرید)</dt>
             <dd>{sell === null ? "—" : `${formatToman(sell.price_toman)} تومان`}</dd>
             {minOrder === null ? null : (
               <>
-                <dt style={dtStyle}>حداقل سفارش</dt>
+                <dt>حداقل سفارش</dt>
                 <dd>{formatToman(Number(minOrder))} تومان</dd>
               </>
             )}
-            <dt style={dtStyle}>منبع کارمزد</dt>
+            <dt>منبع کارمزد</dt>
             <dd>
               {unknown ? "نامشخص — قیمت بالا میانی و بدون کارمزد است" : <FeeSourceLabel terms={terms} />}
             </dd>
@@ -225,7 +224,6 @@ function KnownRow({
       <tr
         data-platform={row.platform.slug}
         {...(cheapest ? { "data-cheapest": "true" } : {})}
-        style={cheapest ? { background: "#eef7ee", fontWeight: 600 } : undefined}
       >
         <th scope="row">
           {row.platform.name_fa}
@@ -271,7 +269,7 @@ function UnknownFeeRow({ row, nowMs }: { row: Row; nowMs: number }) {
               تومان{" "}
               <span
                 title="کارمزد این سکو اعلام نشده است؛ این قیمت میانیِ بدون کارمزد است و با قیمت‌های مؤثر ستون بالا هم‌مقایسه نیست."
-                style={{ fontSize: "0.8em", color: "#8a6d1a" }}
+                className="mid-price-note"
               >
                 (قیمت میانی — بدون کارمزد)
               </span>
@@ -355,12 +353,11 @@ export default async function Home() {
               </tbody>
             ) : null}
             {unknown.length > 0 ? (
-              <tbody data-group="unknown-fee" style={{ background: "#fdf9ef" }}>
+              <tbody data-group="unknown-fee">
                 <tr>
                   <th
                     colSpan={COLUMN_COUNT}
                     scope="colgroup"
-                    style={{ textAlign: "start", padding: "8px", borderTop: "2px solid #d8c98e" }}
                   >
                     کارمزد نامشخص — فقط قیمت میانی
                   </th>

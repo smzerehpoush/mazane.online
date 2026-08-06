@@ -14,10 +14,9 @@ export const MADDE5_WARNING_FA =
 const barStyle: CSSProperties = {
   marginTop: "24px",
   padding: "10px 16px",
-  borderTop: "3px solid #b45309",
+  borderTopWidth: "3px",
+  borderTopStyle: "solid",
   borderRadius: "0 0 8px 8px",
-  background: "#fff7ed",
-  color: "#7c2d12",
   fontSize: "0.9em",
 };
 

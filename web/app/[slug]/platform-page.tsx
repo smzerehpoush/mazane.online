@@ -27,36 +27,35 @@ const NOT_RECORDED = "ثبت نشده است";
 function TermsSection({ snapshot }: { snapshot: PlatformSnapshot }) {
   const terms = snapshot.terms;
   const minOrder = terms.min_order_toman ?? null;
-  const dtStyle = { fontWeight: 600 as const };
   return (
     <section aria-labelledby="terms-heading">
       <h2 id="terms-heading">شرایط تجاری</h2>
       <dl>
-        <dt style={dtStyle}>کارمزد خرید</dt>
+        <dt>کارمزد خرید</dt>
         <dd>
           {terms.buy_fee_percent === null
             ? "نامشخص"
             : formatPercentPointsFa(terms.buy_fee_percent)}
         </dd>
-        <dt style={dtStyle}>کارمزد فروش</dt>
+        <dt>کارمزد فروش</dt>
         <dd>
           {terms.sell_fee_percent === null
             ? "نامشخص"
             : formatPercentPointsFa(terms.sell_fee_percent)}
         </dd>
-        <dt style={dtStyle}>هزینه‌ی رفت‌وبرگشت</dt>
+        <dt>هزینه‌ی رفت‌وبرگشت</dt>
         <dd>
           {terms.round_trip_percent === null
             ? "نامشخص"
             : formatPercentPointsFa(terms.round_trip_percent)}
         </dd>
-        <dt style={dtStyle}>منبع کارمزد</dt>
+        <dt>منبع کارمزد</dt>
         <dd>
           <FeeSourceLabel terms={terms} />
         </dd>
         {minOrder === null ? null : (
           <>
-            <dt style={dtStyle}>حداقل سفارش</dt>
+            <dt>حداقل سفارش</dt>
             <dd>{formatToman(Number(minOrder))} تومان</dd>
           </>
         )}

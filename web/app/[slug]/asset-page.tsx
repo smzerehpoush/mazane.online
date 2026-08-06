@@ -113,7 +113,7 @@ function UnknownFeeRow({ row, instrument, nowMs }: { row: Row; instrument: strin
             {formatToman(mid)} تومان{" "}
             <span
               title="کارمزد این سکو اعلام نشده است؛ این قیمت میانیِ بدون کارمزد است و با قیمت‌های مؤثر هم‌مقایسه نیست."
-              style={{ fontSize: "0.8em", color: "#8a6d1a" }}
+              className="mid-price-note"
             >
               (قیمت میانی — بدون کارمزد)
             </span>
@@ -201,17 +201,9 @@ export async function AssetPage({ listing }: { listing: InstrumentListing }) {
               </tbody>
             ) : null}
             {unknown.length > 0 ? (
-              <tbody data-group="unknown-fee" style={{ background: "#fdf9ef" }}>
+              <tbody data-group="unknown-fee">
                 <tr>
-                  <th
-                    colSpan={COLUMN_COUNT}
-                    scope="colgroup"
-                    style={{
-                      textAlign: "start",
-                      padding: "8px",
-                      borderTop: "2px solid #d8c98e",
-                    }}
-                  >
+                  <th colSpan={COLUMN_COUNT} scope="colgroup">
                     کارمزد نامشخص — فقط قیمت میانی
                   </th>
                 </tr>
@@ -234,7 +226,7 @@ export async function AssetPage({ listing }: { listing: InstrumentListing }) {
             ) : null}
           </table>
         )}
-        <p style={{ fontSize: "0.85em" }}>
+        <p className="page-lead">
           «قیمت مرجع سکو» میانگین قیمت مؤثر خرید و فروش <strong>همان سکو</strong>{" "}
           است؛ مظنه آنلاین هیچ میانگین بین‌سکویی‌ای محاسبه یا منتشر نمی‌کند.
         </p>

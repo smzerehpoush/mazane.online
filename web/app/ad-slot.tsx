@@ -32,11 +32,9 @@ const slotStyle: CSSProperties = {
   height: `${AD_SLOT_HEIGHT_PX}px`,
   overflow: "hidden",
   boxSizing: "border-box",
-  border: "1px dashed #b8a35a",
-  borderRadius: "8px",
+  borderRadius: "10px",
   padding: "12px 16px",
   margin: "16px 0",
-  background: "#faf7ee",
 };
 
 export function AdSlot({

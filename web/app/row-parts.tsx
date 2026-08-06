@@ -74,15 +74,6 @@ export function MarketModelBadge({ platform }: { platform: ListedPlatform }) {
     <span
       data-badge="order-book"
       title="قیمت این سکو از دفتر سفارش کاربران می‌آید؛ ممکن است نقدشوندگی محدود باشد و اسپردش با سکوهای فروشنده هم‌جنس نیست."
-      style={{
-        background: "#e8eaf6",
-        color: "#283593",
-        borderRadius: "4px",
-        padding: "1px 6px",
-        marginInlineStart: "6px",
-        fontSize: "0.75em",
-        whiteSpace: "nowrap",
-      }}
     >
       دفتر سفارش
     </span>
@@ -91,24 +82,15 @@ export function MarketModelBadge({ platform }: { platform: ListedPlatform }) {
 
 /** نشان باز/بسته — از buy_enabled/sell_enabled داده‌ی زنده (بند ۹.۲). */
 export function ClosedBadges({ terms }: { terms: PlatformTerms }) {
-  const badgeStyle = {
-    background: "#c62828",
-    color: "#fff",
-    borderRadius: "4px",
-    padding: "1px 6px",
-    marginInlineStart: "6px",
-    fontSize: "0.75em",
-    whiteSpace: "nowrap" as const,
-  };
   return (
     <>
       {terms.buy_enabled ? null : (
-        <strong data-badge="buy-closed" style={badgeStyle}>
+        <strong data-badge="buy-closed">
           خرید بسته است
         </strong>
       )}
       {terms.sell_enabled ? null : (
-        <strong data-badge="sell-closed" style={badgeStyle}>
+        <strong data-badge="sell-closed">
           فروش بسته است
         </strong>
       )}
