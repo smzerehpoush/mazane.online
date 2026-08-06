@@ -5,6 +5,8 @@
  *     mazane:current:{slug}     ← JSON کامل PlatformSnapshot (با TTL)
  *     mazane:updated_at:{slug}  ← ISO-8601 (بدون TTL — کهنگی، نه خطا)
  *     mazane:listed             ← آرایه‌ی سکوهای قابل نمایش (از قبل فیلترشده)
+ *     mazane:instruments        ← آرایه‌ی دارایی‌ها با وضعیت دروازه‌ی انتشار
+ *                                 (بلیت ۷ — بدون TTL، فراداده است نه قیمت)
  *
  * قطع خود ردیس هم «کهنگی است، نه خطا» (قاعده‌ی ۵ قراردادها): هر خطای
  * اتصال/فرمان به «داده‌ای نیست» ترجمه می‌شود تا صفحه همیشه ۲۰۰ بدهد.
@@ -14,7 +16,12 @@
  */
 import Redis from "ioredis";
 
-import type { ListedPlatform, PlatformSnapshot, PriceSource } from "./prices";
+import type {
+  InstrumentListing,
+  ListedPlatform,
+  PlatformSnapshot,
+  PriceSource,
+} from "./prices";
 
 export function createRedisSource(): PriceSource {
   const redis = new Redis(process.env.MAZANE_REDIS_URL ?? "redis://127.0.0.1:6379/0", {
@@ -48,6 +55,16 @@ export function createRedisSource(): PriceSource {
         return await redis.get(`mazane:updated_at:${platformSlug}`);
       } catch {
         return null;
+      }
+    },
+
+    async getInstruments(): Promise<InstrumentListing[]> {
+      try {
+        const raw = await redis.get("mazane:instruments");
+        if (raw === null) return [];
+        return JSON.parse(raw) as InstrumentListing[];
+      } catch {
+        return [];
       }
     },
   };

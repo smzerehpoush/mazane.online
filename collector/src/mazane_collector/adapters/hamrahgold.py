@@ -19,7 +19,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Instrument, PlatformSnapshot
 from ..pipeline import AdapterError
 from .common import unknown_fee_snapshot
 
@@ -28,6 +28,7 @@ HAMRAHGOLD_ENDPOINT = "https://pwa.hamrahgold.com/api/v1/market/price/xau/change
 
 class HamrahgoldAdapter:
     slug = "hamrahgold"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = HAMRAHGOLD_ENDPOINT
     # ضریب صریح این منبع: ریال بر گرم، ÷۱۰ به تومان (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("0.1")

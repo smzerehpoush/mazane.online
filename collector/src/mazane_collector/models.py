@@ -11,7 +11,9 @@ from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, computed_field, model_validator
+
+from .pricing import reference_price_toman
 
 
 class Side(StrEnum):
@@ -59,7 +61,12 @@ class MarketModel(StrEnum):
 
 
 class Platform(BaseModel):
-    """فراداده‌ی سکو — ثابت، دستی نگهداری می‌شود (بند ۲.۲ سند معماری)."""
+    """فراداده‌ی سکو — ثابت، دستی نگهداری می‌شود (بند ۲.۲ سند معماری).
+
+    فیلدهای اختیاری خوراک صفحه‌ی سکو (بلیت ۷)اند و فقط از سند تحقیق ۰۱
+    پر می‌شوند — جایی که مستند نیست None می‌ماند؛ **هیچ مقداری حدس زده
+    نمی‌شود** (همان اصل «عدد ساختگی ممنوع» برای فراداده).
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -67,6 +74,13 @@ class Platform(BaseModel):
     name_fa: str
     data_policy: DataPolicy
     market_model: MarketModel = MarketModel.OTC
+    # نام لاتین برند — از دامنه‌ی مستند در سند تحقیق ۰۱ (بند ۲.۱/۲.۲).
+    name_en: str | None = None
+    website_url: str | None = None
+    # هویت حقوقی، فقط اگر جایی مستند شده (مثلاً <title> خود سکو).
+    legal_entity: str | None = None
+    # شرایط تحویل فیزیکی به روایت سند تحقیق ۰۱ — متن کوتاه فارسی با عدد مستند.
+    delivery_note_fa: str | None = None
 
     @property
     def is_listed(self) -> bool:
@@ -136,6 +150,26 @@ class PlatformSnapshot(BaseModel):
     terms: PlatformTerms
     fetched_at: datetime
     suppressed: bool = False
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def reference_prices_toman(self) -> dict[str, int]:
+        """قیمت مرجع این سکو به‌ازای هر دارایی = میانگین مؤثر خرید و فروش
+        **خودش** (بند ۱۳، تصمیم ۱۹) — computed_field است تا در JSON کانونی
+        (همان که ردیس/وب می‌خوانند) همیشه حاضر باشد و فرمول فقط همین‌جا،
+        در گردآورنده، زندگی کند (قاعده‌ی ۱ قراردادها).
+
+        فقط دارایی‌هایی که هر دو سمت BUY و SELL دارند کلید می‌گیرند: کارمزد
+        نامعلوم (فقط MID) یا دفتر یک‌طرفه ⟸ غایب، جعل نمی‌شود. MID هرگز در
+        این میانگین دخالت ندارد و هیچ عدد بین‌سکویی‌ای اینجا وجود ندارد.
+        """
+        buys = {q.instrument.value: q.price_toman for q in self.quotes if q.side is Side.BUY}
+        sells = {q.instrument.value: q.price_toman for q in self.quotes if q.side is Side.SELL}
+        return {
+            instrument: reference_price_toman(buys[instrument], sells[instrument])
+            for instrument in buys
+            if instrument in sells
+        }
 
     @model_validator(mode="after")
     def _no_effective_price_without_fee(self) -> PlatformSnapshot:

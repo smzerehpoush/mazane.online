@@ -18,7 +18,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Instrument, PlatformSnapshot
 from ..pipeline import AdapterError
 from .common import dealer_snapshot
 
@@ -27,6 +27,7 @@ BAAZAR_ENDPOINT = "https://api.baazar.ir/landing/v1/price/DAILY/30"
 
 class BaazarAdapter:
     slug = "baazar"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = BAAZAR_ENDPOINT
     # ضریب صریح این منبع: ریال بر گرم، ÷۱۰ به تومان (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("0.1")

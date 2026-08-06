@@ -11,6 +11,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import DarbarePishnahad from "../app/darbare-pishnahad/page";
 import sitemap from "../app/sitemap";
 import { setBlogSource } from "../lib/blog";
+import { setPriceSource } from "../lib/prices";
 import { SITE_URL } from "../lib/site";
 
 describe("صفحه‌ی معیارهای پیشنهاد سردبیر", () => {
@@ -31,6 +32,13 @@ describe("صفحه‌ی معیارهای پیشنهاد سردبیر", () => {
 
   it("در سایت‌مپ هست (محتوای ایستا، بدون lastmod قیمتی)", async () => {
     setBlogSource({ listPosts: async () => [], getPost: async () => null });
+    // سایت‌مپ از بلیت ۷ منبع قیمت را هم می‌خواند — خالی تزریق تا ردیس load نشود.
+    setPriceSource({
+      getListedPlatforms: async () => [],
+      getSnapshot: async () => null,
+      getUpdatedAt: async () => null,
+      getInstruments: async () => [],
+    });
     const urls = (await sitemap()).map((entry) => entry.url);
     expect(urls).toContain(`${SITE_URL}/darbare-pishnahad`);
   });

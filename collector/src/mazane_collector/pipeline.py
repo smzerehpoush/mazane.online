@@ -12,7 +12,8 @@ from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
-from .models import Platform, PlatformSnapshot
+from .instruments import build_listings
+from .models import Instrument, Platform, PlatformSnapshot
 from .sanity import median_outliers
 from .store import Store
 
@@ -26,10 +27,16 @@ class AdapterError(Exception):
 
 
 class Adapter(Protocol):
-    """هر آداپتر: یک endpoint و یک تبدیلِ payload به اسنپ‌شات نرمال‌شده."""
+    """هر آداپتر: یک endpoint و یک تبدیلِ payload به اسنپ‌شات نرمال‌شده.
+
+    `instruments` اعلام صریح دارایی‌هایی است که این آداپتر تولید می‌کند —
+    رجیستری زنده‌ی دروازه‌ی انتشار (بند ۱۳، تصمیم ۱۰) از همین فیلد شمار
+    سکوهای پشتیبان هر دارایی را می‌گیرد.
+    """
 
     slug: str
     endpoint: str
+    instruments: tuple[Instrument, ...]
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot: ...
 
@@ -69,6 +76,9 @@ async def collect_round(
       با کمتر از ۳ منبع تازه رأی‌گیری ممکن نیست و چک اجرا نمی‌شود.
     - فهرست عمومی هر نوبت بازنویسی می‌شود تا استور جاری (ردیس) بعد از
       ری‌استارت هم بدون دیپلوی درست باشد.
+    - payload دارایی‌ها (بلیت ۷) هم هر نوبت از رجیستری زنده بازنویسی
+      می‌شود: با فعال شدن سکوی دوم یک دارایی، `published` در همان نوبت
+      True می‌شود و صفحه‌ی وب خودکار ساخته می‌شود (بند ۱۳، تصمیم ۱۰).
     """
     fetched_at = now if now is not None else datetime.now(UTC)
 
@@ -95,4 +105,5 @@ async def collect_round(
         saved.append(snapshot)
 
     await store.save_platforms(platforms)
+    await store.save_instruments(build_listings(adapters, platforms))
     return tuple(saved)

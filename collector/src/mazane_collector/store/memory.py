@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from decimal import Decimal
 
+from ..instruments import InstrumentListing
 from ..models import Platform, PlatformSnapshot
 from ..references import ReferenceSnapshot
 from ..retention import HourlyRollup, RawRow, RollupKey, SourceKind
@@ -26,6 +27,7 @@ class InMemoryStore:
         self._snapshots: dict[str, PlatformSnapshot] = {}
         self._updated_at: dict[str, datetime] = {}
         self._platforms: tuple[Platform, ...] = ()
+        self._instruments: tuple[InstrumentListing, ...] = ()
         self._references: dict[str, ReferenceSnapshot] = {}
         self.history: list[PlatformSnapshot] = []
         self.reference_history: list[ReferenceSnapshot] = []
@@ -72,6 +74,12 @@ class InMemoryStore:
 
     async def get_listed_platforms(self) -> tuple[Platform, ...]:
         return tuple(p for p in self._platforms if p.is_listed)
+
+    async def save_instruments(self, listings: Sequence[InstrumentListing]) -> None:
+        self._instruments = tuple(listings)
+
+    async def get_instruments(self) -> tuple[InstrumentListing, ...]:
+        return self._instruments
 
     async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
         self.reference_history.append(snapshot)

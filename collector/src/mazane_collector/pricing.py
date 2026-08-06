@@ -32,6 +32,14 @@ def round_trip_percent(buy_fee: Decimal, sell_fee: Decimal) -> Decimal:
     return (fraction * 100).quantize(_PERCENT_PLACES, rounding=ROUND_HALF_UP)
 
 
+def reference_price_toman(effective_buy: int, effective_sell: int) -> int:
+    """قیمت مرجع یک سکو = میانگین مؤثر خرید و فروش **خودِ همان سکو**، گرد به
+    تومان (بند ۱۳، تصمیم ۱۹). فقط وقتی هر دو سمت موجودند معنا دارد — کارمزد
+    نامعلوم یا دفتر یک‌طرفه قیمت مرجع ندارد، جعل نمی‌شود. میانگین بین‌سکویی
+    هرگز تولید نمی‌شود (قاعده‌ی ۴ قراردادها)."""
+    return to_toman((Decimal(effective_buy) + Decimal(effective_sell)) / 2)
+
+
 def to_toman(value: Decimal) -> int:
     """گرد کردن به تومان صحیح، نیم‌بالا — تنها گردکننده‌ی قیمت در کد."""
     return int(value.quantize(_TOMAN, rounding=ROUND_HALF_UP))

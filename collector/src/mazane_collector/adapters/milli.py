@@ -42,6 +42,7 @@ MILLI_FEE_OBSERVED_AT = datetime(2026, 8, 5, tzinfo=UTC)
 
 class MilliAdapter:
     slug = "milli"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = MILLI_ENDPOINT
     # ضریب صریح این منبع: ریال بر میلی‌گرم، ×۱۰۰ به تومان بر گرم
     # (سند تحقیق ۰۱، بند ۳.۳).

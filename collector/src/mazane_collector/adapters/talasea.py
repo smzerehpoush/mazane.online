@@ -31,6 +31,7 @@ TALASEA_ENDPOINT = "https://api.talasea.ir/api/market/getGoldPrice"
 
 class TalaseaAdapter:
     slug = "talasea"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = TALASEA_ENDPOINT
     # ضریب صریح این منبع: تومان بر میلی‌گرم، ×۱۰۰۰ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1000")

@@ -8,6 +8,9 @@
     mazane:current:{slug}     ← JSON کامل PlatformSnapshot، با TTL
     mazane:updated_at:{slug}  ← ISO-8601، بدون TTL
     mazane:listed             ← آرایه‌ی JSON سکوهای قابل نمایش (فقط ALLOWED)
+    mazane:instruments        ← آرایه‌ی JSON دارایی‌ها (بلیت ۷) با وضعیت
+                                دروازه‌ی انتشار (published) و سکوهای پشتیبان
+                                — بدون TTL، مثل فهرست: فراداده است نه قیمت
     mazane:reference:{slug}   ← JSON کامل ReferenceSnapshot (با ذکر منبع)، با TTL
                                 — مرجع قیمت سکو نیست و هرگز در mazane:listed
                                 یا mazane:current نمی‌آید (بند ۱۲.۲)
@@ -23,6 +26,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
+from ..instruments import InstrumentListing
 from ..models import Platform, PlatformSnapshot
 from ..references import ReferenceSnapshot
 
@@ -32,6 +36,7 @@ DEFAULT_PRICE_TTL_SECONDS = 120
 DEFAULT_REFERENCE_TTL_SECONDS = 900
 
 LISTED_KEY = "mazane:listed"
+INSTRUMENTS_KEY = "mazane:instruments"
 
 
 def current_key(platform_slug: str) -> str:
@@ -98,6 +103,19 @@ class RedisStore:
             return ()
         text = raw.decode() if isinstance(raw, bytes) else raw
         return tuple(Platform.model_validate(item) for item in json.loads(text))
+
+    async def save_instruments(self, listings: Sequence[InstrumentListing]) -> None:
+        payload = [listing.model_dump(mode="json") for listing in listings]
+        # بدون TTL — فراداده‌ی رجیستری است نه قیمت؛ published=False ها هم
+        # می‌مانند تا وب بتواند دروازه‌ی رد را صریح 404 کند (بلیت ۷).
+        await self._client.set(INSTRUMENTS_KEY, json.dumps(payload, ensure_ascii=False))
+
+    async def get_instruments(self) -> tuple[InstrumentListing, ...]:
+        raw = await self._client.get(INSTRUMENTS_KEY)
+        if raw is None:
+            return ()
+        text = raw.decode() if isinstance(raw, bytes) else raw
+        return tuple(InstrumentListing.model_validate(item) for item in json.loads(text))
 
     async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
         await self._client.set(

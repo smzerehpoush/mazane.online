@@ -35,7 +35,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot, Side
+from ..models import Instrument, PlatformSnapshot, Side
 from ..pipeline import AdapterError
 from .common import dealer_snapshot, one_sided_book_snapshot
 
@@ -88,6 +88,7 @@ def decode_signalr_message(raw: str) -> Any | None:
 
 class DaricAdapter:
     slug = "daric"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = DARIC_REST_ENDPOINT
     # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")

@@ -35,6 +35,34 @@ export interface ListedPlatform {
   data_policy: DataPolicy;
   /** غیبت = OTC — پیش از مهاجرت ۰۰۴ این فیلد در payload نبود. */
   market_model?: MarketModel;
+  /**
+   * فراداده‌ی صفحه‌ی سکو (بلیت ۷) — گردآورنده فقط از سند تحقیق ۰۱ پرشان
+   * می‌کند؛ جای نامستند null است و وب همان «ثبت نشده» را می‌گوید، جعل نمی‌کند.
+   * اختیاری تا payload قدیمی‌تر بدون این کلیدها هم رندر شود.
+   */
+  name_en?: string | null;
+  website_url?: string | null;
+  legal_entity?: string | null;
+  delivery_note_fa?: string | null;
+}
+
+/**
+ * یک دارایی از payload ‏`mazane:instruments` — موجودیت کامل با وضعیت
+ * دروازه‌ی انتشار (بند ۱۳، تصمیم ۱۰). `published` در گردآورنده محاسبه شده
+ * (دست‌کم دو سکوی پشتیبانِ قابل نمایش)؛ وب فقط پرچم را می‌خواند:
+ * published=false ⟸ 404 و غایب از سایت‌مپ.
+ */
+export interface InstrumentListing {
+  /** لاتین و تخت — عضو جدول مرکزی اسلاگ (تصمیم ۱۱). */
+  slug: string;
+  /** کد دارایی — همان مقدار `instrument` سطرهای Quote (مثلاً "GOLD_18K"). */
+  instrument: string;
+  name_fa: string;
+  unit_fa: string;
+  purity: string | null;
+  currency: string;
+  supporting_platform_slugs: string[];
+  published: boolean;
 }
 
 export interface Quote {
@@ -74,12 +102,25 @@ export interface PlatformSnapshot {
    * نتیجه به این لایه) نمی‌رسد؛ فیلد فقط برای آینگی کامل با JSON کانونی است.
    */
   suppressed: boolean;
+  /**
+   * قیمت مرجع این سکو به‌ازای هر کد دارایی = میانگین مؤثر خرید و فروش
+   * **خودِ همین سکو** (بند ۱۳، تصمیم ۱۹) — در گردآورنده محاسبه شده؛ اینجا
+   * فقط انتخاب می‌شود. دارایی بدون هر دو سمت کلید ندارد (جعل نمی‌شود) و
+   * هیچ میانگین بین‌سکویی‌ای در هیچ لایه‌ای وجود ندارد. اختیاری تا payload
+   * قدیمی‌تر بدون این کلید هم رندر شود.
+   */
+  reference_prices_toman?: Record<string, number>;
 }
 
 export interface PriceSource {
   getListedPlatforms(): Promise<ListedPlatform[]>;
   getSnapshot(platformSlug: string): Promise<PlatformSnapshot | null>;
   getUpdatedAt(platformSlug: string): Promise<string | null>;
+  /**
+   * payload ‏`mazane:instruments`‏ — اختیاری تا فیک‌های قدیمی تست‌ها بدون
+   * تغییر سبز بمانند؛ غیبت = فهرست خالی (هیچ صفحه‌ی دارایی‌ای).
+   */
+  getInstruments?(): Promise<InstrumentListing[]>;
 }
 
 let activeSource: PriceSource | null = null;
@@ -110,4 +151,9 @@ export async function getPlatformSnapshot(
 
 export async function getUpdatedAt(platformSlug: string): Promise<string | null> {
   return (await source()).getUpdatedAt(platformSlug);
+}
+
+export async function getInstruments(): Promise<InstrumentListing[]> {
+  const active = await source();
+  return active.getInstruments === undefined ? [] : active.getInstruments();
 }

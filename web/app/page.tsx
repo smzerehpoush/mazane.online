@@ -36,20 +36,17 @@ import { Fragment } from "react";
 import { AdSlot, type EditorialPick } from "./ad-slot";
 import { LivePricesUpdater } from "./live-prices-updater";
 import {
-  formatDateFa,
-  formatMinutesAgoFa,
+  ClosedBadges,
+  FeeSourceLabel,
+  MarketModelBadge,
+  Staleness,
+} from "./row-parts";
+import {
   formatPercentFa,
   formatPercentPointsFa,
   formatToman,
-  isStale,
-  minutesSince,
 } from "../lib/format";
-import { STALE_SUFFIX_FA } from "../lib/live-update";
-import {
-  type ListedPlatform,
-  type PlatformSnapshot,
-  type PlatformTerms,
-} from "../lib/prices";
+import { type PlatformSnapshot } from "../lib/prices";
 import {
   effectiveBuy,
   fetchRows,
@@ -115,100 +112,6 @@ function editorialPick(rows: Row[]): EditorialPick | null {
     name_fa: best.row.platform.name_fa,
     round_trip_percent: best.roundTrip,
   };
-}
-
-/**
- * برچسب زمان داخل خود HTML (الزام بند ۶.۲) با قلاب‌های data-live برای
- * به‌روزرسان زنده (بلیت ۸). گره‌ی کهنگی همیشه هست (وقتی تازه است تهی) تا
- * سوآپ کلاینت فقط متن عوض کند، نه ساختار DOM.
- */
-function Staleness({ updatedAt, nowMs }: { updatedAt: string | null; nowMs: number }) {
-  if (updatedAt === null) {
-    // سکوی بی‌سابقه قلاب زنده ندارد — با آمدن اولین داده، رندر بعدی ISR
-    // (حداکثر ۶۰ ثانیه بعد) نشانش می‌دهد.
-    return <span>هنوز داده‌ای ثبت نشده است</span>;
-  }
-  const minutes = minutesSince(updatedAt, nowMs);
-  return (
-    <>
-      به‌روزرسانی:{" "}
-      <time dateTime={updatedAt} data-live="updated-at" suppressHydrationWarning>
-        {formatMinutesAgoFa(minutes)}
-      </time>
-      <strong data-live="stale" suppressHydrationWarning>
-        {isStale(minutes) ? STALE_SUFFIX_FA : null}
-      </strong>
-    </>
-  );
-}
-
-function FeeSourceLabel({ terms }: { terms: PlatformTerms }) {
-  if (terms.fee_source === "MANUAL") {
-    // کارمزد دستی باید برچسب و تاریخ مشاهده داشته باشد (بند ۲.۲ سند معماری).
-    return (
-      <span>
-        دستی — مشاهده‌شده در{" "}
-        <time dateTime={terms.observed_at}>{formatDateFa(terms.observed_at)}</time>
-      </span>
-    );
-  }
-  if (terms.fee_source === "UNKNOWN") {
-    return <span>نامشخص — سکو کارمزدش را اعلام نکرده است</span>;
-  }
-  return <span>از API سکو</span>;
-}
-
-/**
- * برچسب صریح دفتر سفارش (بند ۹.۲، شکاف ۵ رقبا): قیمت داریک از سفارش‌های
- * کاربران است، نه قیمت‌گذاری فروشنده — بدون این برچسب، اسپرد ناهم‌جنس
- * به‌عنوان قیمت رقیب خوانده می‌شود.
- */
-function MarketModelBadge({ platform }: { platform: ListedPlatform }) {
-  if (platform.market_model !== "ORDER_BOOK") return null;
-  return (
-    <span
-      data-badge="order-book"
-      title="قیمت این سکو از دفتر سفارش کاربران می‌آید؛ ممکن است نقدشوندگی محدود باشد و اسپردش با سکوهای فروشنده هم‌جنس نیست."
-      style={{
-        background: "#e8eaf6",
-        color: "#283593",
-        borderRadius: "4px",
-        padding: "1px 6px",
-        marginInlineStart: "6px",
-        fontSize: "0.75em",
-        whiteSpace: "nowrap",
-      }}
-    >
-      دفتر سفارش
-    </span>
-  );
-}
-
-/** نشان باز/بسته — از buy_enabled/sell_enabled داده‌ی زنده (بند ۹.۲). */
-function ClosedBadges({ terms }: { terms: PlatformTerms }) {
-  const badgeStyle = {
-    background: "#c62828",
-    color: "#fff",
-    borderRadius: "4px",
-    padding: "1px 6px",
-    marginInlineStart: "6px",
-    fontSize: "0.75em",
-    whiteSpace: "nowrap" as const,
-  };
-  return (
-    <>
-      {terms.buy_enabled ? null : (
-        <strong data-badge="buy-closed" style={badgeStyle}>
-          خرید بسته است
-        </strong>
-      )}
-      {terms.sell_enabled ? null : (
-        <strong data-badge="sell-closed" style={badgeStyle}>
-          فروش بسته است
-        </strong>
-      )}
-    </>
-  );
 }
 
 const COLUMN_COUNT = 4;

@@ -18,7 +18,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Instrument, PlatformSnapshot
 from ..pipeline import AdapterError
 from .common import unknown_fee_snapshot
 
@@ -29,6 +29,7 @@ _TWO = Decimal("2")
 
 class MelligoldAdapter:
     slug = "melligold"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = MELLIGOLD_ENDPOINT
     # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")

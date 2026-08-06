@@ -18,7 +18,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Instrument, PlatformSnapshot
 from ..pipeline import AdapterError
 from .common import dealer_snapshot
 
@@ -28,6 +28,7 @@ GOLD_SYMBOL = "GOLD18"
 
 class TlynAdapter:
     slug = "tlyn"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = TLYN_ENDPOINT
     # ضریب صریح این منبع: تومان ÷۱۰۰۰، ×۱۰۰۰ به تومان بر گرم
     # (سند تحقیق ۰۱، بند ۳.۳).

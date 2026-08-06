@@ -146,17 +146,37 @@ async def test_listed_payload_orders_unknown_fee_platforms_last() -> None:
 
 
 async def test_listed_payload_shape_carries_market_model() -> None:
-    """قرارداد با `web/lib/prices.ts` (ListedPlatform): بلیت ۵ یک فیلد به
-    فهرست اضافه کرد — `market_model` — تا وب بتواند برچسب «دفتر سفارش»
-    بزند (بند ۹.۲ نکته‌ی ۵). داریک تنها ORDER_BOOK است؛ بقیه OTC."""
+    """قرارداد با `web/lib/prices.ts` (ListedPlatform): بلیت ۵ فیلد
+    `market_model` را اضافه کرد (برچسب «دفتر سفارش» — بند ۹.۲ نکته‌ی ۵) و
+    بلیت ۷ فراداده‌ی صفحه‌ی سکو را: `name_en`، `website_url`،
+    `legal_entity`، `delivery_note_fa` (اختیاری — جای نامستند None).
+    داریک تنها ORDER_BOOK است؛ بقیه OTC."""
     store = InMemoryStore()
     await store.save_platforms(PLATFORMS)
 
     listed = await store.get_listed_platforms()
     for platform in listed:
         payload = platform.model_dump(mode="json")
-        assert set(payload) == {"slug", "name_fa", "data_policy", "market_model"}
+        assert set(payload) == {
+            "slug",
+            "name_fa",
+            "data_policy",
+            "market_model",
+            "name_en",
+            "website_url",
+            "legal_entity",
+            "delivery_note_fa",
+        }
         assert payload["data_policy"] == "ALLOWED"
         expected = "ORDER_BOOK" if payload["slug"] == "daric" else "OTC"
         assert payload["market_model"] == expected
+        # نشانی وب‌سایت هر ۱۴ سکو در سند تحقیق ۰۱ مستند است.
+        assert isinstance(payload["website_url"], str)
+        assert payload["website_url"].startswith("https://")
     assert "daric" in {p.slug for p in listed}
+    # فراداده‌ی مستندشده در سند تحقیق ۰۱ سر جای خودش است؛ نامستند None است.
+    by_slug = {p.slug: p for p in listed}
+    assert by_slug["talasea"].legal_entity == "شرکت توسعه راهکار الوند ارسباران"
+    assert by_slug["milli"].delivery_note_fa == "کارمزد تحویل فیزیکی ۳٪"
+    assert by_slug["wallgold"].legal_entity is None
+    assert by_slug["wallgold"].delivery_note_fa is None

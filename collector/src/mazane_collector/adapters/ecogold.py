@@ -20,7 +20,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Instrument, PlatformSnapshot
 from ..pipeline import AdapterError
 from .common import dealer_snapshot
 
@@ -30,6 +30,7 @@ GOLD_SYMBOL = "GOLD18-IRT"
 
 class EcogoldAdapter:
     slug = "ecogold"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = ECOGOLD_ENDPOINT
     # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")

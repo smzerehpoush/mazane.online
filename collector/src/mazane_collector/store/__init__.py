@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 
+from ..instruments import InstrumentListing
 from ..models import Platform, PlatformSnapshot
 from ..references import ReferenceSnapshot
 
@@ -53,6 +54,16 @@ class Store(Protocol):
         """آخرین اسنپ‌شات جاری مرجع، یا None — همیشه با ذکر منبع داخل داده."""
         ...
 
+    async def save_instruments(self, listings: Sequence[InstrumentListing]) -> None:
+        """payload دارایی‌ها (بلیت ۷): اسلاگ، نام، واحد، سکوهای پشتیبان و
+        **وضعیت دروازه‌ی انتشار** — محاسبه‌شده در گردآورنده؛ وب فقط می‌خواند."""
+        ...
+
+    async def get_instruments(self) -> tuple[InstrumentListing, ...]:
+        """فهرست دارایی‌ها همان‌طور که ذخیره شده — شامل published=False ها؛
+        قاعده‌ی نمایش (404 برای دروازه‌ی رد) با لایه‌ی وب است ولی پرچمش اینجاست."""
+        ...
+
 
 class MultiStore:
     """یک نوشتن، چند مقصد (ردیس + پستگرس). خواندن از مقصد اول."""
@@ -83,3 +94,10 @@ class MultiStore:
 
     async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
         return await self._stores[0].get_reference(reference_slug)
+
+    async def save_instruments(self, listings: Sequence[InstrumentListing]) -> None:
+        for store in self._stores:
+            await store.save_instruments(listings)
+
+    async def get_instruments(self) -> tuple[InstrumentListing, ...]:
+        return await self._stores[0].get_instruments()

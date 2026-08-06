@@ -8,6 +8,7 @@
 import {
   setPriceSource,
   type FeeSource,
+  type InstrumentListing,
   type ListedPlatform,
   type PlatformSnapshot,
   type Quote,
@@ -19,10 +20,11 @@ export function quote(
   side: Side,
   priceToman: number,
   fetchedAt: string,
+  instrument: string = "GOLD_18K",
 ): Quote {
   return {
     platform_slug: slug,
-    instrument: "GOLD_18K",
+    instrument,
     side,
     price_toman: priceToman,
     raw_value: String(priceToman),
@@ -39,16 +41,26 @@ export function makeSnapshot(opts: {
   sell?: number;
   feeSource?: FeeSource;
   fetchedAt?: string;
+  /** پیش‌فرض GOLD_18K — صفحه‌ی دارایی (بلیت ۷) کد خودش را می‌دهد. */
+  instrument?: string;
+  /**
+   * قیمت مرجع سکو — عدد آماده‌ی گردآورنده (میانگین مؤثر خرید و فروش خودش،
+   * تصمیم ۱۹). نده ⟸ کلیدی در payload نیست (کارمزد نامعلوم/یک‌طرفه).
+   */
+  reference?: number;
+  buyEnabled?: boolean;
+  sellEnabled?: boolean;
 }): PlatformSnapshot {
   const fetchedAt = opts.fetchedAt ?? new Date().toISOString();
   const feeSource = opts.feeSource ?? "API";
   const unknown = feeSource === "UNKNOWN";
-  const quotes: Quote[] = [quote(opts.slug, "MID", opts.mid, fetchedAt)];
+  const instrument = opts.instrument ?? "GOLD_18K";
+  const quotes: Quote[] = [quote(opts.slug, "MID", opts.mid, fetchedAt, instrument)];
   if (!unknown && opts.buy !== undefined) {
-    quotes.push(quote(opts.slug, "BUY", opts.buy, fetchedAt));
+    quotes.push(quote(opts.slug, "BUY", opts.buy, fetchedAt, instrument));
   }
   if (!unknown && opts.sell !== undefined) {
-    quotes.push(quote(opts.slug, "SELL", opts.sell, fetchedAt));
+    quotes.push(quote(opts.slug, "SELL", opts.sell, fetchedAt, instrument));
   }
   return {
     platform_slug: opts.slug,
@@ -59,12 +71,15 @@ export function makeSnapshot(opts: {
       sell_fee_percent: unknown ? null : "0.5",
       round_trip_percent: unknown ? null : "0.9950",
       fee_source: feeSource,
-      buy_enabled: true,
-      sell_enabled: true,
+      buy_enabled: opts.buyEnabled ?? true,
+      sell_enabled: opts.sellEnabled ?? true,
       observed_at: fetchedAt,
     },
     fetched_at: fetchedAt,
     suppressed: false,
+    ...(opts.reference !== undefined
+      ? { reference_prices_toman: { [instrument]: opts.reference } }
+      : {}),
   };
 }
 
@@ -92,6 +107,8 @@ export interface SeededStore {
   listed?: ListedPlatform[];
   snapshots: Record<string, PlatformSnapshot | null>;
   updatedAt: Record<string, string | null>;
+  /** payload ‏`mazane:instruments`‏ (بلیت ۷) — پرچم دروازه از گردآورنده. */
+  instruments?: InstrumentListing[];
 }
 
 export function seed(store: SeededStore): void {
@@ -99,7 +116,34 @@ export function seed(store: SeededStore): void {
     getListedPlatforms: async () => store.listed ?? LISTED,
     getSnapshot: async (slug) => store.snapshots[slug] ?? null,
     getUpdatedAt: async (slug) => store.updatedAt[slug] ?? null,
+    getInstruments: async () => store.instruments ?? [],
   });
+}
+
+/**
+ * یک سطر payload دارایی — همان شکلی که گردآورنده می‌نویسد؛ `published`
+ * از قبل آنجا محاسبه شده (وب فقط می‌خواند).
+ */
+export function makeListing(opts: {
+  slug: string;
+  instrument: string;
+  name_fa: string;
+  supporting: string[];
+  published: boolean;
+  unit_fa?: string;
+  purity?: string | null;
+  currency?: string;
+}): InstrumentListing {
+  return {
+    slug: opts.slug,
+    instrument: opts.instrument,
+    name_fa: opts.name_fa,
+    unit_fa: opts.unit_fa ?? "گرم",
+    purity: opts.purity ?? null,
+    currency: opts.currency ?? "TOMAN",
+    supporting_platform_slugs: opts.supporting,
+    published: opts.published,
+  };
 }
 
 /** استور سالم: هر سه سکوی فهرست‌شده تازه + گلدیکا هم در استور (ولی نه در فهرست). */

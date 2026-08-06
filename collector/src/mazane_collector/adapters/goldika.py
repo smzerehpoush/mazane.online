@@ -38,6 +38,7 @@ _HUNDRED = Decimal("100")
 
 class GoldikaAdapter:
     slug = "goldika"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = GOLDIKA_ENDPOINT
     # ضریب صریح این منبع: ریال بر گرم، ÷۱۰ به تومان (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("0.1")

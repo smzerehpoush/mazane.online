@@ -18,7 +18,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Instrument, PlatformSnapshot
 from ..pipeline import AdapterError
 from .common import unknown_fee_snapshot
 
@@ -27,6 +27,7 @@ DIGIKALA_ENDPOINT = "https://api.digikala.com/non-inventory/v1/prices/"
 
 class DigikalaAdapter:
     slug = "digikala"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = DIGIKALA_ENDPOINT
     # ضریب صریح این منبع: ریال ÷۱۰۰۰، ×۱۰۰ به تومان بر گرم
     # (سند تحقیق ۰۱، بند ۳.۳).

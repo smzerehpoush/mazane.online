@@ -18,6 +18,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
+from ..instruments import InstrumentListing
 from ..models import (
     DataPolicy,
     FeeSource,
@@ -270,6 +271,15 @@ class PostgresStore:
             )
             for row in rows
         )
+
+    async def save_instruments(self, listings: Sequence[InstrumentListing]) -> None:
+        """No-op عمدی: رجیستری دارایی‌ها کد است (mazane_collector.instruments)
+        و payload جاری‌اش را ردیس نگه می‌دارد — پستگرس فقط تاریخچه است و هیچ
+        شکل ماندگار تازه‌ای لازم ندارد (بلیت ۷: مهاجرت آگاهانه حذف شد)."""
+
+    async def get_instruments(self) -> tuple[InstrumentListing, ...]:
+        """خواندن از مقصد اول (ردیس) انجام می‌شود؛ اینجا چیزی ذخیره نیست."""
+        return ()
 
     async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
         async with self._pool.acquire() as conn:

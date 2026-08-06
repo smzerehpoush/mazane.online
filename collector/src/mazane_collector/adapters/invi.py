@@ -21,7 +21,7 @@ from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Instrument, PlatformSnapshot
 from ..pipeline import AdapterError
 from .common import unknown_fee_snapshot
 
@@ -46,6 +46,7 @@ def decode_invi_message(raw: str) -> Any | None:
 
 class InviAdapter:
     slug = "invi"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = INVI_WS_ENDPOINT
     # ضریب فرضی این منبع: تومان بر گرم، ×۱ — با اولین فریم زنده بازبینی شود.
     scale = Decimal("1")

@@ -32,6 +32,7 @@ GOLD_SYMBOL = "GLD_18C_750TMN"
 
 class WallgoldAdapter:
     slug = "wallgold"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = WALLGOLD_ENDPOINT
     # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")

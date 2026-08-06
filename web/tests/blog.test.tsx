@@ -17,7 +17,23 @@ import BlogPostPage, {
 import sitemap from "../app/sitemap";
 import { formatDateFa } from "../lib/format";
 import { setBlogSource, type BlogPost } from "../lib/blog";
+import { setPriceSource } from "../lib/prices";
 import { SITE_URL } from "../lib/site";
+
+/**
+ * سایت‌مپ از بلیت ۷ به بعد صفحات دارایی/سکو را هم می‌خواند؛ این تست‌ها
+ * فقط رفتار بلاگ را می‌سنجند، پس منبع قیمتِ خالی تزریق می‌شود تا ردیس
+ * (منبع پیش‌فرض تنبل) هرگز load نشود. رفتار دارایی/سکوی سایت‌مپ در
+ * tests/asset-platform-pages.test.tsx سنجیده می‌شود.
+ */
+function seedEmptyPrices(): void {
+  setPriceSource({
+    getListedPlatforms: async () => [],
+    getSnapshot: async () => null,
+    getUpdatedAt: async () => null,
+    getInstruments: async () => [],
+  });
+}
 
 const PUBLISHED_OLD: BlogPost = {
   slug: "moghayese-karmozd-sakooha",
@@ -67,6 +83,7 @@ const RETRACTED: BlogPost = {
 const ALL_POSTS: BlogPost[] = [PUBLISHED_OLD, PUBLISHED_NEW, DRAFT, RETRACTED];
 
 function seedBlog(posts: BlogPost[]): void {
+  seedEmptyPrices();
   setBlogSource({
     listPosts: async () => posts,
     getPost: async (slug) => posts.find((p) => p.slug === slug) ?? null,
@@ -222,6 +239,7 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
 
 describe("استور بلاگ از دسترس خارج (مثلاً build بیرون از سرور) — کهنگی/خالی، نه شکست", () => {
   function seedBrokenSource(): void {
+    seedEmptyPrices();
     setBlogSource({
       listPosts: async () => {
         throw new Error("pg down");
