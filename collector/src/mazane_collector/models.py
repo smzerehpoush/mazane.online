@@ -32,6 +32,30 @@ class FeeSource(StrEnum):
     MANUAL = "MANUAL"
 
 
+class DataPolicy(StrEnum):
+    """کلید حقوقی هر سکو — بند ۲.۲ سند معماری. تغییرش دیپلوی نمی‌خواهد."""
+
+    ALLOWED = "ALLOWED"
+    RESTRICTED = "RESTRICTED"
+    PERMISSION_PENDING = "PERMISSION_PENDING"
+    BLOCKED = "BLOCKED"
+
+
+class Platform(BaseModel):
+    """فراداده‌ی سکو — ثابت، دستی نگهداری می‌شود (بند ۲.۲ سند معماری)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    slug: str
+    name_fa: str
+    data_policy: DataPolicy
+
+    @property
+    def is_listed(self) -> bool:
+        """نمایش عمومی فقط تابع data_policy است (بند ۱۳، تصمیم ۲۰)."""
+        return self.data_policy == DataPolicy.ALLOWED
+
+
 class Quote(BaseModel):
     """یک قیمت منتسب به یک سکو، همیشه تومان بر گرم.
 
@@ -66,7 +90,12 @@ class PlatformTerms(BaseModel):
 
 
 class PlatformSnapshot(BaseModel):
-    """خروجی یک نوبت گردآوری موفق برای یک سکو: قیمت‌ها + شرایط."""
+    """خروجی یک نوبت گردآوری موفق برای یک سکو: قیمت‌ها + شرایط.
+
+    `suppressed=True` یعنی چک میانه‌ی تقاطعی (قاعده‌ی ۳ قراردادها) این نوبت را
+    رد کرده: در استور قیمت جاری منتشر نمی‌شود، فقط در تاریخچه با همین پرچم
+    ثبت می‌ماند.
+    """
 
     model_config = ConfigDict(frozen=True)
 
@@ -74,3 +103,4 @@ class PlatformSnapshot(BaseModel):
     quotes: tuple[Quote, ...]
     terms: PlatformTerms
     fetched_at: datetime
+    suppressed: bool = False

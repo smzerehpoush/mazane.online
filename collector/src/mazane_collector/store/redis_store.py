@@ -7,16 +7,24 @@
 کلیدها (قرارداد مشترک با `web/lib/redis-source.ts`):
     mazane:current:{slug}     ← JSON کامل PlatformSnapshot، با TTL
     mazane:updated_at:{slug}  ← ISO-8601، بدون TTL
+    mazane:listed             ← آرایه‌ی JSON سکوهای قابل نمایش (فقط ALLOWED)
+
+وب `mazane:listed` را همان‌طور که هست رندر می‌کند — فیلتر نمایش عمومی
+(گلدیکا و هر PERMISSION_PENDING دیگر) همین‌جا اعمال شده است، نه در وب.
 """
 
 from __future__ import annotations
 
+import json
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from ..models import PlatformSnapshot
+from ..models import Platform, PlatformSnapshot
 
 DEFAULT_PRICE_TTL_SECONDS = 120
+
+LISTED_KEY = "mazane:listed"
 
 
 def current_key(platform_slug: str) -> str:
@@ -34,6 +42,10 @@ class RedisStore:
         self._price_ttl_seconds = price_ttl_seconds
 
     async def save_snapshot(self, snapshot: PlatformSnapshot) -> None:
+        if snapshot.suppressed:
+            # رد چک میانه: ردیس فقط قیمت جاری است — سرکوب یعنی هیچ‌چیز نوشته
+            # نشود؛ ثبت تاریخچه (با پرچم) کار استور پستگرس است.
+            return
         await self._client.set(
             current_key(snapshot.platform_slug),
             snapshot.model_dump_json(),
@@ -57,3 +69,15 @@ class RedisStore:
             return None
         text = raw.decode() if isinstance(raw, bytes) else raw
         return datetime.fromisoformat(text)
+
+    async def save_platforms(self, platforms: Sequence[Platform]) -> None:
+        listed = [p.model_dump(mode="json") for p in platforms if p.is_listed]
+        # بدون TTL — فهرست، فراداده‌ی ثابت است نه قیمت.
+        await self._client.set(LISTED_KEY, json.dumps(listed, ensure_ascii=False))
+
+    async def get_listed_platforms(self) -> tuple[Platform, ...]:
+        raw = await self._client.get(LISTED_KEY)
+        if raw is None:
+            return ()
+        text = raw.decode() if isinstance(raw, bytes) else raw
+        return tuple(Platform.model_validate(item) for item in json.loads(text))

@@ -23,8 +23,12 @@ import asyncpg
 import httpx
 import redis.asyncio as aioredis
 
+from .adapters.goldika import GoldikaAdapter
+from .adapters.milli import MilliAdapter
+from .adapters.talasea import TalaseaAdapter
 from .adapters.wallgold import WallgoldAdapter
-from .pipeline import collect_once
+from .pipeline import collect_round
+from .platforms import PLATFORMS
 from .store import MultiStore
 from .store.postgres_store import PostgresStore
 from .store.redis_store import RedisStore
@@ -42,7 +46,12 @@ async def run() -> None:
         "MAZANE_DATABASE_URL", "postgresql://mazane:mazane@127.0.0.1:5432/mazane"
     )
 
-    adapter = WallgoldAdapter()
+    adapters = (
+        WallgoldAdapter(),
+        TalaseaAdapter(),
+        MilliAdapter(),
+        GoldikaAdapter(),
+    )
     redis_client = aioredis.from_url(redis_url, decode_responses=True)
     pool = await asyncpg.create_pool(database_url)
     assert pool is not None
@@ -61,11 +70,19 @@ async def run() -> None:
         while True:
             started = time.monotonic()
             try:
-                snapshot = await collect_once(adapter, fetch_json, store)
+                snapshots = await collect_round(
+                    adapters, fetch_json, store, platforms=PLATFORMS
+                )
                 log.info(
-                    "%s ذخیره شد: %s",
-                    snapshot.platform_slug,
-                    {q.side.value: q.price_toman for q in snapshot.quotes},
+                    "نوبت گردآوری: %s",
+                    {
+                        s.platform_slug: (
+                            "سرکوب‌شده (چک میانه)"
+                            if s.suppressed
+                            else {q.side.value: q.price_toman for q in s.quotes}
+                        )
+                        for s in snapshots
+                    },
                 )
             except Exception:
                 # کهنگی، نه سقوط: updated_at قبلی می‌ماند و حلقه ادامه می‌دهد.

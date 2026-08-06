@@ -1,4 +1,4 @@
-"""خط لوله‌ی گردآوری: fetch → parse → save.
+"""خط لوله‌ی گردآوری: fetch → parse → چک میانه → save.
 
 مرز تست گردآورنده همین‌جاست: payload (در تست، فیکسچر ضبط‌شده) وارد می‌شود و
 ردیف‌های ذخیره‌شده در استور بیرون می‌آید. شبکه با `fetch_json` تزریق می‌شود
@@ -7,14 +7,18 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+import logging
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
-from .models import PlatformSnapshot
+from .models import Platform, PlatformSnapshot
+from .sanity import median_outliers
 from .store import Store
 
 FetchJson = Callable[[str], Awaitable[Any]]
+
+log = logging.getLogger("mazane.collector.pipeline")
 
 
 class AdapterError(Exception):
@@ -46,3 +50,49 @@ async def collect_once(
     snapshot = adapter.parse(payload, fetched_at)
     await store.save_snapshot(snapshot)
     return snapshot
+
+
+async def collect_round(
+    adapters: Sequence[Adapter],
+    fetch_json: FetchJson,
+    store: Store,
+    *,
+    platforms: Sequence[Platform],
+    now: datetime | None = None,
+) -> tuple[PlatformSnapshot, ...]:
+    """یک نوبت گردآوری برای همه‌ی سکوها + چک میانه‌ی تقاطعی + فهرست عمومی.
+
+    - قطع یک منبع کل نوبت را نمی‌کشد: فقط لاگ می‌شود و آن سکو کهنه می‌ماند.
+    - چک میانه (قاعده‌ی ۳ قراردادها): mid هر منبع تازه با میانه‌ی سایر منابع
+      تازه مقایسه می‌شود؛ انحراف بیش از آستانه ⟸ همان اسنپ‌شات با
+      `suppressed=True` ذخیره می‌شود (تاریخچه بله، قیمت جاری هرگز) + هشدار.
+      با کمتر از ۳ منبع تازه رأی‌گیری ممکن نیست و چک اجرا نمی‌شود.
+    - فهرست عمومی هر نوبت بازنویسی می‌شود تا استور جاری (ردیس) بعد از
+      ری‌استارت هم بدون دیپلوی درست باشد.
+    """
+    fetched_at = now if now is not None else datetime.now(UTC)
+
+    fresh: list[PlatformSnapshot] = []
+    for adapter in adapters:
+        try:
+            payload = await fetch_json(adapter.endpoint)
+            fresh.append(adapter.parse(payload, fetched_at))
+        except Exception:
+            # کهنگی، نه خطا: updated_at قبلی این سکو می‌ماند و نوبت ادامه دارد.
+            log.exception("گردآوری %s شکست خورد — سکو کهنه می‌ماند", adapter.slug)
+
+    outliers = median_outliers(fresh)
+    saved: list[PlatformSnapshot] = []
+    for snapshot in fresh:
+        if snapshot.platform_slug in outliers:
+            log.warning(
+                "چک میانه: %s بیش از آستانه از میانه‌ی سایر منابع فاصله دارد "
+                "— منتشر نمی‌شود (فقط تاریخچه، با پرچم سرکوب)",
+                snapshot.platform_slug,
+            )
+            snapshot = snapshot.model_copy(update={"suppressed": True})
+        await store.save_snapshot(snapshot)
+        saved.append(snapshot)
+
+    await store.save_platforms(platforms)
+    return tuple(saved)

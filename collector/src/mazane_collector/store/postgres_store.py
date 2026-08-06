@@ -1,19 +1,32 @@
 """استور پستگرس — تاریخچه (درج، بدون هرس؛ آرشیو الزام حقوقی است — بند ۷.۱).
 
-اسکیمای جدول‌ها: `collector/migrations/001_init.sql`.
+اسکیمای جدول‌ها: `collector/migrations/001_init.sql` و `002_multi_source.sql`.
+اسنپ‌شات سرکوب‌شده (رد چک میانه) هم درج می‌شود — با `suppressed = true` —
+ولی خواندن‌های «جاری» فقط ردیف‌های منتشرشده را می‌بینند.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from ..models import FeeSource, Instrument, PlatformSnapshot, PlatformTerms, Quote, Side
+from ..models import (
+    DataPolicy,
+    FeeSource,
+    Instrument,
+    Platform,
+    PlatformSnapshot,
+    PlatformTerms,
+    Quote,
+    Side,
+)
 
 _INSERT_QUOTE = """
 insert into quotes
-    (platform_slug, instrument, side, price_toman, raw_value, raw_scale, fetched_at)
-values ($1, $2, $3, $4, $5, $6, $7)
+    (platform_slug, instrument, side, price_toman, raw_value, raw_scale,
+     fetched_at, suppressed)
+values ($1, $2, $3, $4, $5, $6, $7, $8)
 """
 
 _INSERT_TERMS = """
@@ -24,13 +37,27 @@ values ($1, $2, $3, $4, $5, $6, $7, $8)
 """
 
 _SELECT_LATEST_FETCHED_AT = """
-select max(fetched_at) as fetched_at from quotes where platform_slug = $1
+select max(fetched_at) as fetched_at from quotes
+where platform_slug = $1 and not suppressed
 """
 
 _SELECT_QUOTES_AT = """
 select platform_slug, instrument, side, price_toman, raw_value, raw_scale, fetched_at
 from quotes
-where platform_slug = $1 and fetched_at = $2
+where platform_slug = $1 and fetched_at = $2 and not suppressed
+"""
+
+_UPSERT_PLATFORM = """
+insert into platforms (slug, name_fa, data_policy, is_listed)
+values ($1, $2, $3, $4)
+on conflict (slug) do update
+    set name_fa = excluded.name_fa,
+        data_policy = excluded.data_policy,
+        is_listed = excluded.is_listed
+"""
+
+_SELECT_LISTED_PLATFORMS = """
+select slug, name_fa, data_policy from platforms where is_listed order by slug
 """
 
 _SELECT_LATEST_TERMS = """
@@ -62,6 +89,7 @@ class PostgresStore:
                             q.raw_value,
                             q.raw_scale,
                             q.fetched_at,
+                            snapshot.suppressed,
                         )
                         for q in snapshot.quotes
                     ],
@@ -122,3 +150,26 @@ class PostgresStore:
         if row is None:
             return None
         return row["fetched_at"]
+
+    async def save_platforms(self, platforms: Sequence[Platform]) -> None:
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.executemany(
+                    _UPSERT_PLATFORM,
+                    [
+                        (p.slug, p.name_fa, p.data_policy.value, p.is_listed)
+                        for p in platforms
+                    ],
+                )
+
+    async def get_listed_platforms(self) -> tuple[Platform, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(_SELECT_LISTED_PLATFORMS)
+        return tuple(
+            Platform(
+                slug=row["slug"],
+                name_fa=row["name_fa"],
+                data_policy=DataPolicy(row["data_policy"]),
+            )
+            for row in rows
+        )

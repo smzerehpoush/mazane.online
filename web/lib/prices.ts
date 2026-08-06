@@ -11,6 +11,18 @@
 
 export type Side = "BUY" | "SELL" | "MID";
 export type FeeSource = "API" | "MANUAL";
+export type DataPolicy = "ALLOWED" | "RESTRICTED" | "PERMISSION_PENDING" | "BLOCKED";
+
+/**
+ * یک سکوی قابل نمایش عمومی — عضو فهرستی که گردآورنده می‌نویسد.
+ * فیلتر نمایش (گلدیکا و هر PERMISSION_PENDING دیگر) سمت گردآورنده/استور
+ * اعمال شده؛ وب هرچه در فهرست است را رندر می‌کند و بس.
+ */
+export interface ListedPlatform {
+  slug: string;
+  name_fa: string;
+  data_policy: DataPolicy;
+}
 
 export interface Quote {
   platform_slug: string;
@@ -38,9 +50,15 @@ export interface PlatformSnapshot {
   quotes: Quote[];
   terms: PlatformTerms;
   fetched_at: string;
+  /**
+   * رد چک میانه‌ی گردآورنده. اسنپ‌شات سرکوب‌شده هرگز به استور جاری (و در
+   * نتیجه به این لایه) نمی‌رسد؛ فیلد فقط برای آینگی کامل با JSON کانونی است.
+   */
+  suppressed: boolean;
 }
 
 export interface PriceSource {
+  getListedPlatforms(): Promise<ListedPlatform[]>;
   getSnapshot(platformSlug: string): Promise<PlatformSnapshot | null>;
   getUpdatedAt(platformSlug: string): Promise<string | null>;
 }
@@ -59,6 +77,10 @@ async function source(): Promise<PriceSource> {
     activeSource = createRedisSource();
   }
   return activeSource;
+}
+
+export async function getListedPlatforms(): Promise<ListedPlatform[]> {
+  return (await source()).getListedPlatforms();
 }
 
 export async function getPlatformSnapshot(
