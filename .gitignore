@@ -1,0 +1,44 @@
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### VSCODE ###
+.vscode
+
+#Mac
+.DS_Store
+
+logs/
+
+### Ansible linter ###
+.ansible/
+
+# Other
+*.log
+
+### Cursor ###
+AGENTS.md
+
+### Vagrant ###
+.vagrant/
+
+### Molecule dynamic generated files ###
+ansible/roles/*/molecule/default/create.yml
+ansible/roles/*/molecule/default/destroy.yml
+ansible/roles/*/molecule/default/host_vars.yml
+
+### left hook ###
+lefthook-local.yml
+
+### Agent scratch (ephemeral specs/tickets) ###
+.scratch/
+
+### کد اختصاصی کارفرما — هرگز کامیت نشود (بند ۱۳ سند معماری، تصمیم ۳) ###
+web-crawler/
+
+### Secrets ###
+.env
+.env.*
+!.env.example
