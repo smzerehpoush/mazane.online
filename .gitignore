@@ -38,6 +38,20 @@ lefthook-local.yml
 ### کد اختصاصی کارفرما — هرگز کامیت نشود (بند ۱۳ سند معماری، تصمیم ۳) ###
 web-crawler/
 
+### Python (collector) ###
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+
+### Node (web) ###
+node_modules/
+.next/
+next-env.d.ts.bak
+*.tsbuildinfo
+
 ### Secrets ###
 .env
 .env.*
