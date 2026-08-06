@@ -34,6 +34,7 @@ import { SiteHeader } from "@/components/mazane/SiteHeader";
 import type { PublishedPost } from "@/lib/blog";
 import type { PlatformHistory } from "@/lib/history";
 import type { Row } from "@/lib/rows";
+import { hasViewData, type ViewCounts } from "@/lib/views";
 import { SITE_URL } from "@/lib/site";
 import { brand, legalNote } from "@/lib/site-content";
 import { organizationWebSiteJsonLd } from "@/lib/structured-data";
@@ -47,6 +48,12 @@ export interface HomePageData {
   rows: Row[];
   history: PlatformHistory[];
   posts: PublishedPost[];
+  /**
+   * شمار بازدید هر اسلاگ پست — فقط برای *ترتیب* کارت‌های انتهای صفحه، نه
+   * نمایش عدد. اسلاگ غایب یعنی صفر. شیء تهی (منبع قطع یا هنوز بی‌داده)
+   * یعنی ترتیب تاریخ می‌ماند و ادعای «پرخواننده» گفته نمی‌شود.
+   */
+  viewCounts: ViewCounts;
   generated_at: string;
 }
 
@@ -90,7 +97,8 @@ export function HomePage({ data }: { data: HomePageData }) {
   const nowMs = Date.now();
 
   const latestPosts = sidebarPosts(data.posts);
-  const morePosts = bottomPosts(data.posts);
+  const morePosts = bottomPosts(data.posts, data.viewCounts);
+  const rankedByViews = hasViewData(data.posts, data.viewCounts);
   // تصمیم مالک: پستی نیست ⟸ هر دو بخش بلاگ کاملاً پنهان و جدول تمام‌عرض.
   const hasPosts = data.posts.length > 0;
 
@@ -133,7 +141,7 @@ export function HomePage({ data }: { data: HomePageData }) {
 
         {hasPosts && (
           <div className="mt-10 sm:mt-14">
-            <PopularPosts posts={morePosts} />
+            <PopularPosts posts={morePosts} rankedByViews={rankedByViews} />
           </div>
         )}
 

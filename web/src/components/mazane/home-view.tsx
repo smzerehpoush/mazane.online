@@ -28,6 +28,7 @@ import {
   type Row,
 } from "@/lib/rows";
 import { CHART_PLATFORMS, HOME_INSTRUMENT } from "@/lib/site-content";
+import { byPopularity, type ViewCounts } from "@/lib/views";
 
 /* ---------------------------------------------------------------- نمودار */
 
@@ -273,7 +274,13 @@ export function sidebarPosts(posts: PublishedPost[]): PublishedPost[] {
   return posts.slice(0, 4);
 }
 
-/** کارت‌های انتهای صفحه. شمارنده‌ی بازدید نداریم ⟸ ترتیب تاریخ، بدون عدد جعلی. */
-export function bottomPosts(posts: PublishedPost[]): PublishedPost[] {
-  return posts.slice(0, 3);
+/**
+ * کارت‌های انتهای صفحه — پرخواننده‌ترین‌ها، وقتی داده‌ای هست.
+ *
+ * `byPopularity` تا وقتی هیچ پستی بازدید ثبت‌شده ندارد ترتیب ورودی (تاریخ)
+ * را دست‌نخورده برمی‌گرداند، پس روز اول هیچ ادعای جعلی «پرخواننده» گفته
+ * نمی‌شود و عدد بازدید هم هرگز نمایش داده نمی‌شود — فقط ترتیب.
+ */
+export function bottomPosts(posts: PublishedPost[], counts: ViewCounts = {}): PublishedPost[] {
+  return byPopularity(posts, counts).slice(0, 3);
 }

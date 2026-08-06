@@ -15,6 +15,7 @@ import { Route as DarbarePishnahadRouteImport } from './routes/darbare-pishnahad
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ApiPostViewRouteImport } from './routes/api/post-view'
 import { Route as ApiPricesRouteImport } from './routes/api/prices'
 import { Route as ApiRevalidateBlogRouteImport } from './routes/api/revalidate-blog'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
@@ -51,6 +52,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPostViewRoute = ApiPostViewRouteImport.update({
+  id: '/api/post-view',
+  path: '/api/post-view',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPricesRoute = ApiPricesRouteImport.update({
   id: '/api/prices',
   path: '/api/prices',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
     | '/blog/$slug'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
     | '/blog/$slug'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
     | '/blog/$slug'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   MazaneChistRoute: typeof MazaneChistRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiPostViewRoute: typeof ApiPostViewRoute
   ApiPricesRoute: typeof ApiPricesRoute
   ApiRevalidateBlogRoute: typeof ApiRevalidateBlogRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/post-view': {
+      id: '/api/post-view'
+      path: '/api/post-view'
+      fullPath: '/api/post-view'
+      preLoaderRoute: typeof ApiPostViewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/prices': {
       id: '/api/prices'
       path: '/api/prices'
@@ -262,6 +282,7 @@ const rootRouteChildren: RootRouteChildren = {
   MazaneChistRoute: MazaneChistRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiPostViewRoute: ApiPostViewRoute,
   ApiPricesRoute: ApiPricesRoute,
   ApiRevalidateBlogRoute: ApiRevalidateBlogRoute,
   BlogSlugRoute: BlogSlugRoute,

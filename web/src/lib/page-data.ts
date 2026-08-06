@@ -26,6 +26,7 @@ import {
   HOME_INSTRUMENT,
 } from "./site-content";
 import type { SlugResolution } from "./slugs";
+import type { ViewCounts } from "./views";
 
 /**
  * حذف نشانی معرف از payload کلاینت.
@@ -47,10 +48,15 @@ export interface HomeReaders {
   fetchRows(): Promise<Row[]>;
   getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;
   listPublishedPosts(): Promise<PublishedPost[]>;
+  /**
+   * اختیاری: شمارنده‌ی بازدید. نبودش یعنی ترتیب تاریخ می‌ماند — نه خطا.
+   * (فیک‌های قدیمی تست بدون این هم معتبرند.)
+   */
+  getViewCounts?(): Promise<ViewCounts>;
 }
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
-  const [rows, history, posts] = await Promise.all([
+  const [rows, history, posts, viewCounts] = await Promise.all([
     read.fetchRows(),
     read.getPlatformHistory({
       platformSlugs: [...CHART_PLATFORM_SLUGS],
@@ -58,11 +64,13 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
       hours: HOME_CHART_HOURS,
     }),
     read.listPublishedPosts(),
+    read.getViewCounts?.() ?? Promise.resolve<ViewCounts>({}),
   ]);
   return {
     rows: rows.map((row) => ({ ...row, platform: withoutReferral(row.platform) })),
     history,
     posts,
+    viewCounts,
     generated_at: new Date().toISOString(),
   };
 }

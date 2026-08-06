@@ -12,6 +12,7 @@
 import type { SlugPageData } from "../../src/components/content/SlugPageView";
 import type { HomePageData } from "../../src/components/mazane/HomePage";
 import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
+import { setViewCounter, type ViewCounts } from "../../src/lib/views";
 import { getPlatformHistory, setHistorySource, type PlatformHistory } from "../../src/lib/history";
 import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
 import { listInstruments } from "../../src/lib/catalog";
@@ -169,12 +170,49 @@ export function seedEmptyPrices(): void {
  */
 export async function homeData(
   store: SeededStore,
-  extra: { history?: PlatformHistory[]; posts?: BlogPost[] } = {},
+  extra: { history?: PlatformHistory[]; posts?: BlogPost[]; views?: ViewCounts } = {},
 ): Promise<HomePageData> {
   seed(store);
   seedHistory(extra.history ?? []);
   seedBlog(extra.posts ?? []);
-  return assembleHomeData({ fetchRows, getPlatformHistory, listPublishedPosts });
+  const views = extra.views;
+  return assembleHomeData({
+    fetchRows,
+    getPlatformHistory,
+    listPublishedPosts,
+    // نبودِ خواننده عمداً حالت معتبری است — همان مسیری که تا پیش از آمدن
+    // شمارنده اجرا می‌شد و باید همچنان کار کند.
+    ...(views === undefined ? {} : { getViewCounts: async () => views }),
+  });
+}
+
+/**
+ * فیک شمارنده‌ی بازدید — یک شمارنده‌ی درون‌حافظه‌ای که هم می‌نویسد هم
+ * می‌خواند، تا مرز «ثبت بازدید ⟸ عدد خوانده‌شده» واقعاً سنجیده شود.
+ */
+export function seedViewCounter(initial: Record<string, number> = {}): {
+  counts: Record<string, number>;
+} {
+  const counts: Record<string, number> = { ...initial };
+  setViewCounter({
+    recordView: async (slug) => {
+      counts[slug] = (counts[slug] ?? 0) + 1;
+    },
+    viewCounts: async () => ({ ...counts }),
+  });
+  return { counts };
+}
+
+/** شمارنده‌ای که همیشه می‌ترکد — برای سنجیدن «قطع منبع، خطا نیست». */
+export function seedBrokenViewCounter(): void {
+  setViewCounter({
+    recordView: async () => {
+      throw new Error("view counter down");
+    },
+    viewCounts: async () => {
+      throw new Error("view counter down");
+    },
+  });
 }
 
 /**

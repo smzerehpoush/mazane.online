@@ -32,11 +32,12 @@ import { assembleHomeData } from "./page-data";
 import { listPublishedPosts } from "./server/blog-source";
 import { getPlatformHistory } from "./server/history-source";
 import { fetchRows } from "./server/price-source";
+import { getViewCounts } from "./server/view-counter";
 
 /** نام قدیمی همان قرارداد — مالک شکل، نماست (`components/mazane/HomePage`). */
 export type HomeData = HomePageData;
 
 export const loadHomeData = createServerFn({ method: "GET" }).handler(
   async (): Promise<HomeData> =>
-    assembleHomeData({ fetchRows, getPlatformHistory, listPublishedPosts }),
+    assembleHomeData({ fetchRows, getPlatformHistory, listPublishedPosts, getViewCounts }),
 );

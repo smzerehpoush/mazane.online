@@ -12,6 +12,7 @@
  * اسکریپت‌ها عمدی است: BlogPosting اول، BreadcrumbList بعد.
  */
 import { Breadcrumbs } from "@/components/content/PageShell";
+import { ViewBeacon } from "@/components/content/ViewBeacon";
 import type { PublishedPost } from "@/lib/blog";
 import { formatDateFa } from "@/lib/format";
 import { excerptFa, renderMarkdown } from "@/lib/markdown";
@@ -160,6 +161,7 @@ const PROSE =
 export function BlogPostView({ post }: { post: PublishedPost }) {
   return (
     <>
+      <ViewBeacon slug={post.slug} />
       <Breadcrumbs
         items={[
           { label: "خانه", href: "/" },
