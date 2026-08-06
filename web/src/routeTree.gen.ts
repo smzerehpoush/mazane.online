@@ -33,6 +33,7 @@ import { Route as AdminPostsIndexRouteImport } from './routes/admin/posts/index'
 import { Route as AdminPostsSlugRouteImport } from './routes/admin/posts/$slug'
 import { Route as AdminPostsNewRouteImport } from './routes/admin/posts/new'
 import { Route as ApiAdminPostsSlugRouteImport } from './routes/api/admin-posts.$slug'
+import { Route as ApiAdminPostsSlugImageRouteImport } from './routes/api/admin-posts.$slug.image'
 import { Route as ApiAdminPostsSlugPublishRouteImport } from './routes/api/admin-posts.$slug.publish'
 import { Route as ApiAdminPostsSlugRetractRouteImport } from './routes/api/admin-posts.$slug.retract'
 
@@ -157,6 +158,11 @@ const ApiAdminPostsSlugRoute = ApiAdminPostsSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ApiAdminPostsRoute,
 } as any)
+const ApiAdminPostsSlugImageRoute = ApiAdminPostsSlugImageRouteImport.update({
+  id: '/image',
+  path: '/image',
+  getParentRoute: () => ApiAdminPostsSlugRoute,
+} as any)
 const ApiAdminPostsSlugPublishRoute =
   ApiAdminPostsSlugPublishRouteImport.update({
     id: '/publish',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/admin/posts/new': typeof AdminPostsNewRoute
   '/api/admin-posts/$slug': typeof ApiAdminPostsSlugRouteWithChildren
   '/admin/posts/': typeof AdminPostsIndexRoute
+  '/api/admin-posts/$slug/image': typeof ApiAdminPostsSlugImageRoute
   '/api/admin-posts/$slug/publish': typeof ApiAdminPostsSlugPublishRoute
   '/api/admin-posts/$slug/retract': typeof ApiAdminPostsSlugRetractRoute
 }
@@ -222,6 +229,7 @@ export interface FileRoutesByTo {
   '/admin/posts/new': typeof AdminPostsNewRoute
   '/api/admin-posts/$slug': typeof ApiAdminPostsSlugRouteWithChildren
   '/admin/posts': typeof AdminPostsIndexRoute
+  '/api/admin-posts/$slug/image': typeof ApiAdminPostsSlugImageRoute
   '/api/admin-posts/$slug/publish': typeof ApiAdminPostsSlugPublishRoute
   '/api/admin-posts/$slug/retract': typeof ApiAdminPostsSlugRetractRoute
 }
@@ -251,6 +259,7 @@ export interface FileRoutesById {
   '/admin/posts/new': typeof AdminPostsNewRoute
   '/api/admin-posts/$slug': typeof ApiAdminPostsSlugRouteWithChildren
   '/admin/posts/': typeof AdminPostsIndexRoute
+  '/api/admin-posts/$slug/image': typeof ApiAdminPostsSlugImageRoute
   '/api/admin-posts/$slug/publish': typeof ApiAdminPostsSlugPublishRoute
   '/api/admin-posts/$slug/retract': typeof ApiAdminPostsSlugRetractRoute
 }
@@ -281,6 +290,7 @@ export interface FileRouteTypes {
     | '/admin/posts/new'
     | '/api/admin-posts/$slug'
     | '/admin/posts/'
+    | '/api/admin-posts/$slug/image'
     | '/api/admin-posts/$slug/publish'
     | '/api/admin-posts/$slug/retract'
   fileRoutesByTo: FileRoutesByTo
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/admin/posts/new'
     | '/api/admin-posts/$slug'
     | '/admin/posts'
+    | '/api/admin-posts/$slug/image'
     | '/api/admin-posts/$slug/publish'
     | '/api/admin-posts/$slug/retract'
   id:
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/admin/posts/new'
     | '/api/admin-posts/$slug'
     | '/admin/posts/'
+    | '/api/admin-posts/$slug/image'
     | '/api/admin-posts/$slug/publish'
     | '/api/admin-posts/$slug/retract'
   fileRoutesById: FileRoutesById
@@ -530,6 +542,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminPostsSlugRouteImport
       parentRoute: typeof ApiAdminPostsRoute
     }
+    '/api/admin-posts/$slug/image': {
+      id: '/api/admin-posts/$slug/image'
+      path: '/image'
+      fullPath: '/api/admin-posts/$slug/image'
+      preLoaderRoute: typeof ApiAdminPostsSlugImageRouteImport
+      parentRoute: typeof ApiAdminPostsSlugRoute
+    }
     '/api/admin-posts/$slug/publish': {
       id: '/api/admin-posts/$slug/publish'
       path: '/publish'
@@ -570,11 +589,13 @@ const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
 )
 
 interface ApiAdminPostsSlugRouteChildren {
+  ApiAdminPostsSlugImageRoute: typeof ApiAdminPostsSlugImageRoute
   ApiAdminPostsSlugPublishRoute: typeof ApiAdminPostsSlugPublishRoute
   ApiAdminPostsSlugRetractRoute: typeof ApiAdminPostsSlugRetractRoute
 }
 
 const ApiAdminPostsSlugRouteChildren: ApiAdminPostsSlugRouteChildren = {
+  ApiAdminPostsSlugImageRoute: ApiAdminPostsSlugImageRoute,
   ApiAdminPostsSlugPublishRoute: ApiAdminPostsSlugPublishRoute,
   ApiAdminPostsSlugRetractRoute: ApiAdminPostsSlugRetractRoute,
 }

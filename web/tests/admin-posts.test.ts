@@ -21,8 +21,10 @@ import {
   resetAdminPostsSource,
   retractPost,
   setAdminPostsSource,
+  setPostImage,
   updatePost,
   type AdminPostsSource,
+  type PostImagePatch,
 } from "../src/lib/admin-posts";
 import type { BlogPost, PostStatus } from "../src/lib/blog";
 
@@ -68,6 +70,14 @@ class FakeAdminPostsSource implements AdminPostsSource {
     patch: { status: PostStatus; published_at: string | null; updated_at: string },
   ): Promise<void> {
     this.statusChanges.push({ slug, ...patch });
+    const existing = this.posts.get(slug);
+    if (existing !== undefined) this.posts.set(slug, { ...existing, ...patch });
+  }
+
+  imageChanges: { slug: string; patch: PostImagePatch }[] = [];
+
+  async setImage(slug: string, patch: PostImagePatch): Promise<void> {
+    this.imageChanges.push({ slug, patch });
     const existing = this.posts.get(slug);
     if (existing !== undefined) this.posts.set(slug, { ...existing, ...patch });
   }
@@ -172,6 +182,10 @@ describe("createPost", () => {
       status: "draft",
       published_at: null,
       updated_at: now,
+      image_url: null,
+      image_alt: null,
+      image_width: null,
+      image_height: null,
     });
     expect(fake.inserted).toHaveLength(1);
   });
@@ -333,5 +347,59 @@ describe("retractPost", () => {
     expect(result.post.status).toBe("retracted");
     expect(result.post.updated_at).toBe(original);
     expect(result.post.published_at).toBe(original);
+  });
+});
+
+describe("setPostImage", () => {
+  const image: PostImagePatch = {
+    image_url: "https://cdn.mazane.online/posts/akkas/deadbeef.webp",
+    image_alt: "نمودار قیمت طلا روی صفحه‌ی موبایل",
+    image_width: 1600,
+    image_height: 900,
+  };
+
+  it("پست ناموجود ⟸ kind=not_found", async () => {
+    seedFake();
+    const result = await setPostImage("nist", image);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("unreachable");
+    expect(result.kind).toBe("not_found");
+  });
+
+  it("متن جایگزین خالی ⟸ رد می‌شود، چیزی روی منبع ذخیره نمی‌شود", async () => {
+    const fake = seedFake(post("akkas"));
+    const result = await setPostImage("akkas", { ...image, image_alt: "   " });
+    expect(result.ok).toBe(false);
+    expect(fake.imageChanges).toHaveLength(0);
+  });
+
+  it("ابعاد نامعتبر ⟸ رد می‌شود", async () => {
+    seedFake(post("akkas"));
+    const result = await setPostImage("akkas", { ...image, image_width: 0 });
+    expect(result.ok).toBe(false);
+  });
+
+  it("موفق ⟸ هر چهار فیلد روی پست می‌نشیند، updated_at دست‌نخورده می‌ماند", async () => {
+    const original = "2026-08-01T00:00:00.000Z";
+    const fake = seedFake(post("akkas", { status: "published", updated_at: original }));
+    const result = await setPostImage("akkas", image);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("unreachable");
+    expect(result.post.image_url).toBe(image.image_url);
+    expect(result.post.image_alt).toBe(image.image_alt);
+    expect(result.post.image_width).toBe(image.image_width);
+    expect(result.post.image_height).toBe(image.image_height);
+    expect(result.post.updated_at).toBe(original);
+    expect(fake.imageChanges).toEqual([{ slug: "akkas", patch: image }]);
+  });
+
+  it("ذخیره‌ی متن پست (updatePost) هرگز به setImage نمی‌رسد — مسیرهای مجزا", async () => {
+    const fake = seedFake(post("akkas"));
+    await updatePost(
+      "akkas",
+      { title_fa: "عنوان تازه", body_md: "متن تازه", meaningfulEdit: false },
+      "2026-08-07T00:00:00.000Z",
+    );
+    expect(fake.imageChanges).toHaveLength(0);
   });
 });

@@ -22,6 +22,7 @@ import {
   resetAdminPostsSource,
   setAdminPostsSource,
   type AdminPostsSource,
+  type PostImagePatch,
 } from "../src/lib/admin-posts";
 import type { BlogPost, PostStatus } from "../src/lib/blog";
 import {
@@ -71,6 +72,11 @@ class FakeAdminPostsSource implements AdminPostsSource {
     slug: string,
     patch: { status: PostStatus; published_at: string | null; updated_at: string },
   ): Promise<void> {
+    const existing = this.posts.get(slug);
+    if (existing !== undefined) this.posts.set(slug, { ...existing, ...patch });
+  }
+
+  async setImage(slug: string, patch: PostImagePatch): Promise<void> {
     const existing = this.posts.get(slug);
     if (existing !== undefined) this.posts.set(slug, { ...existing, ...patch });
   }

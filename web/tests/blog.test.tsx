@@ -158,6 +158,34 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(html).toMatch(/<time [^>]*datetime="2026-07-20T08:30:00.000Z"/i);
   });
 
+  it("عکس شاخص (بلیت ۲۴): src/width/height/alt/loading=eager بالای محتوا", async () => {
+    seedBlog([
+      {
+        ...PUBLISHED_NEW,
+        image_url: "https://cdn.mazane.online/posts/x/h.webp",
+        image_alt: "توضیح عکس",
+        image_width: 1600,
+        image_height: 900,
+      },
+    ]);
+    const html = await renderPost(PUBLISHED_NEW.slug);
+
+    expect(html).toMatch(/<img[^>]*src="https:\/\/cdn\.mazane\.online\/posts\/x\/h\.webp"[^>]*>/);
+    expect(html).toContain('width="1600"');
+    expect(html).toContain('height="900"');
+    expect(html).toContain('alt="توضیح عکس"');
+    expect(html).toContain('loading="eager"');
+    // بالای محتوا: پیش از بدنه‌ی مارک‌داونِ رندرشده می‌آید.
+    expect(html.indexOf("<img")).toBeGreaterThan(-1);
+    expect(html.indexOf("<img")).toBeLessThan(html.indexOf(PUBLISHED_NEW.body_md));
+  });
+
+  it("پستِ بدون عکس دقیقاً رندر امروز است — هیچ img ای نیست", async () => {
+    seedBlog(ALL_POSTS);
+    const html = await renderPost(PUBLISHED_OLD.slug);
+    expect(html).not.toContain("<img");
+  });
+
   it("BlogPosting معتبر با تاریخ‌های ISO لاتین و هم‌ارز داده‌ی seed", async () => {
     seedBlog(ALL_POSTS);
     const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;

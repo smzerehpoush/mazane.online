@@ -15,6 +15,7 @@ import { Breadcrumbs } from "@/components/content/PageShell";
 import { ViewBeacon } from "@/components/content/ViewBeacon";
 import type { PublishedPost } from "@/lib/blog";
 import { formatDateFa } from "@/lib/format";
+import { postImageAsset } from "@/lib/images";
 import { excerptFa, renderMarkdown } from "@/lib/markdown";
 import { SITE_URL } from "@/lib/site";
 import { breadcrumbJsonLd, jsonLdString } from "@/lib/structured-data";
@@ -159,6 +160,9 @@ const PROSE =
   "[&_strong]:font-semibold [&_strong]:text-foreground";
 
 export function BlogPostView({ post }: { post: PublishedPost }) {
+  // پستِ بدون عکس دقیقاً همان رندر امروز است — بدون هیچ جای خالی (بلیت ۲۴).
+  const image = postImageAsset(post);
+
   return (
     <>
       <ViewBeacon slug={post.slug} />
@@ -182,6 +186,18 @@ export function BlogPostView({ post }: { post: PublishedPost }) {
             </>
           ) : null}
         </p>
+        {image !== null ? (
+          // width/height رزرو جا می‌کنند تا متن زیر پای خواننده نپرد؛
+          // loading="eager" چون این عکس همیشه بالای تاشدگی است.
+          <img
+            src={image.url}
+            width={image.width}
+            height={image.height}
+            alt={image.alt}
+            loading="eager"
+            className="mt-6 w-full rounded-2xl"
+          />
+        ) : null}
         <div className={`mt-6 ${PROSE}`}>{renderMarkdown(post.body_md)}</div>
       </article>
 

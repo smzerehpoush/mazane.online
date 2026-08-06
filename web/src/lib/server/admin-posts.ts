@@ -19,9 +19,11 @@ import {
   publishPost as domainPublish,
   retractPost as domainRetract,
   setDefaultAdminPostsSource,
+  setPostImage as domainSetImage,
   updatePost as domainUpdate,
   type AdminPostsSource,
   type CreatePostInput,
+  type PostImagePatch,
   type UpdatePostInput,
   type WriteResult,
 } from "../admin-posts";
@@ -35,6 +37,10 @@ interface PostRow {
   status: PostStatus;
   published_at: Date | null;
   updated_at: Date;
+  image_url: string | null;
+  image_alt: string | null;
+  image_width: number | null;
+  image_height: number | null;
 }
 
 function toPost(row: PostRow): BlogPost {
@@ -45,10 +51,16 @@ function toPost(row: PostRow): BlogPost {
     status: row.status,
     published_at: row.published_at === null ? null : row.published_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
+    image_url: row.image_url,
+    image_alt: row.image_alt,
+    image_width: row.image_width,
+    image_height: row.image_height,
   };
 }
 
-const COLUMNS = "slug, title_fa, body_md, status, published_at, updated_at";
+const COLUMNS =
+  "slug, title_fa, body_md, status, published_at, updated_at, " +
+  "image_url, image_alt, image_width, image_height";
 
 /** کد خطای پستگرس برای نقض یکتایی (PK اسلاگ) — رقابت هم‌زمان روی یک اسلاگ. */
 const UNIQUE_VIOLATION = "23505";
@@ -108,6 +120,17 @@ export function createPgAdminPostsSource(): AdminPostsSource {
         [slug, patch.status, patch.published_at, patch.updated_at],
       );
     },
+
+    // مسیر کاملاً جدا از updatePost/setStatus — updated_at را دست نمی‌زند
+    // (بلیت ۲۴، بند طراحی: عوض‌شدنش قاعده‌ی «تیک ویرایش معنادار» است که
+    // برای عکس موضوعیت ندارد).
+    async setImage(slug: string, patch: PostImagePatch): Promise<void> {
+      await pool.query(
+        `update posts set image_url = $2, image_alt = $3, image_width = $4, image_height = $5
+         where slug = $1`,
+        [slug, patch.image_url, patch.image_alt, patch.image_width, patch.image_height],
+      );
+    },
   };
 }
 
@@ -163,4 +186,9 @@ export async function publishPost(slug: string, now: string): Promise<WriteResul
 export async function retractPost(slug: string): Promise<WriteResult> {
   ensureDefaultSource();
   return domainRetract(slug);
+}
+
+export async function setPostImage(slug: string, image: PostImagePatch): Promise<WriteResult> {
+  ensureDefaultSource();
+  return domainSetImage(slug, image);
 }

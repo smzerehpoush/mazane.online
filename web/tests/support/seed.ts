@@ -12,6 +12,7 @@
 import type { SlugPageData } from "../../src/components/content/SlugPageView";
 import type { HomePageData } from "../../src/components/mazane/HomePage";
 import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
+import { setImageStore, type ImageStore, type UploadedImage } from "../../src/lib/images";
 import { setViewCounter, type ViewCounts } from "../../src/lib/views";
 import { getPlatformHistory, setHistorySource, type PlatformHistory } from "../../src/lib/history";
 import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
@@ -226,6 +227,35 @@ export function seedBrokenViewCounter(): void {
     },
     viewCounts: async () => {
       throw new Error("view counter down");
+    },
+  });
+}
+
+/**
+ * فیک انبار عکس (بلیت ۲۴) — درون‌حافظه‌ای، بدون S3/sharp واقعی. هر آپلود
+ * را ثبت می‌کند تا تست بتواند اسلاگ/بایت رسیده به `upload` را هم بسنجد.
+ */
+export function seedImageStore(
+  result: Omit<UploadedImage, "objectKey"> = { width: 800, height: 600 },
+): {
+  uploads: { slug: string; bytes: Uint8Array; contentType: string }[];
+} {
+  const uploads: { slug: string; bytes: Uint8Array; contentType: string }[] = [];
+  const store: ImageStore = {
+    upload: async (slug, bytes, contentType) => {
+      uploads.push({ slug, bytes, contentType });
+      return { objectKey: `posts/${slug}/fake-hash.webp`, ...result };
+    },
+  };
+  setImageStore(store);
+  return { uploads };
+}
+
+/** انباری که همیشه می‌ترکد — برای سنجیدن «قطع انبار عکس فقط آپلود را می‌شکند». */
+export function seedBrokenImageStore(): void {
+  setImageStore({
+    upload: async () => {
+      throw new Error("image store down");
     },
   });
 }
