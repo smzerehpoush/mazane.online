@@ -6,6 +6,20 @@
  * ویرایش معنادار بود» تاریخ به‌روزرسانی را جلو می‌برد — تیک فقط برای پست
  * منتشرشده نشان داده می‌شود؛ پیش‌نویس اصلاً در سایت‌مپ نیست، پس مالک آزادانه
  * می‌نویسد و ذخیره می‌کند.
+ *
+ * عکس شاخص (بلیت ۲۴ — تکمیل UI): فرم مستقل از فرم عنوان/متن، چون
+ * `POST /api/admin-posts/$slug/image` قراردادی جدا دارد (multipart، نه
+ * JSON — `lib/server/admin-post-image.ts`). دکمه‌ی بارگذاری تا وقتی فایل
+ * انتخاب نشده یا متن جایگزین خالی است غیرفعال می‌ماند (`canUploadPostImage`)
+ * — فقط تجربه‌ی سریع‌تر، دروازه‌ی واقعی همان پیام‌های ۴۰۰ سرور است.
+ *
+ * ⚠️ عمداً بدون دکمه‌ی «حذف عکس»: سرور هیچ مسیری برای پاک‌کردن image_url
+ * ندارد — `POST /api/admin-posts/$slug/image` فقط آپلود/جایگزینی می‌کند و
+ * هر متد دیگر (از جمله DELETE) با ۴۰۵ رد می‌شود (`adminPostImageMethodNotAllowed`
+ * در `lib/server/admin-post-image.ts`؛ فرم به‌روزرسانی متن هم فقط
+ * title_fa/body_md می‌پذیرد). دکمه‌ای که همیشه شکست می‌خورد بدتر از نبودنش
+ * است — این یک شکاف واقعی است، نه فراموشی؛ برای حذف واقعی باید یک تیکت
+ * جدا مسیر سرور را اضافه کند.
  */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -17,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { canUploadPostImage } from "@/lib/admin-post-image-form";
 import type { BlogPost, PostStatus } from "@/lib/blog";
 import { formatDateTimeFa } from "@/lib/format";
 import { renderMarkdown } from "@/lib/markdown";
@@ -60,6 +75,13 @@ function AdminEditPostPage() {
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
+
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageAlt, setImageAlt] = useState("");
+  const [imageInputKey, setImageInputKey] = useState(0);
+  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [imageUploaded, setImageUploaded] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,6 +195,41 @@ function AdminEditPostPage() {
     }
   }
 
+  async function onUploadImage() {
+    if (!canUploadPostImage({ file: imageFile, alt: imageAlt }) || imageFile === null) return;
+    setImageUploading(true);
+    setImageUploadError(null);
+    setImageUploaded(false);
+    try {
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      formData.append("alt", imageAlt);
+      const response = await fetch(`/api/admin-posts/${slug}/image`, {
+        method: "POST",
+        body: formData,
+      });
+      if (response.status === 401) {
+        await navigate({ to: "/admin/login" });
+        return;
+      }
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setImageUploadError(body?.error ?? "بارگذاری عکس با خطا مواجه شد.");
+        return;
+      }
+      const body = (await response.json()) as { post: BlogPost };
+      setPost(body.post);
+      setImageFile(null);
+      setImageAlt("");
+      setImageInputKey((key) => key + 1);
+      setImageUploaded(true);
+    } catch {
+      setImageUploadError("ارتباط با سرور برقرار نشد.");
+    } finally {
+      setImageUploading(false);
+    }
+  }
+
   if (notFound) {
     return (
       <div className="mx-auto flex min-h-screen max-w-3xl flex-col gap-4 bg-background px-4 py-10">
@@ -245,6 +302,76 @@ function AdminEditPostPage() {
                     {preview}
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-3 border-t pt-4">
+                <Label>عکس شاخص</Label>
+
+                {post.image_url !== null && post.image_url !== undefined ? (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={post.image_url}
+                      alt={post.image_alt ?? ""}
+                      className="h-20 w-20 rounded-md border object-cover"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      متن جایگزین فعلی:{" "}
+                      {post.image_alt !== null && post.image_alt !== undefined
+                        ? post.image_alt || "—"
+                        : "—"}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">این پست هنوز عکس شاخصی ندارد.</p>
+                )}
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="post-image-file">
+                      {post.image_url !== null && post.image_url !== undefined
+                        ? "جایگزینی عکس"
+                        : "بارگذاری عکس"}
+                    </Label>
+                    <Input
+                      key={imageInputKey}
+                      id="post-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        setImageFile(event.target.files?.[0] ?? null);
+                        setImageUploaded(false);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="post-image-alt">متن جایگزین عکس (اجباری)</Label>
+                    <Input
+                      id="post-image-alt"
+                      value={imageAlt}
+                      onChange={(event) => {
+                        setImageAlt(event.target.value);
+                        setImageUploaded(false);
+                      }}
+                      placeholder="توصیف کوتاه عکس برای دسترس‌پذیری"
+                    />
+                  </div>
+                </div>
+
+                {imageUploadError !== null && (
+                  <p className="text-sm text-destructive">{imageUploadError}</p>
+                )}
+                {imageUploaded && <p className="text-sm text-emerald-600">عکس بارگذاری شد.</p>}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void onUploadImage()}
+                  disabled={
+                    !canUploadPostImage({ file: imageFile, alt: imageAlt }) || imageUploading
+                  }
+                >
+                  {imageUploading ? "در حال بارگذاری…" : "بارگذاری عکس"}
+                </Button>
               </div>
 
               {post.status === "published" && (
