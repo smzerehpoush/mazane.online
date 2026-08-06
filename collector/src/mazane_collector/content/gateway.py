@@ -48,6 +48,13 @@ class ContentGateway(Protocol):
         """همه‌ی اسلاگ‌های جدول (هر وضعیتی) — دروازه‌ی برخورد در صف شدن."""
         ...
 
+    async def existing_texts(self) -> tuple[tuple[str, str], ...]:
+        """زوج‌های `(slug, body_md)` همه‌ی ردیف‌ها (هر وضعیتی) — ورودی چک
+        شباهت دروازه (بلیت ۱۴): پیش‌نویسِ در صف هم «پست موجود» است (مولد
+        نباید یک مطلب را دوبار صف کند) و پس‌گرفته هم (مطلب پس‌گرفته نباید
+        با تغییر جزئی برگردد)."""
+        ...
+
     async def draft_count(self) -> int:
         """شمار پیش‌نویس‌های منتظر — صورتِ کسرِ عمق صف."""
         ...
@@ -80,6 +87,8 @@ values ($1, $2, $3, 'draft', null, $4)
 """
 
 _SELECT_ALL_SLUGS = "select slug from posts"
+
+_SELECT_ALL_TEXTS = "select slug, body_md from posts"
 
 _COUNT_DRAFTS = "select count(*) as n from posts where status = 'draft'"
 
@@ -144,6 +153,11 @@ class PostgresContentGateway:
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(_SELECT_ALL_SLUGS)
         return frozenset(row["slug"] for row in rows)
+
+    async def existing_texts(self) -> tuple[tuple[str, str], ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(_SELECT_ALL_TEXTS)
+        return tuple((row["slug"], row["body_md"]) for row in rows)
 
     async def draft_count(self) -> int:
         async with self._pool.acquire() as conn:

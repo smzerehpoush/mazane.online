@@ -57,6 +57,9 @@ class FakeContentGateway:
     async def all_slugs(self) -> frozenset[str]:
         return frozenset(self.posts)
 
+    async def existing_texts(self) -> tuple[tuple[str, str], ...]:
+        return tuple((post.slug, post.body_md) for post in self.posts.values())
+
     async def draft_count(self) -> int:
         return sum(1 for p in self.posts.values() if p.status == "draft")
 
@@ -113,16 +116,32 @@ class RecordingRevalidator:
         return self._result
 
 
+# حروف پایه‌ی بدنه‌های متمایز — هر بدنه فقط از یک حرف ساخته می‌شود تا
+# ۳-گرم‌های دو بدنه‌ی متفاوت هیچ اشتراکی نداشته باشند و دروازه‌ی شباهت
+# (بلیت ۱۴) در تست‌های صف/انتشار درگیر نشود؛ رقم هم ندارد (دروازه‌ی رقم).
+_LETTERS = "ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی"
+
+
+def unique_body(index: int) -> str:
+    word = _LETTERS[index] * 4
+    return f"{word} {word} {word}"
+
+
 async def seed_drafts(gateway: FakeContentGateway, count: int) -> list[str]:
-    """پیش‌نویس‌ها به ترتیب زمانی (یک دقیقه فاصله) — «قدیمی‌ترین» تعریف‌پذیر است."""
+    """پیش‌نویس‌ها به ترتیب زمانی (یک دقیقه فاصله) — «قدیمی‌ترین» تعریف‌پذیر است.
+
+    از مسیر واقعی `enqueue_draft` (با دروازه) می‌گذرند: عنوانْ قالب است و
+    شماره‌اش از جای‌خالی می‌آید (رقم بیرون از جای‌خالی رد می‌شود).
+    """
     slugs = []
     for i in range(count):
         slug = f"post-{i:02d}"
         await enqueue_draft(
             gateway,
             slug=slug,
-            title_fa=f"پست {i}",
-            body_md="متن آزمایشی",
+            title_template="پست {{shomare}}",
+            body_template=unique_body(i),
+            slots={"shomare": str(i)},
             now=BASE - timedelta(days=1) + timedelta(minutes=i),
         )
         slugs.append(slug)
@@ -156,12 +175,12 @@ async def test_cap_limits_publishes_to_two_per_day_with_twenty_drafts() -> None:
 async def test_publish_picks_oldest_drafts_first() -> None:
     gateway = FakeContentGateway()
     # عمداً با ترتیب درج به‌هم‌ریخته — ملاک updated_at (زمان صف شدن) است.
-    for slug, minutes in (("newest", 30), ("oldest", 0), ("middle", 10)):
+    for index, (slug, minutes) in enumerate((("newest", 30), ("oldest", 0), ("middle", 10))):
         await enqueue_draft(
             gateway,
             slug=slug,
-            title_fa=slug,
-            body_md="متن",
+            title_template=slug,
+            body_template=unique_body(index),
             now=BASE - timedelta(hours=1) + timedelta(minutes=minutes),
         )
 
@@ -364,7 +383,9 @@ async def test_enqueue_rejects_reserved_slug() -> None:
     gateway = FakeContentGateway()
 
     with pytest.raises(ReservedSlugError):
-        await enqueue_draft(gateway, slug="blog", title_fa="x", body_md="x", now=BASE)
+        await enqueue_draft(
+            gateway, slug="blog", title_template="الف", body_template="الف", now=BASE
+        )
     assert await gateway.all_slugs() == frozenset()
 
 
@@ -373,7 +394,9 @@ async def test_enqueue_rejects_collision_with_central_registry() -> None:
     gateway = FakeContentGateway()
 
     with pytest.raises(SlugCollisionError):
-        await enqueue_draft(gateway, slug="wallgold", title_fa="x", body_md="x", now=BASE)
+        await enqueue_draft(
+            gateway, slug="wallgold", title_template="الف", body_template="الف", now=BASE
+        )
     assert await gateway.all_slugs() == frozenset()
 
 
@@ -381,29 +404,36 @@ async def test_enqueue_rejects_non_flat_latin_slug() -> None:
     gateway = FakeContentGateway()
 
     with pytest.raises(InvalidSlugError):
-        await enqueue_draft(gateway, slug="Tala_18", title_fa="x", body_md="x", now=BASE)
+        await enqueue_draft(
+            gateway, slug="Tala_18", title_template="الف", body_template="الف", now=BASE
+        )
     assert await gateway.all_slugs() == frozenset()
 
 
 async def test_enqueue_rejects_slug_already_in_posts_table() -> None:
     gateway = FakeContentGateway()
-    await enqueue_draft(gateway, slug="moqayese-karmozd", title_fa="x", body_md="x", now=BASE)
+    await enqueue_draft(
+        gateway, slug="moqayese-karmozd", title_template="الف", body_template="الف", now=BASE
+    )
 
     with pytest.raises(SlugCollisionError):
         await enqueue_draft(
-            gateway, slug="moqayese-karmozd", title_fa="y", body_md="y", now=BASE
+            gateway, slug="moqayese-karmozd", title_template="ب", body_template="ب", now=BASE
         )
     assert await gateway.draft_count() == 1
 
 
 async def test_enqueue_accepts_valid_new_slug() -> None:
+    """عدد فقط از جای‌خالی وارد متن می‌شود (بلیت ۱۴): «۱۸» عنوان از slots
+    می‌آید و رندرشده ذخیره می‌شود — قالبِ خودش هیچ رقمی ندارد."""
     gateway = FakeContentGateway()
 
     await enqueue_draft(
         gateway,
         slug="arzantarin-tala-18",
-        title_fa="ارزان‌ترین طلای ۱۸ عیار",
-        body_md="## متن",
+        title_template="ارزان‌ترین طلای {{ayar}} عیار",
+        body_template="## جمع‌بندی\n\nعیار {{ayar}} را همه‌ی سکوها عرضه می‌کنند.",
+        slots={"ayar": "۱۸"},
         now=BASE,
     )
 
@@ -412,3 +442,6 @@ async def test_enqueue_accepts_valid_new_slug() -> None:
     assert post.status == "draft"
     assert post.published_at is None
     assert post.updated_at == BASE
+    assert post.title_fa == "ارزان‌ترین طلای ۱۸ عیار"
+    assert "عیار ۱۸" in post.body_md
+    assert "{{" not in post.body_md

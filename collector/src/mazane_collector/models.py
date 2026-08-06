@@ -134,6 +134,11 @@ class PlatformTerms(BaseModel):
     buy_enabled: bool
     sell_enabled: bool
     observed_at: datetime
+    # حداقل ارزش سفارش به تومان — فقط جایی که خود منبع منتشرش می‌کند (مثل
+    # `minOrderValue` وال‌گلد یا `lower_amounts` ملی‌گلد — سند تحقیق ۰۱).
+    # نامستند/نیامده ⟸ None؛ **جعل نمی‌شود** (همان اصل «عدد ساختگی ممنوع»).
+    # خوراک پست داده‌محور «حداقل سفارش» (بلیت‌های ۱۴/۱۵) از همین فیلد است.
+    min_order_toman: int | None = None
 
     @model_validator(mode="after")
     def _fees_match_source(self) -> PlatformTerms:
