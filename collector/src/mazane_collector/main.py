@@ -1,8 +1,9 @@
 """نقطه‌ی ورود گردآورنده: حلقه‌ی polling سکوها + خوراک‌های وب‌سوکت + مراجع.
 
 کرال مؤدب (قاعده‌ی ۶ قراردادها): User-Agent صادق با URL تماس، بازه‌ی ثابت،
-و در شکست فقط لاگ — قطع منبع (و قطع وب‌سوکت) کهنگی است، نه خطا؛ هیچ
-حلقه‌ای هرگز نمی‌میرد.
+داوری `robots.txt` در زمان اجرا (ماژول `robots` — کش ۲۴ ساعته، باز-به-شکست
+مستند)، و در شکست فقط لاگ — قطع منبع (و قطع وب‌سوکت) کهنگی است، نه خطا؛
+هیچ حلقه‌ای هرگز نمی‌میرد.
 
 شش تسک موازی:
 - حلقه‌ی سکوها (۳۰ ثانیه): همه‌ی آداپترها + چک میانه + فهرست عمومی.
@@ -75,8 +76,9 @@ from .content.revalidate import revalidator_from_env
 from .pipeline import collect_round
 from .platforms import PLATFORMS
 from .references.pipeline import REFERENCE_SOURCES, collect_reference_round
-from .references.transport import HttpxReferenceTransport
+from .references.transport import HttpxReferenceTransport, RobotsCheckedTransport
 from .retention import retention_pass
+from .robots import RobotsGate, robots_checked_fetch
 from .store import MultiStore
 from .store.postgres_store import PostgresStore
 from .store.redis_store import RedisStore
@@ -186,11 +188,17 @@ async def run() -> None:
             response.raise_for_status()
             return response.json()
 
+        # داوری robots.txt با همان کلاینت مشترک (UA صادق)، پیش از هر fetch
+        # سکو و مرجع؛ فریم‌های وب‌سوکت کش‌شده fetch ندارند و داوری نمی‌شوند.
+        robots = RobotsGate(client, user_agent=USER_AGENT)
+
         cache = FeedCache()
         # «دو خوراک، یک سکو»: قطع وب‌سوکت داریک حتی کهنگی هم نمی‌سازد —
         # REST جایش را می‌گیرد (بند ۱۲.۳).
         fetch_json = compose_fetch(
-            http_fetch_json, cache, ws_primary={DARIC_REST_ENDPOINT: DARIC_WS_ENDPOINT}
+            robots_checked_fetch(robots, http_fetch_json),
+            cache,
+            ws_primary={DARIC_REST_ENDPOINT: DARIC_WS_ENDPOINT},
         )
         daric_feed = ReconnectingFeedClient(
             DARIC_WS_ENDPOINT, _daric_connector(client), decode_signalr_message, cache
@@ -198,7 +206,7 @@ async def run() -> None:
         invi_feed = ReconnectingFeedClient(
             INVI_WS_ENDPOINT, _invi_connector(), decode_invi_message, cache
         )
-        transport = HttpxReferenceTransport(client)
+        transport = RobotsCheckedTransport(robots, HttpxReferenceTransport(client))
 
         async def platform_loop() -> None:
             log.info("گردآورنده بالا آمد؛ بازه %s ثانیه", POLL_INTERVAL_SECONDS)
