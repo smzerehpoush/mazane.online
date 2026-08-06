@@ -1,10 +1,15 @@
-"""استور پستگرس — تاریخچه (درج، بدون هرس؛ آرشیو الزام حقوقی است — بند ۷.۱).
+"""استور پستگرس — تاریخچه (درج؛ حذف فقط از مسیر نگه‌داری بلیت ۱۶ — بند ۷.۱).
 
-اسکیمای جدول‌ها: `collector/migrations/001_init.sql` تا `004_references.sql`.
+اسکیمای جدول‌ها: `collector/migrations/001_init.sql` تا `011_retention.sql`.
 اسنپ‌شات سرکوب‌شده (رد چک میانه) هم درج می‌شود — با `suppressed = true` —
 ولی خواندن‌های «جاری» فقط ردیف‌های منتشرشده را می‌بینند. مراجع قیمت
 (بند ۱۲.۲) جدول جدای خودشان را دارند و هر ردیفشان نشانی منبع را حمل
 می‌کند — عدد مرجع بدون ذکر منبع وجود ندارد (بند ۷.۱).
+
+سطح تماس `RetentionStore` (تجمیع ساعتی + فشرده‌سازی + هرس) هم اینجا پیاده
+شده؛ سیاست و دروازه‌هایش (هرس فقط بعد از تجمیع همان بازه، سرکوب‌شده‌ها
+هرگز) در `mazane_collector.retention` مستند و اعمال می‌شوند — این کلاس فقط
+عملیات ردیفی خام را فراهم می‌کند.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from ..references import (
     ReferenceQuote,
     ReferenceSnapshot,
 )
+from ..retention import HourlyRollup, RawRow, RollupKey, SourceKind
 
 _INSERT_QUOTE = """
 insert into quotes
@@ -96,6 +102,61 @@ select reference_slug, name_fa, source_url, instrument, side, value,
        raw_value, raw_scale, fetched_at
 from reference_quotes
 where reference_slug = $1 and fetched_at = $2
+"""
+
+_SELECT_RAW_QUOTE_ROWS = """
+select id, platform_slug, instrument, side, price_toman, raw_value, raw_scale,
+       fetched_at, suppressed
+from quotes
+where fetched_at < $1 and ($2::timestamptz is null or fetched_at >= $2)
+"""
+
+_SELECT_RAW_REFERENCE_ROWS = """
+select id, reference_slug, instrument, side, value, raw_value, raw_scale, fetched_at
+from reference_quotes
+where fetched_at < $1 and ($2::timestamptz is null or fetched_at >= $2)
+"""
+
+_SELECT_LATEST_ROLLUP_HOUR = """
+select max(hour_start) as hour_start from hourly_rollups
+"""
+
+_SELECT_ROLLUP_KEYS = """
+select kind, source_slug, instrument, side, hour_start
+from hourly_rollups
+where hour_start < $1 and ($2::timestamptz is null or hour_start >= $2)
+"""
+
+_UPSERT_ROLLUP = """
+insert into hourly_rollups
+    (kind, source_slug, instrument, side, hour_start,
+     open_value, close_value, min_value, max_value, sample_count)
+values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+on conflict (kind, source_slug, instrument, side, hour_start) do update
+    set open_value = excluded.open_value,
+        close_value = excluded.close_value,
+        min_value = excluded.min_value,
+        max_value = excluded.max_value,
+        sample_count = excluded.sample_count
+"""
+
+_DELETE_QUOTE_ROWS = """
+delete from quotes where id = any($1::bigint[])
+"""
+
+_DELETE_REFERENCE_ROWS = """
+delete from reference_quotes where id = any($1::bigint[])
+"""
+
+_SELECT_ROLLUPS = """
+select kind, source_slug, instrument, side, hour_start,
+       open_value, close_value, min_value, max_value, sample_count
+from hourly_rollups
+where kind = $1 and source_slug = $2
+  and ($3::text is null or instrument = $3)
+  and ($4::timestamptz is null or hour_start >= $4)
+  and ($5::timestamptz is null or hour_start < $5)
+order by hour_start, instrument, side
 """
 
 
@@ -257,4 +318,126 @@ class PostgresStore:
                 for row in rows
             ),
             fetched_at=fetched_at,
+        )
+
+    # --- سطح تماس RetentionStore (بلیت ۱۶) — منطق در mazane_collector.retention ---
+
+    async def load_raw_rows(
+        self, *, until: datetime, since: datetime | None = None
+    ) -> tuple[RawRow, ...]:
+        async with self._pool.acquire() as conn:
+            quote_rows = await conn.fetch(_SELECT_RAW_QUOTE_ROWS, until, since)
+            reference_rows = await conn.fetch(_SELECT_RAW_REFERENCE_ROWS, until, since)
+        return tuple(
+            RawRow(
+                row_id=row["id"],
+                kind=SourceKind.PLATFORM,
+                source_slug=row["platform_slug"],
+                instrument=row["instrument"],
+                side=row["side"],
+                value=row["price_toman"],
+                raw_value=row["raw_value"],
+                raw_scale=row["raw_scale"],
+                fetched_at=row["fetched_at"],
+                suppressed=row["suppressed"],
+            )
+            for row in quote_rows
+        ) + tuple(
+            RawRow(
+                row_id=row["id"],
+                kind=SourceKind.REFERENCE,
+                source_slug=row["reference_slug"],
+                instrument=row["instrument"],
+                side=row["side"],
+                value=row["value"],
+                raw_value=row["raw_value"],
+                raw_scale=row["raw_scale"],
+                fetched_at=row["fetched_at"],
+            )
+            for row in reference_rows
+        )
+
+    async def latest_rollup_hour(self) -> datetime | None:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow(_SELECT_LATEST_ROLLUP_HOUR)
+        if row is None:
+            return None
+        return row["hour_start"]
+
+    async def load_rollup_keys(
+        self, *, until: datetime, since: datetime | None = None
+    ) -> frozenset[RollupKey]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(_SELECT_ROLLUP_KEYS, until, since)
+        return frozenset(
+            RollupKey(
+                SourceKind(row["kind"]),
+                row["source_slug"],
+                row["instrument"],
+                row["side"],
+                row["hour_start"],
+            )
+            for row in rows
+        )
+
+    async def upsert_rollups(self, rollups: Sequence[HourlyRollup]) -> None:
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.executemany(
+                    _UPSERT_ROLLUP,
+                    [
+                        (
+                            r.kind.value,
+                            r.source_slug,
+                            r.instrument,
+                            r.side,
+                            r.hour_start,
+                            r.open_value,
+                            r.close_value,
+                            r.min_value,
+                            r.max_value,
+                            r.sample_count,
+                        )
+                        for r in rollups
+                    ],
+                )
+
+    async def delete_raw_rows(self, rows: Sequence[RawRow]) -> None:
+        quote_ids = [r.row_id for r in rows if r.kind is SourceKind.PLATFORM]
+        reference_ids = [r.row_id for r in rows if r.kind is SourceKind.REFERENCE]
+        async with self._pool.acquire() as conn:
+            async with conn.transaction():
+                if quote_ids:
+                    await conn.execute(_DELETE_QUOTE_ROWS, quote_ids)
+                if reference_ids:
+                    await conn.execute(_DELETE_REFERENCE_ROWS, reference_ids)
+
+    async def get_hourly_rollups(
+        self,
+        kind: SourceKind,
+        source_slug: str,
+        instrument: str | None = None,
+        *,
+        since: datetime | None = None,
+        until: datetime | None = None,
+    ) -> tuple[HourlyRollup, ...]:
+        """کوئری تاریخچه — سری ساعتی از جدول تجمیع می‌خواند، نه از خام."""
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(
+                _SELECT_ROLLUPS, kind.value, source_slug, instrument, since, until
+            )
+        return tuple(
+            HourlyRollup(
+                kind=SourceKind(row["kind"]),
+                source_slug=row["source_slug"],
+                instrument=row["instrument"],
+                side=row["side"],
+                hour_start=row["hour_start"],
+                open_value=row["open_value"],
+                close_value=row["close_value"],
+                min_value=row["min_value"],
+                max_value=row["max_value"],
+                sample_count=row["sample_count"],
+            )
+            for row in rows
         )

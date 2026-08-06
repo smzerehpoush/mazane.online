@@ -4,13 +4,17 @@
 و در شکست فقط لاگ — قطع منبع (و قطع وب‌سوکت) کهنگی است، نه خطا؛ هیچ
 حلقه‌ای هرگز نمی‌میرد.
 
-چهار تسک موازی:
+پنج تسک موازی:
 - حلقه‌ی سکوها (۳۰ ثانیه): همه‌ی آداپترها + چک میانه + فهرست عمومی.
   fetch با `compose_fetch` ساخته می‌شود: داریک «دو خوراک، یک سکو» است —
   فریم تازه‌ی وب‌سوکت اگر بود، وگرنه REST؛ اینوی فقط وب‌سوکت است و سکوت
   خوراکش ⟸ FeedStale ⟸ کهنگی همان سکو.
 - حلقه‌ی مراجع (۱۲۰ ثانیه — مؤدبانه‌تر، چون بن‌بست HTML کامل می‌گیرد):
   طلا دات‌آی‌آر و بن‌بست؛ فقط تاریخچه + کلید mazane:reference:{slug}.
+- حلقه‌ی نگه‌داری (ساعتی، بلیت ۱۶ — فقط روی پستگرس): تجمیع ساعتی +
+  فشرده‌سازی تکراری‌های متوالی + هرس خام کهنه‌تر از ۹۰ روز. نخستین اجرا
+  در بوت، جاماندگی (ساعت‌های تجمیع‌نشده) را جبران می‌کند؛ سیاست و
+  دروازه‌ها در `mazane_collector.retention` مستندند.
 - دو کلاینت وب‌سوکت reconnect دار (داریک SignalR، اینوی) که فقط کش فریم
   را پر می‌کنند.
 
@@ -62,6 +66,7 @@ from .pipeline import collect_round
 from .platforms import PLATFORMS
 from .references.pipeline import REFERENCE_SOURCES, collect_reference_round
 from .references.transport import HttpxReferenceTransport
+from .retention import retention_pass
 from .store import MultiStore
 from .store.postgres_store import PostgresStore
 from .store.redis_store import RedisStore
@@ -71,6 +76,9 @@ POLL_INTERVAL_SECONDS = 30
 # مراجع قیمت لحظه‌ای نیستند (tala.ir خودش می‌گوید) و بن‌بست HTML کامل
 # می‌دهد ⟸ آهنگ کندتر، مؤدبانه‌تر.
 REFERENCE_POLL_INTERVAL_SECONDS = 120
+# نگه‌داری بازه‌های «ساعتی» را تجمیع می‌کند ⟸ آهنگ ساعتی کافی است؛ هر گذر
+# خودش جاماندگی را جبران می‌کند، پس دیر شدن یک نوبت بی‌هزینه است.
+RETENTION_INTERVAL_SECONDS = 3600
 USER_AGENT = "MazaneBot/0.1 (+https://mazane.online/about)"
 HTTP_TIMEOUT_SECONDS = 15
 
@@ -144,7 +152,9 @@ async def run() -> None:
     redis_client = aioredis.from_url(redis_url, decode_responses=True)
     pool = await asyncpg.create_pool(database_url)
     assert pool is not None
-    store = MultiStore(RedisStore(redis_client), PostgresStore(pool))
+    # نگه‌داری (بلیت ۱۶) فقط با تاریخچه‌ی پستگرس کار دارد — ردیس تاریخچه ندارد.
+    history_store = PostgresStore(pool)
+    store = MultiStore(RedisStore(redis_client), history_store)
 
     # follow_redirects + cookie jar خود کلاینت: دست‌دهی ArvanCloud ملی‌گلد
     # (۳۰۷ + کوکی — auth نیست؛ سند تحقیق ۰۱، بند ۸.۲) و توکن /json بن‌بست.
@@ -214,8 +224,29 @@ async def run() -> None:
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, REFERENCE_POLL_INTERVAL_SECONDS - elapsed))
 
+        async def retention_loop() -> None:
+            while True:
+                started = time.monotonic()
+                try:
+                    report = await retention_pass(history_store)
+                    log.info(
+                        "نوبت نگه‌داری: %s تجمیع، %s فشرده، %s هرس",
+                        report.rollups_written,
+                        report.rows_compressed,
+                        report.rows_pruned,
+                    )
+                except Exception:
+                    # مثل بقیه‌ی حلقه‌ها: شکست فقط لاگ می‌شود؛ گذر بعدی جبران می‌کند.
+                    log.exception("نوبت نگه‌داری شکست خورد")
+                elapsed = time.monotonic() - started
+                await asyncio.sleep(max(0.0, RETENTION_INTERVAL_SECONDS - elapsed))
+
         await asyncio.gather(
-            platform_loop(), reference_loop(), daric_feed.run(), invi_feed.run()
+            platform_loop(),
+            reference_loop(),
+            retention_loop(),
+            daric_feed.run(),
+            invi_feed.run(),
         )
 
 
