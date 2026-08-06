@@ -22,12 +22,19 @@ import { Route as AdminPlatformsRouteImport } from './routes/admin/platforms'
 import { Route as ApiAdminLoginRouteImport } from './routes/api/admin-login'
 import { Route as ApiAdminLogoutRouteImport } from './routes/api/admin-logout'
 import { Route as ApiAdminPlatformSettingsRouteImport } from './routes/api/admin-platform-settings'
+import { Route as ApiAdminPostsRouteImport } from './routes/api/admin-posts'
 import { Route as ApiPostViewRouteImport } from './routes/api/post-view'
 import { Route as ApiPricesRouteImport } from './routes/api/prices'
 import { Route as ApiRevalidateBlogRouteImport } from './routes/api/revalidate-blog'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as GoSlugRouteImport } from './routes/go/$slug'
+import { Route as AdminPostsIndexRouteImport } from './routes/admin/posts/index'
+import { Route as AdminPostsSlugRouteImport } from './routes/admin/posts/$slug'
+import { Route as AdminPostsNewRouteImport } from './routes/admin/posts/new'
+import { Route as ApiAdminPostsSlugRouteImport } from './routes/api/admin-posts.$slug'
+import { Route as ApiAdminPostsSlugPublishRouteImport } from './routes/api/admin-posts.$slug.publish'
+import { Route as ApiAdminPostsSlugRetractRouteImport } from './routes/api/admin-posts.$slug.retract'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -95,6 +102,11 @@ const ApiAdminPlatformSettingsRoute =
     path: '/api/admin-platform-settings',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminPostsRoute = ApiAdminPostsRouteImport.update({
+  id: '/api/admin-posts',
+  path: '/api/admin-posts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPostViewRoute = ApiPostViewRouteImport.update({
   id: '/api/post-view',
   path: '/api/post-view',
@@ -125,6 +137,38 @@ const GoSlugRoute = GoSlugRouteImport.update({
   path: '/go/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPostsIndexRoute = AdminPostsIndexRouteImport.update({
+  id: '/posts/',
+  path: '/posts/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPostsSlugRoute = AdminPostsSlugRouteImport.update({
+  id: '/posts/$slug',
+  path: '/posts/$slug',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminPostsNewRoute = AdminPostsNewRouteImport.update({
+  id: '/posts/new',
+  path: '/posts/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const ApiAdminPostsSlugRoute = ApiAdminPostsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ApiAdminPostsRoute,
+} as any)
+const ApiAdminPostsSlugPublishRoute =
+  ApiAdminPostsSlugPublishRouteImport.update({
+    id: '/publish',
+    path: '/publish',
+    getParentRoute: () => ApiAdminPostsSlugRoute,
+  } as any)
+const ApiAdminPostsSlugRetractRoute =
+  ApiAdminPostsSlugRetractRouteImport.update({
+    id: '/retract',
+    path: '/retract',
+    getParentRoute: () => ApiAdminPostsSlugRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -139,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
+  '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -146,6 +191,12 @@ export interface FileRoutesByFullPath {
   '/go/$slug': typeof GoSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
+  '/admin/posts/$slug': typeof AdminPostsSlugRoute
+  '/admin/posts/new': typeof AdminPostsNewRoute
+  '/api/admin-posts/$slug': typeof ApiAdminPostsSlugRouteWithChildren
+  '/admin/posts/': typeof AdminPostsIndexRoute
+  '/api/admin-posts/$slug/publish': typeof ApiAdminPostsSlugPublishRoute
+  '/api/admin-posts/$slug/retract': typeof ApiAdminPostsSlugRetractRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -159,6 +210,7 @@ export interface FileRoutesByTo {
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
+  '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -166,6 +218,12 @@ export interface FileRoutesByTo {
   '/go/$slug': typeof GoSlugRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
+  '/admin/posts/$slug': typeof AdminPostsSlugRoute
+  '/admin/posts/new': typeof AdminPostsNewRoute
+  '/api/admin-posts/$slug': typeof ApiAdminPostsSlugRouteWithChildren
+  '/admin/posts': typeof AdminPostsIndexRoute
+  '/api/admin-posts/$slug/publish': typeof ApiAdminPostsSlugPublishRoute
+  '/api/admin-posts/$slug/retract': typeof ApiAdminPostsSlugRetractRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -181,6 +239,7 @@ export interface FileRoutesById {
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
+  '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -188,6 +247,12 @@ export interface FileRoutesById {
   '/go/$slug': typeof GoSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
+  '/admin/posts/$slug': typeof AdminPostsSlugRoute
+  '/admin/posts/new': typeof AdminPostsNewRoute
+  '/api/admin-posts/$slug': typeof ApiAdminPostsSlugRouteWithChildren
+  '/admin/posts/': typeof AdminPostsIndexRoute
+  '/api/admin-posts/$slug/publish': typeof ApiAdminPostsSlugPublishRoute
+  '/api/admin-posts/$slug/retract': typeof ApiAdminPostsSlugRetractRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -204,6 +269,7 @@ export interface FileRouteTypes {
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
+    | '/api/admin-posts'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -211,6 +277,12 @@ export interface FileRouteTypes {
     | '/go/$slug'
     | '/admin/'
     | '/blog/'
+    | '/admin/posts/$slug'
+    | '/admin/posts/new'
+    | '/api/admin-posts/$slug'
+    | '/admin/posts/'
+    | '/api/admin-posts/$slug/publish'
+    | '/api/admin-posts/$slug/retract'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -224,6 +296,7 @@ export interface FileRouteTypes {
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
+    | '/api/admin-posts'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -231,6 +304,12 @@ export interface FileRouteTypes {
     | '/go/$slug'
     | '/admin'
     | '/blog'
+    | '/admin/posts/$slug'
+    | '/admin/posts/new'
+    | '/api/admin-posts/$slug'
+    | '/admin/posts'
+    | '/api/admin-posts/$slug/publish'
+    | '/api/admin-posts/$slug/retract'
   id:
     | '__root__'
     | '/'
@@ -245,6 +324,7 @@ export interface FileRouteTypes {
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
+    | '/api/admin-posts'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -252,6 +332,12 @@ export interface FileRouteTypes {
     | '/go/$slug'
     | '/admin/'
     | '/blog/'
+    | '/admin/posts/$slug'
+    | '/admin/posts/new'
+    | '/api/admin-posts/$slug'
+    | '/admin/posts/'
+    | '/api/admin-posts/$slug/publish'
+    | '/api/admin-posts/$slug/retract'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -265,6 +351,7 @@ export interface RootRouteChildren {
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminLogoutRoute: typeof ApiAdminLogoutRoute
   ApiAdminPlatformSettingsRoute: typeof ApiAdminPlatformSettingsRoute
+  ApiAdminPostsRoute: typeof ApiAdminPostsRouteWithChildren
   ApiPostViewRoute: typeof ApiPostViewRoute
   ApiPricesRoute: typeof ApiPricesRoute
   ApiRevalidateBlogRoute: typeof ApiRevalidateBlogRoute
@@ -366,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminPlatformSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin-posts': {
+      id: '/api/admin-posts'
+      path: '/api/admin-posts'
+      fullPath: '/api/admin-posts'
+      preLoaderRoute: typeof ApiAdminPostsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/post-view': {
       id: '/api/post-view'
       path: '/api/post-view'
@@ -408,6 +502,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GoSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/posts/': {
+      id: '/admin/posts/'
+      path: '/posts'
+      fullPath: '/admin/posts/'
+      preLoaderRoute: typeof AdminPostsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/posts/$slug': {
+      id: '/admin/posts/$slug'
+      path: '/posts/$slug'
+      fullPath: '/admin/posts/$slug'
+      preLoaderRoute: typeof AdminPostsSlugRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/posts/new': {
+      id: '/admin/posts/new'
+      path: '/posts/new'
+      fullPath: '/admin/posts/new'
+      preLoaderRoute: typeof AdminPostsNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/api/admin-posts/$slug': {
+      id: '/api/admin-posts/$slug'
+      path: '/$slug'
+      fullPath: '/api/admin-posts/$slug'
+      preLoaderRoute: typeof ApiAdminPostsSlugRouteImport
+      parentRoute: typeof ApiAdminPostsRoute
+    }
+    '/api/admin-posts/$slug/publish': {
+      id: '/api/admin-posts/$slug/publish'
+      path: '/publish'
+      fullPath: '/api/admin-posts/$slug/publish'
+      preLoaderRoute: typeof ApiAdminPostsSlugPublishRouteImport
+      parentRoute: typeof ApiAdminPostsSlugRoute
+    }
+    '/api/admin-posts/$slug/retract': {
+      id: '/api/admin-posts/$slug/retract'
+      path: '/retract'
+      fullPath: '/api/admin-posts/$slug/retract'
+      preLoaderRoute: typeof ApiAdminPostsSlugRetractRouteImport
+      parentRoute: typeof ApiAdminPostsSlugRoute
+    }
   }
 }
 
@@ -415,16 +551,47 @@ interface AdminRouteRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   AdminPlatformsRoute: typeof AdminPlatformsRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminPostsSlugRoute: typeof AdminPostsSlugRoute
+  AdminPostsNewRoute: typeof AdminPostsNewRoute
+  AdminPostsIndexRoute: typeof AdminPostsIndexRoute
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   AdminPlatformsRoute: AdminPlatformsRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminPostsSlugRoute: AdminPostsSlugRoute,
+  AdminPostsNewRoute: AdminPostsNewRoute,
+  AdminPostsIndexRoute: AdminPostsIndexRoute,
 }
 
 const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
   AdminRouteRouteChildren,
+)
+
+interface ApiAdminPostsSlugRouteChildren {
+  ApiAdminPostsSlugPublishRoute: typeof ApiAdminPostsSlugPublishRoute
+  ApiAdminPostsSlugRetractRoute: typeof ApiAdminPostsSlugRetractRoute
+}
+
+const ApiAdminPostsSlugRouteChildren: ApiAdminPostsSlugRouteChildren = {
+  ApiAdminPostsSlugPublishRoute: ApiAdminPostsSlugPublishRoute,
+  ApiAdminPostsSlugRetractRoute: ApiAdminPostsSlugRetractRoute,
+}
+
+const ApiAdminPostsSlugRouteWithChildren =
+  ApiAdminPostsSlugRoute._addFileChildren(ApiAdminPostsSlugRouteChildren)
+
+interface ApiAdminPostsRouteChildren {
+  ApiAdminPostsSlugRoute: typeof ApiAdminPostsSlugRouteWithChildren
+}
+
+const ApiAdminPostsRouteChildren: ApiAdminPostsRouteChildren = {
+  ApiAdminPostsSlugRoute: ApiAdminPostsSlugRouteWithChildren,
+}
+
+const ApiAdminPostsRouteWithChildren = ApiAdminPostsRoute._addFileChildren(
+  ApiAdminPostsRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -438,6 +605,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminLogoutRoute: ApiAdminLogoutRoute,
   ApiAdminPlatformSettingsRoute: ApiAdminPlatformSettingsRoute,
+  ApiAdminPostsRoute: ApiAdminPostsRouteWithChildren,
   ApiPostViewRoute: ApiPostViewRoute,
   ApiPricesRoute: ApiPricesRoute,
   ApiRevalidateBlogRoute: ApiRevalidateBlogRoute,

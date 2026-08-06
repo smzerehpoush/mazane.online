@@ -1,0 +1,166 @@
+/**
+ * پست‌های پنل روی پستگرس — همان جدول `posts` که مهاجرت
+ * `collector/migrations/010_blog.sql` می‌سازد (بلیت ۲۲).
+ *
+ * **فقط سمت سرور** (همان دلیل `blog-source.ts`/`view-counter.ts`: `pg`
+ * هرگز به باندل مرورگر نمی‌رود). از همان استخر مشترک استفاده می‌کند تا
+ * سرور تک‌هسته‌ای استخر تازه باز نکند.
+ *
+ * ⚠️ خط لوله‌ی خودکار محتوای پایتونی (`collector/src/mazane_collector/content/`)
+ * همین جدول را می‌خواند/می‌نویسد — این فایل کاملاً کنارش می‌نشیند، جایگزینش
+ * نمی‌شود.
+ */
+import "@tanstack/react-start/server-only";
+
+import {
+  createPost as domainCreate,
+  getAdminPost as domainGetPost,
+  listAllPosts as domainList,
+  publishPost as domainPublish,
+  retractPost as domainRetract,
+  setDefaultAdminPostsSource,
+  updatePost as domainUpdate,
+  type AdminPostsSource,
+  type CreatePostInput,
+  type UpdatePostInput,
+  type WriteResult,
+} from "../admin-posts";
+import type { BlogPost, PostStatus } from "../blog";
+import { pgPool } from "./blog-source";
+
+interface PostRow {
+  slug: string;
+  title_fa: string;
+  body_md: string;
+  status: PostStatus;
+  published_at: Date | null;
+  updated_at: Date;
+}
+
+function toPost(row: PostRow): BlogPost {
+  return {
+    slug: row.slug,
+    title_fa: row.title_fa,
+    body_md: row.body_md,
+    status: row.status,
+    published_at: row.published_at === null ? null : row.published_at.toISOString(),
+    updated_at: row.updated_at.toISOString(),
+  };
+}
+
+const COLUMNS = "slug, title_fa, body_md, status, published_at, updated_at";
+
+/** کد خطای پستگرس برای نقض یکتایی (PK اسلاگ) — رقابت هم‌زمان روی یک اسلاگ. */
+const UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === UNIQUE_VIOLATION
+  );
+}
+
+export function createPgAdminPostsSource(): AdminPostsSource {
+  const pool = pgPool();
+
+  return {
+    async listPosts(): Promise<BlogPost[]> {
+      const result = await pool.query<PostRow>(
+        `select ${COLUMNS} from posts order by updated_at desc`,
+      );
+      return result.rows.map(toPost);
+    },
+
+    async getPost(slug: string): Promise<BlogPost | null> {
+      const result = await pool.query<PostRow>(`select ${COLUMNS} from posts where slug = $1`, [
+        slug,
+      ]);
+      const row = result.rows[0];
+      return row === undefined ? null : toPost(row);
+    },
+
+    async insertPost(post: BlogPost): Promise<void> {
+      await pool.query(
+        `insert into posts (slug, title_fa, body_md, status, published_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6)`,
+        [post.slug, post.title_fa, post.body_md, post.status, post.published_at, post.updated_at],
+      );
+    },
+
+    async updatePost(
+      slug: string,
+      patch: { title_fa: string; body_md: string; updated_at: string },
+    ): Promise<void> {
+      await pool.query(
+        `update posts set title_fa = $2, body_md = $3, updated_at = $4 where slug = $1`,
+        [slug, patch.title_fa, patch.body_md, patch.updated_at],
+      );
+    },
+
+    async setStatus(
+      slug: string,
+      patch: { status: PostStatus; published_at: string | null; updated_at: string },
+    ): Promise<void> {
+      await pool.query(
+        `update posts set status = $2, published_at = $3, updated_at = $4 where slug = $1`,
+        [slug, patch.status, patch.published_at, patch.updated_at],
+      );
+    },
+  };
+}
+
+let registered = false;
+
+/** ثبت تنبل — همان الگو و همان دلیلِ `view-counter.ts`. */
+function ensureDefaultSource(): void {
+  if (registered) return;
+  registered = true;
+  setDefaultAdminPostsSource(createPgAdminPostsSource);
+}
+
+/** تنها درِ ورود کد سروری به پست‌های پنل — نه مستقیم از `lib/admin-posts.ts`. */
+export async function listAllPosts(): Promise<BlogPost[]> {
+  ensureDefaultSource();
+  return domainList();
+}
+
+export async function getAdminPost(slug: string): Promise<BlogPost | null> {
+  ensureDefaultSource();
+  return domainGetPost(slug);
+}
+
+export async function createPost(input: CreatePostInput, now: string): Promise<WriteResult> {
+  ensureDefaultSource();
+  try {
+    return await domainCreate(input, now);
+  } catch (error) {
+    // دفاع دوم: چک پیش از insert در `lib/admin-posts.ts` شرط مسابقه‌ی
+    // هم‌زمان روی یک اسلاگ را نمی‌گیرد؛ محدودیت PK جدول posts می‌گیرد و
+    // اینجا به همان پیام خطای روشن (نه خطای خام دیتابیس) ترجمه می‌شود.
+    if (isUniqueViolation(error)) {
+      return { ok: false, kind: "invalid", error: "این اسلاگ قبلاً استفاده شده است" };
+    }
+    throw error;
+  }
+}
+
+export async function updatePost(
+  slug: string,
+  input: UpdatePostInput,
+  now: string,
+): Promise<WriteResult> {
+  ensureDefaultSource();
+  return domainUpdate(slug, input, now);
+}
+
+export async function publishPost(slug: string, now: string): Promise<WriteResult> {
+  ensureDefaultSource();
+  return domainPublish(slug, now);
+}
+
+export async function retractPost(slug: string): Promise<WriteResult> {
+  ensureDefaultSource();
+  return domainRetract(slug);
+}
