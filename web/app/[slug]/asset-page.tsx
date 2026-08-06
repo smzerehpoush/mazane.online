@@ -30,6 +30,12 @@ import { ClosedBadges, MarketModelBadge, Staleness } from "../row-parts";
 
 const COLUMN_COUNT = 5;
 
+/**
+ * ⚠️ بند ۶.۴ (قاعده‌ی مکمل): مرتب‌سازی هیچ ورودی‌ای از فیلدهای معرف سکو
+ * (کمیسیون) نمی‌گیرد — فقط قیمت مؤثر/میانی گردآورنده؛ نگهبان CI در
+ * tests/sponsored-links.test.tsx حضور نام آن فیلدها در این فایل را هم
+ * قرمز می‌کند.
+ */
 function groupRows(
   rows: Row[],
   instrument: string,

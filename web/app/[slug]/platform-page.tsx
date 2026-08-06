@@ -128,7 +128,9 @@ export async function PlatformPage({ platform }: { platform: ListedPlatform }) {
   const instrumentNames = new Map(
     instruments.map((item) => [item.instrument, item.name_fa]),
   );
-  const websiteUrl = platform.website_url ?? null;
+  // لینک فقط وقتی که ‎/go/‎ مقصدی دارد (referral_url یا website_url) —
+  // وگرنه ریدایرکت 404 می‌شد و لینک مرده می‌ماند.
+  const hasOutbound = (platform.referral_url ?? platform.website_url) != null;
 
   return (
     <main>
@@ -143,12 +145,18 @@ export async function PlatformPage({ platform }: { platform: ListedPlatform }) {
         <p>
           <Staleness updatedAt={updatedAt} nowMs={nowMs} />
         </p>
-        {websiteUrl === null ? null : (
+        {!hasOutbound ? null : (
           <p>
-            {/* TODO(بلیت ۹): این لینک مستقیم با مسیر ‎/go/<slug>‎ (ریدایرکت با
-                کد معرف مالک) جایگزین می‌شود؛ الزام rel از بند ۶.۴ همین حالا
-                رعایت شده تا لینک خروجی درآمدزای بی‌rel هرگز منتشر نشود. */}
-            <a href={websiteUrl} rel="sponsored nofollow noopener" data-outbound="website">
+            {/* بلیت ۹ (تصمیم ۲۱): هر کلیک خروجی درآمدزا از ‎/go/<slug>‎
+                می‌گذرد — کد معرف فقط سمت ریدایرکت است و هرگز در HTML
+                نمی‌نشیند. rel کامل الزام بند ۶.۴ است و تست CI دارد
+                (tests/sponsored-links.test.tsx). */}
+            <a
+              href={`/go/${platform.slug}`}
+              rel="sponsored nofollow noopener"
+              target="_blank"
+              data-outbound="website"
+            >
               وب‌سایت {platform.name_fa}
             </a>
           </p>

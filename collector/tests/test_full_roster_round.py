@@ -147,9 +147,10 @@ async def test_listed_payload_orders_unknown_fee_platforms_last() -> None:
 
 async def test_listed_payload_shape_carries_market_model() -> None:
     """قرارداد با `web/lib/prices.ts` (ListedPlatform): بلیت ۵ فیلد
-    `market_model` را اضافه کرد (برچسب «دفتر سفارش» — بند ۹.۲ نکته‌ی ۵) و
+    `market_model` را اضافه کرد (برچسب «دفتر سفارش» — بند ۹.۲ نکته‌ی ۵)،
     بلیت ۷ فراداده‌ی صفحه‌ی سکو را: `name_en`، `website_url`،
-    `legal_entity`، `delivery_note_fa` (اختیاری — جای نامستند None).
+    `legal_entity`، `delivery_note_fa` (اختیاری — جای نامستند None) و
+    بلیت ۹ فیلدهای معرف را: `referral_url`، `referral_param` (تصمیم ۲۱).
     داریک تنها ORDER_BOOK است؛ بقیه OTC."""
     store = InMemoryStore()
     await store.save_platforms(PLATFORMS)
@@ -166,6 +167,8 @@ async def test_listed_payload_shape_carries_market_model() -> None:
             "website_url",
             "legal_entity",
             "delivery_note_fa",
+            "referral_url",
+            "referral_param",
         }
         assert payload["data_policy"] == "ALLOWED"
         expected = "ORDER_BOOK" if payload["slug"] == "daric" else "OTC"

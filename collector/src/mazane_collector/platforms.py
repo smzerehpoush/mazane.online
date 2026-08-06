@@ -17,6 +17,13 @@
 فراداده‌ی صفحه‌ی سکو (بلیت ۷ — `name_en`، `website_url`، `legal_entity`،
 `delivery_note_fa`) فقط از سند تحقیق ۰۱ (بندهای ۲.۱، ۳.۸ و ۸) پر شده؛
 جایی که مستند نیست None مانده — **حدس ممنوع.**
+
+لینک معرف (بلیت ۹؛ بند ۱۳، تصمیم ۲۱): `referral_url` امروز برای **همه**
+None است — کدهای معرف را صاحب کسب‌وکار بعداً تحویل می‌دهد و تا آن روز
+‎/go/<slug>‎ به website_url می‌رود. `referral_param` فقط الگوی پارامترِ
+مستند در سند تحقیق ۰۱ بند ۶.۲ است (پارامترِ بی‌کد): میلی و تکنوگلد
+`referralCode`، طلاسی `r`؛ گلدیکا اصلاً پارامتر ندارد. بقیه نامستندند ⟸
+None (حدس ممنوع).
 """
 
 from __future__ import annotations
@@ -42,6 +49,8 @@ PLATFORMS: tuple[Platform, ...] = (
         legal_entity="شرکت توسعه راهکار الوند ارسباران",
         # سند تحقیق ۰۱، بند ۹: تحویل فیزیکی با اجرت ساخت (نرخ منتشرنشده).
         delivery_note_fa="تحویل فیزیکی با اجرت ساخت (نرخ اعلام عمومی نشده)",
+        # سند تحقیق ۰۱، بند ۶.۲: ‎talasea.ir/onboarding/?r=…‎
+        referral_param="r",
     ),
     Platform(
         slug="milli",
@@ -51,6 +60,8 @@ PLATFORMS: tuple[Platform, ...] = (
         website_url="https://milli.gold",
         # سند تحقیق ۰۱، بند ۳.۸ (تأییدشده): تحویل فیزیکی ۳٪.
         delivery_note_fa="کارمزد تحویل فیزیکی ۳٪",
+        # سند تحقیق ۰۱، بند ۶.۲: ‎milli.gold/app/sign-up?referralCode=…‎
+        referral_param="referralCode",
     ),
     Platform(
         slug="technogold",
@@ -60,6 +71,8 @@ PLATFORMS: tuple[Platform, ...] = (
         website_url="https://technogold.gold",
         # سند تحقیق ۰۱، بند ۲.۱: بازوی فینتک هلدینگ تکنولایف.
         legal_entity="بازوی فینتک هلدینگ تکنولایف",
+        # سند تحقیق ۰۱، بند ۶.۲: ‎app.technogold.gold/?referralCode=…‎
+        referral_param="referralCode",
     ),
     Platform(
         slug="tlyn",
@@ -140,6 +153,8 @@ PLATFORMS: tuple[Platform, ...] = (
     ),
     # شرایط استفاده‌ی گلدیکا استخراج داده را صریحاً ممنوع کرده (سند تحقیق ۰۱،
     # بند ۵) ⟸ تا اجازه‌ی کتبی، نمایش عمومی ندارد (بند ۱۳، تصمیم ۱۲).
+    # سند تحقیق ۰۱، بند ۶.۲: گلدیکا **هیچ** پارامتر معرفی ندارد ⟸
+    # referral_param=None همیشگی است، نه «هنوز مستند نشده».
     Platform(
         slug="goldika",
         name_fa="گلدیکا",

@@ -44,6 +44,18 @@ export interface ListedPlatform {
   website_url?: string | null;
   legal_entity?: string | null;
   delivery_note_fa?: string | null;
+  /**
+   * لینک معرف (بلیت ۹؛ بند ۱۳، تصمیم ۲۱) — مقصد ‎/go/<slug>‎ وقتی کد معرف
+   * مالک رسیده باشد؛ تا آن روز null است و ‎/go/‎ به website_url می‌رود.
+   * الگوی پارامتر هر سکو (referralCode / r / invitation؛ گلدیکا ندارد) در
+   * referral_param مستند است — پارامترِ بی‌کد، برای ساختن referral_url بعدی.
+   *
+   * ⚠️ بند ۶.۴ (الزام غیرقابل‌مذاکره): این دو فیلد **هرگز** ورودی
+   * مرتب‌سازی نیستند — groupRows/editorialPick فقط قیمت و کارمزد گردآورنده
+   * را می‌خوانند؛ تستش در tests/sponsored-links.test.tsx است.
+   */
+  referral_url?: string | null;
+  referral_param?: string | null;
 }
 
 /**

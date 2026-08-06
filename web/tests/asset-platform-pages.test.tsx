@@ -304,8 +304,10 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     const html = renderToStaticMarkup(await SlugPage(pageProps("talasea")));
 
     expect(html).toContain("طلاسی");
-    // TODO بلیت ۹ لینک /go/ می‌شود؛ تا آن موقع لینک مستقیم با rel کامل بند ۶.۴.
-    expect(html).toContain('href="https://talasea.ir"');
+    // بلیت ۹ (تصمیم ۲۱): لینک وب‌سایت از ‎/go/‎ می‌گذرد، با rel کامل بند ۶.۴؛
+    // لینک مستقیم دیگر هرگز در HTML نمی‌آید.
+    expect(html).toContain('href="/go/talasea"');
+    expect(html).not.toContain('href="https://talasea.ir"');
     expect(html).toContain('rel="sponsored nofollow noopener"');
     // شرایط تجاری با منبع کارمزد:
     expect(html).toContain("کارمزد خرید");

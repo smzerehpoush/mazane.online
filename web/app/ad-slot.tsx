@@ -55,7 +55,18 @@ export function AdSlot({
         ) : (
           <>
             {" — "}
-            {pick.name_fa}: کمترین هزینه‌ی رفت‌وبرگشت (
+            {/* لینک درآمدزا (بلیت ۹؛ تصمیم ۲۱): فقط از ‎/go/‎ با rel کامل
+                بند ۶.۴ — انتخابِ پیشنهاد تحریریه است و از فیلدهای معرف
+                هیچ ورودی‌ای نمی‌گیرد (تست CI دارد). */}
+            <a
+              href={`/go/${pick.slug}`}
+              rel="sponsored nofollow noopener"
+              target="_blank"
+              data-outbound="editorial-pick"
+            >
+              {pick.name_fa}
+            </a>
+            : کمترین هزینه‌ی رفت‌وبرگشت (
             {formatPercentPointsFa(pick.round_trip_percent)}) میان سکوهایی که
             کارمزدشان از API خودشان می‌آید و خرید و فروششان باز است.
           </>
