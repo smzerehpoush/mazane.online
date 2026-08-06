@@ -23,10 +23,18 @@ import asyncpg
 import httpx
 import redis.asyncio as aioredis
 
+from .adapters.baazar import BaazarAdapter
+from .adapters.digikala import DigikalaAdapter
+from .adapters.ecogold import EcogoldAdapter
 from .adapters.goldika import GoldikaAdapter
+from .adapters.hamrahgold import HamrahgoldAdapter
+from .adapters.melligold import MelligoldAdapter
 from .adapters.milli import MilliAdapter
 from .adapters.talasea import TalaseaAdapter
+from .adapters.technogold import TechnogoldAdapter
+from .adapters.tlyn import TlynAdapter
 from .adapters.wallgold import WallgoldAdapter
+from .adapters.zarafza import ZarafzaAdapter
 from .pipeline import collect_round
 from .platforms import PLATFORMS
 from .store import MultiStore
@@ -51,14 +59,26 @@ async def run() -> None:
         TalaseaAdapter(),
         MilliAdapter(),
         GoldikaAdapter(),
+        TechnogoldAdapter(),
+        TlynAdapter(),
+        EcogoldAdapter(),
+        ZarafzaAdapter(),
+        BaazarAdapter(),
+        MelligoldAdapter(),
+        DigikalaAdapter(),
+        HamrahgoldAdapter(),
     )
     redis_client = aioredis.from_url(redis_url, decode_responses=True)
     pool = await asyncpg.create_pool(database_url)
     assert pool is not None
     store = MultiStore(RedisStore(redis_client), PostgresStore(pool))
 
+    # follow_redirects + cookie jar خود کلاینت: دست‌دهی ArvanCloud ملی‌گلد
+    # (۳۰۷ + کوکی — auth نیست؛ سند تحقیق ۰۱، بند ۸.۲).
     async with httpx.AsyncClient(
-        headers={"User-Agent": USER_AGENT}, timeout=HTTP_TIMEOUT_SECONDS
+        headers={"User-Agent": USER_AGENT},
+        timeout=HTTP_TIMEOUT_SECONDS,
+        follow_redirects=True,
     ) as client:
 
         async def fetch_json(url: str) -> Any:

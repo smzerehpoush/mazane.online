@@ -11,7 +11,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class Side(StrEnum):
@@ -28,8 +28,13 @@ class Instrument(StrEnum):
 
 
 class FeeSource(StrEnum):
+    """`UNKNOWN` یعنی سکو کارمزدش را نه در API می‌دهد و نه جایی منتشر کرده
+    (مثل دیجی‌کالا — سند تحقیق ۰۱، بند ۸.۱): فقط mid ذخیره می‌شود و قیمت
+    مؤثر **جعل نمی‌شود** — «یک ردیف صادقانه با نامشخص بهتر از عدد ساختگی»."""
+
     API = "API"
     MANUAL = "MANUAL"
+    UNKNOWN = "UNKNOWN"
 
 
 class DataPolicy(StrEnum):
@@ -75,18 +80,32 @@ class Quote(BaseModel):
 
 
 class PlatformTerms(BaseModel):
-    """شرایط تجاری سکو — چرخه‌ی عمر جدا از قیمت (کارمزد شاید ماهی یک‌بار عوض شود)."""
+    """شرایط تجاری سکو — چرخه‌ی عمر جدا از قیمت (کارمزد شاید ماهی یک‌بار عوض شود).
+
+    کارمزدها فقط با `fee_source = UNKNOWN` تهی‌اند؛ در آن حالت هر سه تهی‌اند
+    — عدد نصفه‌نیمه یعنی باگ، نه داده.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     platform_slug: str
-    buy_fee_percent: Decimal
-    sell_fee_percent: Decimal
-    round_trip_percent: Decimal
+    buy_fee_percent: Decimal | None
+    sell_fee_percent: Decimal | None
+    round_trip_percent: Decimal | None
     fee_source: FeeSource
     buy_enabled: bool
     sell_enabled: bool
     observed_at: datetime
+
+    @model_validator(mode="after")
+    def _fees_match_source(self) -> PlatformTerms:
+        fees = (self.buy_fee_percent, self.sell_fee_percent, self.round_trip_percent)
+        if self.fee_source is FeeSource.UNKNOWN:
+            if any(fee is not None for fee in fees):
+                raise ValueError("کارمزد UNKNOWN نباید عدد داشته باشد — عدد ساختگی ممنوع")
+        elif any(fee is None for fee in fees):
+            raise ValueError("کارمزد API/MANUAL باید هر سه عدد را داشته باشد")
+        return self
 
 
 class PlatformSnapshot(BaseModel):
@@ -104,3 +123,12 @@ class PlatformSnapshot(BaseModel):
     terms: PlatformTerms
     fetched_at: datetime
     suppressed: bool = False
+
+    @model_validator(mode="after")
+    def _no_effective_price_without_fee(self) -> PlatformSnapshot:
+        """کارمزد نامعلوم ⟸ قیمت مؤثر BUY/SELL وجود ندارد (جعل نمی‌شود)."""
+        if self.terms.fee_source is FeeSource.UNKNOWN and any(
+            quote.side is not Side.MID for quote in self.quotes
+        ):
+            raise ValueError("با کارمزد UNKNOWN فقط سطر MID مجاز است")
+        return self

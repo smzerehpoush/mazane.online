@@ -139,7 +139,8 @@ async def test_goldika_is_stored_but_never_listed() -> None:
 
     # در استور هست…
     assert await store.get_snapshot("goldika") is not None
-    # …ولی در فهرست عمومی نیست.
+    # …ولی در فهرست عمومی نیست (فهرست کامل: بلیت ۴، test_full_roster_round).
     listed = await store.get_listed_platforms()
-    assert {p.slug for p in listed} == {"wallgold", "talasea", "milli"}
+    assert "goldika" not in {p.slug for p in listed}
+    assert {"wallgold", "talasea", "milli"} <= {p.slug for p in listed}
     assert all(p.is_listed for p in listed)
