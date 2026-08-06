@@ -13,6 +13,8 @@ import type { Metadata } from "next";
 import { listPublishedPosts } from "../../lib/blog";
 import { formatDateFa } from "../../lib/format";
 import { SITE_URL } from "../../lib/site";
+import { breadcrumbJsonLd } from "../../lib/structured-data";
+import { JsonLdScript } from "../json-ld";
 
 export const metadata: Metadata = {
   title: "بلاگ مظنه آنلاین",
@@ -26,6 +28,13 @@ export default async function BlogIndex() {
 
   return (
     <main>
+      {/* بلیت ۱۰ (بند ۶.۵): BreadcrumbList همه‌جا جز ریشه. */}
+      <JsonLdScript
+        json={breadcrumbJsonLd([
+          { name: "خانه", url: `${SITE_URL}/` },
+          { name: "بلاگ", url: `${SITE_URL}/blog` },
+        ])}
+      />
       <h1>بلاگ مظنه آنلاین</h1>
 
       {posts.length === 0 ? (

@@ -7,15 +7,27 @@
  */
 import type { Metadata } from "next";
 
+import { SITE_URL } from "../../lib/site";
+import { breadcrumbJsonLd } from "../../lib/structured-data";
+import { JsonLdScript } from "../json-ld";
+
 export const metadata: Metadata = {
   title: "معیارهای پیشنهاد سردبیر — مظنه آنلاین",
   description:
     "پیشنهاد سردبیر مظنه آنلاین چگونه انتخاب می‌شود؟ معیار علنی: کمترین هزینه‌ی رفت‌وبرگشت میان سکوهایی با کارمزد اعلام‌شده در API و خرید و فروش باز.",
+  alternates: { canonical: `${SITE_URL}/darbare-pishnahad` },
 };
 
 export default function DarbarePishnahad() {
   return (
     <main>
+      {/* بلیت ۱۰ (بند ۶.۵): BreadcrumbList همه‌جا جز ریشه. */}
+      <JsonLdScript
+        json={breadcrumbJsonLd([
+          { name: "خانه", url: `${SITE_URL}/` },
+          { name: "معیارهای پیشنهاد سردبیر", url: `${SITE_URL}/darbare-pishnahad` },
+        ])}
+      />
       <h1>پیشنهاد سردبیر چگونه انتخاب می‌شود؟</h1>
 
       <p>

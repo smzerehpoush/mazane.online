@@ -16,6 +16,10 @@ import {
   type PlatformSnapshot,
 } from "../../lib/prices";
 import { findQuote } from "../../lib/rows";
+import { SITE_URL } from "../../lib/site";
+import { breadcrumbJsonLd } from "../../lib/structured-data";
+import { JsonLdScript } from "../json-ld";
+import { Madde5Bar } from "../legal-notice";
 import { ClosedBadges, FeeSourceLabel, MarketModelBadge, Staleness } from "../row-parts";
 
 const NOT_RECORDED = "ثبت نشده است";
@@ -134,6 +138,14 @@ export async function PlatformPage({ platform }: { platform: ListedPlatform }) {
 
   return (
     <main>
+      {/* بلیت ۱۰ (بند ۶.۵): BreadcrumbList همه‌جا؛ برای سکو هیچ Product/
+          Offer ای ساخته نمی‌شود — ما فروشنده نیستیم. */}
+      <JsonLdScript
+        json={breadcrumbJsonLd([
+          { name: "خانه", url: `${SITE_URL}/` },
+          { name: platform.name_fa, url: `${SITE_URL}/${platform.slug}` },
+        ])}
+      />
       <header>
         <p>مظنه آنلاین</p>
         <h1>
@@ -191,6 +203,9 @@ export async function PlatformPage({ platform }: { platform: ListedPlatform }) {
       <p>
         <a href="/">بازگشت به جدول مقایسه</a>
       </p>
+
+      {/* بند ۷.۲: صفحه‌ی ارجاع است (لینک /go/ بالای صفحه) ⟸ نوار ماده ۵. */}
+      <Madde5Bar />
     </main>
   );
 }

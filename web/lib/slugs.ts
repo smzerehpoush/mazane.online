@@ -32,7 +32,10 @@ export const RESERVED_WORDS: ReadonlySet<string> = new Set([
 ]);
 
 /** صفحات ایستای سطح ریشه — مسیر ایستای خودشان را دارند، نه ‎[slug]‎. */
-export const STATIC_PAGE_SLUGS: ReadonlySet<string> = new Set(["darbare-pishnahad"]);
+export const STATIC_PAGE_SLUGS: ReadonlySet<string> = new Set([
+  "darbare-pishnahad",
+  "mazane-chist",
+]);
 
 export type SlugResolution =
   | { kind: "instrument"; listing: InstrumentListing }

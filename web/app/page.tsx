@@ -31,9 +31,12 @@
  * تناقض دارد. suppressHydrationWarning فقط روی همان گره‌های متنی است که
  * به‌روزرسان ممکن است پیش از پایان hydration عوض کرده باشد.
  */
+import type { Metadata } from "next";
 import { Fragment } from "react";
 
 import { AdSlot, type EditorialPick } from "./ad-slot";
+import { JsonLdScript } from "./json-ld";
+import { Madde5Bar } from "./legal-notice";
 import { LivePricesUpdater } from "./live-prices-updater";
 import {
   ClosedBadges,
@@ -55,6 +58,19 @@ import {
   midPrice,
   type Row,
 } from "../lib/rows";
+import { SITE_URL } from "../lib/site";
+import { organizationWebSiteJsonLd } from "../lib/structured-data";
+
+/**
+ * بلیت ۱۰ — canonical صریح ریشه؛ عنوان/توضیح فارسی همان لایه‌ی ریشه است و
+ * og:locale هم آن‌جاست (بند ۶.۶).
+ */
+export const metadata: Metadata = {
+  title: "مظنه آنلاین — مقایسه‌ی قیمت مؤثر طلای آنلاین",
+  description:
+    "قیمت مؤثر خرید و فروش طلای آب‌شده در سکوهای آنلاین ایران — با احتساب کارمزد.",
+  alternates: { canonical: `${SITE_URL}/` },
+};
 
 /**
  * ISR شصت‌ثانیه‌ای (بند ۶.۲ — تصمیم قطعی رندر). force-dynamic برداشته شد؛
@@ -300,6 +316,9 @@ export default async function Home() {
 
   return (
     <main>
+      {/* بند ۶.۵: Organization + WebSite فقط همین‌جا — بدون SearchAction.
+          خانه سرِ زنجیر است و BreadcrumbList نمی‌گیرد. */}
+      <JsonLdScript json={organizationWebSiteJsonLd()} />
       <header>
         <p>مظنه آنلاین</p>
         <h1>برای یک گرم طلا چقدر می‌پردازی؟</h1>
@@ -363,6 +382,9 @@ export default async function Home() {
       </section>
 
       <AdSlot position="bottom" pick={pick} />
+
+      {/* بند ۷.۲: این صفحه لینک ارجاع (/go/) دارد ⟸ نوار ماده ۵ الزامی است. */}
+      <Madde5Bar />
 
       {/* هیچ HTML ای ندارد — polling سی‌ثانیه‌ای بعد از hydration (بلیت ۸). */}
       <LivePricesUpdater />

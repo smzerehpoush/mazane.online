@@ -14,6 +14,10 @@
  *
  * اعداد ISR-فقط‌اند (حداکثر ۶۰ ثانیه کهنه) — به‌روزرسان زنده mount
  * نمی‌شود؛ انتخاب مستند در ‎app/[slug]/page.tsx‎.
+ *
+ * بلیت ۱۰ (بند ۶.۵): `Product` + `AggregateOffer` در **همین رندر** و از
+ * **همین ردیف‌های** جدول ساخته می‌شود (گروه معلوم‌ها — بدون fetch جدا)؛
+ * BreadcrumbList دارد و نوار ماده ۵ (بند ۷.۲) پایین صفحه است.
  */
 import { formatToman } from "../../lib/format";
 import type { InstrumentListing } from "../../lib/prices";
@@ -26,6 +30,10 @@ import {
   referencePriceFor,
   type Row,
 } from "../../lib/rows";
+import { SITE_URL } from "../../lib/site";
+import { assetProductJsonLd, breadcrumbJsonLd } from "../../lib/structured-data";
+import { JsonLdScript } from "../json-ld";
+import { Madde5Bar } from "../legal-notice";
 import { ClosedBadges, MarketModelBadge, Staleness } from "../row-parts";
 
 const COLUMN_COUNT = 5;
@@ -142,9 +150,19 @@ export async function AssetPage({ listing }: { listing: InstrumentListing }) {
   const rows = await fetchRowsForPlatforms(listing.supporting_platform_slugs);
   const nowMs = Date.now();
   const { known, unknown, unpriced } = groupRows(rows, listing.instrument);
+  // بند ۶.۵: از همان `known` رندرشده — null یعنی بدون ردیف معلوم، هیچ
+  // AggregateOffer ای جعل نمی‌شود و اسکریپت اصلاً رندر نمی‌شود.
+  const productJson = assetProductJsonLd(listing, known);
 
   return (
     <main>
+      <JsonLdScript
+        json={breadcrumbJsonLd([
+          { name: "خانه", url: `${SITE_URL}/` },
+          { name: listing.name_fa, url: `${SITE_URL}/${listing.slug}` },
+        ])}
+      />
+      {productJson === null ? null : <JsonLdScript json={productJson} />}
       <header>
         <p>مظنه آنلاین</p>
         <h1>قیمت {listing.name_fa}</h1>
@@ -225,6 +243,9 @@ export async function AssetPage({ listing }: { listing: InstrumentListing }) {
       <p>
         <a href="/">بازگشت به جدول مقایسه</a>
       </p>
+
+      {/* بند ۷.۲: صفحه‌ی ارجاع است (لینک سکوها) ⟸ نوار ماده ۵. */}
+      <Madde5Bar />
     </main>
   );
 }

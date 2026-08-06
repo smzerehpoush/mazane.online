@@ -19,6 +19,8 @@ import { getPublishedPost, listPublishedPosts, type PublishedPost } from "../../
 import { formatDateFa } from "../../../lib/format";
 import { excerptFa, renderMarkdown } from "../../../lib/markdown";
 import { SITE_URL } from "../../../lib/site";
+import { breadcrumbJsonLd, jsonLdString } from "../../../lib/structured-data";
+import { JsonLdScript } from "../../json-ld";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -50,7 +52,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 function blogPostingJsonLd(post: PublishedPost): string {
   const url = `${SITE_URL}/blog/${post.slug}`;
-  const jsonLd = {
+  // سریال‌سازی و escape در lib/structured-data.ts (بلیت ۱۰) — همان رسم قبلی.
+  return jsonLdString({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title_fa,
@@ -61,10 +64,7 @@ function blogPostingJsonLd(post: PublishedPost): string {
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     author: { "@type": "Organization", name: "مظنه آنلاین", url: SITE_URL },
     publisher: { "@type": "Organization", name: "مظنه آنلاین", url: SITE_URL },
-  };
-  // فقط داده‌ی JSON خودمان است (نه متن خام کاربر)؛ escape کردن < رسم ایمنی
-  // تزریق در JSON-LD است تا "</script>" داخل رشته‌ها بی‌اثر شود.
-  return JSON.stringify(jsonLd).replace(/</g, "\\u003c");
+  });
 }
 
 export default async function BlogPostPage({ params }: Props) {
@@ -74,9 +74,18 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <main>
+      {/* BlogPosting اول می‌ماند (قرارداد تست بلیت ۱۲)؛ BreadcrumbList
+          بند ۶.۵ بعد از آن. */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: blogPostingJsonLd(post) }}
+      />
+      <JsonLdScript
+        json={breadcrumbJsonLd([
+          { name: "خانه", url: `${SITE_URL}/` },
+          { name: "بلاگ", url: `${SITE_URL}/blog` },
+          { name: post.title_fa, url: `${SITE_URL}/blog/${post.slug}` },
+        ])}
       />
       <article>
         <h1>{post.title_fa}</h1>

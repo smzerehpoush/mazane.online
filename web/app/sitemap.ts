@@ -34,6 +34,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // معیارهای پیشنهاد سردبیر (بلیت ۶) — ایستا؛ lastmod فقط با ویرایش واقعی
     // معنا دارد که ردیابی نمی‌شود، پس مثل صفحه‌ی اصلی حذف شده است.
     { url: `${SITE_URL}/darbare-pishnahad` },
+    // «مظنه چیست» (بلیت ۱۰؛ بند ۱۱) — ایستا؛ به همان دلیل بدون lastmod.
+    { url: `${SITE_URL}/mazane-chist` },
     // صفحات دارایی — فقط دروازه‌ی انتشار گذشته‌ها (تصمیم ۱۰)؛ بدون lastmod.
     ...instruments
       .filter((item) => item.published)
