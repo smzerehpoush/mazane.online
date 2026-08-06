@@ -19,7 +19,21 @@
  * سکو (`website_url` — از `mazane:listed`، همان منبعی که `listPlatforms`
  * برای فهرست سکوها می‌خواند) باشد یا زیردامنه‌ی آن. خالی‌کردن فیلد مجاز
  * است (یعنی حذف override — رفتار برمی‌گردد به `website_url`، نه ۴۰۴).
+ *
+ * بازه‌ی مجاز شمار سکوی نمودار و اعتبارسنجی رنگ (`MIN_CHART_PLATFORMS`/
+ * `MAX_CHART_PLATFORMS`/`isValidChartColor`) از `site-content.ts` می‌آیند —
+ * همان قاعده‌ی خام رنگ/بازه که `chartSeriesConfig` هم استفاده می‌کند؛ دو
+ * نسخه‌ی مستقل از یک ثابت نباید واگرا شوند. اینجا فقط دوباره export
+ * می‌شوند تا مصرف‌کننده‌های موجود (`routes/admin/platforms.tsx`،
+ * تست‌ها) بدون تغییر مسیر import کار کنند.
  */
+import {
+  isValidChartColor,
+  MAX_CHART_PLATFORMS,
+  MIN_CHART_PLATFORMS,
+} from "@/lib/site-content";
+
+export { isValidChartColor, MAX_CHART_PLATFORMS, MIN_CHART_PLATFORMS };
 
 /** یک سکوی قابل انتخاب — از فهرست سکوهای واقعاً قابل نمایش (`mazane:listed`). */
 export interface PlatformOption {
@@ -77,15 +91,6 @@ function source(): PlatformSettingsSource {
   }
   activeSource = defaultFactory();
   return activeSource;
-}
-
-export const MIN_CHART_PLATFORMS = 2;
-export const MAX_CHART_PLATFORMS = 6;
-
-const COLOR_RE = /^#[0-9a-f]{6}$/i;
-
-export function isValidChartColor(color: string): boolean {
-  return COLOR_RE.test(color);
 }
 
 /**
