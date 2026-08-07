@@ -13,10 +13,15 @@
  * بلیت ۲۶: صفحه فقط طلای ۱۸ عیار را نشان می‌دهد — جدول «قیمت‌های این سکو»ی
  * قبلی (همه‌ی دارایی‌ها) حذف شده؛ آن عدد در کارت قهرمان (بلیت ۲۷) از قبل
  * هست.
+ *
+ * بلیت ۳۵: زیر «قیمت امروز» یک ماشین‌حساب دوحالته می‌آید
+ * (`PlatformCalculator.tsx`) — کارمزدمعلوم دو ورودی دوسویه‌ی خرید/فروش،
+ * کارمزد نامعلوم فقط یک ورودی وزن روی قیمت اسمی. جزئیاتش همان‌جاست.
  */
 import type { ReactNode } from "react";
 
 import { Madde5Bar } from "@/components/content/LegalNotice";
+import { PlatformCalculator } from "@/components/content/PlatformCalculator";
 import { PlatformRateCard } from "@/components/content/PlatformRateCard";
 import {
   ClosedBadges,
@@ -258,6 +263,11 @@ export function PlatformPage({
         // یعنی TermsSection خودش null برمی‌گرداند، نه حدسی از اینجا.
         <TermsSection row={row} snapshot={snapshot} updatedAt={updatedAt} />
       )}
+
+      {/* بلیت ۳۵: ماشین‌حساب زیر «قیمت امروز» — خودش هم قطع منبع (snapshot
+          null) و هم کارمزد نامعلوم را از روی همان row تشخیص می‌دهد، حدسی از
+          اینجا لازم نیست. */}
+      <PlatformCalculator row={row} hasOutbound={hasOutbound} />
 
       <section
         aria-labelledby="identity-heading"
