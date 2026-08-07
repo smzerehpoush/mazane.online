@@ -10,6 +10,10 @@
  *
  * قطع منبع ⟸ کهنگی، نه خطا (قاعده‌ی ۵): payload بی‌قیمت متن قبلی را نگه
  * می‌دارد و فقط برچسب زمان از روی ISO موجود «پیر» می‌شود.
+ *
+ * `nextRateCardCountdown` (بلیت ۳۱) همان اصل را برای شمارنده‌ی «بروزرسانی
+ * بعدی در N ثانیه» زیر کارت نرخ سکو تکرار می‌کند — تابع خالص جدا، بدون
+ * تایمر. اثر جانبی (setInterval + fetch) در خودِ `PlatformRateCard.tsx` است.
  */
 import { formatMinutesAgoFa, isStale, minutesSince } from "./format";
 
@@ -75,4 +79,41 @@ export function nextRowDomState(
     updatedText: formatMinutesAgoFa(minutes),
     staleText: isStale(minutes) ? STALE_SUFFIX_FA : "",
   };
+}
+
+/**
+ * ثانیه‌های یک نوبت شمارش معکوس کارت نرخ سکو (بلیت ۳۱) — همان بازه‌ی
+ * polling صفحه‌ی اصلی («بروزرسانی بعدی در N ثانیه»، نه ۶۰).
+ */
+export const RATE_CARD_POLL_SECONDS = 30;
+
+/** خروجی یک تیک شمارنده‌ی کارت نرخ — ثانیه‌ی بعدی + آیا الان باید دریافت واقعی انجام شود. */
+export interface RateCardCountdownTick {
+  secondsRemaining: number;
+  shouldFetch: boolean;
+}
+
+/**
+ * یک تیک ثانیه‌ای شمارنده‌ی «بروزرسانی بعدی در N ثانیه» زیر کارت نرخ (بلیت
+ * ۳۱). تابع خالص، بدون تایمر/DOM/شبکه: «ثانیه‌های باقی‌مانده‌ی فعلی + آیا
+ * همین الان کهنه‌ایم؟ ⟸ ثانیه‌های بعدی + آیا باید یک نوبت دریافت واقعی
+ * ‎GET /api/prices‎ انجام شود؟».
+ *
+ * کهنگی شمارنده را خاموش می‌کند (معیار پذیرش تیکت): تا وقتی کهنه‌ایم هر تیک
+ * همان RATE_CARD_POLL_SECONDS را برمی‌گرداند و هرگز دریافت درخواست نمی‌کند —
+ * فقط برچسب کهنگی (Staleness) روی کارت می‌ماند. سالم که شد، شمارش از ۳۰ تا
+ * صفر ادامه می‌یابد؛ درست در صفر یک نوبت دریافت واقعی لازم است و شمارنده
+ * دوباره از ۳۰ شروع می‌شود.
+ */
+export function nextRateCardCountdown(
+  secondsRemaining: number,
+  isStaleNow: boolean,
+): RateCardCountdownTick {
+  if (isStaleNow) {
+    return { secondsRemaining: RATE_CARD_POLL_SECONDS, shouldFetch: false };
+  }
+  if (secondsRemaining <= 0) {
+    return { secondsRemaining: RATE_CARD_POLL_SECONDS, shouldFetch: true };
+  }
+  return { secondsRemaining: secondsRemaining - 1, shouldFetch: false };
 }

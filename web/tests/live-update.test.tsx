@@ -17,7 +17,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { HomePage } from "../src/components/mazane/HomePage";
 import {
+  nextRateCardCountdown,
   nextRowDomState,
+  RATE_CARD_POLL_SECONDS,
   STALE_SUFFIX_FA,
   type LiveRowDomState,
 } from "../src/lib/live-update";
@@ -159,6 +161,33 @@ describe("قلاب‌های data-live در HTML سروررندر", () => {
     const milli = rowOf(html, "milli");
     const afterPriceCell = milli.slice(milli.indexOf('data-live="price"') + 1);
     expect(afterPriceCell).not.toContain('data-live="price"');
+  });
+});
+
+describe("شمارنده‌ی زنده‌ی کارت نرخ — تابع خالص nextRateCardCountdown (بلیت ۳۱)", () => {
+  it("هر تیک، وقتی داده تازه است، یکی کم می‌شود و دریافتی درخواست نمی‌شود", () => {
+    expect(nextRateCardCountdown(30, false)).toEqual({ secondsRemaining: 29, shouldFetch: false });
+    expect(nextRateCardCountdown(15, false)).toEqual({ secondsRemaining: 14, shouldFetch: false });
+    expect(nextRateCardCountdown(1, false)).toEqual({ secondsRemaining: 0, shouldFetch: false });
+  });
+
+  it("در صفر، یک نوبت دریافت واقعی لازم است و شمارنده دوباره از ۳۰ شروع می‌شود", () => {
+    expect(nextRateCardCountdown(0, false)).toEqual({
+      secondsRemaining: RATE_CARD_POLL_SECONDS,
+      shouldFetch: true,
+    });
+  });
+
+  it("کهنگی شمارنده را خاموش می‌کند — همیشه به ۳۰ می‌پرد و هرگز دریافت نمی‌خواهد", () => {
+    expect(nextRateCardCountdown(12, true)).toEqual({
+      secondsRemaining: RATE_CARD_POLL_SECONDS,
+      shouldFetch: false,
+    });
+    // حتی درست در صفر هم کهنگی اولویت دارد — دریافتی درخواست نمی‌شود.
+    expect(nextRateCardCountdown(0, true)).toEqual({
+      secondsRemaining: RATE_CARD_POLL_SECONDS,
+      shouldFetch: false,
+    });
   });
 });
 

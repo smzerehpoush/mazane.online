@@ -231,7 +231,7 @@ export function PlatformPage({
 
       {/* بلیت ۲۷: عدد درشت خودش وقتی قیمت مرجع نداریم (کارت null برمی‌گرداند)
           چیزی نمی‌گذارد؛ پیام «قیمت در دسترس نیست» زیرش همچنان می‌آید. */}
-      <PlatformRateCard row={row} history={history} />
+      <PlatformRateCard row={row} history={history} nowMs={nowMs} />
 
       {snapshot === null ? (
         // قطع منبع ⟸ کهنگی، نه خطا: صفحه ۲۰۰ می‌ماند (قاعده‌ی ۵ قراردادها).

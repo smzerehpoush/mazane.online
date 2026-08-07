@@ -27,6 +27,25 @@
  *
  * جزء مستقل است: نمودار چندسکویی صفحه‌ی اصلی (`PriceChart.tsx`) دست‌نخورده
  * می‌ماند و این کارت هیچ چیزی از آن import نمی‌کند.
+ *
+ * **شمارنده‌ی زنده + برچسب کهنگی (بلیت ۳۱)**: پایین کارت «بروزرسانی بعدی در
+ * N ثانیه» را نشان می‌دهد — شمارش معکوس همان ۳۰ ثانیه‌ی
+ * `live-prices-updater.tsx`، ولی مکانیزم مستقل خودش را دارد چون
+ * `LivePricesUpdater` فقط در صفحه‌ی اصلی mount می‌شود و روی
+ * ‎tr[data-platform]‎ کار می‌کند، نه این کارت. منطق تیک شمارنده تابع خالص
+ * `nextRateCardCountdown` (کنار `nextRowDomState` در `lib/live-update.ts`)
+ * است؛ اثر جانبی‌اش (setInterval + fetch) فقط همین‌جاست.
+ *
+ * ⚠️ عدد درشت کارت هرگز با این شمارنده عوض نمی‌شود — همچنان همان
+ * `referencePriceFor` سروررندر می‌ماند (بند بالا). دریافت زنده فقط
+ * `updated_at` همین سکو را از ‎/api/prices‎ می‌گیرد تا برچسب «آخرین
+ * به‌روزرسانی»/کهنگی با گذر زمان واقعی پیش برود — نه قیمتی تازه، چون
+ * ‎/api/prices‎ عدد «مؤثر خرید» را می‌دهد که تعریفش با «قیمت مرجع سکو» فرق
+ * دارد؛ سوآپش اینجا برچسب کارت را روی عدد غلط می‌گذاشت.
+ *
+ * کهنگی شمارنده را خاموش می‌کند (`isStale` از `lib/format.ts`): فقط برچسب
+ * Staleness می‌ماند، بدون هیچ شمارش. قطع شبکه/endpoint ⟸ زمان قبلی می‌ماند
+ * (کهنگی، نه خطا، قاعده‌ی ۵) — دقیقاً همان قرارداد `nextRowDomState`.
  */
 import {
   useEffect,
@@ -39,10 +58,16 @@ import {
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
 
-import { formatDateTimeFa, formatSignedToman, formatToman } from "@/lib/format";
+import { Staleness } from "@/components/content/RowParts";
+import { formatDateTimeFa, formatSignedToman, formatToman, isStale, minutesSince } from "@/lib/format";
 import type { HistoryPoint, HistoryRange, PlatformHistoryByRange } from "@/lib/history";
+import {
+  nextRateCardCountdown,
+  RATE_CARD_POLL_SECONDS,
+  type LivePricesPayload,
+} from "@/lib/live-update";
 import { hasUnknownFee, referencePriceFor, type Row } from "@/lib/rows";
-import { RATE_CARD_RANGES, type RateCardRangeConfig } from "@/lib/site-content";
+import { fa, RATE_CARD_RANGES, type RateCardRangeConfig } from "@/lib/site-content";
 
 const KNOWN_FEE_LABEL = "میانگین خرید و فروش این سکو";
 const UNKNOWN_FEE_LABEL = "قیمت اعلامی این سکو";
@@ -186,16 +211,67 @@ function RangeTab({
 export function PlatformRateCard({
   row,
   history,
+  nowMs,
 }: {
   row: Row;
   /** تاریخچه‌ی هر سه بازه‌ی همین سکو — هرکدام `null` یعنی منبع قطع بود یا سابقه‌ای نیست. */
   history: PlatformHistoryByRange;
+  /** مبنای «آخرین به‌روزرسانی» پیش از mount — از generated_at سرور (همان الگوی PlatformPage). */
+  nowMs: number;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const [activeRange, setActiveRange] = useState<HistoryRange>("DAILY");
   const tabRefs = useRef<Partial<Record<HistoryRange, HTMLButtonElement | null>>>({});
+
+  // بلیت ۳۱: شمارنده + برچسب کهنگی — مقدار اولیه دقیقاً همان چیزی که سرور
+  // با نوشتن دستی محاسبه می‌کرد، تا هیدریشن واگرا نشود؛ فقط بعد از mount
+  // تیک می‌خورد (پایین‌تر).
+  const [live, setLive] = useState(() => ({
+    updatedAtIso: row.updatedAt,
+    nowMs,
+    secondsRemaining: RATE_CARD_POLL_SECONDS,
+  }));
+
+  useEffect(() => {
+    let cancelled = false;
+    let updatedAtIso = row.updatedAt;
+    let secondsRemaining = RATE_CARD_POLL_SECONDS;
+
+    // دریافت واقعی در صفر — فقط زمان همین سکو را تازه می‌کند، نه عدد درشت
+    // کارت (بند بالای فایل): ‎/api/prices‎ «مؤثر خرید» می‌دهد که تعریفش با
+    // «قیمت مرجع سکو» فرق دارد.
+    async function refreshUpdatedAt(): Promise<void> {
+      try {
+        const response = await fetch("/api/prices", { cache: "no-store" });
+        if (!response.ok || cancelled) return;
+        const payload = (await response.json()) as LivePricesPayload;
+        const match = payload.rows.find((r) => r.platform_slug === row.platform.slug);
+        if (match !== undefined && match.updated_at !== null) {
+          updatedAtIso = match.updated_at;
+        }
+      } catch {
+        // قطع شبکه ⟸ زمان قبلی می‌ماند، کهنگی نه خطا (قاعده‌ی ۵)
+      }
+    }
+
+    function tick(): void {
+      if (cancelled) return;
+      const now = Date.now();
+      const staleNow = updatedAtIso === null || isStale(minutesSince(updatedAtIso, now));
+      const next = nextRateCardCountdown(secondsRemaining, staleNow);
+      secondsRemaining = next.secondsRemaining;
+      setLive({ updatedAtIso, nowMs: now, secondsRemaining });
+      if (next.shouldFetch) void refreshUpdatedAt();
+    }
+
+    const id = window.setInterval(tick, 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [row.platform.slug, row.updatedAt]);
 
   const price = referencePriceFor(row, "GOLD_18K");
   const enabledRanges = useMemo(() => computeEnabledRanges(history), [history]);
@@ -206,6 +282,9 @@ export function PlatformRateCard({
 
   // سکوی بی‌قیمت مرجع (بی‌اسنپ‌شات یا فقط یک سمت باز) ⟸ کل کارت رندر نمی‌شود.
   if (price === null) return null;
+
+  // کهنگی شمارنده را خاموش می‌کند — فقط برچسب Staleness زیر کارت می‌ماند.
+  const staleNow = live.updatedAtIso === null || isStale(minutesSince(live.updatedAtIso, live.nowMs));
 
   const label = hasUnknownFee(row) ? UNKNOWN_FEE_LABEL : KNOWN_FEE_LABEL;
 
@@ -329,6 +408,17 @@ export function PlatformRateCard({
           <Stat label="پایین‌ترین">{formatToman(stats.low)}</Stat>
         </div>
       )}
+
+      {/* بلیت ۳۱: برچسب «آخرین به‌روزرسانی» همیشه حاضر است؛ شمارنده فقط
+          وقتی سالمیم کنارش می‌آید — کهنگی خاموشش می‌کند. */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <Staleness updatedAt={live.updatedAtIso} nowMs={live.nowMs} />
+        {staleNow ? null : (
+          <span data-rate-countdown className="text-[10px] text-muted-foreground/70">
+            بروزرسانی بعدی در {fa(live.secondsRemaining)} ثانیه
+          </span>
+        )}
+      </div>
     </section>
   );
 }

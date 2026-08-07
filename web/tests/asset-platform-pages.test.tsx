@@ -514,6 +514,52 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
   });
 });
 
+/** ناحیه‌ی خودِ کارت نرخ در HTML رندرشده — تا تست‌ها با بقیه‌ی صفحه قاطی نشوند. */
+function rateCardSection(html: string): string {
+  const match = html.match(
+    /<section[^>]*aria-labelledby="rate-card-heading"[\s\S]*?<\/section>/,
+  );
+  if (!match) throw new Error("کارت نرخ در HTML نیست");
+  return match[0];
+}
+
+describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت نرخ (بلیت ۳۱)", () => {
+  it("با داده‌ی تازه، برچسب «آخرین به‌روزرسانی» و شمارنده‌ی ۳۰ ثانیه هر دو رندر می‌شوند", async () => {
+    seed(assetStore()); // updatedAt همه‌ی سکوها freshIso است — تازه
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    const card = rateCardSection(html);
+    expect(card).toContain("به‌روزرسانی:"); // برچسب «آخرین به‌روزرسانی» — همیشه حاضر
+    expect(card).toContain("data-rate-countdown");
+    expect(card).toContain("بروزرسانی بعدی در ۳۰ ثانیه");
+    expect(card).not.toContain("کهنه");
+  });
+
+  it("با داده‌ی کهنه، شمارنده رندر نمی‌شود ولی برچسب کهنگی می‌ماند", async () => {
+    const store = assetStore();
+    store.updatedAt["talasea"] = staleIso(); // اسنپ‌شات همچنان هست، فقط زمانش کهنه
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    const card = rateCardSection(html);
+    expect(card).toContain("به‌روزرسانی:"); // برچسب کهنگی هم زیرمجموعه‌ی همین متن است
+    expect(card).toContain("کهنه");
+    expect(card).not.toContain("data-rate-countdown");
+    expect(card).not.toContain("بروزرسانی بعدی در");
+  });
+
+  it("قطع منبع (بی‌اسنپ‌شات) اصلاً کارت را رندر نمی‌کند — نه شمارنده نه برچسب زمان جعلی", async () => {
+    const store = assetStore();
+    store.snapshots["talasea"] = null;
+    store.updatedAt["talasea"] = staleIso();
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    expect(html).not.toContain("data-rate-countdown");
+    expect(html).toContain("قیمت در دسترس نیست"); // صفحه ۲۰۰ می‌ماند، متن صادقانه (قاعده‌ی ۵)
+  });
+});
+
 /** برچسب یک زبانه در HTML رندرشده — روزانه/هفتگی/ماهانه یا «به‌زودی». */
 function tabButton(html: string, label: string): string {
   const match = html.match(new RegExp(`<button[^>]*>${label}</button>`));
