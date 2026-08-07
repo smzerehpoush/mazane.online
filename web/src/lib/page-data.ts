@@ -83,6 +83,8 @@ export interface SlugReaders {
   getPlatformSnapshot(platformSlug: string): Promise<PlatformSnapshot | null>;
   getUpdatedAt(platformSlug: string): Promise<string | null>;
   getInstruments(): Promise<InstrumentListing[]>;
+  /** تاریخچه‌ی قیمت مرجع — کارت نرخ صفحه‌ی سکو (بلیت ۲۷). فقط شاخه‌ی platform می‌خواندش. */
+  getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;
 }
 
 /**
@@ -111,10 +113,17 @@ export async function assembleSlugPage(
   }
 
   const { platform } = resolved;
-  const [snapshot, updatedAt, instruments] = await Promise.all([
+  const [snapshot, updatedAt, instruments, histories] = await Promise.all([
     read.getPlatformSnapshot(platform.slug),
     read.getUpdatedAt(platform.slug),
     read.getInstruments(),
+    // کارت نرخ (بلیت ۲۷): همان الگوی نمودار صفحه‌ی اصلی، فقط برای یک سکو و
+    // همیشه طلای ۱۸ عیار — زبانه‌ی بازه مال بلیت ۳۰ است.
+    read.getPlatformHistory({
+      platformSlugs: [platform.slug],
+      instrument: "GOLD_18K",
+      hours: 24,
+    }),
   ]);
   return {
     kind: "platform",
@@ -125,6 +134,9 @@ export async function assembleSlugPage(
     instrumentNames: Object.fromEntries(
       instruments.map((item) => [item.instrument, item.name_fa]),
     ),
+    // قطع منبع یا سکوی بی‌سابقه ⟸ history[0] وجود ندارد ⟸ null، نه throw
+    // (قاعده‌ی ۵) — کارت بدون نمودار رندر می‌شود.
+    history: histories[0] ?? null,
     generated_at: generatedAt,
   };
 }

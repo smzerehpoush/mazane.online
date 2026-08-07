@@ -18,6 +18,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NotFoundPanel } from "../src/components/content/NotFoundPanel";
 import { SlugPageView, slugHead } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
+import type { PlatformHistory } from "../src/lib/history";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
@@ -28,6 +29,7 @@ import {
   makeSnapshot,
   rowOf,
   seed,
+  seedHistory,
   slugPageData,
   staleIso,
   type SeededStore,
@@ -402,6 +404,107 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(data.kind === "platform" && data.hasOutbound).toBe(false);
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
     expect(html).not.toContain('href="/go/wallgold"');
+  });
+});
+
+describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲۷)", () => {
+  it("عدد درشت = referencePriceFor؛ کارمزد معلوم ⟸ «میانگین خرید و فروش این سکو»", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    expect(html).toContain("data-rate-price");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودِ طلاسی (تصمیم ۱۹)
+    expect(html).toContain("میانگین خرید و فروش این سکو");
+  });
+
+  it("کارمزد نامعلوم ⟸ برچسب «قیمت اعلامی این سکو»، از hasUnknownFee نه فهرست دستی", async () => {
+    const store = assetStore();
+    const now = freshIso();
+    // سکوی کارمزد-نامعلوم که گردآورنده برایش قیمت مرجع (همان قیمت اسمی، تصمیم
+    // مالک ۲۰۲۶-۰۸-۰۶) نوشته — بر خلاف دیجی‌کالای assetStore که اصلاً مرجع
+    // ندارد و کارتش رندر نمی‌شود (آزموده در «سکوی بی‌قیمت مرجع» پایین‌تر).
+    store.listed = [...PLATFORMS, { slug: "melligold", name_fa: "ملی‌گلد", data_policy: "ALLOWED" }];
+    store.snapshots["melligold"] = makeSnapshot({
+      slug: "melligold",
+      mid: 18490000,
+      feeSource: "UNKNOWN",
+      reference: 18490000,
+      fetchedAt: now,
+    });
+    store.updatedAt["melligold"] = now;
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("melligold");
+    expect(html).toContain("قیمت اعلامی این سکو");
+    expect(html).not.toContain("میانگین خرید و فروش این سکو");
+  });
+
+  it("نمودار همان سری عدد درشت را می‌کشد؛ سه آمار (تغییرات صعودی، بیشینه، کمینه) از همان سری‌اند", async () => {
+    seed(assetStore());
+    const history: PlatformHistory[] = [
+      {
+        platform_slug: "talasea",
+        points: [
+          { hour: "2026-08-06T09:00:00.000Z", value: 18400000 },
+          { hour: "2026-08-06T15:00:00.000Z", value: 18300000 },
+          { hour: "2026-08-06T21:00:00.000Z", value: 18530000 },
+        ],
+        latest: 18530000,
+        side_used: "MEAN",
+      },
+    ];
+    seedHistory(history);
+    const html = await renderSlug("talasea");
+    expect(html).not.toContain(
+      "هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.",
+    );
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // بیشینه‌ی سری
+    expect(html).toContain("۱۸٬۳۰۰٬۰۰۰"); // کمینه‌ی سری
+    expect(html).toContain("۱۳۰٬۰۰۰"); // تغییرات: نقطه‌ی آخر منهای نقطه‌ی اول
+    expect(html).toContain("text-positive"); // صعود — سبز
+  });
+
+  it("تغییرات نزولی رنگ text-negative می‌گیرد", async () => {
+    seed(assetStore());
+    seedHistory([
+      {
+        platform_slug: "wallgold",
+        points: [
+          { hour: "2026-08-06T09:00:00.000Z", value: 18700000 },
+          { hour: "2026-08-06T15:00:00.000Z", value: 18820000 },
+          { hour: "2026-08-06T18:00:00.000Z", value: 18590000 },
+          { hour: "2026-08-06T21:00:00.000Z", value: 18611000 },
+        ],
+        latest: 18611000,
+        side_used: "MEAN",
+      },
+    ]);
+    const html = await renderSlug("wallgold");
+    expect(html).toContain("text-negative");
+    expect(html).toContain("۸۹٬۰۰۰"); // |۱۸۶۱۱۰۰۰ - ۱۸۷۰۰۰۰۰|
+    expect(html).toContain("۱۸٬۸۲۰٬۰۰۰"); // بیشینه‌ی سری
+    expect(html).toContain("۱۸٬۵۹۰٬۰۰۰"); // کمینه‌ی سری
+  });
+
+  it("سکوی بی‌تاریخچه: کارت بدون نمودار رندر می‌شود، صفحه ۲۰۰ می‌ماند (قاعده‌ی ۵)", async () => {
+    seed(assetStore());
+    seedHistory([]); // منبع تاریخچه در دسترس ولی هیچ سکویی سابقه ندارد
+    const html = await renderSlug("talasea");
+    expect(html).toContain("data-rate-price");
+    expect(html).toContain(
+      "هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.",
+    );
+  });
+
+  it("سکوی بی‌قیمت مرجع (بی‌اسنپ‌شات) اصلاً کارت را رندر نمی‌کند", async () => {
+    const store = assetStore();
+    store.snapshots["talasea"] = null;
+    store.updatedAt["talasea"] = staleIso();
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    expect(html).not.toContain("data-rate-price");
+    expect(html).toContain("قیمت در دسترس نیست");
   });
 });
 

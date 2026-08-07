@@ -15,6 +15,7 @@
 import { AssetPage, groupRows } from "@/components/content/AssetPage";
 import { Breadcrumbs } from "@/components/content/PageShell";
 import { PlatformPage } from "@/components/content/PlatformPage";
+import type { PlatformHistory } from "@/lib/history";
 import type {
   InstrumentListing,
   ListedPlatform,
@@ -48,6 +49,12 @@ export interface PlatformPageData {
   hasOutbound: boolean;
   /** نام فارسی هر کد دارایی — برای ستون «دارایی» جدول قیمت‌ها. */
   instrumentNames: Record<string, string>;
+  /**
+   * تاریخچه‌ی ۲۴ ساعته‌ی قیمت مرجع همین سکو (طلای ۱۸ عیار) — کارت نرخ بالای
+   * صفحه (بلیت ۲۷). `null` یعنی منبع قطع بود یا سکو هنوز سابقه‌ای ندارد؛
+   * کارت بدون نمودار رندر می‌شود، نه throw (قاعده‌ی ۵).
+   */
+  history: PlatformHistory | null;
   generated_at: string;
 }
 
@@ -153,6 +160,7 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
         updatedAt={data.updatedAt}
         hasOutbound={data.hasOutbound}
         instrumentNames={data.instrumentNames}
+        history={data.history}
         nowMs={nowMs}
       />
     </>

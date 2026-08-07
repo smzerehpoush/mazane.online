@@ -13,6 +13,7 @@
 import type { ReactNode } from "react";
 
 import { Madde5Bar } from "@/components/content/LegalNotice";
+import { PlatformRateCard } from "@/components/content/PlatformRateCard";
 import {
   ClosedBadges,
   FeeSourceLabel,
@@ -20,6 +21,7 @@ import {
   Staleness,
 } from "@/components/content/RowParts";
 import { formatPercentPointsFa, formatToman } from "@/lib/format";
+import type { PlatformHistory } from "@/lib/history";
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import { findQuote, referencePriceFor, type Row } from "@/lib/rows";
 
@@ -178,6 +180,7 @@ export function PlatformPage({
   updatedAt,
   hasOutbound,
   instrumentNames,
+  history,
   nowMs,
 }: {
   platform: ListedPlatform;
@@ -185,6 +188,8 @@ export function PlatformPage({
   updatedAt: string | null;
   hasOutbound: boolean;
   instrumentNames: Record<string, string>;
+  /** تاریخچه‌ی همین سکو — کارت نرخ بالای صفحه (بلیت ۲۷). `null` یعنی بی‌سابقه. */
+  history: PlatformHistory | null;
   nowMs: number;
 }) {
   // ردیف دامنه‌ی همین سکو — تنها مصرفش انتخاب «قیمت مرجع سکو» است.
@@ -223,6 +228,10 @@ export function PlatformPage({
           </p>
         )}
       </header>
+
+      {/* بلیت ۲۷: عدد درشت خودش وقتی قیمت مرجع نداریم (کارت null برمی‌گرداند)
+          چیزی نمی‌گذارد؛ پیام «قیمت در دسترس نیست» زیرش همچنان می‌آید. */}
+      <PlatformRateCard row={row} history={history} />
 
       {snapshot === null ? (
         // قطع منبع ⟸ کهنگی، نه خطا: صفحه ۲۰۰ می‌ماند (قاعده‌ی ۵ قراردادها).

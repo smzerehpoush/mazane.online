@@ -5,6 +5,11 @@
 
 const tomanFormatter = new Intl.NumberFormat("fa-IR");
 
+/** با علامت +/− صریح — کارت نرخ سکو (بلیت ۲۷)، ستون «تغییرات». */
+const signedTomanFormatter = new Intl.NumberFormat("fa-IR", {
+  signDisplay: "exceptZero",
+});
+
 const dateTimeFormatter = new Intl.DateTimeFormat("fa-IR", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -21,6 +26,14 @@ export const STALE_AFTER_MINUTES = 3;
 
 export function formatToman(priceToman: number): string {
   return tomanFormatter.format(priceToman);
+}
+
+/**
+ * تفاضل دو نقطه‌ی آماده (مثلاً سر و ته یک سری تاریخچه) با علامت صریح —
+ * «۱۲٬۳۴۵+» یا «۱۲٬۳۴۵−». هیچ محاسبه‌ی قیمتی نیست، فقط قالب‌بندی همان عدد.
+ */
+export function formatSignedToman(diffToman: number): string {
+  return signedTomanFormatter.format(diffToman);
 }
 
 const fractionPercentFormatter = new Intl.NumberFormat("fa-IR", {

@@ -21,6 +21,7 @@ import {
   type BlogPost,
 } from "../src/lib/blog";
 import { listInstruments, listPlatforms } from "../src/lib/catalog";
+import { getPlatformHistory } from "../src/lib/history";
 import { assembleSlugPage } from "../src/lib/page-data";
 import {
   getPlatformSnapshot,
@@ -59,6 +60,9 @@ async function slugPage(slug: string) {
     getPlatformSnapshot,
     getUpdatedAt,
     getInstruments: listInstruments,
+    // این فایل هیچ setHistorySource ای صدا نمی‌زند — دقیقاً همان قطعی که
+    // می‌سنجد: خواننده‌ی دامنه بی‌منبع، خودش کهنگی برمی‌گرداند، نه خطا.
+    getPlatformHistory,
   });
 }
 

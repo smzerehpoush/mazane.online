@@ -28,6 +28,7 @@ import type {
 import type { PublishedPost } from "./blog";
 import { assembleSlugPage } from "./page-data";
 import { getPublishedPost, listPublishedPosts } from "./server/blog-source";
+import { getPlatformHistory } from "./server/history-source";
 import {
   fetchRowsForPlatforms,
   getInstruments,
@@ -80,5 +81,6 @@ export const loadSlugPage = createServerFn({ method: "GET" })
       getPlatformSnapshot,
       getUpdatedAt,
       getInstruments,
+      getPlatformHistory,
     }),
   );

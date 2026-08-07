@@ -228,6 +228,8 @@ export async function slugPageData(slug: string): Promise<SlugPageData | null> {
     // همان خواننده‌ای که `content-data.ts` روی سرور می‌دهد: فهرست دارایی‌ها
     // از کاتالوگ می‌آید (زنده مقدم، رجیستری بیلد کف) نه مستقیم از استور.
     getInstruments: listInstruments,
+    // بلیت ۲۷: تاریخچه‌ی سکو با seedHistory تزریق می‌شود، عین صفحه‌ی اصلی.
+    getPlatformHistory,
   });
 }
 
