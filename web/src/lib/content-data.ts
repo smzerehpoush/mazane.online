@@ -54,9 +54,7 @@ export const loadBlogIndex = createServerFn({ method: "GET" }).handler(
  */
 export const loadBlogPost = createServerFn({ method: "GET" })
   .validator((input: { slug: string }) => input)
-  .handler(
-    async ({ data }): Promise<PublishedPost | null> => getPublishedPost(data.slug),
-  );
+  .handler(async ({ data }): Promise<PublishedPost | null> => getPublishedPost(data.slug));
 
 /**
  * قرارداد داده‌ی این صفحات را **نما** تعریف می‌کند

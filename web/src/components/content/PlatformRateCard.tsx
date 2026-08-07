@@ -47,19 +47,18 @@
  * Staleness می‌ماند، بدون هیچ شمارش. قطع شبکه/endpoint ⟸ زمان قبلی می‌ماند
  * (کهنگی، نه خطا، قاعده‌ی ۵) — دقیقاً همان قرارداد `nextRowDomState`.
  */
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { Staleness } from "@/components/content/RowParts";
-import { formatDateTimeFa, formatSignedToman, formatToman, isStale, minutesSince } from "@/lib/format";
+import {
+  formatDateTimeFa,
+  formatSignedToman,
+  formatToman,
+  isStale,
+  minutesSince,
+} from "@/lib/format";
 import type { HistoryPoint, HistoryRange, PlatformHistoryByRange } from "@/lib/history";
 import {
   nextRateCardCountdown,
@@ -108,11 +107,7 @@ function computeEnabledRanges(history: PlatformHistoryByRange): Record<HistoryRa
 }
 
 /** اولین زبانه‌ی فعال در جهت داده‌شده، با چرخش — زبانه‌های «به‌زودی» رد می‌شوند. */
-function nextEnabledIndex(
-  start: number,
-  direction: 1 | -1,
-  enabled: readonly boolean[],
-): number {
+function nextEnabledIndex(start: number, direction: 1 | -1, enabled: readonly boolean[]): number {
   const n = enabled.length;
   for (let step = 1; step <= n; step++) {
     const index = (start + direction * step + n * n) % n;
@@ -152,7 +147,8 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function ChangeStat({ change }: { change: number }) {
-  const tone = change > 0 ? "text-positive" : change < 0 ? "text-negative" : "text-muted-foreground";
+  const tone =
+    change > 0 ? "text-positive" : change < 0 ? "text-negative" : "text-muted-foreground";
   return (
     <span className={`inline-flex items-center gap-1 ${tone}`}>
       {change > 0 ? (
@@ -276,7 +272,10 @@ export function PlatformRateCard({
   const price = referencePriceFor(row, "GOLD_18K");
   const enabledRanges = useMemo(() => computeEnabledRanges(history), [history]);
   const activeHistory = history[activeRange];
-  const points = activeHistory?.points ?? [];
+  // useMemo هم اینجا: بی‌آن، فالبک `?? []` هر رندر یک آرایه‌ی تازه می‌سازد و
+  // useMemo زیرِ stats را با هر رندر (نه فقط با عوض‌شدن واقعی داده) دوباره
+  // حساب می‌کند.
+  const points = useMemo(() => activeHistory?.points ?? [], [activeHistory]);
   const hasSeries = points.length > 0;
   const stats = useMemo(() => computeStats(points), [points]);
 
@@ -284,7 +283,8 @@ export function PlatformRateCard({
   if (price === null) return null;
 
   // کهنگی شمارنده را خاموش می‌کند — فقط برچسب Staleness زیر کارت می‌ماند.
-  const staleNow = live.updatedAtIso === null || isStale(minutesSince(live.updatedAtIso, live.nowMs));
+  const staleNow =
+    live.updatedAtIso === null || isStale(minutesSince(live.updatedAtIso, live.nowMs));
 
   const label = hasUnknownFee(row) ? UNKNOWN_FEE_LABEL : KNOWN_FEE_LABEL;
 
@@ -300,7 +300,8 @@ export function PlatformRateCard({
 
     let targetIndex: number | null = null;
     if (event.key === "ArrowRight") targetIndex = nextEnabledIndex(currentIndex, 1, enabledFlags);
-    else if (event.key === "ArrowLeft") targetIndex = nextEnabledIndex(currentIndex, -1, enabledFlags);
+    else if (event.key === "ArrowLeft")
+      targetIndex = nextEnabledIndex(currentIndex, -1, enabledFlags);
     else if (event.key === "Home") targetIndex = enabledFlags.indexOf(true);
     else if (event.key === "End") targetIndex = enabledFlags.lastIndexOf(true);
     if (targetIndex === null || targetIndex < 0) return;

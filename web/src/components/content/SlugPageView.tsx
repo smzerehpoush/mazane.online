@@ -16,19 +16,11 @@ import { AssetPage, groupRows } from "@/components/content/AssetPage";
 import { Breadcrumbs } from "@/components/content/PageShell";
 import { PlatformPage } from "@/components/content/PlatformPage";
 import type { PlatformHistoryByRange } from "@/lib/history";
-import type {
-  InstrumentListing,
-  ListedPlatform,
-  PlatformSnapshot,
-} from "@/lib/prices";
+import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import type { ReferencePrice } from "@/lib/reference-price";
 import type { Row } from "@/lib/rows";
 import { SITE_URL } from "@/lib/site";
-import {
-  assetProductJsonLd,
-  breadcrumbJsonLd,
-  platformWebPageJsonLd,
-} from "@/lib/structured-data";
+import { assetProductJsonLd, breadcrumbJsonLd, platformWebPageJsonLd } from "@/lib/structured-data";
 
 /** صفحه‌ی دارایی — جدول همه‌ی سکوهای پشتیبان همین دارایی. */
 export interface InstrumentPageData {
@@ -158,9 +150,7 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
   if (data.kind === "instrument") {
     return (
       <>
-        <Breadcrumbs
-          items={[{ label: "خانه", href: "/" }, { label: data.listing.name_fa }]}
-        />
+        <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: data.listing.name_fa }]} />
         <AssetPage listing={data.listing} rows={data.rows} nowMs={nowMs} />
       </>
     );
@@ -168,9 +158,7 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
 
   return (
     <>
-      <Breadcrumbs
-        items={[{ label: "خانه", href: "/" }, { label: data.platform.name_fa }]}
-      />
+      <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: data.platform.name_fa }]} />
       <PlatformPage
         platform={data.platform}
         snapshot={data.snapshot}

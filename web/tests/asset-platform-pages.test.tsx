@@ -530,7 +530,10 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     // سکوی کارمزد-نامعلوم که گردآورنده برایش قیمت مرجع (همان قیمت اسمی، تصمیم
     // مالک ۲۰۲۶-۰۸-۰۶) نوشته — بر خلاف دیجی‌کالای assetStore که اصلاً مرجع
     // ندارد و کارتش رندر نمی‌شود (آزموده در «سکوی بی‌قیمت مرجع» پایین‌تر).
-    store.listed = [...PLATFORMS, { slug: "melligold", name_fa: "ملی‌گلد", data_policy: "ALLOWED" }];
+    store.listed = [
+      ...PLATFORMS,
+      { slug: "melligold", name_fa: "ملی‌گلد", data_policy: "ALLOWED" },
+    ];
     store.snapshots["melligold"] = makeSnapshot({
       slug: "melligold",
       mid: 18490000,
@@ -562,9 +565,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     ];
     seedHistory(history);
     const html = await renderSlug("talasea");
-    expect(html).not.toContain(
-      "هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.",
-    );
+    expect(html).not.toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // بیشینه‌ی سری
     expect(html).toContain("۱۸٬۳۰۰٬۰۰۰"); // کمینه‌ی سری
     expect(html).toContain("۱۳۰٬۰۰۰"); // تغییرات: نقطه‌ی آخر منهای نقطه‌ی اول
@@ -598,9 +599,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     seedHistory([]); // منبع تاریخچه در دسترس ولی هیچ سکویی سابقه ندارد
     const html = await renderSlug("talasea");
     expect(html).toContain("data-rate-price");
-    expect(html).toContain(
-      "هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.",
-    );
+    expect(html).toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
   });
 
   it("سکوی بی‌قیمت مرجع (بی‌اسنپ‌شات) اصلاً کارت را رندر نمی‌کند", async () => {
@@ -617,9 +616,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
 
 /** ناحیه‌ی خودِ کارت نرخ در HTML رندرشده — تا تست‌ها با بقیه‌ی صفحه قاطی نشوند. */
 function rateCardSection(html: string): string {
-  const match = html.match(
-    /<section[^>]*aria-labelledby="rate-card-heading"[\s\S]*?<\/section>/,
-  );
+  const match = html.match(/<section[^>]*aria-labelledby="rate-card-heading"[\s\S]*?<\/section>/);
   if (!match) throw new Error("کارت نرخ در HTML نیست");
   return match[0];
 }

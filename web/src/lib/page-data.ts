@@ -107,9 +107,7 @@ export async function assembleSlugPage(
   const generatedAt = new Date().toISOString();
 
   if (resolved.kind === "instrument") {
-    const rows = await read.fetchRowsForPlatforms(
-      resolved.listing.supporting_platform_slugs,
-    );
+    const rows = await read.fetchRowsForPlatforms(resolved.listing.supporting_platform_slugs);
     return {
       kind: "instrument",
       listing: resolved.listing,
@@ -155,9 +153,7 @@ export async function assembleSlugPage(
     snapshot,
     updatedAt,
     hasOutbound: (platform.referral_url ?? platform.website_url) != null,
-    instrumentNames: Object.fromEntries(
-      instruments.map((item) => [item.instrument, item.name_fa]),
-    ),
+    instrumentNames: Object.fromEntries(instruments.map((item) => [item.instrument, item.name_fa])),
     history,
     referencePrice,
     generated_at: generatedAt,

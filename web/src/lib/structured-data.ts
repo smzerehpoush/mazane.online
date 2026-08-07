@@ -136,10 +136,7 @@ export function platformWebPageJsonLd(platform: ListedPlatform): string {
  * AggregateOffer جعل نمی‌شود؛ ارز غیرتومانی هم (تا وقتی قاعده‌ی تبدیلش
  * مستند شود) عمداً بی‌اسکیما می‌ماند — تبدیل ×۱۰ فقط برای تومان⟸ریال درست است.
  */
-export function assetProductJsonLd(
-  listing: InstrumentListing,
-  knownRows: Row[],
-): string | null {
+export function assetProductJsonLd(listing: InstrumentListing, knownRows: Row[]): string | null {
   if (listing.currency !== "TOMAN") return null;
   const buysToman = knownRows
     .filter(isBuyOpen)

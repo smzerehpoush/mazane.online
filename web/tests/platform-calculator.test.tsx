@@ -14,11 +14,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { PlatformCalculator } from "../src/components/content/PlatformCalculator";
-import {
-  amountFromWeight,
-  parseCalculatorInput,
-  weightFromAmount,
-} from "../src/lib/calculator";
+import { amountFromWeight, parseCalculatorInput, weightFromAmount } from "../src/lib/calculator";
 import type { ListedPlatform } from "../src/lib/prices";
 import type { Row } from "../src/lib/rows";
 import { SlugPageView } from "../src/components/content/SlugPageView";
@@ -211,8 +207,18 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
     const now = freshIso();
     return {
       listed: [
-        { slug: "talasea", name_fa: "طلاسی", data_policy: "ALLOWED", website_url: "https://talasea.ir" },
-        { slug: "digikala", name_fa: "دیجی‌کالا", data_policy: "ALLOWED", website_url: "https://www.digikala.com" },
+        {
+          slug: "talasea",
+          name_fa: "طلاسی",
+          data_policy: "ALLOWED",
+          website_url: "https://talasea.ir",
+        },
+        {
+          slug: "digikala",
+          name_fa: "دیجی‌کالا",
+          data_policy: "ALLOWED",
+          website_url: "https://www.digikala.com",
+        },
       ],
       snapshots: {
         talasea: makeSnapshot({

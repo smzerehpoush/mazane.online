@@ -35,10 +35,7 @@ import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
-import {
-  DarbarePishnahad,
-  darbarePishnahadHead,
-} from "../src/routes/darbare-pishnahad";
+import { DarbarePishnahad, darbarePishnahadHead } from "../src/routes/darbare-pishnahad";
 import { MazaneChist, mazaneChistHead } from "../src/routes/mazane-chist";
 import {
   freshIso,
@@ -206,10 +203,7 @@ describe("Organization + WebSite (بند ۶.۵ + بند ۱۱)", () => {
     const head = homeHead();
     const graphBlock = jsonLdBlocks(head).find((block) => "@graph" in block);
     expect(graphBlock).toBeDefined();
-    const graph = (graphBlock as Record<string, unknown>)["@graph"] as Record<
-      string,
-      unknown
-    >[];
+    const graph = (graphBlock as Record<string, unknown>)["@graph"] as Record<string, unknown>[];
 
     expect(graph.find((node) => node["@type"] === "Organization")).toMatchObject({
       name: "مظنه آنلاین",
@@ -332,10 +326,7 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
       url: `${SITE_URL}/tala-18`,
     });
 
-    const offers = (product as Record<string, unknown>)["offers"] as Record<
-      string,
-      unknown
-    >;
+    const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
     expect(offers["@type"]).toBe("AggregateOffer");
     expect(offers["priceCurrency"]).toBe("IRR");
     // عدد JSON (نه رشته) — و دقیقاً ×۱۰ تومانِ گردآورنده.
@@ -349,10 +340,7 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
   it("offerCount = فقط سکوهای با مؤثر خرید معلوم (کارمزد نامشخص نمی‌شمرد)", async () => {
     seed(assetStore());
     const product = findByType(jsonLdBlocks(slugHead(await pageOf("tala-18"))), "Product");
-    const offers = (product as Record<string, unknown>)["offers"] as Record<
-      string,
-      unknown
-    >;
+    const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
     // چهار سکوی پشتیبان، ولی دیجی‌کالا (UNKNOWN) مؤثر ندارد ⟸ ۳.
     expect(offers["offerCount"]).toBe(3);
   });
@@ -362,12 +350,8 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const raw = rawJsonLd(slugHead(await pageOf("tala-18")));
     const offers = raw.match(/"offers":\{[^}]*\}/);
     expect(offers).not.toBeNull();
-    expect((offers as RegExpMatchArray)[0]).toContain(
-      `"lowPrice":${KNOWN_BUY_MIN_TOMAN * 10}`,
-    );
-    expect((offers as RegExpMatchArray)[0]).toContain(
-      `"highPrice":${KNOWN_BUY_MAX_TOMAN * 10}`,
-    );
+    expect((offers as RegExpMatchArray)[0]).toContain(`"lowPrice":${KNOWN_BUY_MIN_TOMAN * 10}`);
+    expect((offers as RegExpMatchArray)[0]).toContain(`"highPrice":${KNOWN_BUY_MAX_TOMAN * 10}`);
     expect((offers as RegExpMatchArray)[0]).not.toMatch(/[۰-۹]/);
   });
 
@@ -392,10 +376,7 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const html = renderToStaticMarkup(<HomePage data={await home()} />);
     seed(assetStore());
     const product = findByType(jsonLdBlocks(slugHead(await pageOf("tala-18"))), "Product");
-    const offers = (product as Record<string, unknown>)["offers"] as Record<
-      string,
-      unknown
-    >;
+    const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
     // یک عدد، سه جا: کارت صفحه‌ی اصلی، جدول صفحه‌ی دارایی، و JSON-LD دارایی.
     expect(html).toContain('data-best="buy" data-platform-best="daric"');
     expect(html).toContain(formatToman(KNOWN_BUY_MIN_TOMAN));
@@ -425,9 +406,9 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     seed(store);
     const data = await pageOf("tala-18");
 
-    const offers = (
-      findByType(jsonLdBlocks(slugHead(data)), "Product") as Record<string, unknown>
-    )["offers"] as Record<string, unknown>;
+    const offers = (findByType(jsonLdBlocks(slugHead(data)), "Product") as Record<string, unknown>)[
+      "offers"
+    ] as Record<string, unknown>;
     // کمینه‌ی سکوهای **باز**: وال‌گلد ۱۸٬۷۰۴٬۰۵۵ — نه عدد داریکِ بسته.
     expect(offers["lowPrice"]).toBe(18704055 * 10);
     expect(offers["highPrice"]).toBe(KNOWN_BUY_MAX_TOMAN * 10);

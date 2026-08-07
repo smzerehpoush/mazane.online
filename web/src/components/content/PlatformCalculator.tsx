@@ -33,11 +33,7 @@
 import { useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import {
-  amountFromWeight,
-  parseCalculatorInput,
-  weightFromAmount,
-} from "@/lib/calculator";
+import { amountFromWeight, parseCalculatorInput, weightFromAmount } from "@/lib/calculator";
 import { fa } from "@/lib/site-content";
 import {
   effectiveBuyFor,
@@ -170,13 +166,7 @@ function TwoWaySide({ unitPriceToman }: { unitPriceToman: number }) {
   );
 }
 
-function KnownFeeCalculator({
-  row,
-  hasOutbound,
-}: {
-  row: Row;
-  hasOutbound: boolean;
-}) {
+function KnownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boolean }) {
   const buyPrice = isBuyOpen(row) ? effectiveBuyFor(row, ASSET_INSTRUMENT) : null;
   const sellPrice = isSellOpen(row) ? effectiveSellFor(row, ASSET_INSTRUMENT) : null;
   const available: TradeSide[] = [
@@ -232,29 +222,31 @@ function KnownFeeCalculator({
       <TwoWaySide key={activeSide} unitPriceToman={unitPrice} />
 
       <p className="mt-4 text-[12px] leading-6 text-muted-foreground">
-        بر پایه‌ی قیمت مؤثر {SIDE_LABEL[activeSide]} همین سکو — کارمزد از قبل در این عدد لحاظ شده است.
+        بر پایه‌ی قیمت مؤثر {SIDE_LABEL[activeSide]} همین سکو — کارمزد از قبل در این عدد لحاظ شده
+        است.
       </p>
 
-      <TradeButton slug={row.platform.slug} nameFa={row.platform.name_fa} hasOutbound={hasOutbound} />
+      <TradeButton
+        slug={row.platform.slug}
+        nameFa={row.platform.name_fa}
+        hasOutbound={hasOutbound}
+      />
     </section>
   );
 }
 
-function UnknownFeeCalculator({
-  row,
-  hasOutbound,
-}: {
-  row: Row;
-  hasOutbound: boolean;
-}) {
+function UnknownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boolean }) {
+  // هوک‌ها همیشه، بدون قید و شرط، پیش از هر return زودهنگام — قانون Hooks:
+  // اگر midPrice بین دو رندر همین نمونه از عدد به null (یا برعکس) عوض شود،
+  // ترتیب فراخوانی هوک نباید تغییر کند، وگرنه React کرش می‌کند.
+  const [weightRaw, setWeightRaw] = useState("");
+  const [amountRaw, setAmountRaw] = useState("");
+
   const midPriceValue = midPrice(row);
   if (midPriceValue === null) return null;
   // اسم تازه با نوع number خالص (نه number|null) — تا closure زیر هم بدون
   // نیاز به تنگ‌کردن دوباره‌ی جریان کنترل همین نوع را ببیند.
   const price: number = midPriceValue;
-
-  const [weightRaw, setWeightRaw] = useState("");
-  const [amountRaw, setAmountRaw] = useState("");
 
   function onWeightChange(next: string): void {
     setWeightRaw(next);
@@ -290,18 +282,16 @@ function UnknownFeeCalculator({
         </span>
       </p>
 
-      <TradeButton slug={row.platform.slug} nameFa={row.platform.name_fa} hasOutbound={hasOutbound} />
+      <TradeButton
+        slug={row.platform.slug}
+        nameFa={row.platform.name_fa}
+        hasOutbound={hasOutbound}
+      />
     </section>
   );
 }
 
-export function PlatformCalculator({
-  row,
-  hasOutbound,
-}: {
-  row: Row;
-  hasOutbound: boolean;
-}) {
+export function PlatformCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boolean }) {
   if (row.snapshot === null) return null;
   return hasUnknownFee(row) ? (
     <UnknownFeeCalculator row={row} hasOutbound={hasOutbound} />

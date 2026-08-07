@@ -146,12 +146,8 @@ describe("قلاب‌های data-live در HTML سروررندر", () => {
   });
 
   it("ردیف «کارمزد نامشخص» هم قلاب price دارد (تک‌عددش زنده می‌شود)", async () => {
-    const html = renderToStaticMarkup(
-      <HomePage data={await homeData(storeWithUnknownFee())} />,
-    );
-    expect(rowOf(html, "digikala")).toMatch(
-      /<span[^>]*data-live="price"[^>]*>۱۸٬۵۲۰٬۰۰۰<\/span>/,
-    );
+    const html = renderToStaticMarkup(<HomePage data={await homeData(storeWithUnknownFee())} />);
+    expect(rowOf(html, "digikala")).toMatch(/<span[^>]*data-live="price"[^>]*>۱۸٬۵۲۰٬۰۰۰<\/span>/);
   });
 
   it("فقط ستون خرید قلاب زنده دارد — ستون فروش و کارت‌ها عمداً بی‌قلاب‌اند", async () => {

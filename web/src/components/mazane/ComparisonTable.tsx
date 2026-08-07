@@ -43,9 +43,7 @@ import { fa } from "@/lib/site-content";
  */
 function Staleness({ updatedAt, nowMs }: { updatedAt: string | null; nowMs: number }) {
   if (updatedAt === null) {
-    return (
-      <span className="text-[10px] text-muted-foreground">هنوز داده‌ای ثبت نشده است</span>
-    );
+    return <span className="text-[10px] text-muted-foreground">هنوز داده‌ای ثبت نشده است</span>;
   }
   const minutes = minutesSince(updatedAt, nowMs);
   return (
@@ -61,22 +59,12 @@ function Staleness({ updatedAt, nowMs }: { updatedAt: string | null; nowMs: numb
   );
 }
 
-export function ComparisonTable({
-  rows,
-  nowMs,
-}: {
-  rows: TableRowView[];
-  nowMs: number;
-}) {
+export function ComparisonTable({ rows, nowMs }: { rows: TableRowView[]; nowMs: number }) {
   return (
     <section className="glass-surface overflow-hidden">
       <div className="border-b border-border/70 px-4 py-4 sm:px-6">
-        <h2 className="text-base font-semibold sm:text-lg">
-          مقایسه‌ی سکوهای خرید و فروش طلا
-        </h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          مرتب‌شده از ارزان‌ترین قیمت خرید
-        </p>
+        <h2 className="text-base font-semibold sm:text-lg">مقایسه‌ی سکوهای خرید و فروش طلا</h2>
+        <p className="mt-1 text-xs text-muted-foreground">مرتب‌شده از ارزان‌ترین قیمت خرید</p>
       </div>
 
       {rows.length === 0 ? (

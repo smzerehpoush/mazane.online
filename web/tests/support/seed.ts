@@ -174,9 +174,7 @@ export function seedHistory(entries: PlatformHistory[]): void {
  * بازه‌ی روزانه/هفتگی/ماهانه (تشخیص از `query.stepHours`) چه چیزی بگیرد —
  * لازم برای سنجیدن فعال/غیرفعال‌بودن هر زبانه جدا از بقیه.
  */
-export function seedHistoryByQuery(
-  resolve: (query: HistoryQuery) => PlatformHistory[],
-): void {
+export function seedHistoryByQuery(resolve: (query: HistoryQuery) => PlatformHistory[]): void {
   setHistorySource({ getPlatformHistory: async (query) => resolve(query) });
 }
 

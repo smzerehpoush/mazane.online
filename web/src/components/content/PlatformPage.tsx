@@ -29,12 +29,7 @@ import {
   MarketModelBadge,
   Staleness,
 } from "@/components/content/RowParts";
-import {
-  formatDateTimeFa,
-  formatDateFa,
-  formatPercentPointsFa,
-  formatToman,
-} from "@/lib/format";
+import { formatDateTimeFa, formatDateFa, formatPercentPointsFa, formatToman } from "@/lib/format";
 import type { PlatformHistoryByRange } from "@/lib/history";
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import type { ReferencePrice } from "@/lib/reference-price";
@@ -104,10 +99,7 @@ function UnionRateBar({ referencePrice }: { referencePrice: ReferencePrice | nul
       <span className="text-muted-foreground">نرخ اتحادیه (۱۸ عیار)</span>
       <span className="flex items-center gap-2 font-semibold tabular-nums">
         {formatToman(referencePrice.value)} تومان
-        <time
-          dateTime={referencePrice.read_at}
-          className="font-normal text-muted-foreground"
-        >
+        <time dateTime={referencePrice.read_at} className="font-normal text-muted-foreground">
           {formatDateTimeFa(referencePrice.read_at)}
         </time>
       </span>
@@ -162,9 +154,7 @@ function TermsSection({
 
       <dl className="mt-3">
         <Field label="کارمزد خرید">
-          {terms.buy_fee_percent === null
-            ? UNKNOWN
-            : formatPercentPointsFa(terms.buy_fee_percent)}
+          {terms.buy_fee_percent === null ? UNKNOWN : formatPercentPointsFa(terms.buy_fee_percent)}
         </Field>
         <Field label="کارمزد فروش">
           {terms.sell_fee_percent === null
@@ -219,9 +209,7 @@ export function PlatformPage({
         <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold sm:text-2xl">
           {platform.name_fa}
           {platform.name_en ? (
-            <span className="text-sm font-normal text-muted-foreground">
-              ({platform.name_en})
-            </span>
+            <span className="text-sm font-normal text-muted-foreground">({platform.name_en})</span>
           ) : null}
           <MarketModelBadge platform={platform} />
           {snapshot === null ? null : <ClosedBadges terms={snapshot.terms} />}
@@ -269,10 +257,7 @@ export function PlatformPage({
           اینجا لازم نیست. */}
       <PlatformCalculator row={row} hasOutbound={hasOutbound} />
 
-      <section
-        aria-labelledby="identity-heading"
-        className="glass-surface mt-6 px-5 py-5 sm:px-6"
-      >
+      <section aria-labelledby="identity-heading" className="glass-surface mt-6 px-5 py-5 sm:px-6">
         <h2 id="identity-heading" className="text-base font-semibold sm:text-lg">
           هویت و تحویل فیزیکی
         </h2>
