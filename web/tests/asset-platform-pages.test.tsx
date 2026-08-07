@@ -19,7 +19,7 @@ import { NotFoundPanel } from "../src/components/content/NotFoundPanel";
 import { SlugPageView, slugHead } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
 import type { PlatformHistory } from "../src/lib/history";
-import { formatDateFa } from "../src/lib/format";
+import { formatDateFa, formatDateTimeFa } from "../src/lib/format";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
@@ -32,6 +32,7 @@ import {
   seed,
   seedHistory,
   seedHistoryByQuery,
+  seedReferencePrice,
   slugPageData,
   staleIso,
   type SeededStore,
@@ -463,6 +464,53 @@ describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد �
     seed(assetStore());
     const html = await renderSlug("talasea");
     expect(html).toContain('data-legal-notice="madde-5"');
+  });
+});
+
+describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳)", () => {
+  it("با مرجع قیمت seed‌شده، نوار با برچسب، عدد ۱۸ عیار و زمان خوانده‌شدنش می‌آید", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    seedReferencePrice({
+      reference_slug: "talair",
+      instrument: "GOLD_18K_TOMAN",
+      value: 18559700,
+      read_at: "2026-08-07T10:00:00.000Z",
+    });
+    const html = await renderSlug("talasea");
+
+    expect(html).toContain("data-union-rate");
+    expect(html).toContain("نرخ اتحادیه");
+    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰"); // عدد آماده‌ی مرجع، بدون هیچ محاسبه‌ای
+    expect(html).toContain(formatDateTimeFa("2026-08-07T10:00:00.000Z"));
+  });
+
+  it("قطع منبع مرجع (بی‌سابقه) ⟸ نوار اصلاً رندر نمی‌شود، صفحه ۲۰۰ می‌ماند", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    seedReferencePrice(null);
+    const html = await renderSlug("talasea");
+
+    expect(html).not.toContain("data-union-rate");
+    expect(html).not.toContain("نرخ اتحادیه");
+    expect(html).toContain("طلاسی"); // صفحه همچنان کامل رندر می‌شود
+  });
+
+  it("عدد نوار به قیمت مرجع خودِ سکو نمی‌خورد — دو رشته‌ی جدا در HTML", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    // مقداری عمداً متفاوت از قیمت مرجع طلاسی (۱۸٬۵۳۰٬۰۰۰) تا اثبات شود این
+    // عدد مستقل است و به‌جای قیمت هیچ سکویی نمی‌نشیند (قاعده‌ی ۴ قراردادها).
+    seedReferencePrice({
+      reference_slug: "talair",
+      instrument: "GOLD_18K_TOMAN",
+      value: 18559700,
+      read_at: "2026-08-07T10:00:00.000Z",
+    });
+    const html = await renderSlug("talasea");
+
+    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰"); // نرخ اتحادیه
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودِ طلاسی، همچنان جدا
   });
 });
 

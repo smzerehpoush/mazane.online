@@ -29,6 +29,7 @@ import {
   resetPriceSource,
   setPriceSource,
 } from "../src/lib/prices";
+import { getReferencePrice } from "../src/lib/reference-price";
 import { REGISTRY_INSTRUMENTS, REGISTRY_PLATFORMS } from "../src/lib/registry";
 import { fetchRowsForPlatforms } from "../src/lib/rows";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
@@ -60,9 +61,11 @@ async function slugPage(slug: string) {
     getPlatformSnapshot,
     getUpdatedAt,
     getInstruments: listInstruments,
-    // این فایل هیچ setHistorySource ای صدا نمی‌زند — دقیقاً همان قطعی که
-    // می‌سنجد: خواننده‌ی دامنه بی‌منبع، خودش کهنگی برمی‌گرداند، نه خطا.
+    // این فایل هیچ setHistorySource/setReferencePriceSource ای صدا نمی‌زند —
+    // دقیقاً همان قطعی که می‌سنجد: خواننده‌ی دامنه بی‌منبع، خودش کهنگی
+    // برمی‌گرداند (فهرست/نوار خالی)، نه خطا.
     getPlatformHistory,
+    getReferencePrice,
   });
 }
 

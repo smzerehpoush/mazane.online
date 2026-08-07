@@ -22,6 +22,11 @@ import {
 import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
 import { listInstruments } from "../../src/lib/catalog";
 import {
+  getReferencePrice,
+  setReferencePriceSource,
+  type ReferencePrice,
+} from "../../src/lib/reference-price";
+import {
   getPlatformSnapshot,
   getUpdatedAt,
   setPriceSource,
@@ -175,6 +180,14 @@ export function seedHistoryByQuery(
   setHistorySource({ getPlatformHistory: async (query) => resolve(query) });
 }
 
+/**
+ * فیک نوار «نرخ اتحادیه» (تیکت ۳۳) — `null` یعنی منبع قطع/بی‌سابقه، درست
+ * مثل قطع پستگرس واقعی: نوار اصلاً رندر نمی‌شود، صفحه ۲۰۰ می‌ماند.
+ */
+export function seedReferencePrice(value: ReferencePrice | null): void {
+  setReferencePriceSource({ getReferencePrice: async () => value });
+}
+
 /** منبع قیمت خالی — برای تست‌هایی که فقط بلاگ را می‌سنجند. */
 export function seedEmptyPrices(): void {
   seed({ listed: [], snapshots: {}, updatedAt: {}, instruments: [] });
@@ -247,6 +260,8 @@ export async function slugPageData(slug: string): Promise<SlugPageData | null> {
     getInstruments: listInstruments,
     // بلیت ۲۷: تاریخچه‌ی سکو با seedHistory تزریق می‌شود، عین صفحه‌ی اصلی.
     getPlatformHistory,
+    // تیکت ۳۳: نوار «نرخ اتحادیه» با seedReferencePrice تزریق می‌شود.
+    getReferencePrice,
   });
 }
 

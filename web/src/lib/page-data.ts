@@ -19,12 +19,15 @@ import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
 import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
+import type { ReferencePrice, ReferencePriceQuery } from "./reference-price";
 import type { Row } from "./rows";
 import {
   CHART_PLATFORM_SLUGS,
   HOME_CHART_HOURS,
   HOME_INSTRUMENT,
   RATE_CARD_RANGES,
+  UNION_RATE_INSTRUMENT,
+  UNION_RATE_REFERENCE_SLUG,
 } from "./site-content";
 import type { SlugResolution } from "./slugs";
 import type { ViewCounts } from "./views";
@@ -86,6 +89,8 @@ export interface SlugReaders {
   getInstruments(): Promise<InstrumentListing[]>;
   /** تاریخچه‌ی قیمت مرجع — کارت نرخ صفحه‌ی سکو (بلیت ۲۷). فقط شاخه‌ی platform می‌خواندش. */
   getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;
+  /** نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳). فقط شاخه‌ی platform می‌خواندش. */
+  getReferencePrice(query: ReferencePriceQuery): Promise<ReferencePrice | null>;
 }
 
 /**
@@ -114,7 +119,7 @@ export async function assembleSlugPage(
   }
 
   const { platform } = resolved;
-  const [snapshot, updatedAt, instruments, historyByRange] = await Promise.all([
+  const [snapshot, updatedAt, instruments, historyByRange, referencePrice] = await Promise.all([
     read.getPlatformSnapshot(platform.slug),
     read.getUpdatedAt(platform.slug),
     read.getInstruments(),
@@ -131,6 +136,12 @@ export async function assembleSlugPage(
         }),
       ),
     ),
+    // نوار «نرخ اتحادیه» (تیکت ۳۳) — مرجع قیمت مستقل، نه قیمت این سکو؛
+    // قطع منبع ⟸ null، نوار رندر نمی‌شود (قاعده‌ی ۵).
+    read.getReferencePrice({
+      referenceSlug: UNION_RATE_REFERENCE_SLUG,
+      instrument: UNION_RATE_INSTRUMENT,
+    }),
   ]);
   const history: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
   RATE_CARD_RANGES.forEach((range, index) => {
@@ -148,6 +159,7 @@ export async function assembleSlugPage(
       instruments.map((item) => [item.instrument, item.name_fa]),
     ),
     history,
+    referencePrice,
     generated_at: generatedAt,
   };
 }

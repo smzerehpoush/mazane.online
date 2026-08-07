@@ -24,9 +24,15 @@ import {
   MarketModelBadge,
   Staleness,
 } from "@/components/content/RowParts";
-import { formatDateFa, formatPercentPointsFa, formatToman } from "@/lib/format";
+import {
+  formatDateTimeFa,
+  formatDateFa,
+  formatPercentPointsFa,
+  formatToman,
+} from "@/lib/format";
 import type { PlatformHistoryByRange } from "@/lib/history";
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
+import type { ReferencePrice } from "@/lib/reference-price";
 import { findQuote, hasUnknownFee, type Row } from "@/lib/rows";
 
 const NOT_RECORDED = "ثبت نشده است";
@@ -69,6 +75,38 @@ function PriceCard({
         {toman === null ? "—" : `${formatToman(toman)} تومان`}
       </p>
     </div>
+  );
+}
+
+/**
+ * نوار «نرخ اتحادیه» (تیکت ۳۳) — عدد ۱۸ عیارِ مرجع قیمت، مستقل از این سکو.
+ *
+ * برچسب «اتحادیه» روی عددی که واقعاً از تلا خوانده می‌شود، تصمیم ثبت‌شده‌ی
+ * مالک است — سند `docs/adr/0001-etehadieh-label-on-talair-number.md`. این
+ * عدد در هیچ محاسبه‌ای شرکت نمی‌کند و هرگز به‌عنوان قیمت این یا هیچ سکوی
+ * دیگری نمایش داده نمی‌شود (قاعده‌ی ۴ قراردادها: بدون میانگین بین‌سکویی).
+ *
+ * قطع منبع مرجع ⟸ `referencePrice` تهی است و نوار اصلاً رندر نمی‌شود؛ صفحه
+ * همچنان ۲۰۰ می‌ماند (قاعده‌ی ۵).
+ */
+function UnionRateBar({ referencePrice }: { referencePrice: ReferencePrice | null }) {
+  if (referencePrice === null) return null;
+  return (
+    <p
+      data-union-rate
+      className="glass-surface mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 text-[12px]"
+    >
+      <span className="text-muted-foreground">نرخ اتحادیه (۱۸ عیار)</span>
+      <span className="flex items-center gap-2 font-semibold tabular-nums">
+        {formatToman(referencePrice.value)} تومان
+        <time
+          dateTime={referencePrice.read_at}
+          className="font-normal text-muted-foreground"
+        >
+          {formatDateTimeFa(referencePrice.read_at)}
+        </time>
+      </span>
+    </p>
   );
 }
 
@@ -153,6 +191,7 @@ export function PlatformPage({
   hasOutbound,
   instrumentNames,
   history,
+  referencePrice,
   nowMs,
 }: {
   platform: ListedPlatform;
@@ -162,6 +201,8 @@ export function PlatformPage({
   instrumentNames: Record<string, string>;
   /** تاریخچه‌ی همین سکو، هر سه بازه — کارت نرخ بالای صفحه (بلیت ۲۷ + ۳۰). */
   history: PlatformHistoryByRange;
+  /** نوار «نرخ اتحادیه» (تیکت ۳۳) — مرجع قیمت مستقل، نه قیمت این سکو. */
+  referencePrice: ReferencePrice | null;
   nowMs: number;
 }) {
   // ردیف دامنه‌ی همین سکو — تنها مصرفش انتخاب «قیمت مرجع سکو» است.
@@ -200,6 +241,8 @@ export function PlatformPage({
           </p>
         )}
       </header>
+
+      <UnionRateBar referencePrice={referencePrice} />
 
       {/* بلیت ۲۷: عدد درشت خودش وقتی قیمت مرجع نداریم (کارت null برمی‌گرداند)
           چیزی نمی‌گذارد؛ پیام «قیمت در دسترس نیست» زیرش همچنان می‌آید. */}

@@ -83,6 +83,16 @@ export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
 ];
 
 /**
+ * منبع نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳) — فقط طلای ۱۸ عیار؛ بند ۲۴
+ * عیار گردآوری نمی‌شود. اسلاگ منبع همان چیزی است که گردآورنده در
+ * `hourly_rollups`/`reference_quotes` ذخیره می‌کند (`references/talair.py`).
+ * برچسب نمایشی «اتحادیه» روی این عدد تصمیم ثبت‌شده‌ی مالک است — سند
+ * `docs/adr/0001-etehadieh-label-on-talair-number.md`.
+ */
+export const UNION_RATE_REFERENCE_SLUG = "talair";
+export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
+
+/**
  * ارقام فارسی نمایش (قراردادها، بخش استک). ارقام داخل JSON-LD و URL لاتین
  * می‌مانند و از این توابع رد نمی‌شوند.
  */

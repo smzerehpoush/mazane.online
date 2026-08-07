@@ -21,6 +21,7 @@ import type {
   ListedPlatform,
   PlatformSnapshot,
 } from "@/lib/prices";
+import type { ReferencePrice } from "@/lib/reference-price";
 import type { Row } from "@/lib/rows";
 import { SITE_URL } from "@/lib/site";
 import {
@@ -60,6 +61,12 @@ export interface PlatformPageData {
    * نمودار رندر می‌شود، نه throw (قاعده‌ی ۵).
    */
   history: PlatformHistoryByRange;
+  /**
+   * نوار «نرخ اتحادیه» (تیکت ۳۳) — مرجع قیمت مستقل (نه سکو، نه محاسبه‌شده).
+   * `null` یعنی منبع مرجع قطع بود یا سابقه‌ای نبود؛ نوار اصلاً رندر نمی‌شود
+   * (قاعده‌ی ۵) — صفحه همچنان ۲۰۰ می‌ماند.
+   */
+  referencePrice: ReferencePrice | null;
   generated_at: string;
 }
 
@@ -171,6 +178,7 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
         hasOutbound={data.hasOutbound}
         instrumentNames={data.instrumentNames}
         history={data.history}
+        referencePrice={data.referencePrice}
         nowMs={nowMs}
       />
     </>
