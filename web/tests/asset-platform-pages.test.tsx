@@ -568,7 +568,8 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     expect(html).not.toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // بیشینه‌ی سری
     expect(html).toContain("۱۸٬۳۰۰٬۰۰۰"); // کمینه‌ی سری
-    expect(html).toContain("۱۳۰٬۰۰۰"); // تغییرات: نقطه‌ی آخر منهای نقطه‌ی اول
+    // تغییرات: (۱۸۵۳۰۰۰۰−۱۸۴۰۰۰۰۰)/۱۸۴۰۰۰۰۰ = +۰٫۷۱٪ (سند مادر: «با درصد و فلش»)
+    expect(html).toContain("+۰٫۷۱٪");
     expect(html).toContain("text-positive"); // صعود — سبز
   });
 
@@ -589,7 +590,8 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     ]);
     const html = await renderSlug("wallgold");
     expect(html).toContain("text-negative");
-    expect(html).toContain("۸۹٬۰۰۰"); // |۱۸۶۱۱۰۰۰ - ۱۸۷۰۰۰۰۰|
+    // تغییرات: (۱۸۶۱۱۰۰۰−۱۸۷۰۰۰۰۰)/۱۸۷۰۰۰۰۰ = −۰٫۴۸٪ (U+2212 MINUS SIGN، نه هایفن)
+    expect(html).toContain("−۰٫۴۸٪");
     expect(html).toContain("۱۸٬۸۲۰٬۰۰۰"); // بیشینه‌ی سری
     expect(html).toContain("۱۸٬۵۹۰٬۰۰۰"); // کمینه‌ی سری
   });

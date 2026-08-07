@@ -5,11 +5,6 @@
 
 const tomanFormatter = new Intl.NumberFormat("fa-IR");
 
-/** با علامت +/− صریح — کارت نرخ سکو (بلیت ۲۷)، ستون «تغییرات». */
-const signedTomanFormatter = new Intl.NumberFormat("fa-IR", {
-  signDisplay: "exceptZero",
-});
-
 const dateTimeFormatter = new Intl.DateTimeFormat("fa-IR", {
   dateStyle: "medium",
   timeStyle: "short",
@@ -28,14 +23,6 @@ export function formatToman(priceToman: number): string {
   return tomanFormatter.format(priceToman);
 }
 
-/**
- * تفاضل دو نقطه‌ی آماده (مثلاً سر و ته یک سری تاریخچه) با علامت صریح —
- * «۱۲٬۳۴۵+» یا «۱۲٬۳۴۵−». هیچ محاسبه‌ی قیمتی نیست، فقط قالب‌بندی همان عدد.
- */
-export function formatSignedToman(diffToman: number): string {
-  return signedTomanFormatter.format(diffToman);
-}
-
 const fractionPercentFormatter = new Intl.NumberFormat("fa-IR", {
   style: "percent",
   maximumFractionDigits: 2,
@@ -44,6 +31,21 @@ const fractionPercentFormatter = new Intl.NumberFormat("fa-IR", {
 /** کسر (مثلاً ۰٫۰۰۳۹) ⟸ «۰٫۳۹٪». خودِ کسر ورودی است — اینجا فقط قالب است. */
 export function formatPercentFa(fraction: number): string {
   return fractionPercentFormatter.format(fraction);
+}
+
+/** با علامت +/− صریح — کارت نرخ سکو، ستون «تغییرات» (بلیت ۲۷: «با درصد و فلش»). */
+const signedFractionPercentFormatter = new Intl.NumberFormat("fa-IR", {
+  style: "percent",
+  maximumFractionDigits: 2,
+  signDisplay: "exceptZero",
+});
+
+/**
+ * کسرِ تغییر (مثلاً ۰٫۰۰۳۹ یا −۰٫۰۰۱۲) ⟸ «۰٫۳۹٪+» یا «۰٫۱۲٪−». همان کسر
+ * تفاضل سر و ته یک سری آماده است — فقط قالب‌بندی، هیچ فرمول قیمتی نیست.
+ */
+export function formatSignedPercentFa(fraction: number): string {
+  return signedFractionPercentFormatter.format(fraction);
 }
 
 const percentPointsFormatter = new Intl.NumberFormat("fa-IR", {

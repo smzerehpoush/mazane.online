@@ -79,7 +79,9 @@ export interface RateCardRangeConfig {
 export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
   { key: "DAILY", label: "روزانه", hours: 24 },
   { key: "WEEKLY", label: "هفتگی", hours: 24 * 7, stepHours: 2 },
-  { key: "MONTHLY", label: "ماهانه", hours: 24 * 30, stepHours: 8 },
+  // ۳۱ روز (نه ۳۰) عمداً: با گام ۸ ساعته دقیقاً ۹۳ سطل می‌دهد
+  // (۷۴۴/۸=۹۳) — همان عدد سند مادر، نه تقریب ماه ۳۰روزه.
+  { key: "MONTHLY", label: "ماهانه", hours: 24 * 31, stepHours: 8 },
 ];
 
 /**

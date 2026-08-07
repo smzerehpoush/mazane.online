@@ -100,9 +100,12 @@ export function ComparisonTable({ rows, nowMs }: { rows: TableRowView[]; nowMs: 
                 >
                   <td className="px-4 py-3 sm:px-6">
                     <div className="flex flex-wrap items-center gap-2">
+                      {/* هدف لمسی: py-2.5 با my منفی هم‌ارز، ارتفاع لمسی را
+                          بی‌آنکه چیدمان سطر جابه‌جا شود بزرگ می‌کند
+                          (توصیه‌ی دسترس‌پذیری برای اندازه‌ی هدف لمسی). */}
                       <a
                         href={`/${row.slug}`}
-                        className="transition-smooth inline-flex items-center gap-0.5 text-xs font-medium hover:text-primary sm:text-sm"
+                        className="transition-smooth -my-2.5 inline-flex items-center gap-0.5 py-2.5 text-xs font-medium hover:text-primary sm:text-sm"
                       >
                         {row.name}
                         <ChevronLeft

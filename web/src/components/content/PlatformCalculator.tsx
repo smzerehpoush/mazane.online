@@ -9,8 +9,10 @@
  *
  * **سکوی کارمزد نامعلوم** (`hasUnknownFee`): بدون زبانه، فقط یک ورودی وزن
  * که مبلغ را با قیمت اسمی (`midPrice`) حساب می‌کند و برچسبش صریح می‌گوید
- * کارمزد در این عدد نیست — دقیقاً همان جمله‌ی `FeeSourceLabel` («سکو
- * کارمزدش را اعلام نکرده است») برای یکدستی واژگان.
+ * کارمزد در این عدد نیست — با همان بند پایانی جمله‌ی `FeeSourceLabel`
+ * («سکو کارمزدش را اعلام نکرده است») برای یکدستی واژگان؛ آغاز جمله جدا
+ * می‌ماند چون این بافت ماشین‌حساب است («بدون احتساب کارمزد»)، نه بافت
+ * برچسب منبع کارمزد.
  *
  * تبدیل وزن⟸مبلغ خودش تابع خالص `lib/calculator.ts` است (ضرب/تقسیم ساده
  * روی یک قیمت واحدِ آماده — قاعده‌ی ۱ قراردادها؛ اینجا فقط قیمت درست را
@@ -30,7 +32,7 @@
  * ‎/go/<slug>‎ با ‎rel="sponsored nofollow noopener"‎ و ‎target="_blank"‎
  * (بند ۶.۴) — و فقط وقتی `hasOutbound` است، وگرنه دکمه‌ی مرده می‌ساخت.
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { amountFromWeight, parseCalculatorInput, weightFromAmount } from "@/lib/calculator";
@@ -122,6 +124,46 @@ function NumberField({
 }
 
 /**
+ * پوسته‌ی مشترک دو حالت (خرید/فروش دوسویه، فقط وزن) — یک `section` با تیتر
+ * ثابت و دکمه‌ی «شروع معامله» در انتها؛ فقط تفاوت بین دو حالت (زبانه‌های
+ * خرید/فروش کنار تیتر، و بدنه‌ی ورودی‌ها) از بیرون تزریق می‌شود.
+ */
+function CalculatorSection({
+  headerExtra,
+  row,
+  hasOutbound,
+  children,
+}: {
+  headerExtra?: ReactNode;
+  row: Row;
+  hasOutbound: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section
+      aria-labelledby="calculator-heading"
+      data-platform-calculator
+      className="glass-surface mt-6 px-5 py-5 sm:px-6"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="calculator-heading" className="text-base font-semibold sm:text-lg">
+          ماشین‌حساب معامله
+        </h2>
+        {headerExtra}
+      </div>
+
+      {children}
+
+      <TradeButton
+        slug={row.platform.slug}
+        nameFa={row.platform.name_fa}
+        hasOutbound={hasOutbound}
+      />
+    </section>
+  );
+}
+
+/**
  * دو ورودی دوسویه‌ی یک سمت (خرید یا فروش): وزن به گرم، مبلغ به تومان — روی
  * یک قیمت واحدِ ثابت (`unitPriceToman`). هرکدام تایپ شود آن‌یکی از تابع
  * خالص `lib/calculator.ts` دوباره حساب می‌شود؛ ورودی نامعتبر/خالی فیلد
@@ -183,16 +225,11 @@ function KnownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boole
   if (unitPrice === null) return null;
 
   return (
-    <section
-      aria-labelledby="calculator-heading"
-      data-platform-calculator
-      className="glass-surface mt-6 px-5 py-5 sm:px-6"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="calculator-heading" className="text-base font-semibold sm:text-lg">
-          ماشین‌حساب معامله
-        </h2>
-        {available.length < 2 ? null : (
+    <CalculatorSection
+      row={row}
+      hasOutbound={hasOutbound}
+      headerExtra={
+        available.length < 2 ? null : (
           <div
             role="tablist"
             aria-label="خرید یا فروش"
@@ -215,9 +252,9 @@ function KnownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boole
               </button>
             ))}
           </div>
-        )}
-      </div>
-
+        )
+      }
+    >
       {/* سوییچ زبانه ⟸ ورودی‌های زبانه‌ی قبلی ریست می‌شوند (بند بالای فایل). */}
       <TwoWaySide key={activeSide} unitPriceToman={unitPrice} />
 
@@ -225,13 +262,7 @@ function KnownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boole
         بر پایه‌ی قیمت مؤثر {SIDE_LABEL[activeSide]} همین سکو — کارمزد از قبل در این عدد لحاظ شده
         است.
       </p>
-
-      <TradeButton
-        slug={row.platform.slug}
-        nameFa={row.platform.name_fa}
-        hasOutbound={hasOutbound}
-      />
-    </section>
+    </CalculatorSection>
   );
 }
 
@@ -255,14 +286,7 @@ function UnknownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boo
   }
 
   return (
-    <section
-      aria-labelledby="calculator-heading"
-      data-platform-calculator
-      className="glass-surface mt-6 px-5 py-5 sm:px-6"
-    >
-      <h2 id="calculator-heading" className="text-base font-semibold sm:text-lg">
-        ماشین‌حساب معامله
-      </h2>
+    <CalculatorSection row={row} hasOutbound={hasOutbound}>
       <p className="mt-1 text-[12px] leading-6 text-muted-foreground">{UNKNOWN_FEE_NOTE}</p>
 
       <div className="mt-4 max-w-xs">
@@ -281,13 +305,7 @@ function UnknownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boo
           {amountRaw === "" ? "—" : `${amountRaw} تومان`}
         </span>
       </p>
-
-      <TradeButton
-        slug={row.platform.slug}
-        nameFa={row.platform.name_fa}
-        hasOutbound={hasOutbound}
-      />
-    </section>
+    </CalculatorSection>
   );
 }
 

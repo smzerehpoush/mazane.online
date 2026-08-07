@@ -205,41 +205,58 @@ export function PlatformPage({
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold sm:text-2xl">
-          {platform.name_fa}
-          {platform.name_en ? (
-            <span className="text-sm font-normal text-muted-foreground">({platform.name_en})</span>
-          ) : null}
-          <MarketModelBadge platform={platform} />
-          {snapshot === null ? null : <ClosedBadges terms={snapshot.terms} />}
-        </h1>
-        <p className="mt-2">
-          <Staleness updatedAt={updatedAt} nowMs={nowMs} />
-        </p>
-        {!hasOutbound ? null : (
-          <p className="mt-4">
-            {/* بلیت ۹ (تصمیم ۲۱): هر کلیک خروجی درآمدزا از ‎/go/<slug>‎ می‌گذرد —
-                کد معرف فقط سمت ریدایرکت است و هرگز در HTML نمی‌نشیند. rel کامل
-                الزام بند ۶.۴ است و تست CI دارد. */}
-            <a
-              href={`/go/${platform.slug}`}
-              rel="sponsored nofollow noopener"
-              target="_blank"
-              data-outbound="website"
-              className="transition-smooth inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              وب‌سایت {platform.name_fa}
-            </a>
+      {/* قهرمان (سند مادر #26، بند ۲): دو ستونه در دسکتاپ — راست متن،
+          چپ کارت نرخ؛ در موبایل روی هم، **اول کارت نمودار، بعد متن**.
+          ترتیب DOM همان ترتیب دیده‌شده‌ی دسکتاپ است (راست‌به‌چپ با
+          dir="rtl" یعنی اولین فرزند DOM ستون راست می‌شود)؛ کلاس‌های
+          order فقط زیر lg این ترتیب را برای موبایل برعکس می‌کنند. */}
+      <div className="grid gap-6 mb-6 lg:mb-0 lg:grid-cols-2 lg:items-start">
+        <header className="order-2 lg:order-none">
+          <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold sm:text-2xl">
+            {platform.name_fa}
+            {platform.name_en ? (
+              <span className="text-sm font-normal text-muted-foreground">
+                ({platform.name_en})
+              </span>
+            ) : null}
+            <MarketModelBadge platform={platform} />
+            {snapshot === null ? null : <ClosedBadges terms={snapshot.terms} />}
+          </h1>
+          <p className="mt-2">
+            <Staleness updatedAt={updatedAt} nowMs={nowMs} />
           </p>
-        )}
-      </header>
+          {!hasOutbound ? null : (
+            <p className="mt-4">
+              {/* بلیت ۹ (تصمیم ۲۱): هر کلیک خروجی درآمدزا از ‎/go/<slug>‎ می‌گذرد —
+                  کد معرف فقط سمت ریدایرکت است و هرگز در HTML نمی‌نشیند. rel کامل
+                  الزام بند ۶.۴ است و تست CI دارد. */}
+              <a
+                href={`/go/${platform.slug}`}
+                rel="sponsored nofollow noopener"
+                target="_blank"
+                data-outbound="website"
+                className="transition-smooth inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                {/* متن دکمه‌ی اصلی: عیناً تصمیم مالک (سند مادر #26، سؤال «متن
+                    دکمه‌ی اصلی چه باشد؟») — «ورود و شروع معامله»، بدون نام سکو؛
+                    نوار ماده ۵ زیرِ صفحه و نشانه‌ی خروج (target=_blank) صراحت
+                    می‌دهند که کاربر از سایت خارج می‌شود. دکمه‌ی جداگانه‌ی
+                    ماشین‌حساب (بلیت ۳۵) نام سکو را دارد چون به یک معامله‌ی
+                    مشخص‌شده ارجاع می‌دهد، نه این دکمه‌ی عمومی بالای صفحه. */}
+                ورود و شروع معامله
+              </a>
+            </p>
+          )}
+        </header>
+
+        {/* بلیت ۲۷: عدد درشت خودش وقتی قیمت مرجع نداریم (کارت null برمی‌گرداند)
+            چیزی نمی‌گذارد؛ پیام «قیمت در دسترس نیست» زیرش همچنان می‌آید. */}
+        <div className="order-1 lg:order-none">
+          <PlatformRateCard row={row} history={history} nowMs={nowMs} />
+        </div>
+      </div>
 
       <UnionRateBar referencePrice={referencePrice} />
-
-      {/* بلیت ۲۷: عدد درشت خودش وقتی قیمت مرجع نداریم (کارت null برمی‌گرداند)
-          چیزی نمی‌گذارد؛ پیام «قیمت در دسترس نیست» زیرش همچنان می‌آید. */}
-      <PlatformRateCard row={row} history={history} nowMs={nowMs} />
 
       {snapshot === null ? (
         // قطع منبع ⟸ کهنگی، نه خطا: صفحه ۲۰۰ می‌ماند (قاعده‌ی ۵ قراردادها).

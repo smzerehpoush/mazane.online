@@ -54,7 +54,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Staleness } from "@/components/content/RowParts";
 import {
   formatDateTimeFa,
-  formatSignedToman,
+  formatSignedPercentFa,
   formatToman,
   isStale,
   minutesSince,
@@ -80,17 +80,25 @@ const EMPTY_HISTORY_MESSAGE: Record<HistoryRange, string> = {
 };
 
 interface RateStats {
-  change: number;
+  /** کسر تغییر سر و ته سری (مثلاً ۰٫۰۰۷۱ یعنی +۰٫۷۱٪) — سند مادر: «تغییرات با درصد و فلش». */
+  changeFraction: number;
   high: number;
   low: number;
 }
 
-/** فقط انتخاب: کمینه/بیشینه‌ی همان سری + تفاضل سر و ته همان سری. */
+/**
+ * فقط انتخاب و یک تقسیم روی همان سری: کمینه/بیشینه‌ی خالص + کسر تفاضل سر و ته
+ * نسبت به نقطه‌ی اول (نه فرمول قیمتی تازه‌ای — تعریف «درصد تغییر» یک سری است،
+ * نه کارمزد یا قیمت مؤثر؛ همان دسته‌ی مجاز کمینه/بیشینه‌ی بند بالای فایل).
+ * نقطه‌ی اول صفر (عملاً هرگز برای قیمت طلا) ⟸ صفر، نه تقسیم بر صفر.
+ */
 function computeStats(points: HistoryPoint[]): RateStats | null {
   if (points.length === 0) return null;
   const values = points.map((p) => p.value);
+  const first = values[0] as number;
+  const last = values[values.length - 1] as number;
   return {
-    change: (values[values.length - 1] as number) - (values[0] as number),
+    changeFraction: first === 0 ? 0 : (last - first) / first,
     high: Math.max(...values),
     low: Math.min(...values),
   };
@@ -146,17 +154,21 @@ function Stat({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ChangeStat({ change }: { change: number }) {
+function ChangeStat({ changeFraction }: { changeFraction: number }) {
   const tone =
-    change > 0 ? "text-positive" : change < 0 ? "text-negative" : "text-muted-foreground";
+    changeFraction > 0
+      ? "text-positive"
+      : changeFraction < 0
+        ? "text-negative"
+        : "text-muted-foreground";
   return (
     <span className={`inline-flex items-center gap-1 ${tone}`}>
-      {change > 0 ? (
+      {changeFraction > 0 ? (
         <TrendingUp className="size-3.5" aria-hidden />
-      ) : change < 0 ? (
+      ) : changeFraction < 0 ? (
         <TrendingDown className="size-3.5" aria-hidden />
       ) : null}
-      {formatSignedToman(change)}
+      {formatSignedPercentFa(changeFraction)}
     </span>
   );
 }
@@ -315,7 +327,7 @@ export function PlatformRateCard({
   return (
     <section
       aria-labelledby="rate-card-heading"
-      className="glass-surface rise-in mb-6 px-5 py-5 sm:px-6"
+      className="glass-surface rise-in px-5 py-5 sm:px-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="rate-card-heading" className="text-base font-semibold sm:text-lg">
@@ -403,7 +415,7 @@ export function PlatformRateCard({
           className="rise-in mt-4 grid grid-cols-3 gap-2 border-t border-border/70 pt-3"
         >
           <Stat label="تغییرات">
-            <ChangeStat change={stats.change} />
+            <ChangeStat changeFraction={stats.changeFraction} />
           </Stat>
           <Stat label="بالاترین">{formatToman(stats.high)}</Stat>
           <Stat label="پایین‌ترین">{formatToman(stats.low)}</Stat>
