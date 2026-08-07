@@ -87,6 +87,16 @@ describe("صفحه‌ی اصلی — جدول چهارستونی مقایسه", 
     expect(cells[3]).toContain('href="/go/wallgold"');
   });
 
+  it("نام سکو پیوند داخلی به مسیر تخت خودش است، جدا از دکمه‌ی خروجی (بلیت ۲۸)", async () => {
+    const html = await renderHome(healthyStore());
+    const cells = cellsOf(rowOf(html, "wallgold"));
+    // سلول نام: پیوند داخلی به /wallgold، نه به /go/wallgold.
+    expect(cells[0]).toContain('href="/wallgold"');
+    expect(cells[0]).not.toContain('href="/go/wallgold"');
+    // دکمه‌ی خروجی همچنان دست‌نخورده در سلول چهارم است.
+    expect(cells[3]).toContain('href="/go/wallgold"');
+  });
+
   it("سرستون‌ها همان چهار عنوان تصمیم مالک‌اند و ستون پنجمی نیست", async () => {
     const html = await renderHome(healthyStore());
     const headers = [...html.matchAll(/<th\b[^>]*scope="col"[^>]*>([\s\S]*?)<\/th>/g)].map((m) =>

@@ -18,9 +18,16 @@
  * ⚠️ قاعده‌ی ۷ قراردادها (بند ۶.۴): دکمه‌ی خروجی درآمدزا فقط از ‎/go/<slug>‎
  * و فقط با ‎rel="sponsored nofollow noopener"‎ و ‎target="_blank"‎ — تست CI دارد.
  *
+ * ⚠️ بلیت ۲۸: نام سکو (سلول اول) پیوند داخلی به مسیر تخت خودِ سکو
+ * (‎/<slug>‎) است — کنشی جدا از دکمه‌ی خروجی، فقط از ‎row.slug‎ ساخته می‌شود،
+ * هرگز از فیلد معرف. نشانه‌ی کلیک‌شدنی (chevron) همیشه دیده می‌شود، نه فقط
+ * روی hover — موبایل هاور ندارد.
+ *
  * قلاب‌های ‎data-live‎ برای به‌روزرسان سی‌ثانیه‌ای‌اند (‎components/live-prices-updater‎):
  * فقط متن همین گره‌ها عوض می‌شود، نه ترتیب ردیف‌ها و نه داده‌ی ساخت‌یافته.
  */
+import { ChevronLeft } from "lucide-react";
+
 import type { TableRowView } from "./home-view";
 import { ClosedBadges } from "@/components/content/RowParts";
 import { formatMinutesAgoFa, isStale, minutesSince } from "@/lib/format";
@@ -105,7 +112,16 @@ export function ComparisonTable({
                 >
                   <td className="px-4 py-3 sm:px-6">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-medium sm:text-sm">{row.name}</span>
+                      <a
+                        href={`/${row.slug}`}
+                        className="transition-smooth inline-flex items-center gap-0.5 text-xs font-medium hover:text-primary sm:text-sm"
+                      >
+                        {row.name}
+                        <ChevronLeft
+                          aria-hidden="true"
+                          className="h-3.5 w-3.5 text-muted-foreground"
+                        />
+                      </a>
                       {row.isBestBuy && (
                         <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-accent-foreground">
                           ارزان‌ترین
