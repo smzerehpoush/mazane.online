@@ -1,7 +1,7 @@
 /**
- * صفحه‌ی سکو (بلیت ۷؛ بند ۱۳، تصمیم ۴): شرایط تجاری با منبع، تحویل فیزیکی،
- * هویت حقوقی، لینک وب‌سایت و قیمت‌های همین سکو برای هر دارایی‌ای که عرضه
- * می‌کند.
+ * صفحه‌ی سکو (بلیت ۷؛ بند ۱۳، تصمیم ۴ — بازچینش بلیت ۳۲): «قیمت امروز» (دو
+ * کارت مؤثر خرید/فروش + کارمزد، فقط برای سکوی کارمزدمعلوم)، تحویل فیزیکی،
+ * هویت حقوقی و لینک وب‌سایت.
  *
  * فراداده (website_url، legal_entity، delivery_note_fa، min_order_toman) همان
  * است که گردآورنده از سند تحقیق ۰۱ پر کرده؛ جای نامستند صادقانه «ثبت نشده
@@ -9,6 +9,10 @@
  * گردآورنده‌اند (قاعده‌ی ۱).
  *
  * قطع منبع ⟸ صفحه ۲۰۰ می‌ماند و فقط «قیمت در دسترس نیست» می‌گوید (قاعده‌ی ۵).
+ *
+ * بلیت ۲۶: صفحه فقط طلای ۱۸ عیار را نشان می‌دهد — جدول «قیمت‌های این سکو»ی
+ * قبلی (همه‌ی دارایی‌ها) حذف شده؛ آن عدد در کارت قهرمان (بلیت ۲۷) از قبل
+ * هست.
  */
 import type { ReactNode } from "react";
 
@@ -20,13 +24,20 @@ import {
   MarketModelBadge,
   Staleness,
 } from "@/components/content/RowParts";
-import { formatPercentPointsFa, formatToman } from "@/lib/format";
+import { formatDateFa, formatPercentPointsFa, formatToman } from "@/lib/format";
 import type { PlatformHistoryByRange } from "@/lib/history";
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
-import { findQuote, referencePriceFor, type Row } from "@/lib/rows";
+import { findQuote, hasUnknownFee, type Row } from "@/lib/rows";
 
 const NOT_RECORDED = "ثبت نشده است";
 const UNKNOWN = "نامشخص";
+
+/**
+ * توضیح صادقانه‌ی منبع کارمزد (بلیت ۳۲): جمله‌ی عمومی، نه ادعای تک/دوقیمتی —
+ * کد امروز نمی‌تواند تشخیص دهد سکو خودش دو عدد جدا می‌دهد یا کارمزد را روی
+ * یک عدد اعمال کرده (سند CONTEXT.md، «سکوی دوقیمتی»)، پس فقط همین را می‌گوید.
+ */
+const FEE_SOURCE_EXPLANATION_FA = "کارمزد از فاصله‌ی خرید و فروش همین سکو می‌آید.";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -37,14 +48,75 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function TermsSection({ snapshot }: { snapshot: PlatformSnapshot }) {
+/** یک کارت قیمت — عدد آماده‌ی گردآورنده (BUY یا SELL)، بدون هیچ محاسبه‌ای. */
+function PriceCard({
+  label,
+  toman,
+  side,
+}: {
+  label: string;
+  toman: number | null;
+  side: "buy" | "sell";
+}) {
+  return (
+    <div className="rounded-2xl bg-surface px-4 py-4">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p
+        data-effective-buy-price={side === "buy" ? true : undefined}
+        data-effective-sell-price={side === "sell" ? true : undefined}
+        className="mt-1 text-lg font-bold tabular-nums sm:text-xl"
+      >
+        {toman === null ? "—" : `${formatToman(toman)} تومان`}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * «قیمت امروز» — فقط سکوی کارمزدمعلوم (`!hasUnknownFee`). برای کارمزد
+ * نامعلوم این بخش اصلاً رندر نمی‌شود؛ نه «نامشخص»، نه صفر، نه کارت خالی —
+ * چون قیمت مؤثر برای آن سکوها اصلاً وجود ندارد (جعل نمی‌شود، قاعده‌ی ۱).
+ */
+function TermsSection({
+  row,
+  snapshot,
+  updatedAt,
+}: {
+  row: Row;
+  snapshot: PlatformSnapshot;
+  updatedAt: string | null;
+}) {
+  if (hasUnknownFee(row)) return null;
+
   const { terms } = snapshot;
+  const buy = findQuote(snapshot.quotes, "BUY");
+  const sell = findQuote(snapshot.quotes, "SELL");
   const minOrder = terms.min_order_toman ?? null;
+  const dateLabel = updatedAt === null ? null : formatDateFa(updatedAt);
+
   return (
     <section aria-labelledby="terms-heading" className="glass-surface px-5 py-5 sm:px-6">
       <h2 id="terms-heading" className="text-base font-semibold sm:text-lg">
-        شرایط تجاری
+        قیمت امروز{dateLabel === null ? null : ` — ${dateLabel}`}
       </h2>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <PriceCard
+          label="قیمت مؤثر خرید هر گرم"
+          toman={buy === null ? null : buy.price_toman}
+          side="buy"
+        />
+        <PriceCard
+          label="قیمت مؤثر فروش هر گرم"
+          toman={sell === null ? null : sell.price_toman}
+          side="sell"
+        />
+      </div>
+
+      <p className="mt-4 text-[12px] leading-6 text-muted-foreground">
+        {FEE_SOURCE_EXPLANATION_FA}
+      </p>
+
       <dl className="mt-3">
         <Field label="کارمزد خرید">
           {terms.buy_fee_percent === null
@@ -70,106 +142,6 @@ function TermsSection({ snapshot }: { snapshot: PlatformSnapshot }) {
           </span>
         </Field>
       </dl>
-    </section>
-  );
-}
-
-/**
- * قیمت‌های همین سکو، دارایی به دارایی — از اسنپ‌شات خودش. قیمت مرجع همان
- * عدد آماده‌ی گردآورنده است (تصمیم ۱۹)؛ نبودش «—» می‌شود، نه عدد جعلی.
- */
-function QuotesSection({
-  row,
-  snapshot,
-  updatedAt,
-  instrumentNames,
-  nowMs,
-}: {
-  /** همان ردیف دامنه — تا انتخاب «قیمت مرجع سکو» از `lib/rows.ts` بیاید. */
-  row: Row;
-  snapshot: PlatformSnapshot;
-  updatedAt: string | null;
-  instrumentNames: Record<string, string>;
-  nowMs: number;
-}) {
-  const codes = [...new Set(snapshot.quotes.map((q) => q.instrument))];
-  const cell = "px-3 py-3 text-xs tabular-nums sm:text-sm";
-  const headCell = "px-3 py-3 text-right font-medium";
-
-  return (
-    <section
-      aria-labelledby="quotes-heading"
-      className="glass-surface mt-6 overflow-hidden"
-    >
-      <div className="border-b border-border/70 px-4 py-4 sm:px-6">
-        <h2 id="quotes-heading" className="text-base font-semibold sm:text-lg">
-          قیمت‌های این سکو
-        </h2>
-      </div>
-      <div className="no-scrollbar overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-right">
-          <thead>
-            <tr className="bg-surface text-[11px] text-muted-foreground sm:text-xs">
-              <th scope="col" className="px-4 py-3 text-right font-medium sm:px-6">
-                دارایی
-              </th>
-              <th scope="col" className={headCell}>
-                مؤثر خرید (می‌پردازید)
-              </th>
-              <th scope="col" className={headCell}>
-                مؤثر فروش (می‌گیرید)
-              </th>
-              <th scope="col" className={headCell}>
-                قیمت اسمی
-              </th>
-              <th scope="col" className={headCell}>
-                قیمت مرجع سکو
-              </th>
-              <th scope="col" className="px-4 py-3 text-right font-medium sm:px-6">
-                آخرین به‌روزرسانی
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {codes.map((code) => {
-              const buy = findQuote(snapshot.quotes, "BUY", code);
-              const sell = findQuote(snapshot.quotes, "SELL", code);
-              const mid = findQuote(snapshot.quotes, "MID", code);
-              // انتخاب، نه محاسبه: قاعده‌ی «قیمت مرجع سکو» یک‌جا در rows.ts است.
-              const reference = referencePriceFor(row, code);
-              return (
-                <tr
-                  key={code}
-                  data-instrument={code}
-                  className="transition-smooth border-t border-border/70 hover:bg-surface"
-                >
-                  <th
-                    scope="row"
-                    className="px-4 py-3 text-right text-xs font-medium sm:px-6 sm:text-sm"
-                  >
-                    {instrumentNames[code] ?? code}
-                  </th>
-                  <td className={cell}>
-                    {buy === null ? "—" : `${formatToman(buy.price_toman)} تومان`}
-                  </td>
-                  <td className={cell}>
-                    {sell === null ? "—" : `${formatToman(sell.price_toman)} تومان`}
-                  </td>
-                  <td className={cell}>
-                    {mid === null ? "—" : `${formatToman(mid.price_toman)} تومان`}
-                  </td>
-                  <td data-reference-price className={cell}>
-                    {reference === null ? "—" : `${formatToman(reference)} تومان`}
-                  </td>
-                  <td className="px-4 py-3 sm:px-6">
-                    <Staleness updatedAt={updatedAt} nowMs={nowMs} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
     </section>
   );
 }
@@ -239,16 +211,9 @@ export function PlatformPage({
           قیمت در دسترس نیست
         </p>
       ) : (
-        <>
-          <TermsSection snapshot={snapshot} />
-          <QuotesSection
-            row={row}
-            snapshot={snapshot}
-            updatedAt={updatedAt}
-            instrumentNames={instrumentNames}
-            nowMs={nowMs}
-          />
-        </>
+        // بلیت ۳۲: «قیمت امروز» فقط برای کارمزدمعلوم می‌آید — کارمزد نامعلوم
+        // یعنی TermsSection خودش null برمی‌گرداند، نه حدسی از اینجا.
+        <TermsSection row={row} snapshot={snapshot} updatedAt={updatedAt} />
       )}
 
       <section

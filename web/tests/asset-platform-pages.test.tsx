@@ -19,6 +19,7 @@ import { NotFoundPanel } from "../src/components/content/NotFoundPanel";
 import { SlugPageView, slugHead } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
 import type { PlatformHistory } from "../src/lib/history";
+import { formatDateFa } from "../src/lib/format";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
@@ -341,11 +342,12 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     // هویت حقوقی و تحویل فیزیکی مستندشده:
     expect(html).toContain("شرکت توسعه راهکار الوند ارسباران");
     expect(html).toContain("تحویل فیزیکی با اجرت ساخت");
-    // قیمت‌های خود سکو با نام فارسی دارایی:
-    expect(html).toContain("طلای ۱۸ عیار");
+    // قیمت مؤثر خرید/فروش خودِ سکو (بلیت ۳۲: دو کارت «قیمت امروز»):
     expect(html).toContain("۱۸٬۷۱۵٬۳۰۰");
     expect(html).toContain("۱۸٬۳۴۴٬۷۰۰");
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودش
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودش (کارت قهرمان)
+    // بلیت ۲۶: جدول «قیمت‌های این سکو» (QuotesSection، همه‌ی دارایی‌ها) حذف شده.
+    expect(html).not.toContain("قیمت‌های این سکو");
   });
 
   it("فراداده‌ی مستندنشده صادقانه «ثبت نشده است» می‌شود، نه جعل", async () => {
@@ -410,6 +412,57 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(data.kind === "platform" && data.hasOutbound).toBe(false);
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
     expect(html).not.toContain('href="/go/wallgold"');
+  });
+});
+
+describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد معلوم/نامعلوم (بلیت ۳۲)", () => {
+  it("کارمزد معلوم ⟸ دو کارت خرید/فروش کنار هم با تاریخ شمسی در تیتر و توضیح صادقانه‌ی منبع کارمزد", async () => {
+    const store = assetStore();
+    seed(store);
+    const html = await renderSlug("talasea");
+
+    // تیتر بخش با تاریخ شمسی همان به‌روزرسانی سکو (formatDateFa، نه ساخته‌ی تست).
+    const expectedDate = formatDateFa(store.updatedAt["talasea"] as string);
+    expect(html).toContain(expectedDate);
+
+    // دو کارت خرید/فروش، هرکدام قیمت مؤثر خودِ سکو (انتخاب، نه محاسبه).
+    expect(html).toContain("قیمت مؤثر خرید هر گرم");
+    expect(html).toContain("قیمت مؤثر فروش هر گرم");
+    expect(html).toContain("۱۸٬۷۱۵٬۳۰۰"); // مؤثر خرید طلاسی
+    expect(html).toContain("۱۸٬۳۴۴٬۷۰۰"); // مؤثر فروش طلاسی
+
+    // توضیح صادقانه‌ی منبع کارمزد — عمومی، بدون ادعای تک/دوقیمتی که کد
+    // نمی‌تواند تأیید کند (سند تیکت ۳۲).
+    expect(html).toContain("کارمزد از فاصله‌ی خرید و فروش همین سکو می‌آید");
+    expect(html).not.toContain("دوقیمتی");
+    expect(html).not.toContain("تک‌قیمتی");
+  });
+
+  it("کارمزد نامعلوم ⟸ بخش اصلاً نمی‌آید — نه «نامشخص»، نه صفر، نه کارت خالی", async () => {
+    seed(assetStore());
+    const html = await renderSlug("digikala");
+
+    expect(html).toContain("دیجی‌کالا");
+    expect(html).not.toContain("قیمت مؤثر خرید هر گرم");
+    expect(html).not.toContain("قیمت مؤثر فروش هر گرم");
+    expect(html).not.toContain("کارمزد خرید");
+    expect(html).not.toContain("کارمزد فروش");
+    expect(html).not.toContain("هزینه‌ی رفت‌وبرگشت");
+    expect(html).not.toContain("منبع کارمزد");
+  });
+
+  it("جدول «قیمت‌های این سکو» (QuotesSection) دیگر نیست — نه برای کارمزد معلوم، نه نامعلوم", async () => {
+    seed(assetStore());
+    const known = await renderSlug("talasea");
+    const unknown = await renderSlug("digikala");
+    expect(known).not.toContain("قیمت‌های این سکو");
+    expect(unknown).not.toContain("قیمت‌های این سکو");
+  });
+
+  it("نوار ماده ۵ دست‌نخورده می‌ماند", async () => {
+    seed(assetStore());
+    const html = await renderSlug("talasea");
+    expect(html).toContain('data-legal-notice="madde-5"');
   });
 });
 
