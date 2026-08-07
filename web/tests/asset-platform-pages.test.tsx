@@ -380,9 +380,14 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
       rel: "canonical",
       href: `${SITE_URL}/wallgold`,
     });
-    // ما فروشنده نیستیم: فقط BreadcrumbList.
-    expect(head.scripts).toHaveLength(1);
-    expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
+    // ما فروشنده نیستیم: هیچ Product/AggregateOffer در هیچ اسکریپتی نیست —
+    // فقط BreadcrumbList و WebPage (بلیت ۲۹؛ جزئیاتش در structured-data.test.tsx).
+    expect(head.scripts).toHaveLength(2);
+    const raw = head.scripts?.map((script) => script.children).join("\n") ?? "";
+    expect(raw).toContain("BreadcrumbList");
+    expect(raw).toContain('"@type":"WebPage"');
+    expect(raw).not.toContain("Product");
+    expect(raw).not.toContain("AggregateOffer");
   });
 
   it("قطع کامل منبع ⟸ صفحه‌ی سکو ۲۰۰ می‌ماند (کهنگی، نه خطا)", async () => {

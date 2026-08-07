@@ -237,8 +237,83 @@ describe("Organization + WebSite (بند ۶.۵ + بند ۱۱)", () => {
     for (const slug of ["tala-18", "wallgold"]) {
       const raw = rawJsonLd(slugHead(await pageOf(slug)));
       expect(raw).not.toContain('"@type":"WebSite"');
-      expect(raw).not.toContain('"@type":"Organization"');
+      // موجودیت سراسری («مضنه آنلاین» alternateName و @id ثابت سایت) هیچ‌جا
+      // جز خانه تکرار نمی‌شود — صفحه‌ی سکو یک Organization دیگر (تو در توی
+      // about، بدون @id) دارد که نباید با این یکی اشتباه شود (بلیت ۲۹).
+      expect(raw).not.toContain(`${SITE_URL}/#organization`);
+      expect(raw).not.toContain("مضنه آنلاین");
     }
+    // صفحه‌ی دارایی اصلاً Organization نمی‌گیرد (نه سراسری، نه تو در تو).
+    const assetRaw = rawJsonLd(slugHead(await pageOf("tala-18")));
+    expect(assetRaw).not.toContain('"@type":"Organization"');
+  });
+});
+
+/* ---------- WebPage + about:Organization — فقط صفحه‌ی سکو (بلیت ۲۹) ---------- */
+
+describe("WebPage + about:Organization (بند ۶.۵ + بلیت ۲۹)", () => {
+  it("صفحه‌ی سکو WebPage با about از نوع Organization (نام سکو + website_url خودش) دارد", async () => {
+    seed(assetStore());
+    const webPage = findByType(
+      jsonLdBlocks(slugHead(await pageOf("wallgold"))),
+      "WebPage",
+    ) as Record<string, unknown>;
+    expect(webPage).toMatchObject({ url: `${SITE_URL}/wallgold`, name: "وال‌گلد" });
+    expect(webPage["about"]).toMatchObject({
+      "@type": "Organization",
+      name: "وال‌گلد",
+      url: "https://wallgold.ir",
+    });
+  });
+
+  it("Organization تو در توی about هیچ @id مستقل نمی‌گیرد — موجودیت جدا نیست", async () => {
+    seed(assetStore());
+    const webPage = findByType(
+      jsonLdBlocks(slugHead(await pageOf("wallgold"))),
+      "WebPage",
+    ) as Record<string, unknown>;
+    const about = webPage["about"] as Record<string, unknown>;
+    expect(about["@id"]).toBeUndefined();
+  });
+
+  it("صفحه‌ی دارایی WebPage/about نمی‌گیرد — این الگو فقط صفحه‌ی سکو است", async () => {
+    seed(assetStore());
+    const blocks = jsonLdBlocks(slugHead(await pageOf("tala-18")));
+    expect(findByType(blocks, "WebPage")).toBeUndefined();
+  });
+
+  it("سکوی بدون website_url ⟸ about فقط name دارد، url جعل نمی‌شود", async () => {
+    const now = freshIso();
+    const store: SeededStore = {
+      listed: [{ slug: "wallgold", name_fa: "وال‌گلد", data_policy: "ALLOWED" }],
+      instruments: [TALA18],
+      snapshots: {
+        wallgold: makeSnapshot({
+          slug: "wallgold",
+          mid: 18611000,
+          buy: 18704055,
+          sell: 18517945,
+          reference: 18611000,
+          fetchedAt: now,
+        }),
+      },
+      updatedAt: { wallgold: now },
+    };
+    seed(store);
+    const webPage = findByType(
+      jsonLdBlocks(slugHead(await pageOf("wallgold"))),
+      "WebPage",
+    ) as Record<string, unknown>;
+    const about = webPage["about"] as Record<string, unknown>;
+    expect(about).toMatchObject({ "@type": "Organization", name: "وال‌گلد" });
+    expect(about["url"]).toBeUndefined();
+  });
+
+  it("BreadcrumbList هم کنار WebPage سر جایش می‌ماند", async () => {
+    seed(assetStore());
+    const blocks = jsonLdBlocks(slugHead(await pageOf("wallgold")));
+    expect(findByType(blocks, "WebPage")).toBeDefined();
+    expect(findByType(blocks, "BreadcrumbList")).toBeDefined();
   });
 });
 

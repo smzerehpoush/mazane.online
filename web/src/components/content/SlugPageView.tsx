@@ -23,7 +23,11 @@ import type {
 } from "@/lib/prices";
 import type { Row } from "@/lib/rows";
 import { SITE_URL } from "@/lib/site";
-import { assetProductJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
+import {
+  assetProductJsonLd,
+  breadcrumbJsonLd,
+  platformWebPageJsonLd,
+} from "@/lib/structured-data";
 
 /** صفحه‌ی دارایی — جدول همه‌ی سکوهای پشتیبان همین دارایی. */
 export interface InstrumentPageData {
@@ -71,7 +75,8 @@ interface HeadTag {
  * `Product` + `AggregateOffer` فقط صفحه‌ی دارایی، و از **همان** گروه
  * «معلوم‌ها»یی که جدول رندر می‌کند (`groupRows` مشترک است) — پس عدد JSON-LD
  * با عدد قابل‌مشاهده یکی است، بدون هیچ fetch جدا. برای سکو هیچ Product/Offer
- * ساخته نمی‌شود: ما فروشنده نیستیم.
+ * ساخته نمی‌شود: ما فروشنده نیستیم؛ به‌جایش `WebPage` با `about` از نوع
+ * `Organization` (نام سکو + website_url خودش) — بلیت ۲۹، بدون @id مستقل.
  */
 export function slugJsonLdTags(data: SlugPageData): HeadTag[] {
   if (data.kind === "instrument") {
@@ -96,6 +101,10 @@ export function slugJsonLdTags(data: SlugPageData): HeadTag[] {
         { name: "خانه", url: `${SITE_URL}/` },
         { name: data.platform.name_fa, url: `${SITE_URL}/${data.platform.slug}` },
       ]),
+    },
+    {
+      type: "application/ld+json",
+      children: platformWebPageJsonLd(data.platform),
     },
   ];
 }
