@@ -21,7 +21,7 @@ import {
   Staleness,
 } from "@/components/content/RowParts";
 import { formatPercentPointsFa, formatToman } from "@/lib/format";
-import type { PlatformHistory } from "@/lib/history";
+import type { PlatformHistoryByRange } from "@/lib/history";
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import { findQuote, referencePriceFor, type Row } from "@/lib/rows";
 
@@ -188,8 +188,8 @@ export function PlatformPage({
   updatedAt: string | null;
   hasOutbound: boolean;
   instrumentNames: Record<string, string>;
-  /** تاریخچه‌ی همین سکو — کارت نرخ بالای صفحه (بلیت ۲۷). `null` یعنی بی‌سابقه. */
-  history: PlatformHistory | null;
+  /** تاریخچه‌ی همین سکو، هر سه بازه — کارت نرخ بالای صفحه (بلیت ۲۷ + ۳۰). */
+  history: PlatformHistoryByRange;
   nowMs: number;
 }) {
   // ردیف دامنه‌ی همین سکو — تنها مصرفش انتخاب «قیمت مرجع سکو» است.

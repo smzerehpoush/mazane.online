@@ -6,6 +6,7 @@
  *
  * قاعده‌ی ۱ قراردادها اینجا هم برقرار است: هیچ فرمول قیمتی نیست، فقط قالب.
  */
+import type { HistoryRange } from "./history";
 
 export const brand = {
   name: "مظنه آنلاین",
@@ -60,6 +61,26 @@ export const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
 export const CHART_PLATFORM_SLUGS: readonly string[] = CHART_PLATFORMS.map(
   (platform) => platform.slug,
 );
+
+/**
+ * سه بازه‌ی نوار زبانه‌ی کارت نرخ صفحه‌ی سکو (بلیت ۳۰). هفتگی/ماهانه روی
+ * تجمیع ساعتی گام‌دار می‌خوانند (قاعده‌ی ۱: بدون میانگین، فقط آخرین نمونه‌ی
+ * هر سطل — `lib/server/history-source.ts::resampleHourlyPoints`). `hours`
+ * طول کل پنجره‌ی پرس‌وجو؛ نبودِ `stepHours` یعنی بدون نمونه‌برداری (روزانه —
+ * همان رفتار بلیت ۲۷).
+ */
+export interface RateCardRangeConfig {
+  key: HistoryRange;
+  label: string;
+  hours: number;
+  stepHours?: number;
+}
+
+export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
+  { key: "DAILY", label: "روزانه", hours: 24 },
+  { key: "WEEKLY", label: "هفتگی", hours: 24 * 7, stepHours: 2 },
+  { key: "MONTHLY", label: "ماهانه", hours: 24 * 30, stepHours: 8 },
+];
 
 /**
  * ارقام فارسی نمایش (قراردادها، بخش استک). ارقام داخل JSON-LD و URL لاتین

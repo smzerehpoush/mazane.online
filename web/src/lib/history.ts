@@ -36,6 +36,14 @@ export interface PlatformHistory {
   latest: number | null;
   /** سطری که واقعاً خوانده شد؛ null یعنی هیچ سطری نبود. */
   side_used: ReferenceSide | null;
+  /**
+   * فقط برای سری‌های نمونه‌برداری‌شده (بلیت ۳۰: `stepHours` در پرس‌وجو) پر
+   * می‌شود — آیا دست‌کم نیمی از سطل‌های کل پنجره نمونه‌ی واقعی داشتند (نه
+   * forward-fill)؟ دروازه‌ی «به‌زودی» زبانه‌ی هفتگی/ماهانه‌ی کارت نرخ همین
+   * را می‌خواند. نبودش (روزانه‌ی بدون نمونه‌برداری) یعنی این معیار بی‌معناست
+   * — آن زبانه همیشه فعال است.
+   */
+  has_enough_coverage?: boolean;
 }
 
 export interface HistoryQuery {
@@ -45,7 +53,22 @@ export interface HistoryQuery {
   instrument: string;
   /** پنجره‌ی زمانی به ساعت (نمودار صفحه‌ی اصلی: ۲۴). */
   hours: number;
+  /**
+   * گام نمونه‌برداری به ساعت (بلیت ۳۰: هفتگی ۲، ماهانه ۸) — روی تجمیع
+   * ساعتی، هر سطل فقط آخرین نمونه‌اش را نگه می‌دارد (قاعده‌ی ۱: بدون
+   * میانگین). نبودش یا ≤۱ یعنی بدون نمونه‌برداری: همان رفتار امروز، هر ردیف
+   * خام. نمودار صفحه‌ی اصلی همیشه همین حالت را می‌خواهد — رفتارش عوض نشده.
+   */
+  stepHours?: number;
 }
+
+/** سه بازه‌ی نمودار کارت نرخ صفحه‌ی سکو (بلیت ۳۰) — همیشه همین سه‌تا، همین ترتیب. */
+export type HistoryRange = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export const HISTORY_RANGES: readonly HistoryRange[] = ["DAILY", "WEEKLY", "MONTHLY"];
+
+/** تاریخچه‌ی هر سه بازه برای یک سکو — ورودی کارت نرخ صفحه‌ی سکو (بلیت ۳۰). */
+export type PlatformHistoryByRange = Record<HistoryRange, PlatformHistory | null>;
 
 export interface HistorySource {
   getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;

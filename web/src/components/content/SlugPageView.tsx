@@ -15,7 +15,7 @@
 import { AssetPage, groupRows } from "@/components/content/AssetPage";
 import { Breadcrumbs } from "@/components/content/PageShell";
 import { PlatformPage } from "@/components/content/PlatformPage";
-import type { PlatformHistory } from "@/lib/history";
+import type { PlatformHistoryByRange } from "@/lib/history";
 import type {
   InstrumentListing,
   ListedPlatform,
@@ -54,11 +54,12 @@ export interface PlatformPageData {
   /** نام فارسی هر کد دارایی — برای ستون «دارایی» جدول قیمت‌ها. */
   instrumentNames: Record<string, string>;
   /**
-   * تاریخچه‌ی ۲۴ ساعته‌ی قیمت مرجع همین سکو (طلای ۱۸ عیار) — کارت نرخ بالای
-   * صفحه (بلیت ۲۷). `null` یعنی منبع قطع بود یا سکو هنوز سابقه‌ای ندارد؛
-   * کارت بدون نمودار رندر می‌شود، نه throw (قاعده‌ی ۵).
+   * تاریخچه‌ی قیمت مرجع همین سکو (طلای ۱۸ عیار)، هر سه بازه — کارت نرخ بالای
+   * صفحه با نوار زبانه‌ی روزانه/هفتگی/ماهانه (بلیت ۲۷ + بلیت ۳۰). هر بازه
+   * `null` یعنی منبع قطع بود یا سکو هنوز سابقه‌ای ندارد؛ کارت/زبانه بدون
+   * نمودار رندر می‌شود، نه throw (قاعده‌ی ۵).
    */
-  history: PlatformHistory | null;
+  history: PlatformHistoryByRange;
   generated_at: string;
 }
 

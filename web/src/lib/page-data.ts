@@ -17,13 +17,14 @@
 import type { HomePageData } from "@/components/mazane/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
-import type { HistoryQuery, PlatformHistory } from "./history";
+import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
 import type { Row } from "./rows";
 import {
   CHART_PLATFORM_SLUGS,
   HOME_CHART_HOURS,
   HOME_INSTRUMENT,
+  RATE_CARD_RANGES,
 } from "./site-content";
 import type { SlugResolution } from "./slugs";
 import type { ViewCounts } from "./views";
@@ -113,18 +114,30 @@ export async function assembleSlugPage(
   }
 
   const { platform } = resolved;
-  const [snapshot, updatedAt, instruments, histories] = await Promise.all([
+  const [snapshot, updatedAt, instruments, historyByRange] = await Promise.all([
     read.getPlatformSnapshot(platform.slug),
     read.getUpdatedAt(platform.slug),
     read.getInstruments(),
-    // کارت نرخ (بلیت ۲۷): همان الگوی نمودار صفحه‌ی اصلی، فقط برای یک سکو و
-    // همیشه طلای ۱۸ عیار — زبانه‌ی بازه مال بلیت ۳۰ است.
-    read.getPlatformHistory({
-      platformSlugs: [platform.slug],
-      instrument: "GOLD_18K",
-      hours: 24,
-    }),
+    // کارت نرخ (بلیت ۲۷، زبانه‌ی بازه بلیت ۳۰): همان الگوی نمودار صفحه‌ی
+    // اصلی، فقط برای یک سکو و همیشه طلای ۱۸ عیار — یک پرس‌وجوی جدا به ازای
+    // هر بازه (روزانه بدون گام، هفتگی/ماهانه گام‌دار).
+    Promise.all(
+      RATE_CARD_RANGES.map((range) =>
+        read.getPlatformHistory({
+          platformSlugs: [platform.slug],
+          instrument: "GOLD_18K",
+          hours: range.hours,
+          ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
+        }),
+      ),
+    ),
   ]);
+  const history: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
+  RATE_CARD_RANGES.forEach((range, index) => {
+    // قطع منبع یا سکوی بی‌سابقه ⟸ نتیجه‌ی همان بازه خالی است ⟸ null، نه
+    // throw (قاعده‌ی ۵) — آن زبانه بدون نمودار/غیرفعال رندر می‌شود.
+    history[range.key] = historyByRange[index]?.[0] ?? null;
+  });
   return {
     kind: "platform",
     platform: withoutReferral(platform),
@@ -134,9 +147,7 @@ export async function assembleSlugPage(
     instrumentNames: Object.fromEntries(
       instruments.map((item) => [item.instrument, item.name_fa]),
     ),
-    // قطع منبع یا سکوی بی‌سابقه ⟸ history[0] وجود ندارد ⟸ null، نه throw
-    // (قاعده‌ی ۵) — کارت بدون نمودار رندر می‌شود.
-    history: histories[0] ?? null,
+    history,
     generated_at: generatedAt,
   };
 }

@@ -30,6 +30,7 @@ import {
   rowOf,
   seed,
   seedHistory,
+  seedHistoryByQuery,
   slugPageData,
   staleIso,
   type SeededStore,
@@ -510,6 +511,80 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     const html = await renderSlug("talasea");
     expect(html).not.toContain("data-rate-price");
     expect(html).toContain("قیمت در دسترس نیست");
+  });
+});
+
+/** برچسب یک زبانه در HTML رندرشده — روزانه/هفتگی/ماهانه یا «به‌زودی». */
+function tabButton(html: string, label: string): string {
+  const match = html.match(new RegExp(`<button[^>]*>${label}</button>`));
+  if (!match) throw new Error(`زبانه‌ی «${label}» در HTML نیست`);
+  return match[0];
+}
+
+describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزانه/هفتگی/ماهانه (بلیت ۳۰)", () => {
+  it("نقش tablist دارد و روزانه پیش‌فرض زبانه‌ی فعال (aria-selected) است", async () => {
+    seed(assetStore());
+    seedHistory([]); // هیچ بازه‌ای سابقه ندارد — روزانه با این حال زبانه‌ی فعال می‌ماند
+    const html = await renderSlug("talasea");
+
+    expect(html).toContain('role="tablist"');
+    const dailyTab = tabButton(html, "روزانه");
+    expect(dailyTab).toContain('aria-selected="true"');
+    expect(dailyTab).not.toContain('disabled=""');
+  });
+
+  it("پوشش کافی هفتگی ⟸ زبانه‌ی هفتگی فعال و قابل‌کلیک؛ پوشش ناکافی ماهانه ⟸ «به‌زودی» و disabled", async () => {
+    seed(assetStore());
+    // پرس‌وجوی هر بازه با stepHours خودش تشخیص داده می‌شود: هفتگی=۲، ماهانه=۸.
+    seedHistoryByQuery((query) => {
+      if (query.stepHours === 2) {
+        return [
+          {
+            platform_slug: "talasea",
+            points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+            latest: 18400000,
+            side_used: "MEAN",
+            has_enough_coverage: true,
+          },
+        ];
+      }
+      if (query.stepHours === 8) {
+        return [
+          {
+            platform_slug: "talasea",
+            points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+            latest: 18400000,
+            side_used: "MEAN",
+            has_enough_coverage: false, // کمتر از نیم پنجره — «به‌زودی»
+          },
+        ];
+      }
+      return []; // روزانه — بی‌ربط به این سنجش
+    });
+    const html = await renderSlug("talasea");
+
+    const weeklyTab = tabButton(html, "هفتگی");
+    expect(weeklyTab).not.toContain('disabled=""');
+    expect(weeklyTab).toContain('aria-selected="false"');
+
+    const comingSoonTab = tabButton(html, "به‌زودی");
+    expect(comingSoonTab).toContain('disabled=""');
+    expect(comingSoonTab).toContain('aria-disabled="true"');
+    expect(html).not.toContain(">ماهانه<"); // برچسبش با «به‌زودی» عوض شده
+  });
+
+  it("ناحیه‌ی سه آمار aria-live دارد — تعویض زبانه عدد را برای صفحه‌خوان اعلام می‌کند", async () => {
+    seed(assetStore());
+    seedHistory([
+      {
+        platform_slug: "talasea",
+        points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+        latest: 18400000,
+        side_used: "MEAN",
+      },
+    ]);
+    const html = await renderSlug("talasea");
+    expect(html).toContain('aria-live="polite"');
   });
 });
 

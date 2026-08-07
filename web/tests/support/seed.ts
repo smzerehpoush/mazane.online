@@ -13,7 +13,12 @@ import type { SlugPageData } from "../../src/components/content/SlugPageView";
 import type { HomePageData } from "../../src/components/mazane/HomePage";
 import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
 import { setViewCounter, type ViewCounts } from "../../src/lib/views";
-import { getPlatformHistory, setHistorySource, type PlatformHistory } from "../../src/lib/history";
+import {
+  getPlatformHistory,
+  setHistorySource,
+  type HistoryQuery,
+  type PlatformHistory,
+} from "../../src/lib/history";
 import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
 import { listInstruments } from "../../src/lib/catalog";
 import {
@@ -156,6 +161,18 @@ export function seedBlog(posts: BlogPost[]): void {
 
 export function seedHistory(entries: PlatformHistory[]): void {
   setHistorySource({ getPlatformHistory: async () => entries });
+}
+
+/**
+ * فیک تاریخچه با تفکیک بر اساس پرس‌وجو (بلیت ۳۰) — برخلاف `seedHistory` که
+ * یک نتیجه‌ی ثابت برای هر سه بازه برمی‌گرداند، اینجا تست خودش تصمیم می‌گیرد
+ * بازه‌ی روزانه/هفتگی/ماهانه (تشخیص از `query.stepHours`) چه چیزی بگیرد —
+ * لازم برای سنجیدن فعال/غیرفعال‌بودن هر زبانه جدا از بقیه.
+ */
+export function seedHistoryByQuery(
+  resolve: (query: HistoryQuery) => PlatformHistory[],
+): void {
+  setHistorySource({ getPlatformHistory: async (query) => resolve(query) });
 }
 
 /** منبع قیمت خالی — برای تست‌هایی که فقط بلاگ را می‌سنجند. */
