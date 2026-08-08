@@ -90,6 +90,11 @@ async function processAndUpload(slug: string, bytes: Uint8Array): Promise<Upload
       ContentType: "image/webp",
       // محتوامحور و تغییرناپذیر — جایگزینی عکس همیشه کلید تازه می‌سازد.
       CacheControl: "public, max-age=31536000, immutable",
+      // بدون این، آروان شیء را خصوصی می‌نویسد و MAZANE_IMAGE_CDN_BASE_URL
+      // (نشانی مستقیم باکت — تصمیم مالک، ۲۰۲۶-۰۸-۰۷: بدون زیردامنه‌ی
+      // اختصاصی) برای بازدیدکننده‌ی بی‌احرازهویت ۴۰۳ می‌دهد. با کلید واقعی
+      // آروان تأیید شد که این پرچم را رعایت می‌کند (بوکت-پالیسی نبود).
+      ACL: "public-read",
     }),
   );
 
