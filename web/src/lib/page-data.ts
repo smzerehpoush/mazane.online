@@ -17,13 +17,17 @@
 import type { HomePageData } from "@/components/mazane/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
-import type { HistoryQuery, PlatformHistory } from "./history";
+import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
+import type { ReferencePrice, ReferencePriceQuery } from "./reference-price";
 import type { Row } from "./rows";
 import {
   CHART_PLATFORM_SLUGS,
   HOME_CHART_HOURS,
   HOME_INSTRUMENT,
+  RATE_CARD_RANGES,
+  UNION_RATE_INSTRUMENT,
+  UNION_RATE_REFERENCE_SLUG,
 } from "./site-content";
 import type { SlugResolution } from "./slugs";
 import type { ViewCounts } from "./views";
@@ -83,6 +87,10 @@ export interface SlugReaders {
   getPlatformSnapshot(platformSlug: string): Promise<PlatformSnapshot | null>;
   getUpdatedAt(platformSlug: string): Promise<string | null>;
   getInstruments(): Promise<InstrumentListing[]>;
+  /** تاریخچه‌ی قیمت مرجع — کارت نرخ صفحه‌ی سکو (بلیت ۲۷). فقط شاخه‌ی platform می‌خواندش. */
+  getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;
+  /** نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳). فقط شاخه‌ی platform می‌خواندش. */
+  getReferencePrice(query: ReferencePriceQuery): Promise<ReferencePrice | null>;
 }
 
 /**
@@ -99,9 +107,7 @@ export async function assembleSlugPage(
   const generatedAt = new Date().toISOString();
 
   if (resolved.kind === "instrument") {
-    const rows = await read.fetchRowsForPlatforms(
-      resolved.listing.supporting_platform_slugs,
-    );
+    const rows = await read.fetchRowsForPlatforms(resolved.listing.supporting_platform_slugs);
     return {
       kind: "instrument",
       listing: resolved.listing,
@@ -111,20 +117,45 @@ export async function assembleSlugPage(
   }
 
   const { platform } = resolved;
-  const [snapshot, updatedAt, instruments] = await Promise.all([
+  const [snapshot, updatedAt, instruments, historyByRange, referencePrice] = await Promise.all([
     read.getPlatformSnapshot(platform.slug),
     read.getUpdatedAt(platform.slug),
     read.getInstruments(),
+    // کارت نرخ (بلیت ۲۷، زبانه‌ی بازه بلیت ۳۰): همان الگوی نمودار صفحه‌ی
+    // اصلی، فقط برای یک سکو و همیشه طلای ۱۸ عیار — یک پرس‌وجوی جدا به ازای
+    // هر بازه (روزانه بدون گام، هفتگی/ماهانه گام‌دار).
+    Promise.all(
+      RATE_CARD_RANGES.map((range) =>
+        read.getPlatformHistory({
+          platformSlugs: [platform.slug],
+          instrument: "GOLD_18K",
+          hours: range.hours,
+          ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
+        }),
+      ),
+    ),
+    // نوار «نرخ اتحادیه» (تیکت ۳۳) — مرجع قیمت مستقل، نه قیمت این سکو؛
+    // قطع منبع ⟸ null، نوار رندر نمی‌شود (قاعده‌ی ۵).
+    read.getReferencePrice({
+      referenceSlug: UNION_RATE_REFERENCE_SLUG,
+      instrument: UNION_RATE_INSTRUMENT,
+    }),
   ]);
+  const history: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
+  RATE_CARD_RANGES.forEach((range, index) => {
+    // قطع منبع یا سکوی بی‌سابقه ⟸ نتیجه‌ی همان بازه خالی است ⟸ null، نه
+    // throw (قاعده‌ی ۵) — آن زبانه بدون نمودار/غیرفعال رندر می‌شود.
+    history[range.key] = historyByRange[index]?.[0] ?? null;
+  });
   return {
     kind: "platform",
     platform: withoutReferral(platform),
     snapshot,
     updatedAt,
     hasOutbound: (platform.referral_url ?? platform.website_url) != null,
-    instrumentNames: Object.fromEntries(
-      instruments.map((item) => [item.instrument, item.name_fa]),
-    ),
+    instrumentNames: Object.fromEntries(instruments.map((item) => [item.instrument, item.name_fa])),
+    history,
+    referencePrice,
     generated_at: generatedAt,
   };
 }

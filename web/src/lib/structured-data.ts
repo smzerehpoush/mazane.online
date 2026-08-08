@@ -13,9 +13,14 @@
  *   - واحد پول `IRR` است: مدل داده تومان است، پس در همین لایه‌ی نمایش ×۱۰
  *     می‌شود. عدد JSON-LD باید همان عدد رندر سرور باشد — سازنده‌ها ورودی را
  *     از همان ردیف‌های رندرشده می‌گیرند، هرگز fetch جدا نمی‌کنند.
+ *   - صفحه‌ی سکو `WebPage` می‌گیرد با `about` تو در توی `Organization` (نام
+ *     سکو + website_url خودش، اگر داشت) — بلیت ۲۹. سکو **هیچ @id مستقل**
+ *     نمی‌گیرد (فقط تو در توی about، نه یک موجودیت جدا در گراف) و **هیچ**
+ *     Product/Offer: صفحه‌ی سکو معرفی شرایط است، نه فروشگاه — آن الگو فقط
+ *     برای صفحه‌ی دارایی است (assetProductJsonLd پایین).
  *   - ارقام لاتین (JSON.stringify روی number همیشه لاتین می‌دهد).
  */
-import type { InstrumentListing } from "./prices";
+import type { InstrumentListing, ListedPlatform } from "./prices";
 import { effectiveBuyFor, isBuyOpen, type Row } from "./rows";
 import { SITE_URL } from "./site";
 
@@ -83,6 +88,34 @@ export function breadcrumbJsonLd(items: BreadcrumbItem[]): string {
 }
 
 /**
+ * `WebPage` صفحه‌ی سکو، با `about` تو در توی `Organization` (بلیت ۲۹).
+ *
+ * سکو اینجا **@id مستقل نمی‌گیرد** — بر خلاف `organizationWebSiteJsonLd`
+ * که برای «مظنه آنلاین» یک `Organization` با `@id` ثابت در گراف اصلی
+ * می‌سازد، این `Organization` فقط شیء تو در توی `about` است، بدون `@id`،
+ * پس هرگز موجودیت مستقلی در گراف دانش نمی‌شود که با برند خودمان اشتباه
+ * گرفته شود. `website_url` هم فقط وقتی هست که ثبت شده باشد (فراداده‌ی
+ * گردآورنده از سند تحقیق ۰۱) — جای نامستند حذف می‌شود، جعل نمی‌شود.
+ *
+ * هیچ `Product`/`Offer`ای اینجا نیست: صفحه‌ی سکو معرفی شرایط تجاری است،
+ * نه فروشگاه (آن الگو فقط برای صفحه‌ی دارایی است — `assetProductJsonLd`).
+ */
+export function platformWebPageJsonLd(platform: ListedPlatform): string {
+  const about: Record<string, unknown> = {
+    "@type": "Organization",
+    name: platform.name_fa,
+  };
+  if (platform.website_url) about["url"] = platform.website_url;
+  return jsonLdString({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    url: `${SITE_URL}/${platform.slug}`,
+    name: platform.name_fa,
+    about,
+  });
+}
+
+/**
  * `Product` + `AggregateOffer` صفحه‌ی دارایی (بند ۱۳، تصمیم ۱۸: نگاشت
  * مستقیم نمای تک‌عددی به lowPrice/highPrice).
  *
@@ -103,10 +136,7 @@ export function breadcrumbJsonLd(items: BreadcrumbItem[]): string {
  * AggregateOffer جعل نمی‌شود؛ ارز غیرتومانی هم (تا وقتی قاعده‌ی تبدیلش
  * مستند شود) عمداً بی‌اسکیما می‌ماند — تبدیل ×۱۰ فقط برای تومان⟸ریال درست است.
  */
-export function assetProductJsonLd(
-  listing: InstrumentListing,
-  knownRows: Row[],
-): string | null {
+export function assetProductJsonLd(listing: InstrumentListing, knownRows: Row[]): string | null {
   if (listing.currency !== "TOMAN") return null;
   const buysToman = knownRows
     .filter(isBuyOpen)

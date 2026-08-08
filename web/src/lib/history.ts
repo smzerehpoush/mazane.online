@@ -36,6 +36,15 @@ export interface PlatformHistory {
   latest: number | null;
   /** سطری که واقعاً خوانده شد؛ null یعنی هیچ سطری نبود. */
   side_used: ReferenceSide | null;
+  /**
+   * برای هر سری‌ای که از تجمیع ساعتی یا از سطرهای خام نمونه‌برداری شده پر
+   * می‌شود (هفتگی/ماهانه گام ۲/۸ ساعته — بلیت ۳۰؛ روزانه گام ۱۵دقیقه‌ای از
+   * `quotes` — بلیت ۳۴) — آیا دست‌کم نیمی از سطل‌های کل پنجره نمونه‌ی واقعی
+   * داشتند (نه forward-fill)؟ دروازه‌ی «به‌زودی» زبانه‌ی هفتگی/ماهانه‌ی کارت
+   * نرخ همین را می‌خواند؛ زبانه‌ی روزانه همیشه فعال است و این مقدار را
+   * نادیده می‌گیرد، هرچند پر باشد.
+   */
+  has_enough_coverage?: boolean;
 }
 
 export interface HistoryQuery {
@@ -45,7 +54,24 @@ export interface HistoryQuery {
   instrument: string;
   /** پنجره‌ی زمانی به ساعت (نمودار صفحه‌ی اصلی: ۲۴). */
   hours: number;
+  /**
+   * گام نمونه‌برداری به ساعت روی تجمیع ساعتیِ `hourly_rollups` (بلیت ۳۰:
+   * هفتگی ۲، ماهانه ۸) — هر سطل فقط آخرین نمونه‌اش را نگه می‌دارد (قاعده‌ی
+   * ۱: بدون میانگین). **نبودش یعنی «روزانه» (بلیت ۳۴)**: پرس‌وجوی جداگانه
+   * از سطرهای خام `quotes` با گام ۱۵ دقیقه — همان قاعده‌ی «آخرین نمونه‌ی هر
+   * سطل»، فقط دانه‌بندی ریزتر و از جدول دیگر (`server/history-source.ts`
+   * تصمیم می‌گیرد کدام مسیر برود؛ این فایل فقط قرارداد را می‌دهد).
+   */
+  stepHours?: number;
 }
+
+/** سه بازه‌ی نمودار کارت نرخ صفحه‌ی سکو (بلیت ۳۰) — همیشه همین سه‌تا، همین ترتیب. */
+export type HistoryRange = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export const HISTORY_RANGES: readonly HistoryRange[] = ["DAILY", "WEEKLY", "MONTHLY"];
+
+/** تاریخچه‌ی هر سه بازه برای یک سکو — ورودی کارت نرخ صفحه‌ی سکو (بلیت ۳۰). */
+export type PlatformHistoryByRange = Record<HistoryRange, PlatformHistory | null>;
 
 export interface HistorySource {
   getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;
@@ -94,9 +120,7 @@ function emptyHistory(platformSlug: string): PlatformHistory {
  * ۲۰۰ می‌ماند. build هم بیرون از سرور و بدون پستگرس اجرا می‌شود (تصمیم ۵)،
  * پس همین مسیرِ خالی است که بیلد را سبز نگه می‌دارد.
  */
-export async function getPlatformHistory(
-  query: HistoryQuery,
-): Promise<PlatformHistory[]> {
+export async function getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]> {
   try {
     return await source().getPlatformHistory(query);
   } catch (error) {

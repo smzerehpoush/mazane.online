@@ -18,6 +18,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { NotFoundPanel } from "../src/components/content/NotFoundPanel";
 import { SlugPageView, slugHead } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
+import type { PlatformHistory } from "../src/lib/history";
+import { formatDateFa, formatDateTimeFa } from "../src/lib/format";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
@@ -28,6 +30,9 @@ import {
   makeSnapshot,
   rowOf,
   seed,
+  seedHistory,
+  seedHistoryByQuery,
+  seedReferencePrice,
   slugPageData,
   staleIso,
   type SeededStore,
@@ -338,11 +343,12 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     // هویت حقوقی و تحویل فیزیکی مستندشده:
     expect(html).toContain("شرکت توسعه راهکار الوند ارسباران");
     expect(html).toContain("تحویل فیزیکی با اجرت ساخت");
-    // قیمت‌های خود سکو با نام فارسی دارایی:
-    expect(html).toContain("طلای ۱۸ عیار");
+    // قیمت مؤثر خرید/فروش خودِ سکو (بلیت ۳۲: دو کارت «قیمت امروز»):
     expect(html).toContain("۱۸٬۷۱۵٬۳۰۰");
     expect(html).toContain("۱۸٬۳۴۴٬۷۰۰");
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودش
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودش (کارت قهرمان)
+    // بلیت ۲۶: جدول «قیمت‌های این سکو» (QuotesSection، همه‌ی دارایی‌ها) حذف شده.
+    expect(html).not.toContain("قیمت‌های این سکو");
   });
 
   it("فراداده‌ی مستندنشده صادقانه «ثبت نشده است» می‌شود، نه جعل", async () => {
@@ -378,9 +384,14 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
       rel: "canonical",
       href: `${SITE_URL}/wallgold`,
     });
-    // ما فروشنده نیستیم: فقط BreadcrumbList.
-    expect(head.scripts).toHaveLength(1);
-    expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
+    // ما فروشنده نیستیم: هیچ Product/AggregateOffer در هیچ اسکریپتی نیست —
+    // فقط BreadcrumbList و WebPage (بلیت ۲۹؛ جزئیاتش در structured-data.test.tsx).
+    expect(head.scripts).toHaveLength(2);
+    const raw = head.scripts?.map((script) => script.children).join("\n") ?? "";
+    expect(raw).toContain("BreadcrumbList");
+    expect(raw).toContain('"@type":"WebPage"');
+    expect(raw).not.toContain("Product");
+    expect(raw).not.toContain("AggregateOffer");
   });
 
   it("قطع کامل منبع ⟸ صفحه‌ی سکو ۲۰۰ می‌ماند (کهنگی، نه خطا)", async () => {
@@ -402,6 +413,324 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(data.kind === "platform" && data.hasOutbound).toBe(false);
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
     expect(html).not.toContain('href="/go/wallgold"');
+  });
+});
+
+describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد معلوم/نامعلوم (بلیت ۳۲)", () => {
+  it("کارمزد معلوم ⟸ دو کارت خرید/فروش کنار هم با تاریخ شمسی در تیتر و توضیح صادقانه‌ی منبع کارمزد", async () => {
+    const store = assetStore();
+    seed(store);
+    const html = await renderSlug("talasea");
+
+    // تیتر بخش با تاریخ شمسی همان به‌روزرسانی سکو (formatDateFa، نه ساخته‌ی تست).
+    const expectedDate = formatDateFa(store.updatedAt["talasea"] as string);
+    expect(html).toContain(expectedDate);
+
+    // دو کارت خرید/فروش، هرکدام قیمت مؤثر خودِ سکو (انتخاب، نه محاسبه).
+    expect(html).toContain("قیمت مؤثر خرید هر گرم");
+    expect(html).toContain("قیمت مؤثر فروش هر گرم");
+    expect(html).toContain("۱۸٬۷۱۵٬۳۰۰"); // مؤثر خرید طلاسی
+    expect(html).toContain("۱۸٬۳۴۴٬۷۰۰"); // مؤثر فروش طلاسی
+
+    // توضیح صادقانه‌ی منبع کارمزد — عمومی، بدون ادعای تک/دوقیمتی که کد
+    // نمی‌تواند تأیید کند (سند تیکت ۳۲).
+    expect(html).toContain("کارمزد از فاصله‌ی خرید و فروش همین سکو می‌آید");
+    expect(html).not.toContain("دوقیمتی");
+    expect(html).not.toContain("تک‌قیمتی");
+  });
+
+  it("کارمزد نامعلوم ⟸ بخش اصلاً نمی‌آید — نه «نامشخص»، نه صفر، نه کارت خالی", async () => {
+    seed(assetStore());
+    const html = await renderSlug("digikala");
+
+    expect(html).toContain("دیجی‌کالا");
+    expect(html).not.toContain("قیمت مؤثر خرید هر گرم");
+    expect(html).not.toContain("قیمت مؤثر فروش هر گرم");
+    expect(html).not.toContain("کارمزد خرید");
+    expect(html).not.toContain("کارمزد فروش");
+    expect(html).not.toContain("هزینه‌ی رفت‌وبرگشت");
+    expect(html).not.toContain("منبع کارمزد");
+  });
+
+  it("جدول «قیمت‌های این سکو» (QuotesSection) دیگر نیست — نه برای کارمزد معلوم، نه نامعلوم", async () => {
+    seed(assetStore());
+    const known = await renderSlug("talasea");
+    const unknown = await renderSlug("digikala");
+    expect(known).not.toContain("قیمت‌های این سکو");
+    expect(unknown).not.toContain("قیمت‌های این سکو");
+  });
+
+  it("نوار ماده ۵ دست‌نخورده می‌ماند", async () => {
+    seed(assetStore());
+    const html = await renderSlug("talasea");
+    expect(html).toContain('data-legal-notice="madde-5"');
+  });
+});
+
+describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳)", () => {
+  it("با مرجع قیمت seed‌شده، نوار با برچسب، عدد ۱۸ عیار و زمان خوانده‌شدنش می‌آید", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    seedReferencePrice({
+      reference_slug: "talair",
+      instrument: "GOLD_18K_TOMAN",
+      value: 18559700,
+      read_at: "2026-08-07T10:00:00.000Z",
+    });
+    const html = await renderSlug("talasea");
+
+    expect(html).toContain("data-union-rate");
+    expect(html).toContain("نرخ اتحادیه");
+    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰"); // عدد آماده‌ی مرجع، بدون هیچ محاسبه‌ای
+    expect(html).toContain(formatDateTimeFa("2026-08-07T10:00:00.000Z"));
+  });
+
+  it("قطع منبع مرجع (بی‌سابقه) ⟸ نوار اصلاً رندر نمی‌شود، صفحه ۲۰۰ می‌ماند", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    seedReferencePrice(null);
+    const html = await renderSlug("talasea");
+
+    expect(html).not.toContain("data-union-rate");
+    expect(html).not.toContain("نرخ اتحادیه");
+    expect(html).toContain("طلاسی"); // صفحه همچنان کامل رندر می‌شود
+  });
+
+  it("عدد نوار به قیمت مرجع خودِ سکو نمی‌خورد — دو رشته‌ی جدا در HTML", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    // مقداری عمداً متفاوت از قیمت مرجع طلاسی (۱۸٬۵۳۰٬۰۰۰) تا اثبات شود این
+    // عدد مستقل است و به‌جای قیمت هیچ سکویی نمی‌نشیند (قاعده‌ی ۴ قراردادها).
+    seedReferencePrice({
+      reference_slug: "talair",
+      instrument: "GOLD_18K_TOMAN",
+      value: 18559700,
+      read_at: "2026-08-07T10:00:00.000Z",
+    });
+    const html = await renderSlug("talasea");
+
+    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰"); // نرخ اتحادیه
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودِ طلاسی، همچنان جدا
+  });
+});
+
+describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲۷)", () => {
+  it("عدد درشت = referencePriceFor؛ کارمزد معلوم ⟸ «میانگین خرید و فروش این سکو»", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    expect(html).toContain("data-rate-price");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودِ طلاسی (تصمیم ۱۹)
+    expect(html).toContain("میانگین خرید و فروش این سکو");
+  });
+
+  it("کارمزد نامعلوم ⟸ برچسب «قیمت اعلامی این سکو»، از hasUnknownFee نه فهرست دستی", async () => {
+    const store = assetStore();
+    const now = freshIso();
+    // سکوی کارمزد-نامعلوم که گردآورنده برایش قیمت مرجع (همان قیمت اسمی، تصمیم
+    // مالک ۲۰۲۶-۰۸-۰۶) نوشته — بر خلاف دیجی‌کالای assetStore که اصلاً مرجع
+    // ندارد و کارتش رندر نمی‌شود (آزموده در «سکوی بی‌قیمت مرجع» پایین‌تر).
+    store.listed = [
+      ...PLATFORMS,
+      { slug: "melligold", name_fa: "ملی‌گلد", data_policy: "ALLOWED" },
+    ];
+    store.snapshots["melligold"] = makeSnapshot({
+      slug: "melligold",
+      mid: 18490000,
+      feeSource: "UNKNOWN",
+      reference: 18490000,
+      fetchedAt: now,
+    });
+    store.updatedAt["melligold"] = now;
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("melligold");
+    expect(html).toContain("قیمت اعلامی این سکو");
+    expect(html).not.toContain("میانگین خرید و فروش این سکو");
+  });
+
+  it("نمودار همان سری عدد درشت را می‌کشد؛ سه آمار (تغییرات صعودی، بیشینه، کمینه) از همان سری‌اند", async () => {
+    seed(assetStore());
+    const history: PlatformHistory[] = [
+      {
+        platform_slug: "talasea",
+        points: [
+          { hour: "2026-08-06T09:00:00.000Z", value: 18400000 },
+          { hour: "2026-08-06T15:00:00.000Z", value: 18300000 },
+          { hour: "2026-08-06T21:00:00.000Z", value: 18530000 },
+        ],
+        latest: 18530000,
+        side_used: "MEAN",
+      },
+    ];
+    seedHistory(history);
+    const html = await renderSlug("talasea");
+    expect(html).not.toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // بیشینه‌ی سری
+    expect(html).toContain("۱۸٬۳۰۰٬۰۰۰"); // کمینه‌ی سری
+    // تغییرات: (۱۸۵۳۰۰۰۰−۱۸۴۰۰۰۰۰)/۱۸۴۰۰۰۰۰ = +۰٫۷۱٪ (سند مادر: «با درصد و فلش»)
+    expect(html).toContain("+۰٫۷۱٪");
+    expect(html).toContain("text-positive"); // صعود — سبز
+  });
+
+  it("تغییرات نزولی رنگ text-negative می‌گیرد", async () => {
+    seed(assetStore());
+    seedHistory([
+      {
+        platform_slug: "wallgold",
+        points: [
+          { hour: "2026-08-06T09:00:00.000Z", value: 18700000 },
+          { hour: "2026-08-06T15:00:00.000Z", value: 18820000 },
+          { hour: "2026-08-06T18:00:00.000Z", value: 18590000 },
+          { hour: "2026-08-06T21:00:00.000Z", value: 18611000 },
+        ],
+        latest: 18611000,
+        side_used: "MEAN",
+      },
+    ]);
+    const html = await renderSlug("wallgold");
+    expect(html).toContain("text-negative");
+    // تغییرات: (۱۸۶۱۱۰۰۰−۱۸۷۰۰۰۰۰)/۱۸۷۰۰۰۰۰ = −۰٫۴۸٪ (U+2212 MINUS SIGN، نه هایفن)
+    expect(html).toContain("−۰٫۴۸٪");
+    expect(html).toContain("۱۸٬۸۲۰٬۰۰۰"); // بیشینه‌ی سری
+    expect(html).toContain("۱۸٬۵۹۰٬۰۰۰"); // کمینه‌ی سری
+  });
+
+  it("سکوی بی‌تاریخچه: کارت بدون نمودار رندر می‌شود، صفحه ۲۰۰ می‌ماند (قاعده‌ی ۵)", async () => {
+    seed(assetStore());
+    seedHistory([]); // منبع تاریخچه در دسترس ولی هیچ سکویی سابقه ندارد
+    const html = await renderSlug("talasea");
+    expect(html).toContain("data-rate-price");
+    expect(html).toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
+  });
+
+  it("سکوی بی‌قیمت مرجع (بی‌اسنپ‌شات) اصلاً کارت را رندر نمی‌کند", async () => {
+    const store = assetStore();
+    store.snapshots["talasea"] = null;
+    store.updatedAt["talasea"] = staleIso();
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    expect(html).not.toContain("data-rate-price");
+    expect(html).toContain("قیمت در دسترس نیست");
+  });
+});
+
+/** ناحیه‌ی خودِ کارت نرخ در HTML رندرشده — تا تست‌ها با بقیه‌ی صفحه قاطی نشوند. */
+function rateCardSection(html: string): string {
+  const match = html.match(/<section[^>]*aria-labelledby="rate-card-heading"[\s\S]*?<\/section>/);
+  if (!match) throw new Error("کارت نرخ در HTML نیست");
+  return match[0];
+}
+
+describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت نرخ (بلیت ۳۱)", () => {
+  it("با داده‌ی تازه، برچسب «آخرین به‌روزرسانی» و شمارنده‌ی ۳۰ ثانیه هر دو رندر می‌شوند", async () => {
+    seed(assetStore()); // updatedAt همه‌ی سکوها freshIso است — تازه
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    const card = rateCardSection(html);
+    expect(card).toContain("به‌روزرسانی:"); // برچسب «آخرین به‌روزرسانی» — همیشه حاضر
+    expect(card).toContain("data-rate-countdown");
+    expect(card).toContain("بروزرسانی بعدی در ۳۰ ثانیه");
+    expect(card).not.toContain("کهنه");
+  });
+
+  it("با داده‌ی کهنه، شمارنده رندر نمی‌شود ولی برچسب کهنگی می‌ماند", async () => {
+    const store = assetStore();
+    store.updatedAt["talasea"] = staleIso(); // اسنپ‌شات همچنان هست، فقط زمانش کهنه
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    const card = rateCardSection(html);
+    expect(card).toContain("به‌روزرسانی:"); // برچسب کهنگی هم زیرمجموعه‌ی همین متن است
+    expect(card).toContain("کهنه");
+    expect(card).not.toContain("data-rate-countdown");
+    expect(card).not.toContain("بروزرسانی بعدی در");
+  });
+
+  it("قطع منبع (بی‌اسنپ‌شات) اصلاً کارت را رندر نمی‌کند — نه شمارنده نه برچسب زمان جعلی", async () => {
+    const store = assetStore();
+    store.snapshots["talasea"] = null;
+    store.updatedAt["talasea"] = staleIso();
+    seed(store);
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    expect(html).not.toContain("data-rate-countdown");
+    expect(html).toContain("قیمت در دسترس نیست"); // صفحه ۲۰۰ می‌ماند، متن صادقانه (قاعده‌ی ۵)
+  });
+});
+
+/** برچسب یک زبانه در HTML رندرشده — روزانه/هفتگی/ماهانه یا «به‌زودی». */
+function tabButton(html: string, label: string): string {
+  const match = html.match(new RegExp(`<button[^>]*>${label}</button>`));
+  if (!match) throw new Error(`زبانه‌ی «${label}» در HTML نیست`);
+  return match[0];
+}
+
+describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزانه/هفتگی/ماهانه (بلیت ۳۰)", () => {
+  it("نقش tablist دارد و روزانه پیش‌فرض زبانه‌ی فعال (aria-selected) است", async () => {
+    seed(assetStore());
+    seedHistory([]); // هیچ بازه‌ای سابقه ندارد — روزانه با این حال زبانه‌ی فعال می‌ماند
+    const html = await renderSlug("talasea");
+
+    expect(html).toContain('role="tablist"');
+    const dailyTab = tabButton(html, "روزانه");
+    expect(dailyTab).toContain('aria-selected="true"');
+    expect(dailyTab).not.toContain('disabled=""');
+  });
+
+  it("پوشش کافی هفتگی ⟸ زبانه‌ی هفتگی فعال و قابل‌کلیک؛ پوشش ناکافی ماهانه ⟸ «به‌زودی» و disabled", async () => {
+    seed(assetStore());
+    // پرس‌وجوی هر بازه با stepHours خودش تشخیص داده می‌شود: هفتگی=۲، ماهانه=۸.
+    seedHistoryByQuery((query) => {
+      if (query.stepHours === 2) {
+        return [
+          {
+            platform_slug: "talasea",
+            points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+            latest: 18400000,
+            side_used: "MEAN",
+            has_enough_coverage: true,
+          },
+        ];
+      }
+      if (query.stepHours === 8) {
+        return [
+          {
+            platform_slug: "talasea",
+            points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+            latest: 18400000,
+            side_used: "MEAN",
+            has_enough_coverage: false, // کمتر از نیم پنجره — «به‌زودی»
+          },
+        ];
+      }
+      return []; // روزانه — بی‌ربط به این سنجش
+    });
+    const html = await renderSlug("talasea");
+
+    const weeklyTab = tabButton(html, "هفتگی");
+    expect(weeklyTab).not.toContain('disabled=""');
+    expect(weeklyTab).toContain('aria-selected="false"');
+
+    const comingSoonTab = tabButton(html, "به‌زودی");
+    expect(comingSoonTab).toContain('disabled=""');
+    expect(comingSoonTab).toContain('aria-disabled="true"');
+    expect(html).not.toContain(">ماهانه<"); // برچسبش با «به‌زودی» عوض شده
+  });
+
+  it("ناحیه‌ی سه آمار aria-live دارد — تعویض زبانه عدد را برای صفحه‌خوان اعلام می‌کند", async () => {
+    seed(assetStore());
+    seedHistory([
+      {
+        platform_slug: "talasea",
+        points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+        latest: 18400000,
+        side_used: "MEAN",
+      },
+    ]);
+    const html = await renderSlug("talasea");
+    expect(html).toContain('aria-live="polite"');
   });
 });
 

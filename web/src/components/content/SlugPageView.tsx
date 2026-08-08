@@ -15,14 +15,12 @@
 import { AssetPage, groupRows } from "@/components/content/AssetPage";
 import { Breadcrumbs } from "@/components/content/PageShell";
 import { PlatformPage } from "@/components/content/PlatformPage";
-import type {
-  InstrumentListing,
-  ListedPlatform,
-  PlatformSnapshot,
-} from "@/lib/prices";
+import type { PlatformHistoryByRange } from "@/lib/history";
+import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "@/lib/prices";
+import type { ReferencePrice } from "@/lib/reference-price";
 import type { Row } from "@/lib/rows";
 import { SITE_URL } from "@/lib/site";
-import { assetProductJsonLd, breadcrumbJsonLd } from "@/lib/structured-data";
+import { assetProductJsonLd, breadcrumbJsonLd, platformWebPageJsonLd } from "@/lib/structured-data";
 
 /** صفحه‌ی دارایی — جدول همه‌ی سکوهای پشتیبان همین دارایی. */
 export interface InstrumentPageData {
@@ -48,6 +46,19 @@ export interface PlatformPageData {
   hasOutbound: boolean;
   /** نام فارسی هر کد دارایی — برای ستون «دارایی» جدول قیمت‌ها. */
   instrumentNames: Record<string, string>;
+  /**
+   * تاریخچه‌ی قیمت مرجع همین سکو (طلای ۱۸ عیار)، هر سه بازه — کارت نرخ بالای
+   * صفحه با نوار زبانه‌ی روزانه/هفتگی/ماهانه (بلیت ۲۷ + بلیت ۳۰). هر بازه
+   * `null` یعنی منبع قطع بود یا سکو هنوز سابقه‌ای ندارد؛ کارت/زبانه بدون
+   * نمودار رندر می‌شود، نه throw (قاعده‌ی ۵).
+   */
+  history: PlatformHistoryByRange;
+  /**
+   * نوار «نرخ اتحادیه» (تیکت ۳۳) — مرجع قیمت مستقل (نه سکو، نه محاسبه‌شده).
+   * `null` یعنی منبع مرجع قطع بود یا سابقه‌ای نبود؛ نوار اصلاً رندر نمی‌شود
+   * (قاعده‌ی ۵) — صفحه همچنان ۲۰۰ می‌ماند.
+   */
+  referencePrice: ReferencePrice | null;
   generated_at: string;
 }
 
@@ -64,7 +75,8 @@ interface HeadTag {
  * `Product` + `AggregateOffer` فقط صفحه‌ی دارایی، و از **همان** گروه
  * «معلوم‌ها»یی که جدول رندر می‌کند (`groupRows` مشترک است) — پس عدد JSON-LD
  * با عدد قابل‌مشاهده یکی است، بدون هیچ fetch جدا. برای سکو هیچ Product/Offer
- * ساخته نمی‌شود: ما فروشنده نیستیم.
+ * ساخته نمی‌شود: ما فروشنده نیستیم؛ به‌جایش `WebPage` با `about` از نوع
+ * `Organization` (نام سکو + website_url خودش) — بلیت ۲۹، بدون @id مستقل.
  */
 export function slugJsonLdTags(data: SlugPageData): HeadTag[] {
   if (data.kind === "instrument") {
@@ -89,6 +101,10 @@ export function slugJsonLdTags(data: SlugPageData): HeadTag[] {
         { name: "خانه", url: `${SITE_URL}/` },
         { name: data.platform.name_fa, url: `${SITE_URL}/${data.platform.slug}` },
       ]),
+    },
+    {
+      type: "application/ld+json",
+      children: platformWebPageJsonLd(data.platform),
     },
   ];
 }
@@ -134,9 +150,7 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
   if (data.kind === "instrument") {
     return (
       <>
-        <Breadcrumbs
-          items={[{ label: "خانه", href: "/" }, { label: data.listing.name_fa }]}
-        />
+        <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: data.listing.name_fa }]} />
         <AssetPage listing={data.listing} rows={data.rows} nowMs={nowMs} />
       </>
     );
@@ -144,15 +158,15 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
 
   return (
     <>
-      <Breadcrumbs
-        items={[{ label: "خانه", href: "/" }, { label: data.platform.name_fa }]}
-      />
+      <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: data.platform.name_fa }]} />
       <PlatformPage
         platform={data.platform}
         snapshot={data.snapshot}
         updatedAt={data.updatedAt}
         hasOutbound={data.hasOutbound}
         instrumentNames={data.instrumentNames}
+        history={data.history}
+        referencePrice={data.referencePrice}
         nowMs={nowMs}
       />
     </>

@@ -33,6 +33,21 @@ export function formatPercentFa(fraction: number): string {
   return fractionPercentFormatter.format(fraction);
 }
 
+/** با علامت +/− صریح — کارت نرخ سکو، ستون «تغییرات» (بلیت ۲۷: «با درصد و فلش»). */
+const signedFractionPercentFormatter = new Intl.NumberFormat("fa-IR", {
+  style: "percent",
+  maximumFractionDigits: 2,
+  signDisplay: "exceptZero",
+});
+
+/**
+ * کسرِ تغییر (مثلاً ۰٫۰۰۳۹ یا −۰٫۰۰۱۲) ⟸ «۰٫۳۹٪+» یا «۰٫۱۲٪−». همان کسر
+ * تفاضل سر و ته یک سری آماده است — فقط قالب‌بندی، هیچ فرمول قیمتی نیست.
+ */
+export function formatSignedPercentFa(fraction: number): string {
+  return signedFractionPercentFormatter.format(fraction);
+}
+
 const percentPointsFormatter = new Intl.NumberFormat("fa-IR", {
   maximumFractionDigits: 3,
 });

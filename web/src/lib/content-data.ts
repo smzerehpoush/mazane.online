@@ -28,6 +28,8 @@ import type {
 import type { PublishedPost } from "./blog";
 import { assembleSlugPage } from "./page-data";
 import { getPublishedPost, listPublishedPosts } from "./server/blog-source";
+import { getPlatformHistory } from "./server/history-source";
+import { getReferencePrice } from "./server/reference-price-source";
 import {
   fetchRowsForPlatforms,
   getInstruments,
@@ -52,9 +54,7 @@ export const loadBlogIndex = createServerFn({ method: "GET" }).handler(
  */
 export const loadBlogPost = createServerFn({ method: "GET" })
   .validator((input: { slug: string }) => input)
-  .handler(
-    async ({ data }): Promise<PublishedPost | null> => getPublishedPost(data.slug),
-  );
+  .handler(async ({ data }): Promise<PublishedPost | null> => getPublishedPost(data.slug));
 
 /**
  * قرارداد داده‌ی این صفحات را **نما** تعریف می‌کند
@@ -80,5 +80,7 @@ export const loadSlugPage = createServerFn({ method: "GET" })
       getPlatformSnapshot,
       getUpdatedAt,
       getInstruments,
+      getPlatformHistory,
+      getReferencePrice,
     }),
   );

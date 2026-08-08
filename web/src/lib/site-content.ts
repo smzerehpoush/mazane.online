@@ -6,6 +6,7 @@
  *
  * قاعده‌ی ۱ قراردادها اینجا هم برقرار است: هیچ فرمول قیمتی نیست، فقط قالب.
  */
+import type { HistoryRange } from "./history";
 
 export const brand = {
   name: "مظنه آنلاین",
@@ -60,6 +61,38 @@ export const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
 export const CHART_PLATFORM_SLUGS: readonly string[] = CHART_PLATFORMS.map(
   (platform) => platform.slug,
 );
+
+/**
+ * سه بازه‌ی نوار زبانه‌ی کارت نرخ صفحه‌ی سکو (بلیت ۳۰). هفتگی/ماهانه روی
+ * تجمیع ساعتی گام‌دار می‌خوانند (قاعده‌ی ۱: بدون میانگین، فقط آخرین نمونه‌ی
+ * هر سطل — `lib/server/history-source.ts::resampleHourlyPoints`). `hours`
+ * طول کل پنجره‌ی پرس‌وجو؛ نبودِ `stepHours` یعنی بدون نمونه‌برداری (روزانه —
+ * همان رفتار بلیت ۲۷).
+ */
+export interface RateCardRangeConfig {
+  key: HistoryRange;
+  label: string;
+  hours: number;
+  stepHours?: number;
+}
+
+export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
+  { key: "DAILY", label: "روزانه", hours: 24 },
+  { key: "WEEKLY", label: "هفتگی", hours: 24 * 7, stepHours: 2 },
+  // ۳۱ روز (نه ۳۰) عمداً: با گام ۸ ساعته دقیقاً ۹۳ سطل می‌دهد
+  // (۷۴۴/۸=۹۳) — همان عدد سند مادر، نه تقریب ماه ۳۰روزه.
+  { key: "MONTHLY", label: "ماهانه", hours: 24 * 31, stepHours: 8 },
+];
+
+/**
+ * منبع نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳) — فقط طلای ۱۸ عیار؛ بند ۲۴
+ * عیار گردآوری نمی‌شود. اسلاگ منبع همان چیزی است که گردآورنده در
+ * `hourly_rollups`/`reference_quotes` ذخیره می‌کند (`references/talair.py`).
+ * برچسب نمایشی «اتحادیه» روی این عدد تصمیم ثبت‌شده‌ی مالک است — سند
+ * `docs/adr/0001-etehadieh-label-on-talair-number.md`.
+ */
+export const UNION_RATE_REFERENCE_SLUG = "talair";
+export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
 
 /**
  * ارقام فارسی نمایش (قراردادها، بخش استک). ارقام داخل JSON-LD و URL لاتین

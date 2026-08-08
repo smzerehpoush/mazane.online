@@ -13,9 +13,19 @@ import type { SlugPageData } from "../../src/components/content/SlugPageView";
 import type { HomePageData } from "../../src/components/mazane/HomePage";
 import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
 import { setViewCounter, type ViewCounts } from "../../src/lib/views";
-import { getPlatformHistory, setHistorySource, type PlatformHistory } from "../../src/lib/history";
+import {
+  getPlatformHistory,
+  setHistorySource,
+  type HistoryQuery,
+  type PlatformHistory,
+} from "../../src/lib/history";
 import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
 import { listInstruments } from "../../src/lib/catalog";
+import {
+  getReferencePrice,
+  setReferencePriceSource,
+  type ReferencePrice,
+} from "../../src/lib/reference-price";
 import {
   getPlatformSnapshot,
   getUpdatedAt,
@@ -158,6 +168,24 @@ export function seedHistory(entries: PlatformHistory[]): void {
   setHistorySource({ getPlatformHistory: async () => entries });
 }
 
+/**
+ * فیک تاریخچه با تفکیک بر اساس پرس‌وجو (بلیت ۳۰) — برخلاف `seedHistory` که
+ * یک نتیجه‌ی ثابت برای هر سه بازه برمی‌گرداند، اینجا تست خودش تصمیم می‌گیرد
+ * بازه‌ی روزانه/هفتگی/ماهانه (تشخیص از `query.stepHours`) چه چیزی بگیرد —
+ * لازم برای سنجیدن فعال/غیرفعال‌بودن هر زبانه جدا از بقیه.
+ */
+export function seedHistoryByQuery(resolve: (query: HistoryQuery) => PlatformHistory[]): void {
+  setHistorySource({ getPlatformHistory: async (query) => resolve(query) });
+}
+
+/**
+ * فیک نوار «نرخ اتحادیه» (تیکت ۳۳) — `null` یعنی منبع قطع/بی‌سابقه، درست
+ * مثل قطع پستگرس واقعی: نوار اصلاً رندر نمی‌شود، صفحه ۲۰۰ می‌ماند.
+ */
+export function seedReferencePrice(value: ReferencePrice | null): void {
+  setReferencePriceSource({ getReferencePrice: async () => value });
+}
+
 /** منبع قیمت خالی — برای تست‌هایی که فقط بلاگ را می‌سنجند. */
 export function seedEmptyPrices(): void {
   seed({ listed: [], snapshots: {}, updatedAt: {}, instruments: [] });
@@ -228,6 +256,10 @@ export async function slugPageData(slug: string): Promise<SlugPageData | null> {
     // همان خواننده‌ای که `content-data.ts` روی سرور می‌دهد: فهرست دارایی‌ها
     // از کاتالوگ می‌آید (زنده مقدم، رجیستری بیلد کف) نه مستقیم از استور.
     getInstruments: listInstruments,
+    // بلیت ۲۷: تاریخچه‌ی سکو با seedHistory تزریق می‌شود، عین صفحه‌ی اصلی.
+    getPlatformHistory,
+    // تیکت ۳۳: نوار «نرخ اتحادیه» با seedReferencePrice تزریق می‌شود.
+    getReferencePrice,
   });
 }
 
