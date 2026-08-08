@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PublishedPost } from "../src/lib/blog";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
+import { adminHeadersFor, applyAdminHeaders } from "../src/lib/seo/admin-headers";
 import {
   HTML_EDGE_CACHE_CONTROL,
   NO_STORE,
@@ -74,6 +75,10 @@ describe("robots.txt (بند ۶.۴)", () => {
     expect(text).toContain("User-agent: *");
     expect(text).toContain("Allow: /");
     expect(text).toContain("Disallow: /go/");
+  });
+
+  it("‎/admin‎ برای همه‌ی خزنده‌ها بسته است (بلیت ۲۰، بند ۹ قراردادها)", () => {
+    expect(renderRobotsTxt()).toContain("Disallow: /admin");
   });
 
   it("سایت‌مپ را با نشانی مطلق معرفی می‌کند", () => {
@@ -199,5 +204,38 @@ describe("سیاست کش لبه (بند ۱۰ — قطعی مبدأ)", () => {
     expect(
       edgeCacheControlFor({ ...base, pathname: "/x.png", contentType: "image/png" }),
     ).toBeNull();
+  });
+});
+
+describe("هدرهای پنل مدیریت (بلیت ۲۰، بند ۹ قراردادها)", () => {
+  it("‎/admin‎ و هر زیرمسیرش هدر بی‌کش و بدون‌نمایه می‌گیرند", () => {
+    for (const pathname of ["/admin", "/admin/", "/admin/login", "/admin/foo/bar"]) {
+      const headers = adminHeadersFor(pathname);
+      expect(headers, pathname).not.toBeNull();
+      expect(headers?.["Cache-Control"]).toBe("no-store");
+      expect(headers?.["X-Robots-Tag"]).toBe("noindex, nofollow");
+    }
+  });
+
+  it("مسیرهای غیرپنل دست‌نخورده می‌مانند", () => {
+    for (const pathname of ["/", "/blog", "/adminfoo", "/api/prices"]) {
+      expect(adminHeadersFor(pathname), pathname).toBeNull();
+    }
+  });
+
+  it("applyAdminHeaders هدرها را روی پاسخ /admin می‌نشاند", () => {
+    const response = new Response("<html></html>", {
+      headers: { "content-type": "text/html" },
+    });
+    applyAdminHeaders(response, "/admin/login");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
+  });
+
+  it("applyAdminHeaders برای مسیر غیرپنل دست نمی‌زند", () => {
+    const response = new Response("ok");
+    applyAdminHeaders(response, "/blog");
+    expect(response.headers.get("cache-control")).toBeNull();
+    expect(response.headers.get("x-robots-tag")).toBeNull();
   });
 });

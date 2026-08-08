@@ -32,6 +32,10 @@ interface PostRow {
   status: PostStatus;
   published_at: Date | null;
   updated_at: Date;
+  image_url: string | null;
+  image_alt: string | null;
+  image_width: number | null;
+  image_height: number | null;
 }
 
 function toPost(row: PostRow): BlogPost {
@@ -42,10 +46,17 @@ function toPost(row: PostRow): BlogPost {
     status: row.status,
     published_at: row.published_at === null ? null : row.published_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
+    image_url: row.image_url,
+    image_alt: row.image_alt,
+    image_width: row.image_width,
+    image_height: row.image_height,
   };
 }
 
-const COLUMNS = "slug, title_fa, body_md, status, published_at, updated_at";
+// image_* — بلیت ۲۴: عکس شاخص، وقتی هست، بالای صفحه‌ی عمومی پست رندر می‌شود.
+const COLUMNS =
+  "slug, title_fa, body_md, status, published_at, updated_at, " +
+  "image_url, image_alt, image_width, image_height";
 
 export function createPgBlogSource(): BlogSource {
   const pool = pgPool();

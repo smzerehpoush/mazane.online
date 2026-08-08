@@ -12,6 +12,7 @@
 import type { SlugPageData } from "../../src/components/content/SlugPageView";
 import type { HomePageData } from "../../src/components/mazane/HomePage";
 import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
+import { setImageStore, type ImageStore, type UploadedImage } from "../../src/lib/images";
 import { setViewCounter, type ViewCounts } from "../../src/lib/views";
 import {
   getPlatformHistory,
@@ -21,6 +22,7 @@ import {
 } from "../../src/lib/history";
 import { assembleHomeData, assembleSlugPage } from "../../src/lib/page-data";
 import { listInstruments } from "../../src/lib/catalog";
+import type { ChartPlatformConfig } from "../../src/lib/site-content";
 import {
   getReferencePrice,
   setReferencePriceSource,
@@ -198,12 +200,25 @@ export function seedEmptyPrices(): void {
  */
 export async function homeData(
   store: SeededStore,
-  extra: { history?: PlatformHistory[]; posts?: BlogPost[]; views?: ViewCounts } = {},
+  extra: {
+    history?: PlatformHistory[];
+    posts?: BlogPost[];
+    views?: ViewCounts;
+    /**
+     * پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱) — `undefined` یعنی خواننده
+     * اصلاً صدا زده نمی‌شود (همان مسیر پیش از این تیکت)؛ مقدار داده‌شده
+     * (حتی `undefined` صریح از سمت خودِ خواننده) یعنی خواننده هست ولی
+     * ممکن است چیزی نداشته باشد — فرود امن در `chartSeriesConfig` سنجیده
+     * می‌شود.
+     */
+    chartPlatforms?: readonly ChartPlatformConfig[] | undefined;
+  } = {},
 ): Promise<HomePageData> {
   seed(store);
   seedHistory(extra.history ?? []);
   seedBlog(extra.posts ?? []);
   const views = extra.views;
+  const hasChartPlatformsReader = "chartPlatforms" in extra;
   return assembleHomeData({
     fetchRows,
     getPlatformHistory,
@@ -211,6 +226,7 @@ export async function homeData(
     // نبودِ خواننده عمداً حالت معتبری است — همان مسیری که تا پیش از آمدن
     // شمارنده اجرا می‌شد و باید همچنان کار کند.
     ...(views === undefined ? {} : { getViewCounts: async () => views }),
+    ...(hasChartPlatformsReader ? { getChartPlatforms: async () => extra.chartPlatforms } : {}),
   });
 }
 
@@ -239,6 +255,35 @@ export function seedBrokenViewCounter(): void {
     },
     viewCounts: async () => {
       throw new Error("view counter down");
+    },
+  });
+}
+
+/**
+ * فیک انبار عکس (بلیت ۲۴) — درون‌حافظه‌ای، بدون S3/sharp واقعی. هر آپلود
+ * را ثبت می‌کند تا تست بتواند اسلاگ/بایت رسیده به `upload` را هم بسنجد.
+ */
+export function seedImageStore(
+  result: Omit<UploadedImage, "objectKey"> = { width: 800, height: 600 },
+): {
+  uploads: { slug: string; bytes: Uint8Array; contentType: string }[];
+} {
+  const uploads: { slug: string; bytes: Uint8Array; contentType: string }[] = [];
+  const store: ImageStore = {
+    upload: async (slug, bytes, contentType) => {
+      uploads.push({ slug, bytes, contentType });
+      return { objectKey: `posts/${slug}/fake-hash.webp`, ...result };
+    },
+  };
+  setImageStore(store);
+  return { uploads };
+}
+
+/** انباری که همیشه می‌ترکد — برای سنجیدن «قطع انبار عکس فقط آپلود را می‌شکند». */
+export function seedBrokenImageStore(): void {
+  setImageStore({
+    upload: async () => {
+      throw new Error("image store down");
     },
   });
 }

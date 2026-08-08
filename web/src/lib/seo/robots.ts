@@ -6,6 +6,11 @@
  * هدر ‎X-Robots-Tag: noindex‎ روی خود پاسخ ‎/go/‎ است (دفاع در عمق برای
  * خزنده‌ای که robots را از کش قدیمی دارد).
  *
+ * ‎/admin‎ پنل مدیریت است (بلیت ۲۰، بند ۹ قراردادها) — سطح مدیریتی سایت
+ * اصلاً نباید کشف شود. لایه‌ی دوم همین قاعده، هدر
+ * ‎X-Robots-Tag: noindex, nofollow‎ روی خود پاسخ‌های پنل است
+ * (`lib/seo/admin-headers.ts`).
+ *
  * تابع خالص است — نه به فریم‌ورک وابسته است نه به منبع داده — تا مسیر
  * ‎src/routes/robots[.]txt.ts‎ فقط پوسته‌ی نازکش باشد و همین قاعده مستقیماً
  * تست شود.
@@ -21,6 +26,7 @@ export function renderRobotsTxt(siteUrl: string = SITE_URL): string {
     "User-agent: *",
     "Allow: /",
     "Disallow: /go/",
+    "Disallow: /admin",
     "",
     `Sitemap: ${siteUrl}/sitemap.xml`,
     "",

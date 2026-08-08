@@ -22,12 +22,13 @@ import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./pric
 import type { ReferencePrice, ReferencePriceQuery } from "./reference-price";
 import type { Row } from "./rows";
 import {
-  CHART_PLATFORM_SLUGS,
+  chartSeriesConfig,
   HOME_CHART_HOURS,
   HOME_INSTRUMENT,
   RATE_CARD_RANGES,
   UNION_RATE_INSTRUMENT,
   UNION_RATE_REFERENCE_SLUG,
+  type ChartPlatformConfig,
 } from "./site-content";
 import type { SlugResolution } from "./slugs";
 import type { ViewCounts } from "./views";
@@ -57,13 +58,21 @@ export interface HomeReaders {
    * (فیک‌های قدیمی تست بدون این هم معتبرند.)
    */
   getViewCounts?(): Promise<ViewCounts>;
+  /**
+   * اختیاری: پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱، `mazane:chart_config`
+   * ردیس). `undefined` یا نبودِ این خواننده یعنی فهرست پیش‌فرض کد
+   * (`chartSeriesConfig()` بدون آرگومان) — نه خطا؛ فرود امن در
+   * `chartSeriesConfig` است.
+   */
+  getChartPlatforms?(): Promise<readonly ChartPlatformConfig[] | undefined>;
 }
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
+  const chartPlatforms = chartSeriesConfig(await read.getChartPlatforms?.());
   const [rows, history, posts, viewCounts] = await Promise.all([
     read.fetchRows(),
     read.getPlatformHistory({
-      platformSlugs: [...CHART_PLATFORM_SLUGS],
+      platformSlugs: chartPlatforms.map((platform) => platform.slug),
       instrument: HOME_INSTRUMENT,
       hours: HOME_CHART_HOURS,
     }),
@@ -75,6 +84,7 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     history,
     posts,
     viewCounts,
+    chartPlatforms,
     generated_at: new Date().toISOString(),
   };
 }

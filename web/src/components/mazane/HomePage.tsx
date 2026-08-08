@@ -36,7 +36,7 @@ import type { PlatformHistory } from "@/lib/history";
 import type { Row } from "@/lib/rows";
 import { hasViewData, type ViewCounts } from "@/lib/views";
 import { SITE_URL } from "@/lib/site";
-import { brand, legalNote } from "@/lib/site-content";
+import { brand, legalNote, type ChartPlatformConfig } from "@/lib/site-content";
 import { organizationWebSiteJsonLd } from "@/lib/structured-data";
 
 /**
@@ -54,6 +54,8 @@ export interface HomePageData {
    * یعنی ترتیب تاریخ می‌ماند و ادعای «پرخواننده» گفته نمی‌شود.
    */
   viewCounts: ViewCounts;
+  /** سکوهای نمودار بالای صفحه با رنگ و ترتیبشان (`chartSeriesConfig`). */
+  chartPlatforms: readonly ChartPlatformConfig[];
   generated_at: string;
 }
 
@@ -89,7 +91,7 @@ export function homeHead() {
 }
 
 export function HomePage({ data }: { data: HomePageData }) {
-  const chart = chartView(data.rows, data.history);
+  const chart = chartView(data.rows, data.history, data.chartPlatforms);
   const best = bestView(data.rows);
   const rows = tableView(data.rows, best.buy?.slug ?? null);
   // زمان مرجع برچسب کهنگی. رندر سرور و hydration یکی نیستند؛ گره‌های متنی

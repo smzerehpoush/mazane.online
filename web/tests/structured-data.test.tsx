@@ -182,6 +182,15 @@ const PUBLISHED_POST: BlogPost = {
   updated_at: "2026-07-22T10:00:00.000Z",
 };
 
+/** همان PUBLISHED_POST به‌همراه عکس شاخص کامل (بلیت ۲۵). */
+const PUBLISHED_POST_WITH_IMAGE: BlogPost = {
+  ...PUBLISHED_POST,
+  image_url: "https://cdn.mazane.online/posts/moghayese-karmozd-sakooha/hash.webp",
+  image_alt: "نمودار مقایسه‌ی کارمزد سکوهای طلای آنلاین",
+  image_width: 1600,
+  image_height: 900,
+};
+
 const MADDE5_TEXT =
   "معاملات طلای برخط صرفاً با پذیرش ریسک از سوی طرفین انجام می‌شود و مشمول ضمانت دولت و نظام بانکی نیست.";
 
@@ -631,5 +640,49 @@ describe("متادیتا (بند ۶.۶) و lastmod (بند ۶.۷)", () => {
         expect(entry.lastModified, `${entry.path} نباید lastmod داشته باشد`).toBeUndefined();
       }
     }
+  });
+});
+
+/* ---------- عکس شاخص در سرصفحه‌ی پست و BlogPosting (بلیت ۲۵) ---------- */
+
+describe("عکس شاخص پست — og:image/twitter و فیلد image در BlogPosting", () => {
+  it("پست با عکس: og:image/og:image:width/og:image:height/twitter:image/twitter:card", async () => {
+    seedBlog([PUBLISHED_POST_WITH_IMAGE]);
+    const post = (await getPublishedPost(PUBLISHED_POST_WITH_IMAGE.slug)) as PublishedPost;
+    const head = blogPostHead(post);
+    expect(head.meta).toContainEqual({
+      property: "og:image",
+      content: PUBLISHED_POST_WITH_IMAGE.image_url,
+    });
+    expect(head.meta).toContainEqual({ property: "og:image:width", content: "1600" });
+    expect(head.meta).toContainEqual({ property: "og:image:height", content: "900" });
+    expect(head.meta).toContainEqual({
+      name: "twitter:image",
+      content: PUBLISHED_POST_WITH_IMAGE.image_url,
+    });
+    expect(head.meta).toContainEqual({ name: "twitter:card", content: "summary_large_image" });
+  });
+
+  it("پست بدون عکس: هیچ‌کدام از تگ‌های تصویر در متا نیست — نه با مقدار خالی", async () => {
+    seedBlog([PUBLISHED_POST]);
+    const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
+    const raw = JSON.stringify(blogPostHead(post).meta);
+    expect(raw).not.toContain("og:image");
+    expect(raw).not.toContain("twitter:image");
+    expect(raw).not.toContain("twitter:card");
+  });
+
+  it("BlogPosting: فیلد image فقط وقتی عکس هست، برابر همان نشانی مطلق", async () => {
+    seedBlog([PUBLISHED_POST_WITH_IMAGE]);
+    const post = (await getPublishedPost(PUBLISHED_POST_WITH_IMAGE.slug)) as PublishedPost;
+    const [blogPosting] = jsonLdBlocks(blogPostHead(post));
+    expect(blogPosting?.["image"]).toBe(PUBLISHED_POST_WITH_IMAGE.image_url);
+  });
+
+  it("پست بدون عکس: فیلد image اصلاً در BlogPosting نیست", async () => {
+    seedBlog([PUBLISHED_POST]);
+    const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
+    const [blogPosting] = jsonLdBlocks(blogPostHead(post));
+    expect(blogPosting).not.toHaveProperty("image");
   });
 });

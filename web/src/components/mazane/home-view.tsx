@@ -27,7 +27,8 @@ import {
   referencePriceFor,
   type Row,
 } from "@/lib/rows";
-import { CHART_PLATFORMS, HOME_INSTRUMENT } from "@/lib/site-content";
+import type { ChartPlatformConfig } from "@/lib/site-content";
+import { HOME_INSTRUMENT } from "@/lib/site-content";
 import { byPopularity, type ViewCounts } from "@/lib/views";
 
 /* ---------------------------------------------------------------- نمودار */
@@ -83,18 +84,23 @@ function formatHourFa(iso: string): string {
 }
 
 /**
- * پنج سکوی ثابت نمودار (تصمیم مالک) + سری ۲۴ ساعته‌شان.
+ * سکوهای نمودار (پیکربندی `chartSeriesConfig` — امروز فهرست ثابت کد،
+ * فردا تنظیمات سکو در پنل مدیریت) + سری ۲۴ ساعته‌شان.
  *
  * آخرین عدد هر سکو از **اسنپ‌شات جاری** می‌آید (قیمت مرجع همان سکو) و اگر
  * اسنپ‌شات نبود، از آخرین نقطه‌ی تاریخچه — هر دو انتخاب‌اند، نه محاسبه.
  * سکوی بی‌هیچ داده (مثلاً سکویی که تازه باز شده) صفحه را نمی‌شکند: محو
  * می‌ماند با برچسب «به‌زودی».
  */
-export function chartView(rows: Row[], history: PlatformHistory[]): ChartView {
+export function chartView(
+  rows: Row[],
+  history: PlatformHistory[],
+  chartPlatforms: readonly ChartPlatformConfig[],
+): ChartView {
   const rowBySlug = new Map(rows.map((row) => [row.platform.slug, row]));
   const historyBySlug = new Map(history.map((entry) => [entry.platform_slug, entry]));
 
-  const platforms: ChartPlatformView[] = CHART_PLATFORMS.map((config) => {
+  const platforms: ChartPlatformView[] = chartPlatforms.map((config) => {
     const row = rowBySlug.get(config.slug) ?? null;
     const entry = historyBySlug.get(config.slug) ?? null;
     const latestToman =
