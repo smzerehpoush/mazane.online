@@ -19,6 +19,7 @@
  */
 import { DashboardLive } from "@/components/dashboard-live";
 import { AllPlatforms } from "@/components/tablo/AllPlatforms";
+import { FeaturedPost } from "@/components/tablo/FeaturedPost";
 import { JewelryCalculator } from "@/components/tablo/JewelryCalculator";
 import { Madde5Bar } from "@/components/tablo/LegalNotice";
 import { MarketSummary } from "@/components/tablo/MarketSummary";
@@ -103,13 +104,18 @@ export function HomePage({ data }: { data: HomePageData }) {
   });
 
   // مقدار اولیه از سرور می‌آید و این هوک موقع mount هیچ فچی نمی‌زند (بند ۱۴).
-  const live = useLiveDashboard();
+  // زمان داده را می‌گیرد تا اولین فچ روی چرخه‌ی گردآورنده بنشیند نه روی لحظه‌ی
+  // hydration — وگرنه فتیله و دریافت داده هرگز هم‌فاز نمی‌شوند (بند ۱۳).
+  const live = useLiveDashboard(dashboard.updatedAt);
 
   // ⚠️ از `generated_at` سرور، نه `Date.now()`: برچسب کهنگی باید در رندر
   // سرور و در hydration یک متن بدهد (بند ۱۴، مورد ۲).
   const nowMs = Date.parse(data.generated_at);
   const reference = dashboard.rail.sources.find((source) => source.isReference) ?? null;
-  const latestPosts = sidebarPosts(data.posts);
+  // بند ۳ و ۸: «مقاله ویژه» تازه‌ترین پست است (بک‌اند پرچم ندارد — بند ۴ سند
+  // شکاف‌ها) و از فهرست ستون کناری کنار می‌رود تا یک نوشته دو بار نیاید.
+  const featuredPost = data.posts[0] ?? null;
+  const latestPosts = sidebarPosts(featuredPost === null ? data.posts : data.posts.slice(1));
   const morePosts = bottomPosts(data.posts, data.viewCounts);
   const rankedByViews = hasViewData(data.posts, data.viewCounts);
   const hasPosts = data.posts.length > 0;
@@ -135,21 +141,28 @@ export function HomePage({ data }: { data: HomePageData }) {
               referenceName={dashboard.summary.referenceName}
             />
             <PriceAlertCard />
-            {hasPosts && <Sidebar posts={latestPosts} />}
+            {/* ⚠️ شرط روی `latestPosts` است نه `hasPosts`: با یک پست، آن پست
+                «مقاله ویژه» می‌شود و این فهرست خالی می‌ماند — جعبه‌ی خالی
+                رندر نمی‌کنیم (تصمیم مالک). */}
+            {latestPosts.length > 0 && <Sidebar posts={latestPosts} />}
           </div>
 
           {/* ستون اصلی */}
           <div className="order-1 flex min-w-0 flex-col gap-4 min-[1081px]:order-2">
+            {/* ⚠️ زمان از داده‌ی زنده مقدم است: اگر نوبت گردآورنده بلغزد،
+                فاز فتیله باید دنبال داده‌ی واقعی برود نه زمان رندر سرور که
+                برای همیشه ثابت می‌ماند. تا اولین دریافت، همان سرور. */}
             <PriceRail
               rail={dashboard.rail}
-              updatedAt={dashboard.updatedAt}
-              updatedAtDisplay={dashboard.updatedAtDisplay}
+              updatedAt={live.data?.updated_at ?? dashboard.updatedAt}
+              updatedAtDisplay={live.data?.updated_at_display ?? dashboard.updatedAtDisplay}
               tick={live.tick}
               failed={live.failed}
               onRefresh={live.refreshNow}
             />
             <MarketSummary summary={dashboard.summary} />
             <SourceCards sources={dashboard.rail.sources} nowMs={nowMs} />
+            {featuredPost !== null && <FeaturedPost post={featuredPost} />}
           </div>
         </div>
 

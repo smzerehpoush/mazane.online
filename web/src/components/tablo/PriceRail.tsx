@@ -67,6 +67,19 @@ export function PriceRail({
       return;
     }
 
+    /**
+     * ⚠️ بند ۱۰: با شکست فچ فتیله باید **بایستد**. این تزئین نیست — فتیله‌ی
+     * در حال سوختن یک وعده است: «تمام که شد، قیمت‌ها تازه می‌شوند» (همان متن
+     * زیر عنوان کارت). وقتی اتصال قطع است این وعده دروغ می‌شود و بدتر از
+     * نبودنش است: کاربر عددِ کهنه را تازه می‌پندارد. نوار خطا به‌تنهایی کافی
+     * نیست، چون فتیله همچنان هر ۳۰ ثانیه پر و خالی می‌شود و حرکت، از متن
+     * ساکن قوی‌تر دیده می‌شود.
+     */
+    if (failed) {
+      fuse.style.animationPlayState = "paused";
+      return;
+    }
+
     const elapsedSeconds = (Date.now() - new Date(updatedAt).getTime()) / 1000;
     const remaining = Math.max(0, 30 - (elapsedSeconds % 30));
 
@@ -77,7 +90,9 @@ export function PriceRail({
     void fuse.offsetWidth;
     fuse.style.animation = "";
     fuse.style.animationDelay = `-${30 - remaining}s`;
-  }, [updatedAt, tick]);
+    // صریح، چون شاخه‌ی بالا ممکن است `paused` را روی همین گره نشانده باشد.
+    fuse.style.animationPlayState = "running";
+  }, [updatedAt, tick, failed]);
 
   return (
     <section className="card-surface overflow-hidden">

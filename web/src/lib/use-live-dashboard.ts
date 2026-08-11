@@ -39,11 +39,37 @@ export interface LiveDashboardState {
 }
 
 /**
- * ⚠️ `initialUpdatedAt` عمداً ورودی است و از داخل خوانده نمی‌شود: فتیله باید
- * با زمان **داده‌ی سرور** همگام شود نه با لحظه‌ی hydration (بند ۱۴)، و تا
- * اولین دریافت موفق، تنها زمانی که داریم همان است.
+ * کف فاصله‌ی اولین فچ. اگر نوبت بعدی گردآورنده تقریباً رسیده باشد، بدون این
+ * کف عملاً «موقع mount» فچ می‌زدیم که بند ۱۴ منعش کرده.
  */
-export function useLiveDashboard(): LiveDashboardState {
+const MIN_FIRST_DELAY_MS = 1_000;
+
+/**
+ * فاصله تا نوبت بعدی گردآورنده — نه یک بازه‌ی کامل از لحظه‌ی mount.
+ *
+ * ⚠️ چرا مهم است: فاز فتیله به `updatedAt` **سرور** قفل است، ولی اگر اولین
+ * فچ ۳۰ ثانیه بعد از mount باشد این دو هرگز روی هم نمی‌افتند. صفحه‌ای که ۵
+ * ثانیه بعد از `updatedAt` هیدریت شود، فتیله‌اش هر دور ۵ ثانیه **زودتر** از
+ * رسیدن داده تمام می‌شود و چون `infinite` است دوباره پر می‌شود — خطا هرگز
+ * جبران نمی‌شود و بند ۱۳ («فتیله دقیقاً هم‌زمان با دریافت داده تمام می‌شود»)
+ * برای همیشه نقض می‌ماند. با تنظیم اولین فچ روی باقی‌مانده‌ی همان چرخه، هر دو
+ * ساعت روی یک فاز می‌نشینند و بعد از آن هم‌قدم می‌مانند.
+ */
+export function firstDelayMs(updatedAt: string | null, nowMs: number = Date.now()): number {
+  if (updatedAt === null) return POLL_INTERVAL_MS;
+  const elapsed = nowMs - new Date(updatedAt).getTime();
+  // زمان نامعتبر یا ساعتِ عقب‌مانده‌ی کاربر ⟸ رفتار قبلی، نه فچ زودهنگام.
+  if (!Number.isFinite(elapsed) || elapsed < 0) return POLL_INTERVAL_MS;
+  return Math.max(MIN_FIRST_DELAY_MS, POLL_INTERVAL_MS - (elapsed % POLL_INTERVAL_MS));
+}
+
+/**
+ * ⚠️ `initialUpdatedAt` زمان داده‌ی رندر سرور است و **فقط** فاز اولین فچ را
+ * تعیین می‌کند: پولینگ باید با چرخه‌ی گردآورنده همگام شود نه با لحظه‌ی
+ * hydration (بند ۱۴). عمداً از `data` داخلی خوانده نمی‌شود چون تا اولین
+ * دریافت موفق، تنها زمانی که داریم همان است.
+ */
+export function useLiveDashboard(initialUpdatedAt: string | null = null): LiveDashboardState {
   const [data, setData] = useState<LiveDashboard | null>(null);
   const [failed, setFailed] = useState(false);
   const [tick, setTick] = useState(0);
@@ -75,9 +101,9 @@ export function useLiveDashboard(): LiveDashboardState {
       }
     }
 
-    function schedule(): void {
+    function schedule(delayMs: number = POLL_INTERVAL_MS): void {
       window.clearTimeout(timer);
-      timer = window.setTimeout(run, POLL_INTERVAL_MS);
+      timer = window.setTimeout(run, delayMs);
     }
 
     async function run(): Promise<void> {
@@ -103,9 +129,11 @@ export function useLiveDashboard(): LiveDashboardState {
       void run();
     }
 
-    // ⚠️ اولین فچ **بعد از** یک بازه‌ی کامل است، نه همین حالا: داده‌ی رندر
-    // سرور تازه است و فچ فوری فقط یک درخواست اضافه به مبدأ می‌زند (بند ۱۴).
-    schedule();
+    // ⚠️ اولین فچ هرگز «همین حالا» نیست — داده‌ی رندر سرور تازه است و فچ
+    // فوری فقط یک درخواست اضافه به مبدأ می‌زند (بند ۱۴). ولی یک بازه‌ی کامل
+    // هم نیست: روی باقی‌مانده‌ی چرخه‌ی گردآورنده می‌نشیند تا با فتیله هم‌فاز
+    // شود (توضیح `firstDelayMs`).
+    schedule(firstDelayMs(initialUpdatedAt));
     document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
@@ -113,7 +141,9 @@ export function useLiveDashboard(): LiveDashboardState {
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, []);
+    // مقدار سرور است و در طول عمر صفحه عوض نمی‌شود، پس عملاً یک‌بار اجراست؛
+    // اگر روزی عوض شد، ری‌ست تایمر رفتار درست است نه عارضه.
+  }, [initialUpdatedAt]);
 
   return { data, failed, tick, refreshNow: () => fetchRef.current() };
 }

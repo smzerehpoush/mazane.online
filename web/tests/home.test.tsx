@@ -210,6 +210,32 @@ describe("صفحه‌ی اصلی — خلاصه بازار (بند ۷)", () => {
       expect(html, key).toContain(`data-summary-tab="${key}"`);
     }
   });
+
+  /**
+   * بند ۷ این سه رشته را عیناً نقل کرده. قبلاً برچسب‌های کارت نرخِ صفحه‌ی سکو
+   * («روزانه/هفتگی/ماهانه») قرض گرفته شده بود — واژگان صفحه‌ی دیگری روی این
+   * صفحه.
+   */
+  it("برچسب زبانه‌ها همان واژگان بند ۷ است، نه واژگان کارت نرخ صفحه‌ی سکو", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain("۲۴ ساعت اخیر");
+    expect(html).toContain("هفته گذشته");
+    expect(html).toContain("ماه گذشته");
+  });
+
+  /**
+   * ⚠️ «به‌زودی» در این صفحه معنای تثبیت‌شده دارد: بند ۱۵ تصمیم ۴ آن را برای
+   * قابلیت‌های ساخته‌نشده (حباب‌سنج، هشدار قیمت) برداشته. بازه‌ای که فقط هنوز
+   * تاریخچه ندارد ساخته‌نشده نیست — و روی نصب تازه هر سه زبانه «به‌زودی»
+   * می‌شدند و کل کارت عرضه‌نشده به‌نظر می‌آمد.
+   */
+  it("زبانه‌ی بی‌داده برچسبش عوض نمی‌شود؛ فقط disabled است", async () => {
+    const html = await renderHome(healthyStore(), { history: [] });
+    expect(html).toContain("۲۴ ساعت اخیر");
+    const tabs = html.match(/<button[^>]*data-summary-tab="[^"]*"[^>]*>/g) ?? [];
+    expect(tabs.length).toBe(3);
+    for (const tab of tabs) expect(tab, tab).toContain("disabled");
+  });
 });
 
 describe("صفحه‌ی اصلی — جدول حذف شد (بند ۱.۱)", () => {
@@ -346,7 +372,7 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
     expect(html).not.toContain("بیشتر بخوانید");
   });
 
-  it("با پست منتشرشده هر دو بخش می‌آیند و لینکشان داخلی است", async () => {
+  it("با دو پست، تازه‌ترین «مقاله ویژه» می‌شود و بقیه در ستون کناری", async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -357,6 +383,14 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
           published_at: "2026-08-01T09:00:00.000Z",
           updated_at: "2026-08-01T09:00:00.000Z",
         },
+        {
+          slug: "ayar-tala",
+          title_fa: "عیار طلا یعنی چه؟",
+          body_md: "عیار نسبت طلای خالص به کل وزن است.",
+          status: "published",
+          published_at: "2026-07-20T09:00:00.000Z",
+          updated_at: "2026-07-20T09:00:00.000Z",
+        },
       ],
     });
     expect(html).toContain("تازه‌ترین نوشته‌ها");
@@ -364,6 +398,65 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
     expect(html).toContain('href="/blog/hazine-raft-o-bargasht"');
     // چکیده از بدنه‌ی خود پست برداشته می‌شود، ساخته نمی‌شود.
     expect(html).toContain("هزینه‌ی رفت‌وبرگشت یعنی مجموع اثر کارمزد خرید و فروش.");
+  });
+
+  /**
+   * بند ۳ و ۸: کارت «مقاله ویژه» در انتهای ستون اصلی.
+   *
+   * ⚠️ «ویژه» ادعای سردبیری نیست — بک‌اند پرچم `is_featured` ندارد (بند ۴ سند
+   * شکاف‌ها) و تازه‌ترین پست انتخاب می‌شود. تستِ عدم‌تکرار مهم‌تر از خودِ کارت
+   * است: بدون آن، یک نوشته دو بار در یک سند می‌آمد.
+   */
+  it("کارت «مقاله ویژه» با CTA رندر می‌شود و همان پست در ستون کناری تکرار نمی‌شود", async () => {
+    const html = await renderHome(healthyStore(), {
+      posts: [
+        {
+          slug: "rahnama-kharid",
+          title_fa: "راهنمای کامل خرید طلای زینتی",
+          body_md: "نکات کلیدی برای خرید هوشمندانه طلای زینتی.",
+          status: "published",
+          published_at: "2026-08-05T09:00:00.000Z",
+          updated_at: "2026-08-05T09:00:00.000Z",
+        },
+        {
+          slug: "ayar-tala",
+          title_fa: "عیار طلا یعنی چه؟",
+          body_md: "عیار نسبت طلای خالص به کل وزن است.",
+          status: "published",
+          published_at: "2026-07-20T09:00:00.000Z",
+          updated_at: "2026-07-20T09:00:00.000Z",
+        },
+      ],
+    });
+    expect(html).toContain("مقاله ویژه");
+    expect(html).toContain("مطالعه مقاله ←");
+
+    // ⚠️ فقط ستون کناری بررسی می‌شود، نه کل صفحه: هم‌پوشانی «تازه‌ترین‌ها» با
+    // «بیشتر بخوانید» از قبل عمدی است (دو نگاه متفاوت به یک مجموعه)، ولی
+    // مقاله‌ی ویژه نباید در فهرست تازه‌ترین‌ها تکرار شود.
+    const sidebar = html.match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? "";
+    expect(sidebar).not.toBe("");
+    expect(sidebar).not.toContain("راهنمای کامل خرید طلای زینتی");
+    expect(sidebar).toContain('href="/blog/ayar-tala"');
+  });
+
+  it("با تنها یک پست، همان پست «مقاله ویژه» است و ستون کناری خالی رندر نمی‌شود", async () => {
+    const html = await renderHome(healthyStore(), {
+      posts: [
+        {
+          slug: "tanha-post",
+          title_fa: "تنها نوشته‌ی سایت",
+          body_md: "یک متن کوتاه.",
+          status: "published",
+          published_at: "2026-08-05T09:00:00.000Z",
+          updated_at: "2026-08-05T09:00:00.000Z",
+        },
+      ],
+    });
+    expect(html).toContain("مقاله ویژه");
+    expect(html).toContain("تنها نوشته‌ی سایت");
+    // جعبه‌ی خالی نه (تصمیم مالک): فهرست ستون کناری اصلاً نمی‌آید.
+    expect(html).not.toContain("تازه‌ترین نوشته‌ها");
   });
 
   it("پیش‌نویس هرگز به صفحه‌ی اصلی نمی‌رسد", async () => {

@@ -194,6 +194,22 @@ export interface RateCardRangeConfig {
   stepHours?: number;
 }
 
+/**
+ * برچسب زبانه‌های «خلاصه بازار» صفحه‌ی اصلی — بند ۷ سند طراحی این سه رشته را
+ * عیناً نقل کرده.
+ *
+ * ⚠️ عمداً جدا از `RATE_CARD_RANGES` است و نه import از آن: آن‌ها برچسب کارت
+ * نرخِ **صفحه‌ی سکو**اند («روزانه/هفتگی/ماهانه») و آنجا کنار جدولی می‌نشینند
+ * که واژگان خودش را دارد. یکی‌کردنشان یعنی هر تغییر در یک صفحه بی‌سروصدا
+ * صفحه‌ی دیگر را هم عوض می‌کند. بازه‌ها (`hours`/`stepHours`) مشترک می‌مانند؛
+ * فقط واژه فرق می‌کند.
+ */
+export const HOME_SUMMARY_RANGE_LABELS: Readonly<Record<HistoryRange, string>> = {
+  DAILY: "۲۴ ساعت اخیر",
+  WEEKLY: "هفته گذشته",
+  MONTHLY: "ماه گذشته",
+};
+
 export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
   { key: "DAILY", label: "روزانه", hours: 24 },
   { key: "WEEKLY", label: "هفتگی", hours: 24 * 7, stepHours: 2 },

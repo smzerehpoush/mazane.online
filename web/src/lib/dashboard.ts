@@ -40,7 +40,12 @@ import { formatSignedPercentFa } from "./format";
 import type { HistoryRange, PlatformHistory, PlatformHistoryByRange } from "./history";
 import { priceToman, type Row } from "./rows";
 import { seriesPaths } from "./spline";
-import { HOME_INSTRUMENT, RATE_CARD_RANGES, type ChartPlatformConfig } from "./site-content";
+import {
+  HOME_INSTRUMENT,
+  HOME_SUMMARY_RANGE_LABELS,
+  RATE_CARD_RANGES,
+  type ChartPlatformConfig,
+} from "./site-content";
 
 /* ------------------------------------------------------------------ محور */
 
@@ -360,7 +365,13 @@ export function buildDashboard(input: DashboardInput): DashboardView {
     },
     summary: {
       referenceName: referenceSource?.name ?? null,
-      ranges: RATE_CARD_RANGES.map((range) => summaryOf(range, input.referenceHistory[range.key])),
+      // بازه‌ها از پیکربندی مشترک، ولی برچسب از واژگان خودِ صفحه‌ی اصلی (بند ۷).
+      ranges: RATE_CARD_RANGES.map((range) =>
+        summaryOf(
+          { key: range.key, label: HOME_SUMMARY_RANGE_LABELS[range.key] },
+          input.referenceHistory[range.key],
+        ),
+      ),
     },
     updatedAt,
     updatedAtDisplay: updatedAt === null ? null : formatFaClock(updatedAt),

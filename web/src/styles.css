@@ -357,6 +357,26 @@
 }
 
 /**
+ * بند ۵: «داده آپدیت می‌شود، محور یک لحظه طلایی برق می‌زند».
+ *
+ * روی `background` می‌نشیند نه `opacity` یا `filter`: محور نشانگرهای در حال
+ * لغزش دارد و هر چیزی که یک لایه‌ی ترکیب تازه بسازد، ترنزیشن ۸۰۰ میلی‌ثانیه‌ای
+ * آن‌ها را روی GPU از نو رسترایز می‌کند و لغزش را می‌لرزاند.
+ */
+.rail-flash {
+  animation: rail-flash 0.6s ease-out;
+}
+
+@keyframes rail-flash {
+  from {
+    background: color-mix(in oklab, var(--gold) 16%, transparent);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/**
  * بند ۱۲: با `prefers-reduced-motion` فتیله به **یک نوار ثابت** تبدیل می‌شود،
  * نه اینکه ناپدید شود — کاربر باید همچنان بفهمد داده هر ۳۰ ثانیه تازه می‌شود.
  * متن جایگزین با `::before` می‌آید تا در DOM تکرار نشود.
@@ -370,6 +390,11 @@
 
   .rail-fuse::after {
     display: none;
+  }
+
+  /* برق طلایی هم حرکت است — با این تنظیم اصلاً نباید بزند (بند ۱۲). */
+  .rail-flash {
+    animation: none !important;
   }
 
   [data-rail]::after {

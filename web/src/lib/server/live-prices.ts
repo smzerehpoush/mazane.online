@@ -66,6 +66,7 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
       spread_display: dashboard.rail.spreadDisplay,
       reference_percent: dashboard.rail.referencePercent,
       updated_at: dashboard.updatedAt,
+      updated_at_display: dashboard.updatedAtDisplay,
     },
   };
 }
