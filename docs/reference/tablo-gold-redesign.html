@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تابلو گلد — قیمت طلا</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F6F7F9; --card:#FFFFFF; --sub:#F4F6F8; --line:#EDEFF3; --line2:#E2E5EA;
+  --tx:#1A1D23; --tx2:#666C78; --tx3:#9AA1AC;
+  --ac:#2563EB; --acbg:#EFF5FF; --actx:#1D4ED8; --onac:#FFFFFF;
+  --gn:#0E9F6E; --gnbg:#E6F6F0; --gntx:#07684A;
+  --rd:#E02424; --rdbg:#FDECEC; --rdtx:#9B1C1C;
+  --am:#B45309; --ambg:#FDF6EC; --gold:#D4A24C;
+  --s1:#2563EB; --s2:#0E9F6E; --s3:#7C3AED; --s4:#EA580C; --s5:#DB2777;
+  --sh:0 1px 2px rgba(16,24,40,.05);
+  --thumb:linear-gradient(135deg,#1E3A5F,#0F172A);
+  --feat:linear-gradient(135deg,#E8C39E,#C9985F);
+}
+[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0D0F13; --card:#16191F; --sub:#1E222A; --line:#252932; --line2:#333843;
+  --tx:#E9EBEF; --tx2:#A2AAB6; --tx3:#737C89;
+  --ac:#6AA0F8; --acbg:#182742; --actx:#A8C7FB; --onac:#0B1220;
+  --gn:#34D3A5; --gnbg:#12291F; --gntx:#5FE0BA;
+  --rd:#F87171; --rdbg:#2C1618; --rdtx:#FCA5A5;
+  --am:#E5B168; --ambg:#291F12; --gold:#E0B063;
+  --s1:#6AA0F8; --s2:#34D3A5; --s3:#A78BFA; --s4:#FB923C; --s5:#F472B6;
+  --sh:0 1px 2px rgba(0,0,0,.3);
+  --thumb:linear-gradient(135deg,#22456F,#131A28);
+  --feat:linear-gradient(135deg,#8A6C4A,#40301F);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:Vazirmatn,system-ui,sans-serif;font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased;transition:background .25s ease,color .25s ease}
+.wrap{max-width:1340px;margin:0 auto;padding:0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh)}
+h1,h2,h3{font-weight:600;line-height:1.4}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+
+header{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.hd{display:flex;align-items:center;justify-content:space-between;height:66px;gap:20px}
+.logo{display:flex;align-items:center;gap:9px;font-size:19px;font-weight:600;letter-spacing:-.3px}
+.mark{width:26px;height:26px;border-radius:7px;background:var(--ac);display:grid;place-items:center;color:var(--onac);font-size:13px;font-weight:600}
+nav{display:flex;gap:4px;font-size:13.5px}
+nav a{color:var(--tx2);text-decoration:none;padding:8px 13px;border-radius:8px;position:relative}
+nav a:hover{color:var(--tx);background:var(--sub)}
+nav a.on{color:var(--ac);font-weight:500}
+nav a.on::after{content:"";position:absolute;right:13px;left:13px;bottom:-13px;height:2px;background:var(--ac);border-radius:2px}
+.icons{display:flex;gap:9px}
+.ib{width:38px;height:38px;border:1px solid var(--line2);border-radius:10px;display:grid;place-items:center;color:var(--tx2);font-size:16px}
+.ib:hover{background:var(--sub);color:var(--tx);border-color:var(--line2)}
+
+.grid{display:grid;grid-template-columns:360px minmax(0,1fr);gap:16px;padding:18px 0 34px;align-items:start}
+.col{display:flex;flex-direction:column;gap:16px}
+.pad{padding:18px 20px}
+.ch{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:3px}
+.ct{font-size:15.5px;font-weight:600}
+.cs{font-size:12.5px;color:var(--tx2)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"ss01"}
+
+.fuse{position:absolute;top:-1px;right:0;height:3px;border-radius:2px;background:var(--gold);width:100%;animation:burn 30s linear infinite}
+.fuse::after{content:"";position:absolute;left:-3px;top:-2.5px;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 3px rgba(212,162,76,.25),0 0 10px 2px rgba(212,162,76,.35)}
+@keyframes burn{from{width:100%}to{width:0}}
+.flash{animation:fl .9s ease-out}
+@keyframes fl{0%{background:var(--gold)}100%{background:var(--line2)}}
+
+.rail{position:relative;height:132px;margin-top:16px}
+.axis{position:absolute;top:30px;right:4%;left:4%;height:1px;background:var(--line2)}
+.axis::before,.axis::after{content:"";position:absolute;top:-3px;width:1px;height:7px;background:var(--line2)}
+.axis::before{right:0}.axis::after{left:0}
+.anchor{position:absolute;top:8px;bottom:6px;width:0;border-right:1px dashed var(--ac);opacity:.45;transition:right .8s cubic-bezier(.4,0,.2,1)}
+.anchorL{position:absolute;top:0;transform:translateX(50%);font-size:10.5px;color:var(--actx);background:var(--acbg);padding:2px 8px;border-radius:20px;white-space:nowrap;transition:right .8s cubic-bezier(.4,0,.2,1)}
+.mk{position:absolute;top:24px;transform:translateX(50%);display:flex;flex-direction:column;align-items:center;transition:right .8s cubic-bezier(.4,0,.2,1);text-decoration:none;color:inherit}
+.mk .dot{width:13px;height:13px;border-radius:50%;background:var(--card);border:2.5px solid;transition:transform .25s}
+.mk:hover .dot{transform:scale(1.25)}
+.mk .stem{width:1px;background:var(--line2)}
+.mk .nm{font-size:12px;margin-top:5px;white-space:nowrap}
+.mk .pz{font-size:11.5px;color:var(--tx3);white-space:nowrap}
+.mk:hover .nm{color:var(--ac)}
+.ends{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--tx3);border-top:1px solid var(--line);padding-top:11px;margin-top:4px}
+
+.cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;margin-top:14px}
+.pc{background:var(--sub);border:1px solid transparent;border-radius:11px;padding:12px 12px 10px;text-decoration:none;color:inherit;display:block;transition:background .6s,border-color .2s}
+.pc:hover{border-color:var(--line2)}
+.pc .top{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.pc .sw{width:8px;height:8px;border-radius:50%;flex:none}
+.pc .nm{font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .pz{font-size:16px;font-weight:600;letter-spacing:-.3px}
+.pc .bd{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;margin:6px 0 9px}
+.pc svg.sp{width:100%;height:28px;display:block}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.seg{display:flex;background:var(--sub);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
+.seg button{padding:6px 14px;border-radius:9px;font-size:12.5px;color:var(--tx2);white-space:nowrap;transition:background .2s,color .2s}
+.seg button:hover{color:var(--tx)}
+.seg button.on{background:var(--ac);color:var(--onac);font-weight:500}
+.sum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:24px;align-items:center;margin-top:18px}
+.hero{font-size:31px;font-weight:600;letter-spacing:-.8px;color:var(--ac);line-height:1.25}
+#area{width:100%;height:108px;display:block}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);margin-top:18px;padding-top:15px}
+.stats b{font-size:15.5px;font-weight:600;display:block;letter-spacing:-.2px}
+.stats span{font-size:12px;color:var(--tx3)}
+.row{display:flex;align-items:center;justify-content:space-between;padding:9px 0}
+.big{font-size:24px;font-weight:600;letter-spacing:-.5px}
+.field{border:1px solid var(--line2);border-radius:10px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;color:var(--tx3);font-size:13px;margin-bottom:9px}
+.bub{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.bub div{background:var(--sub);border-radius:10px;padding:11px 8px;text-align:center}
+.bub b{display:block;font-size:14.5px;font-weight:600;margin-top:2px}
+.bub span{font-size:11px;color:var(--tx3)}
+.note{background:var(--ambg);border-radius:10px;padding:11px 14px;font-size:11.5px;color:var(--am);line-height:2;margin-top:13px}
+.blogit{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.blogit:last-child{border:none}
+.thumb{width:74px;height:52px;border-radius:9px;background:var(--thumb);flex:none}
+.link{color:var(--ac);font-size:12.5px;text-decoration:none;font-weight:500}
+.feat{display:flex;gap:0;overflow:hidden}
+.feat .img{width:230px;flex:none;background:var(--feat)}
+.cta{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--ac);color:var(--ac);border-radius:9px;padding:8px 15px;font-size:13px;font-weight:500;text-decoration:none;margin-top:12px}
+.cta:hover{background:var(--acbg)}
+.tag{display:inline-block;background:var(--acbg);color:var(--actx);font-size:11px;padding:2px 9px;border-radius:20px;margin-bottom:8px}
+
+@media(max-width:1080px){.grid{grid-template-columns:1fr}nav{display:none}.cards{grid-template-columns:repeat(3,1fr)}.feat .img{display:none}}
+@media(max-width:620px){.cards{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.rail{height:180px}.sum{grid-template-columns:1fr;gap:14px}.ch{flex-direction:column;align-items:flex-start;gap:10px}.seg button{padding:6px 10px;font-size:12px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hd">
+    <div class="logo"><span class="mark">ط</span>تابلو گلد</div>
+    <nav>
+      <a href="#" class="on">قیمت طلا</a>
+      <a href="#">اخبار و تحلیل</a>
+      <a href="#">آموزش</a>
+      <a href="#">درباره ما</a>
+      <a href="#">تماس با ما</a>
+    </nav>
+    <div class="icons">
+      <button class="ib" aria-label="هشدار قیمت">◔</button>
+      <button class="ib" id="theme" aria-label="تغییر حالت روشن و تاریک">☾</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap grid">
+
+  <div class="col">
+    <section class="card pad">
+      <div class="ch"><h2 class="ct">حباب سنج</h2></div>
+      <div class="bub" style="margin-top:14px">
+        <div><span>قیمت ذاتی</span><b class="num" id="intr">۵٬۵۵۴٬۴۳۰</b></div>
+        <div><span>مقدار حباب</span><b class="num" id="bub">۳۱۳٬۱۵۰</b></div>
+        <div><span>درصد حباب</span><b class="num" id="bpc" style="color:var(--gn)">۵٫۶۶٪+</b></div>
+      </div>
+      <div style="text-align:center;margin-top:14px">
+        <span class="cs">وضعیت</span>
+        <div style="display:inline-flex;align-items:center;gap:7px;background:var(--rdbg);color:var(--rdtx);padding:5px 14px;border-radius:20px;font-size:12.5px;margin-right:9px">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--rd)"></span>پرریسک
+        </div>
+      </div>
+      <div class="note">
+        فرمول: قیمت گرم = (انس × دلار) ÷ ۳۳۳٫۳۳ + اجرت ساخت + سود + مالیات بر ارزش افزوده<br>
+        معیار ریسک: بالای ۳۰۰٬۰۰۰ پرریسک، بین ۱۰۰٬۰۰۰ تا ۳۰۰٬۰۰۰ منطقی، زیر ۱۰۰٬۰۰۰ فرصت خرید
+      </div>
+    </section>
+
+    <section class="card pad">
+      <div class="ch"><h2 class="ct">ماشین حساب طلای زینتی</h2></div>
+      <div style="margin-top:14px">
+        <div class="field"><span>وزن (گرم)</span></div>
+        <div class="field"><span>اجرت ساخت (٪)</span></div>
+        <div class="field"><span>سود (٪)</span></div>
+        <div class="field"><span>مالیات بر ارزش افزوده (٪)</span></div>
+        <div style="background:var(--acbg);border-radius:10px;padding:16px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:12.5px;color:var(--actx)">تومان</span>
+          <span style="font-size:20px;font-weight:600;color:var(--actx)">—</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card pad">
+      <div class="ch"><h2 class="ct">هشدار قیمت</h2></div>
+      <p class="cs" style="margin-top:8px">قیمت دلخواه خود را تنظیم کنید. هر زمان که نرخ طلا به آن رسید، به شما اطلاع می‌دهیم.</p>
+      <div style="background:var(--ambg);color:var(--am);border-radius:10px;padding:10px;text-align:center;font-size:12.5px;margin-top:12px">به زودی فعال می‌شود</div>
+    </section>
+
+    <section class="card pad">
+      <div class="ch"><h2 class="ct">آخرین مطالب وبلاگ</h2></div>
+      <div style="margin-top:8px">
+        <div class="blogit"><div class="thumb"></div><div><div style="font-size:13px">تحلیل روند قیمت طلا هفته آینده</div><div style="font-size:11.5px;color:var(--tx3)">۱۴۰۳/۰۳/۲۳</div></div></div>
+        <div class="blogit"><div class="thumb"></div><div><div style="font-size:13px">سرمایه‌گذاری در طلا: فرصت‌ها و ریسک‌ها</div><div style="font-size:11.5px;color:var(--tx3)">۱۴۰۳/۰۳/۱۸</div></div></div>
+      </div>
+      <a href="#" class="link" style="display:inline-block;margin-top:10px">مشاهده همه مطالب ←</a>
+    </section>
+  </div>
+
+  <div class="col">
+
+    <section class="card pad">
+      <div class="ch">
+        <div>
+          <h2 class="ct">محور قیمت طلای ۱۸ عیار</h2>
+          <p class="cs">هرچه راست‌تر، ارزان‌تر · خط طلایی که تمام شود، قیمت‌ها تازه می‌شوند</p>
+        </div>
+        <button class="link" id="refresh">همین حالا بگیر ↻</button>
+      </div>
+
+      <div class="rail" id="rail"></div>
+
+      <div class="ends">
+        <span id="hi"></span>
+        <span style="color:var(--tx2)" id="rng"></span>
+        <span id="lo"></span>
+      </div>
+    </section>
+
+    <section class="card pad">
+      <div class="ch">
+        <h2 class="ct">خلاصه بازار</h2>
+        <div class="seg" role="tablist">
+          <button class="on" data-k="d" role="tab" aria-selected="true">۲۴ ساعت اخیر</button>
+          <button data-k="w" role="tab" aria-selected="false">هفته گذشته</button>
+          <button data-k="m" role="tab" aria-selected="false">ماه گذشته</button>
+        </div>
+      </div>
+
+      <div class="sum">
+        <div>
+          <div class="hero num" id="hero">—</div>
+          <div style="font-size:15px;margin-top:2px">میانگین قیمت ۱ گرم طلای ۱۸ عیار</div>
+          <div style="font-size:12.5px;color:var(--tx3)">میانگین پنج منبع · تومان</div>
+        </div>
+        <svg id="area" viewBox="0 0 320 108" preserveAspectRatio="none" aria-hidden="true">
+          <path id="areaF" fill="var(--acbg)"></path>
+          <path id="areaL" fill="none" stroke="var(--ac)" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path>
+        </svg>
+      </div>
+
+      <div class="stats">
+        <div><b class="num" id="sLo">—</b><span>پایین‌ترین قیمت</span></div>
+        <div><b class="num" id="sHi">—</b><span>بالاترین قیمت</span></div>
+        <div><b class="num" id="sCh">—</b><span>تغییرات</span></div>
+      </div>
+    </section>
+
+    <section class="card pad">
+      <div class="ch">
+        <div>
+          <h2 class="ct">منابع قیمت</h2>
+          <p class="cs">روند ۲۴ ساعت گذشته و اختلاف با قیمت مرجع</p>
+        </div>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section class="card feat">
+      <div class="img"></div>
+      <div class="pad">
+        <span class="tag">مقاله ویژه</span>
+        <h2 class="ct">راهنمای کامل خرید طلای زینتی</h2>
+        <p class="cs" style="margin-top:5px">نکات کلیدی برای خرید هوشمندانه طلای زینتی و بررسی عوامل مهم مانند اجرت ساخت و کیفیت.</p>
+        <a href="#" class="cta">مطالعه مقاله ←</a>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+var S=[
+{n:'تابلو گلد',c:'var(--s1)',p:5890000,ref:true},
+{n:'زرین',c:'var(--s2)',p:5830000},
+{n:'طلانسنس',c:'var(--s3)',p:5750000},
+{n:'ایران گلد',c:'var(--s4)',p:5680000},
+{n:'دیجی طلا',c:'var(--s5)',p:5610000}];
+
+function wander(n,vol,drift){
+  var a=[],v=0,i,p;
+  for(i=0;i<n;i++){v+=vol*(Math.random()-0.5)+drift;a.push(v);}
+  for(p=0;p<3;p++){a=a.map(function(x,i,src){var l=i?src[i-1]:x,r=i<src.length-1?src[i+1]:x;return (l+x+r)/3;});}
+  var last=a[n-1];
+  return a.map(function(x){return x-last;});
+}
+
+var market=wander(24,0.010,0.0009);
+S.forEach(function(x){
+  var own=wander(24,0.0022,0);
+  x.h=market.map(function(m,i){return x.p*(1+m+own[i]);});
+  x.h[23]=x.p;
+});
+
+function spline(pts){
+  if(pts.length<2)return '';
+  var d='M'+pts[0][0].toFixed(1)+','+pts[0][1].toFixed(1),i;
+  for(i=0;i<pts.length-1;i++){
+    var p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;
+    d+='C'+(p1[0]+(p2[0]-p0[0])/6).toFixed(1)+','+(p1[1]+(p2[1]-p0[1])/6).toFixed(1)
+      +' '+(p2[0]-(p3[0]-p1[0])/6).toFixed(1)+','+(p2[1]-(p3[1]-p1[1])/6).toFixed(1)
+      +' '+p2[0].toFixed(1)+','+p2[1].toFixed(1);
+  }
+  return d;
+}
+
+function fa(v,d){return v.toLocaleString('fa-IR',{minimumFractionDigits:d||0,maximumFractionDigits:d||0});}
+
+function mkSeries(n,vol){var a=[],v=1,i;for(i=0;i<n;i++){v*=1+vol*(Math.random()-0.48);a.push(v);}var L=a[n-1];return a.map(function(x){return x/L;});}
+var series={w:mkSeries(28,0.012),m:mkSeries(30,0.03)};
+var period='d',lastAvg=0;
+
+function renderSummary(avg){
+  lastAvg=avg;
+  var arr,i,j;
+  if(period==='d'){
+    arr=[];
+    for(i=0;i<24;i++){var s=0;for(j=0;j<S.length;j++)s+=S[j].h[i];arr.push(s/S.length);}
+  }else{
+    arr=series[period].map(function(r){return r*avg;});
+  }
+  var last=arr[arr.length-1],first=arr[0];
+  var hi=Math.max.apply(null,arr),lo=Math.min.apply(null,arr),sp=(hi-lo)||1;
+
+  document.getElementById('hero').textContent=fa(last);
+  document.getElementById('sHi').textContent=fa(hi);
+  document.getElementById('sLo').textContent=fa(lo);
+  var ch=(last-first)/first*100,up=ch>=0,el=document.getElementById('sCh');
+  el.textContent=fa(Math.abs(ch),2)+'٪ '+(up?'↑':'↓');
+  el.style.color=up?'var(--gn)':'var(--rd)';
+
+  var pts=arr.map(function(v,k){return [k*(320/(arr.length-1)),100-((v-lo)/sp)*88];});
+  var d=spline(pts);
+  document.getElementById('areaL').setAttribute('d',d);
+  document.getElementById('areaF').setAttribute('d',d+' L320,106 L0,106 Z');
+}
+
+Array.prototype.forEach.call(document.querySelectorAll('.seg button'),function(b){
+  b.addEventListener('click',function(){
+    Array.prototype.forEach.call(document.querySelectorAll('.seg button'),function(o){
+      o.classList.remove('on');o.setAttribute('aria-selected','false');
+    });
+    b.classList.add('on');b.setAttribute('aria-selected','true');
+    period=b.dataset.k;renderSummary(lastAvg);
+  });
+});
+var rail=document.getElementById('rail'),cards=document.getElementById('cards');
+
+var ax=document.createElement('div');ax.className='axis';rail.appendChild(ax);
+var fs=document.createElement('div');fs.className='fuse';ax.appendChild(fs);
+function relight(){
+  fs.style.animation='none';ax.classList.remove('flash');
+  void fs.offsetWidth;
+  fs.style.animation='';ax.classList.add('flash');
+}
+var an=document.createElement('div');an.className='anchor';rail.appendChild(an);
+var al=document.createElement('div');al.className='anchorL';al.textContent='قیمت مرجع';rail.appendChild(al);
+
+S.forEach(function(x){
+  var m=document.createElement('a');m.className='mk';m.href='#';m.setAttribute('aria-label',x.n);
+  m.innerHTML='<span class="dot" style="border-color:'+x.c+'"></span><span class="stem"></span><span class="nm">'+x.n+'</span><span class="pz num"></span>';
+  rail.appendChild(m);x.m=m;
+
+  var c=document.createElement('a');c.className='pc';c.href='#';
+  c.innerHTML='<span class="top"><span class="sw" style="background:'+x.c+'"></span><span class="nm">'+x.n+'</span></span><div class="pz num"></div><span class="bd num"></span><svg class="sp" viewBox="0 0 100 32" preserveAspectRatio="none"><path class="fl" fill="'+x.c+'" fill-opacity=".1"></path><path class="ln" fill="none" stroke="'+x.c+'" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"></path></svg>';
+  cards.appendChild(c);x.c2=c;
+});
+
+function draw(){
+  var ps=S.map(function(x){return x.p;}),mn=Math.min.apply(null,ps),mx=Math.max.apply(null,ps),sp=(mx-mn)||1;
+  var ref=S.filter(function(x){return x.ref;})[0].p;
+  var pos=function(v){return 4+(1-(v-mn)/sp)*92;};
+  document.getElementById('hi').textContent='گران‌تر · '+fa(mx);
+  document.getElementById('lo').textContent=fa(mn)+' · ارزان‌تر';
+  document.getElementById('rng').textContent='بازه اختلاف '+fa(mx-mn)+' تومان';
+  an.style.right=pos(ref)+'%';al.style.right=pos(ref)+'%';
+
+  var avg=ps.reduce(function(a,b){return a+b;},0)/ps.length;
+
+  var intr=5554430;
+  document.getElementById('bub').textContent=fa(avg-intr);
+  document.getElementById('bpc').textContent=fa((avg-intr)/intr*100,2)+'٪+';
+  renderSummary(avg);
+
+  var rank=S.slice().sort(function(a,b){return a.p-b.p;});
+  S.forEach(function(x){
+    var k=rank.indexOf(x);
+    x.m.style.right=pos(x.p)+'%';
+    x.m.querySelector('.stem').style.height=(k%2?38:10)+'px';
+    x.m.querySelector('.pz').textContent=fa(x.p);
+    x.c2.querySelector('.pz').textContent=fa(x.p);
+
+    var b=x.c2.querySelector('.bd'),d=((x.p-ref)/ref)*100;
+    if(x.ref){b.textContent='قیمت مرجع';b.style.background='var(--acbg)';b.style.color='var(--actx)';}
+    else{b.textContent=(d<0?'−':'+')+fa(Math.abs(d),2)+'٪';b.style.background=d<0?'var(--gnbg)':'var(--rdbg)';b.style.color=d<0?'var(--gntx)':'var(--rdtx)';}
+
+    var h=x.h,hm=Math.min.apply(null,h),hM=Math.max.apply(null,h),hs=(hM-hm)||1;
+    var sd=spline(h.map(function(v,i){return [i*(100/23),28-((v-hm)/hs)*23];}));
+    x.c2.querySelector('.ln').setAttribute('d',sd);
+    x.c2.querySelector('.fl').setAttribute('d',sd+' L100,32 L0,32 Z');
+  });
+}
+
+function tick(){
+  var mv=0.0011*(Math.random()-0.45);
+  S.forEach(function(x){
+    var nv=x.p*(1+mv+0.0004*(Math.random()-0.5));
+    var up=nv>x.p;x.p=nv;x.h.push(nv);if(x.h.length>24)x.h.shift();
+    x.c2.style.background=up?'var(--rdbg)':'var(--gnbg)';
+    setTimeout(function(){x.c2.style.background='';},900);
+  });
+  draw();relight();
+}
+
+var timer=setInterval(tick,30000);
+document.getElementById('refresh').addEventListener('click',function(){
+  clearInterval(timer);tick();timer=setInterval(tick,30000);
+});
+
+var root=document.documentElement,tb=document.getElementById('theme');
+function setTheme(t){
+  root.setAttribute('data-theme',t);
+  tb.textContent=t==='dark'?'☀':'☾';
+  tb.setAttribute('aria-label',t==='dark'?'حالت روشن':'حالت تاریک');
+}
+setTheme(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+tb.addEventListener('click',function(){
+  setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark');
+});
+
+draw();
+</script>
+</body>
+</html>

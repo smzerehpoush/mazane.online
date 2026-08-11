@@ -78,11 +78,7 @@ describe("POST /api/revalidate-blog", () => {
     });
     expect(status).toBe(200);
     expect(payload.revalidated).toBe(true);
-    expect(payload.paths).toEqual([
-      "/blog",
-      "/blog/moghayese-karmozd-sakooha",
-      "/sitemap.xml",
-    ]);
+    expect(payload.paths).toEqual(["/blog", "/blog/moghayese-karmozd-sakooha", "/sitemap.xml"]);
   });
 
   it("بدون اسلاگ (مثلاً پس‌گیری انبوه) فقط فهرست و سایت‌مپ اعلام می‌شوند", async () => {

@@ -39,6 +39,7 @@ import {
   type Quote,
   type Side,
 } from "../../src/lib/prices";
+import { setChartConfigSource } from "../../src/lib/chart-config";
 import { fetchRows, fetchRowsForPlatforms } from "../../src/lib/rows";
 import { resolveSlug } from "../../src/lib/slugs";
 
@@ -128,6 +129,11 @@ export interface SeededStore {
   updatedAt: Record<string, string | null>;
   /** payload ‏`tablo:instruments`‏ (بلیت ۷) — پرچم دروازه از گردآورنده. */
   instruments?: InstrumentListing[];
+  /**
+   * payload ‏`tablo:chart_config`‏ — منابع نمایشی صفحه‌ی اصلی. غیبتش یعنی
+   * «تنظیمی نیست» ⟸ فهرست پیش‌فرض کد (`chartSeriesConfig()`).
+   */
+  chartPlatforms?: readonly ChartPlatformConfig[];
 }
 
 export function seed(store: SeededStore): void {
@@ -137,6 +143,10 @@ export function seed(store: SeededStore): void {
     getUpdatedAt: async (slug) => store.updatedAt[slug] ?? null,
     getInstruments: async () => store.instruments ?? [],
   });
+  // ⚠️ پیکربندی منابع نمایشی هم باید تزریق شود، وگرنه ‎/api/prices‎ (که از
+  // بازطراحی به بعد برای هندسه‌ی محور به آن نیاز دارد) به ردیس **واقعی**
+  // وصل می‌شود. `undefined` یعنی «تنظیمی نیست» ⟸ فهرست پیش‌فرض کد.
+  setChartConfigSource({ getChartPlatforms: async () => store.chartPlatforms });
 }
 
 /**

@@ -39,10 +39,7 @@ import {
  * میزبان‌های مراجع قیمت (بند ۱۲.۲) — ارجاع تحریری غیر درآمدزا؛ لینکشان
  * ساده می‌ماند ولی حداقل nofollow می‌خواهد. هیچ سکویی اینجا نمی‌آید.
  */
-const NON_REVENUE_REFERENCE_HOSTS: ReadonlySet<string> = new Set([
-  "tala.ir",
-  "www.tala.ir",
-]);
+const NON_REVENUE_REFERENCE_HOSTS: ReadonlySet<string> = new Set(["tala.ir", "www.tala.ir"]);
 
 function attrOf(tag: string, name: string): string | null {
   const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
@@ -101,9 +98,7 @@ function assertOutboundLinkPolicy(
         }
       }
       if (attrOf(tag, "target") !== "_blank") {
-        throw new Error(
-          `لینک ${href} در «${pageName}» باید target="_blank" داشته باشد (${tag})`,
-        );
+        throw new Error(`لینک ${href} در «${pageName}» باید target="_blank" داشته باشد (${tag})`);
       }
     }
   }
@@ -197,8 +192,14 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
   it("صفحه‌ی اصلی از کاونده می‌گذرد و برای هر سکو یک لینک /go/ دارد", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(seededStore())} />);
     const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "صفحه‌ی اصلی");
-    // دکمه‌ی «رفتن به سایت» هر ردیف جدول — لینک درآمدزا و فقط از /go/.
-    expect(goLinks).toBe(PLATFORMS.length);
+    // ⚠️ شمار دقیق دیگر ادعا نمی‌شود: با بازطراحی، هر منبع **دو** نقطه‌ی
+    // خروج دارد (نشانگر محور و کارت منبع) و منبعِ بی‌قیمت فقط کارت می‌گیرد.
+    // چیزی که واقعاً مهم است این است که هر سکو دست‌کم یک راه خروج داشته
+    // باشد و **همه‌ی** لینک‌ها از کاونده‌ی سیاست رد شوند.
+    expect(goLinks).toBeGreaterThanOrEqual(PLATFORMS.length);
+    for (const platform of PLATFORMS) {
+      expect(html, platform.slug).toContain(`href="/go/${platform.slug}"`);
+    }
     // کد معرف هرگز در HTML عمومی نمی‌نشیند — فقط سمت ریدایرکت است.
     expect(html).not.toContain(REFERRAL_CODE);
   });
@@ -207,11 +208,7 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
     for (const platform of PLATFORMS) {
       seed(seededStore());
       const html = await renderSlug(platform.slug);
-      const goLinks = assertOutboundLinkPolicy(
-        html,
-        PLATFORM_HOSTS,
-        `صفحه‌ی ${platform.slug}`,
-      );
+      const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, `صفحه‌ی ${platform.slug}`);
       expect(goLinks).toBeGreaterThanOrEqual(1);
       expect(html).toContain(`href="/go/${platform.slug}"`);
       expect(html).not.toContain(REFERRAL_CODE);
@@ -249,36 +246,26 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
 describe("کاونده‌ی سیاست لینک — نقض‌ها واقعاً شکست می‌خورند", () => {
   it("لینک مستقیم به میزبان سکو (دور زدن /go/) ⟸ شکست", () => {
     const bad = '<a href="https://wallgold.ir" rel="sponsored nofollow noopener">و</a>';
-    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /دور می‌زند/,
-    );
+    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(/دور می‌زند/);
   });
 
   it("لینک خروجی بدون sponsored ⟸ شکست", () => {
     const bad = '<a href="https://tabligh.example" rel="nofollow noopener">آ</a>';
-    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /sponsored/,
-    );
+    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(/sponsored/);
   });
 
   it("لینک /go/ بدون rel کامل یا بدون target=_blank ⟸ شکست", () => {
     const noRel = '<a href="/go/milli" rel="nofollow noopener" target="_blank">م</a>';
-    expect(() => assertOutboundLinkPolicy(noRel, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /sponsored/,
-    );
+    expect(() => assertOutboundLinkPolicy(noRel, PLATFORM_HOSTS, "آزمایشی")).toThrow(/sponsored/);
     const noTarget = '<a href="/go/milli" rel="sponsored nofollow noopener">م</a>';
-    expect(() => assertOutboundLinkPolicy(noTarget, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /_blank/,
-    );
+    expect(() => assertOutboundLinkPolicy(noTarget, PLATFORM_HOSTS, "آزمایشی")).toThrow(/_blank/);
   });
 
   it("ارجاع غیر درآمدزا به مرجع قیمت: ساده ولی حتماً nofollow", () => {
     const ok = '<a href="https://www.tala.ir/price" rel="nofollow noopener">طلا</a>';
     expect(assertOutboundLinkPolicy(ok, PLATFORM_HOSTS, "آزمایشی")).toBe(0);
     const bare = '<a href="https://www.tala.ir/price">طلا</a>';
-    expect(() => assertOutboundLinkPolicy(bare, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /rel کامل/,
-    );
+    expect(() => assertOutboundLinkPolicy(bare, PLATFORM_HOSTS, "آزمایشی")).toThrow(/rel کامل/);
   });
 });
 
@@ -295,16 +282,20 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
       fetchedAt: now,
     });
     const html = renderToStaticMarkup(<HomePage data={await homeData(store)} />);
-    // ترتیب فقط از «قیمت»: طلاسی < وال‌گلد < میلی (با وجود کد معرفش).
-    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
-      html.indexOf('data-platform="wallgold"'),
-    );
-    expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
-      html.indexOf('data-platform="milli"'),
-    );
-    // نشان «ارزان‌ترین» هم به طلاسی می‌رسد، نه به سکوی کد-معرف‌دار.
-    expect(html).toContain('data-platform="talasea" data-cheapest="true"');
-    expect(html).not.toContain('data-platform="milli" data-cheapest="true"');
+
+    // ⚠️ «ترتیب» در طرح تازه یعنی **موقعیت روی محور** (بند ۱.۴: راست =
+    // ارزان‌تر، و `right` فاصله از لبه‌ی راست است). میلی کد معرف دارد و
+    // اینجا گران‌ترین است — باید چپ‌ترین بنشیند، یعنی **بیشترین** درصد.
+    // اگر روزی کمیسیون وارد هندسه شود، همین‌جا قرمز می‌شود.
+    const percentOf = (slug: string): number => {
+      const marker = html.match(
+        new RegExp(`data-rail-marker="${slug}"[^>]*style="right:\\s*([\\d.]+)%`),
+      );
+      if (marker === null) throw new Error(`نشانگر ${slug} در HTML نیست`);
+      return Number(marker[1]);
+    };
+    expect(percentOf("talasea")).toBeLessThan(percentOf("wallgold"));
+    expect(percentOf("wallgold")).toBeLessThan(percentOf("milli"));
   });
 
   it("صفحه‌ی دارایی هم همین ترتیب را دارد — کد معرف در گروه‌بندی اثر ندارد", async () => {
@@ -329,8 +320,12 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     // ⚠️ مسیرها با بازنویسی تنکستک به‌روز شدند؛ اگر فایلی جابه‌جا شد،
     // مسیر تازه‌اش را اینجا بگذارید — این فهرست حذف‌شدنی نیست.
     for (const file of [
-      "src/components/tablo/home-view.tsx",
-      "src/components/tablo/ComparisonTable.tsx",
+      // ⚠️ با بازطراحی داشبورد، `ComparisonTable`/`home-view` جای خود را به
+      // `lib/dashboard.ts` دادند — همان‌جا که حالا ترتیب و هندسه‌ی محور ساخته
+      // می‌شود. مسیر عوض شد، پوشش نه. این فهرست حذف‌شدنی نیست.
+      "src/lib/dashboard.ts",
+      "src/components/tablo/PriceRail.tsx",
+      "src/components/tablo/SourceCards.tsx",
       "src/components/content/AssetPage.tsx",
       "src/lib/rows.ts",
     ]) {

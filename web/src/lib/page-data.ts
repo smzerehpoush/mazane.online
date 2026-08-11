@@ -69,7 +69,10 @@ export interface HomeReaders {
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
   const chartPlatforms = chartSeriesConfig(await read.getChartPlatforms?.());
-  const [rows, history, posts, viewCounts] = await Promise.all([
+  const referenceSlug =
+    (chartPlatforms.find((platform) => platform.is_reference) ?? chartPlatforms[0])?.slug ?? null;
+
+  const [rows, history, posts, viewCounts, referenceRanges] = await Promise.all([
     read.fetchRows(),
     read.getPlatformHistory({
       platformSlugs: chartPlatforms.map((platform) => platform.slug),
@@ -78,10 +81,33 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     }),
     read.listPublishedPosts(),
     read.getViewCounts?.() ?? Promise.resolve<ViewCounts>({}),
+    // خلاصه بازار (بند ۷): سه بازه‌ی **سکوی مرجع**، همان الگوی کارت نرخ
+    // صفحه‌ی سکو. هر سه با هم می‌آیند تا تعویض زبانه هیچ فچی نزند (بند ۱۴:
+    // کلاینت داده‌ی سرور را به‌عنوان مقدار اولیه می‌گیرد).
+    referenceSlug === null
+      ? Promise.resolve<PlatformHistory[][]>([])
+      : Promise.all(
+          RATE_CARD_RANGES.map((range) =>
+            read.getPlatformHistory({
+              platformSlugs: [referenceSlug],
+              instrument: HOME_INSTRUMENT,
+              hours: range.hours,
+              ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
+            }),
+          ),
+        ),
   ]);
+
+  const referenceHistory: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
+  RATE_CARD_RANGES.forEach((range, index) => {
+    // قطع منبع یا بازه‌ی بی‌سابقه ⟸ همان زبانه غیرفعال، نه throw (قاعده‌ی ۵).
+    referenceHistory[range.key] = referenceRanges[index]?.[0] ?? null;
+  });
+
   return {
     rows: rows.map((row) => ({ ...row, platform: withoutReferral(row.platform) })),
     history,
+    referenceHistory,
     posts,
     viewCounts,
     chartPlatforms,

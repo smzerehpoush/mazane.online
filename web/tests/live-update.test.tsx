@@ -130,33 +130,38 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
   });
 });
 
-describe("قلاب‌های data-live در HTML سروررندر", () => {
-  it("سلول قیمت هر ردیف قلاب price و زمانش قلاب updated-at و stale دارد", async () => {
+describe("قلاب‌های داشبورد در HTML سروررندر", () => {
+  /**
+   * ⚠️ با بازطراحی، جدول (و قلاب‌های ‎data-live‎ اش) حذف شد. سوآپ زنده حالا
+   * روی نشانگرهای محور و کارت‌های منبع کار می‌کند. قرارداد همان است — «کلاینت
+   * فقط متن و موقعیتِ از قبل حساب‌شده را می‌نشاند» — فقط سلکتورها عوض شده‌اند.
+   */
+  it("هر منبع نشانگر نشان‌دار با گره‌ی قیمت دارد", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     for (const [slug, price] of [
       ["wallgold", "۱۸٬۶۱۱٬۰۰۰"],
       ["talasea", "۱۸٬۵۳۰٬۰۰۰"],
       ["milli", "۱۸٬۵۳۸٬۰۰۰"],
     ] as const) {
-      const row = rowOf(html, slug);
-      expect(row).toMatch(new RegExp(`<span[^>]*data-live="price"[^>]*>${price}</span>`));
-      expect(row).toMatch(/<time[^>]*data-live="updated-at"/);
-      expect(row).toMatch(/<strong[^>]*data-live="stale"/);
+      expect(html, slug).toContain(`data-rail-marker="${slug}"`);
+      const marker = html.match(new RegExp(`<a[^>]*data-rail-marker="${slug}"[\\s\\S]*?</a>`));
+      expect(marker?.[0], slug).toMatch(new RegExp(`data-rail-price[^>]*>${price}</span>`));
     }
   });
 
-  it("ردیف «کارمزد نامشخص» هم قلاب price دارد (قیمتش زنده می‌شود)", async () => {
-    const html = renderToStaticMarkup(<HomePage data={await homeData(storeWithUnknownFee())} />);
-    expect(rowOf(html, "digikala")).toMatch(/<span[^>]*data-live="price"[^>]*>۱۸٬۵۲۰٬۰۰۰<\/span>/);
+  it("هر منبع کارت نشان‌دار با گره‌ی قیمت دارد", async () => {
+    const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
+    for (const slug of ["wallgold", "talasea", "milli"]) {
+      expect(html, slug).toContain(`data-source-card="${slug}"`);
+    }
+    expect(html).toContain("data-source-price");
   });
 
-  it("فقط ستون خرید قلاب زنده دارد — ستون فروش و کارت‌ها عمداً بی‌قلاب‌اند", async () => {
+  it("پاورقی محور قلاب‌های به‌روزرسانی دارد", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
-    // هر ردیف دقیقاً یک قلاب قیمت دارد: ۳ سکو ⟸ ۳ قلاب، نه بیشتر.
-    expect(html.match(/data-live="price"/g)).toHaveLength(3);
-    const milli = rowOf(html, "milli");
-    const afterPriceCell = milli.slice(milli.indexOf('data-live="price"') + 1);
-    expect(afterPriceCell).not.toContain('data-live="price"');
+    expect(html).toContain("data-rail-max");
+    expect(html).toContain("data-rail-min");
+    expect(html).toContain("data-rail-spread");
   });
 });
 
@@ -187,16 +192,40 @@ describe("شمارنده‌ی زنده‌ی کارت نرخ — تابع خال�
   });
 });
 
-describe("هم‌ارزی رشته‌ی payload با رشته‌ی رندر سرور", () => {
-  it("price_display هر سکو بیت‌به‌بیت همان چیزی است که در سلول قیمت رندر شده", async () => {
+describe("هم‌ارزی payload با رندر سرور", () => {
+  /**
+   * ⚠️ قلب قرارداد زنده: رشته‌ای که polling می‌نشاند باید **بیت‌به‌بیت** همان
+   * چیزی باشد که رندر سرور گذاشته، وگرنه عدد در اولین تیک بی‌دلیل «تغییر»
+   * می‌کند. هر دو از یک تابع می‌آیند (`lib/dashboard.ts`) و این تست همان را
+   * قفل می‌کند.
+   */
+  it("price_display هر سکو همان رشته‌ی رندرشده روی نشانگر است", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     const payload = await livePricesPayload();
-    expect(payload.rows).not.toHaveLength(0);
-    for (const row of payload.rows) {
-      if (row.price_display === null) continue;
-      expect(rowOf(html, row.platform_slug)).toMatch(
-        new RegExp(`<span[^>]*data-live="price"[^>]*>${row.price_display}</span>`),
+    expect(payload.dashboard?.sources).not.toHaveLength(0);
+    for (const source of payload.dashboard?.sources ?? []) {
+      if (source.price_display === null) continue;
+      const marker = html.match(
+        new RegExp(`<a[^>]*data-rail-marker="${source.slug}"[\\s\\S]*?</a>`),
       );
+      if (marker === null) continue;
+      expect(marker[0], source.slug).toContain(source.price_display);
+    }
+  });
+
+  /**
+   * هندسه هم باید از همان تابع بیاید. اگر `/api/prices` نسخه‌ی دوم محاسبه
+   * داشت، نشانگرها بعد از اولین polling به موقعیتی می‌پریدند که با رندر
+   * اولیه نمی‌خواند — خرابی‌ای که فقط در مرورگر و بعد از ۳۰ ثانیه دیده می‌شود.
+   */
+  it("rail_percent payload همان درصدی است که سرور رندر کرده", async () => {
+    const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
+    const payload = await livePricesPayload();
+    for (const source of payload.dashboard?.sources ?? []) {
+      if (source.rail_percent === null) continue;
+      const marker = html.match(new RegExp(`<a[^>]*data-rail-marker="${source.slug}"[^>]*>`));
+      if (marker === null) continue;
+      expect(marker[0], source.slug).toContain(`right:${source.rail_percent}%`);
     }
   });
 });

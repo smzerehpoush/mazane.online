@@ -15,14 +15,32 @@
  */
 import "@tanstack/react-start/server-only";
 
+import { buildDashboard } from "../dashboard";
 import { formatToman } from "../format";
 import type { LivePricesPayload } from "../live-update";
 import { priceToman } from "../rows";
 import { NO_STORE } from "../seo/cache-headers";
+import { chartSeriesConfig } from "../site-content";
+import { getChartPlatforms } from "./chart-config-source";
 import { fetchRows } from "./price-source";
 
 export async function livePricesPayload(): Promise<LivePricesPayload> {
-  const rows = await fetchRows();
+  const [rows, chartOverride] = await Promise.all([fetchRows(), getChartPlatforms()]);
+  const platforms = chartSeriesConfig(chartOverride);
+
+  // ⚠️ هندسه‌ی محور با **همان تابعی** ساخته می‌شود که رندر سرور صفحه از آن
+  // استفاده می‌کند. اگر اینجا نسخه‌ی دومی نوشته می‌شد، نشانگرها بعد از اولین
+  // polling به موقعیتی می‌پریدند که با رندر اولیه نمی‌خواند.
+  //
+  // تاریخچه عمداً خالی است: این اندپوینت فقط قیمت جاری را تازه می‌کند و
+  // اسپارک‌لاین/خلاصه بازار در همان رندر سرور می‌مانند تا پاسخ سبک بماند.
+  const dashboard = buildDashboard({
+    rows,
+    platforms,
+    history: [],
+    referenceHistory: { DAILY: null, WEEKLY: null, MONTHLY: null },
+  });
+
   return {
     generated_at: new Date().toISOString(),
     rows: rows.map((row) => {
@@ -34,6 +52,22 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
         updated_at: row.updatedAt,
       };
     }),
+    dashboard: {
+      sources: dashboard.rail.sources.map((source) => ({
+        slug: source.slug,
+        price_toman: source.priceToman,
+        price_display: source.priceDisplay,
+        rail_percent: source.railPercent,
+        stem_long: source.stemLong,
+        updated_at: source.updatedAt,
+      })),
+      max_display: dashboard.rail.maxDisplay,
+      min_display: dashboard.rail.minDisplay,
+      spread_display: dashboard.rail.spreadDisplay,
+      reference_percent: dashboard.rail.referencePercent,
+      updated_at: dashboard.updatedAt,
+      updated_at_display: dashboard.updatedAtDisplay,
+    },
   };
 }
 

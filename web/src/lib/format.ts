@@ -1,9 +1,17 @@
 /**
  * نمایش فارسی — فقط قالب‌بندی، بدون هیچ محاسبه‌ی قیمتی.
- * ارقام نمایش با `Intl.NumberFormat('fa-IR')` (قراردادها، بخش استک).
+ *
+ * ⚠️ ارقام از `lib/fa-number.ts` می‌آیند، **نه** از `Intl.NumberFormat`.
+ * دلیلش کامل در همان فایل است: خروجی `Intl` به نسخه‌ی ICU گره خورده و
+ * نسخه‌ی سرور با نسخه‌ی مرورگر یکی نیست، پس تنها منبع واقعی
+ * hydration mismatch همان بود (بند ۱۴ سند طراحی). خروجی بایت‌به‌بایت همان
+ * چیزی است که قبلاً بود.
+ *
+ * ⚠️ تاریخ‌ها هنوز روی `Intl.DateTimeFormat` اند: تقویم جلالی را نمی‌شود
+ * بدون یک پیاده‌سازی کامل و پرخطر دستی نوشت، و ریسکش هم از عدد کمتر است
+ * (تاریخ انتشار پست ثابت است و هر ۳۰ ثانیه عوض نمی‌شود).
  */
-
-const tomanFormatter = new Intl.NumberFormat("fa-IR");
+import { formatFaNumber, formatFaPercentFromFraction, formatFaPercentPoints } from "./fa-number";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("fa-IR", {
   dateStyle: "medium",
@@ -20,44 +28,32 @@ const dateFormatter = new Intl.DateTimeFormat("fa-IR", {
 export const STALE_AFTER_MINUTES = 3;
 
 export function formatToman(priceToman: number): string {
-  return tomanFormatter.format(priceToman);
+  return formatFaNumber(priceToman);
 }
-
-const fractionPercentFormatter = new Intl.NumberFormat("fa-IR", {
-  style: "percent",
-  maximumFractionDigits: 2,
-});
 
 /** کسر (مثلاً ۰٫۰۰۳۹) ⟸ «۰٫۳۹٪». خودِ کسر ورودی است — اینجا فقط قالب است. */
 export function formatPercentFa(fraction: number): string {
-  return fractionPercentFormatter.format(fraction);
+  return formatFaPercentFromFraction(fraction, { maximumFractionDigits: 2 });
 }
-
-/** با علامت +/− صریح — کارت نرخ سکو، ستون «تغییرات» (بلیت ۲۷: «با درصد و فلش»). */
-const signedFractionPercentFormatter = new Intl.NumberFormat("fa-IR", {
-  style: "percent",
-  maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
-});
 
 /**
  * کسرِ تغییر (مثلاً ۰٫۰۰۳۹ یا −۰٫۰۰۱۲) ⟸ «۰٫۳۹٪+» یا «۰٫۱۲٪−». همان کسر
  * تفاضل سر و ته یک سری آماده است — فقط قالب‌بندی، هیچ فرمول قیمتی نیست.
+ * علامت +/− صریح: کارت نرخ سکو، ستون «تغییرات» (بلیت ۲۷).
  */
 export function formatSignedPercentFa(fraction: number): string {
-  return signedFractionPercentFormatter.format(fraction);
+  return formatFaPercentFromFraction(fraction, {
+    maximumFractionDigits: 2,
+    signDisplay: "exceptZero",
+  });
 }
-
-const percentPointsFormatter = new Intl.NumberFormat("fa-IR", {
-  maximumFractionDigits: 3,
-});
 
 /**
  * درصدِ آماده‌ی گردآورنده — رشته‌ای بر حسب واحد درصد (مثلاً "0.9950") ⟸
  * «۰٫۹۹۵٪». فقط قالب‌بندی همان عدد؛ هیچ محاسبه‌ای در کار نیست.
  */
 export function formatPercentPointsFa(points: string | number): string {
-  return `${percentPointsFormatter.format(Number(points))}٪`;
+  return formatFaPercentPoints(Number(points), { maximumFractionDigits: 3 });
 }
 
 export function formatDateTimeFa(iso: string): string {
@@ -79,5 +75,5 @@ export function isStale(minutes: number): boolean {
 
 export function formatMinutesAgoFa(minutes: number): string {
   if (minutes < 1) return "لحظاتی پیش";
-  return `${tomanFormatter.format(minutes)} دقیقه پیش`;
+  return `${formatFaNumber(minutes)} دقیقه پیش`;
 }

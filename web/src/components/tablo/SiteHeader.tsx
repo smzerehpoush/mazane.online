@@ -1,3 +1,4 @@
+import { ThemeToggle } from "@/components/tablo/ThemeToggle";
 import { brand, nav } from "@/lib/site-content";
 
 export function SiteHeader() {
@@ -10,17 +11,20 @@ export function SiteHeader() {
           </span>
           <span className="whitespace-nowrap text-sm font-bold sm:text-base">{brand.name}</span>
         </a>
-        <nav className="no-scrollbar flex items-center gap-1 overflow-x-auto">
-          {nav.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className="transition-smooth shrink-0 rounded-full px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-surface-2 hover:text-primary sm:text-xs"
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
+        <div className="flex min-w-0 items-center gap-2">
+          <nav className="no-scrollbar flex items-center gap-1 overflow-x-auto">
+            {nav.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                className="transition-smooth shrink-0 rounded-full px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-surface-2 hover:text-primary sm:text-xs"
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

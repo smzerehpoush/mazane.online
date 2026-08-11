@@ -28,7 +28,9 @@ describe("assembleHomeData — chartPlatforms از تنظیمات پنل", () =>
 
   it("خواننده‌ای که override معتبر می‌دهد، همان را جایگزین می‌کند", async () => {
     const data = await homeData(healthyStore(), { chartPlatforms: OVERRIDE });
-    expect(data.chartPlatforms).toEqual(OVERRIDE);
+    expect(data.chartPlatforms.map((platform) => platform.slug)).toEqual(
+      OVERRIDE.map((platform) => platform.slug),
+    );
   });
 
   it("خواننده‌ای که undefined می‌دهد (کلید نبود/نامعتبر) ⟸ فهرست پیش‌فرض کد", async () => {
@@ -36,17 +38,32 @@ describe("assembleHomeData — chartPlatforms از تنظیمات پنل", () =>
     expect(data.chartPlatforms).toEqual(DEFAULT_CONFIG);
   });
 
+  /**
+   * ⚠️ پرچم سکوی مرجع روی **هر** فهرستی می‌نشیند، نه فقط پیش‌فرض کد. اگر
+   * فقط روی `CHART_PLATFORMS` بود، اولین باری که مالک فهرست را از پنل عوض
+   * می‌کرد، لنگر محور بی‌سروصدا ناپدید می‌شد (`docs/api-gaps.md` بند ۱).
+   */
+  it("سکوی مرجع روی override پنل هم نشانده می‌شود", async () => {
+    const data = await homeData(healthyStore(), { chartPlatforms: OVERRIDE });
+    const references = data.chartPlatforms.filter((platform) => platform.is_reference);
+    expect(references).toHaveLength(1);
+    expect(references[0]?.slug).toBe("milli");
+  });
+
   it("پرس‌وجوی تاریخچه با اسلاگ‌های همان override ساخته می‌شود", async () => {
-    let capturedSlugs: string[] | null = null;
+    const captured: string[][] = [];
     await assembleHomeData({
       fetchRows: async () => [],
       getPlatformHistory: async (query) => {
-        capturedSlugs = query.platformSlugs;
+        captured.push(query.platformSlugs);
         return [];
       },
       listPublishedPosts: async () => [],
       getChartPlatforms: async () => OVERRIDE,
     });
-    expect(capturedSlugs).toEqual(["wallgold", "talasea", "milli"]);
+    // نخستین پرس‌وجو سری ۲۴ ساعته‌ی همه‌ی منابع نمایشی است…
+    expect(captured[0]).toEqual(["wallgold", "talasea", "milli"]);
+    // …و سه پرس‌وجوی بعدی سه بازه‌ی خلاصه بازار، فقط برای سکوی مرجع (بند ۷).
+    expect(captured.slice(1)).toEqual([["milli"], ["milli"], ["milli"]]);
   });
 });
