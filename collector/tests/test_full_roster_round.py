@@ -15,24 +15,24 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from mazane_collector.adapters.baazar import BAAZAR_ENDPOINT, BaazarAdapter
-from mazane_collector.adapters.daric import DARIC_REST_ENDPOINT, DaricAdapter
-from mazane_collector.adapters.digikala import DIGIKALA_ENDPOINT, DigikalaAdapter
-from mazane_collector.adapters.ecogold import ECOGOLD_ENDPOINT, EcogoldAdapter
-from mazane_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
-from mazane_collector.adapters.hamrahgold import HAMRAHGOLD_ENDPOINT, HamrahgoldAdapter
-from mazane_collector.adapters.invi import INVI_WS_ENDPOINT, InviAdapter
-from mazane_collector.adapters.melligold import MELLIGOLD_ENDPOINT, MelligoldAdapter
-from mazane_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
-from mazane_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
-from mazane_collector.adapters.technogold import TECHNOGOLD_ENDPOINT, TechnogoldAdapter
-from mazane_collector.adapters.tlyn import TLYN_ENDPOINT, TlynAdapter
-from mazane_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
-from mazane_collector.adapters.zarafza import ZARAFZA_ENDPOINT, ZarafzaAdapter
-from mazane_collector.models import FeeSource, Side
-from mazane_collector.pipeline import collect_round
-from mazane_collector.platforms import PLATFORMS
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.adapters.baazar import BAAZAR_ENDPOINT, BaazarAdapter
+from tablo_collector.adapters.daric import DARIC_REST_ENDPOINT, DaricAdapter
+from tablo_collector.adapters.digikala import DIGIKALA_ENDPOINT, DigikalaAdapter
+from tablo_collector.adapters.ecogold import ECOGOLD_ENDPOINT, EcogoldAdapter
+from tablo_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
+from tablo_collector.adapters.hamrahgold import HAMRAHGOLD_ENDPOINT, HamrahgoldAdapter
+from tablo_collector.adapters.invi import INVI_WS_ENDPOINT, InviAdapter
+from tablo_collector.adapters.melligold import MELLIGOLD_ENDPOINT, MelligoldAdapter
+from tablo_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
+from tablo_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
+from tablo_collector.adapters.technogold import TECHNOGOLD_ENDPOINT, TechnogoldAdapter
+from tablo_collector.adapters.tlyn import TLYN_ENDPOINT, TlynAdapter
+from tablo_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
+from tablo_collector.adapters.zarafza import ZARAFZA_ENDPOINT, ZarafzaAdapter
+from tablo_collector.models import FeeSource, Side
+from tablo_collector.pipeline import collect_round
+from tablo_collector.platforms import PLATFORMS
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -64,14 +64,14 @@ FIXTURE_BY_ENDPOINT = {
     ECOGOLD_ENDPOINT: "ecogold_prices_otc.json",
     ZARAFZA_ENDPOINT: "zarafza_prices.json",
     BAAZAR_ENDPOINT: "baazar_price_daily.json",
-    DARIC_REST_ENDPOINT: "daric_topprice.json",
+    DARIC_REST_ENDPOINT: "daric_collateral_price.json",
     MELLIGOLD_ENDPOINT: "melligold_buy_sell_price.json",
     DIGIKALA_ENDPOINT: "digikala_prices.json",
     HAMRAHGOLD_ENDPOINT: "hamrahgold_xau_changes.json",
     INVI_WS_ENDPOINT: "invi_ws_price.json",
 }
 
-# سکوهایی که قیمت مؤثر دارند، به همان ترتیبی که باید در فهرست عمومی بیایند.
+# سکوهایی که کارمزدشان معلوم است، به همان ترتیبی که در فهرست عمومی می‌آیند.
 KNOWN_FEE_LISTED = (
     "wallgold",
     "talasea",
@@ -83,8 +83,11 @@ KNOWN_FEE_LISTED = (
     "baazar",
     "daric",
 )
-# کارمزد نامعلوم ⟸ قیمت مؤثر ندارند و باید **بعد از** بقیه بیایند.
+# کارمزد نامعلوم — قیمتشان با بقیه هم‌جنس است، فقط ستون کارمزدشان تهی است.
 UNKNOWN_FEE_LISTED = ("melligold", "digikala", "hamrahgold", "invi")
+
+#: همه‌ی سکوهای فهرست عمومی، به ترتیب `PLATFORMS`.
+LISTED_SLUGS = KNOWN_FEE_LISTED + UNKNOWN_FEE_LISTED
 
 
 def make_fetcher() -> Any:
@@ -98,7 +101,7 @@ def make_fetcher() -> Any:
 async def test_healthy_round_publishes_all_fourteen_sources() -> None:
     """معیارهای پذیرش بلیت‌های ۴ و ۵: هر ۱۴ سکو — از جمله داریک (دفتر
     سفارش) و اینوی (وب‌سوکت) — با داده‌ی فیکسچر منتشر می‌شوند و هیچ‌کدام
-    از چک میانه رد نمی‌شوند — یعنی mid همه با میانه‌ی سایر منابع سازگار است."""
+    از چک میانه رد نمی‌شوند — یعنی قیمت همه با میانه‌ی سایر منابع سازگار است."""
     store = InMemoryStore()
 
     saved = await collect_round(
@@ -112,7 +115,10 @@ async def test_healthy_round_publishes_all_fourteen_sources() -> None:
         assert await store.get_updated_at(adapter.slug) == FETCHED_AT
 
 
-async def test_unknown_fee_platforms_have_mid_only_and_unknown_terms() -> None:
+async def test_fee_columns_are_null_only_for_unknown_fee_platforms() -> None:
+    """قیمت **همه‌ی** سکوها یک شکل دارد (یک سطر PRICE)؛ تنها تفاوت
+    کارمزدنامعلوم‌ها این است که هر سه عدد کارمزدشان تهی است — نه صفر، و نه
+    یک شکل متفاوتِ قیمت (سند تصمیم ۰۰۰۲)."""
     store = InMemoryStore()
 
     await collect_round(ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT)
@@ -120,23 +126,24 @@ async def test_unknown_fee_platforms_have_mid_only_and_unknown_terms() -> None:
     for slug in UNKNOWN_FEE_LISTED:
         snapshot = await store.get_snapshot(slug)
         assert snapshot is not None
-        # قیمت مؤثر همچنان جعل نمی‌شود: نه BUY هست نه SELL. سطر MEAN مشتق
-        # نیست بلکه بازتاب همان تک‌عددِ منتشرشده است — قیمت مرجع این سکو.
-        assert [q.side for q in snapshot.quotes] == [Side.MID, Side.MEAN]
+        assert [q.side for q in snapshot.quotes] == [Side.PRICE]
         assert snapshot.terms.fee_source == FeeSource.UNKNOWN
+        assert snapshot.terms.round_trip_percent is None
 
     for slug in KNOWN_FEE_LISTED:
         snapshot = await store.get_snapshot(slug)
         assert snapshot is not None
-        assert {q.side for q in snapshot.quotes} == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
+        assert [q.side for q in snapshot.quotes] == [Side.PRICE]
         assert snapshot.terms.fee_source != FeeSource.UNKNOWN
         assert snapshot.terms.round_trip_percent is not None
 
 
-async def test_listed_payload_orders_unknown_fee_platforms_last() -> None:
-    """سکوی بدون قیمت مؤثر («قیمت در دسترس نیست») باید بعد از سکوهای
-    قیمت‌دار بیاید؛ ترتیب فهرست همان ترتیب PLATFORMS است که استورها حفظ
-    می‌کنند."""
+async def test_listed_payload_keeps_platforms_registry_order() -> None:
+    """ترتیب فهرست همان ترتیب `PLATFORMS` است و استورها حفظش می‌کنند.
+
+    ⚠️ این ترتیب **ترتیب نمایش جدول نیست**: جدول را لایه‌ی وب بر اساس قیمت
+    مرتب می‌کند (`lib/rows.ts::compareByPrice`).
+    """
     store = InMemoryStore()
 
     await collect_round(ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT)

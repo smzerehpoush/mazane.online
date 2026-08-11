@@ -1,25 +1,16 @@
-# ops/caddy-snippet.Caddyfile — بلوک سایت مظنه برای «کدیِ لبه‌ی موجود» پادل‌یار
+# ops/caddy-snippet.Caddyfile — بلوک سایت tablo.gold برای کدیِ لبه‌ی پادل‌یار
 #
-# این فایل مستقیماً import نمی‌شود؛ محتوایش در جلسه‌ی استقرار نظارت‌شده به
-# Caddyfile موجودِ پادل‌یار «اضافه» می‌شود (ops/RUNBOOK.md، گام ۵). مظنه هرگز
-# خودش ۸۰/۴۴۳ را bind نمی‌کند — همین کدی لبه است که TLS و درگاه‌ها را دارد.
+# این فایل مستقیماً import نمی‌شود؛ محتوایش در Caddyfile زندهٔ سرور است:
+#   /opt/padelyar/deploy/Caddyfile
+# الگوی مبدأ پشت CDN آروان (مثل optiflow.studio): HTTP + HTTPS با tls internal.
+# TLS کاربر نهایی در لبه‌ی آروان تمام می‌شود — NS کامل آروان، نه CNAME به CDN.
 #
-# پیش‌نیازهای شبکه (رانبوک، گام ۵):
-#   docker network create mazane-edge            # یک‌بار روی سرور
-#   docker network connect mazane-edge <کانتینر کدی پادل‌یار>
-# بعد از این، نام ‎mazane-web‎ (container_name ثابت در compose.prod.yml) از
-# داخل کانتینر کدی resolve می‌شود.
-#
-# نکته‌ی TLS: چون آروان جلوی دامنه است، صدور گواهی ACME از مسیر HTTP-01 باید
-# از لبه‌ی آروان رد شود (مسیر ‎/.well-known/acme-challenge/*‎ نباید کش یا مسدود
-# شود)، یا هنگام صدور اولیه رکورد DNS موقتاً «فقط DNS» (بدون پراکسی) شود —
-# جزئیات در رانبوک، گام ۵.
+# پیش‌نیاز شبکه:
+#   docker network create tablo-edge
+#   docker network connect tablo-edge padelyar-caddy
 
-mazane.online {
-	# ‎match‎ عمدی است، نه ‎encode zstd gzip‎ خالی. سرور یک هسته دارد و بزرگ‌ترین
-	# دارایی ایستای ما فونت ‎woff2‎ (~۱۱۱KB) است که خودش فشرده است؛ فشرده‌سازی
-	# دوباره‌اش فقط CPU می‌سوزاند و حجم را کم نمی‌کند. همین برای تصویر و
-	# ‎favicon‎ هم صادق است. فشرده‌سازی فقط روی چیزی که واقعاً کوچک می‌شود:
+# ---- tablo.gold / تابلو (پشت آروان — TLS در لبهٔ آروان) ----
+http://tablo.gold, http://www.tablo.gold {
 	encode {
 		zstd
 		gzip
@@ -31,38 +22,50 @@ mazane.online {
 			header Content-Type image/svg+xml*
 		}
 	}
-
-	# هدرهای کش را مبدأ می‌گذارد و اینجا دست‌نخورده رد می‌شوند:
-	#   HTML ⟸ s-maxage=60 + stale-while-revalidate + stale-if-error (بند ۱۰)
-	#   /assets/** و /fonts/** ⟸ max-age یک‌ساله + immutable
-	# هیچ ‎header‎ ای برای override اینجا اضافه نشود؛ ‎stale-if-error‎ همان
-	# چیزی است که در قطعی مبدأ جلوی حذف‌شدن سایت از ایندکس را می‌گیرد.
-
-	# ---- لاگ بازدیدهای مبدأ — الزام بند ۱۰ و بند ۱۳ تصمیم ۱۴ سند معماری ----
-	# «بیمه‌ی Crawl Stats خودمیزبان»: فرمت JSON کدی همه‌ی هدرهای درخواست را ثبت
-	# می‌کند، از جمله User-Agent (برای فیلتر Googlebot) و X-Forwarded-For /
-	# Ar-Real-Ip (IP واقعی کلاینت پشت آروان — remote_ip اینجا IP لبه‌ی آروان
-	# است، نه گوگل‌بات).
-	#
-	# تأیید اصالت گوگل‌بات همین‌جا انجام «نمی‌شود» — آنلاین در مسیر درخواست
-	# هزینه دارد و لازم نیست. تأیید reverse-DNS + forward-confirm به‌صورت
-	# آفلاین/دوره‌ای با ‎ops/verify-googlebot.py‎ روی همین فایل لاگ اجرا می‌شود
-	# (رانبوک، گام ۹).
-	#
-	# ⚠️ مسیر لاگ داخل کانتینر کدی است؛ باید در compose پادل‌یار یک bind/volume
-	# برای ‎/var/log/caddy‎ داشته باشد تا لاگ با ری‌استارت نپرد (رانبوک، گام ۵).
+	@www host www.tablo.gold
+	redir @www https://tablo.gold{uri} 308
 	log {
-		output file /var/log/caddy/mazane-access.log {
+		output file /data/tablo-logs/tablo-access.log {
 			roll_size 20MiB
 			roll_keep 10
 		}
 		format json
 	}
-
-	reverse_proxy mazane-web:3000
+	reverse_proxy tablo-web:3000
 }
 
-# اختیاری — فقط اگر رکورد www در آروان تعریف شد:
-# www.mazane.online {
-# 	redir https://mazane.online{uri} permanent
-# }
+# مبدأ HTTPS اگر آروان پروتکل مبدأ را HTTPS گذاشته باشد.
+# گواهی internal — در آروان SSL مبدأ غیرسختگیرانه یا HTTP به مبدأ.
+https://tablo.gold, https://www.tablo.gold {
+	tls internal
+	encode {
+		zstd
+		gzip
+		match {
+			header Content-Type text/*
+			header Content-Type application/json*
+			header Content-Type application/javascript*
+			header Content-Type application/xml*
+			header Content-Type image/svg+xml*
+		}
+	}
+	@www host www.tablo.gold
+	redir @www https://tablo.gold{uri} 308
+	log {
+		output file /data/tablo-logs/tablo-access.log {
+			roll_size 20MiB
+			roll_keep 10
+		}
+		format json
+	}
+	reverse_proxy tablo-web:3000
+}
+
+# دامنهٔ قدیمی — ریدایرکت به tablo.gold
+http://mazane.online, http://www.mazane.online {
+	redir https://tablo.gold{uri} 308
+}
+https://mazane.online, https://www.mazane.online {
+	tls internal
+	redir https://tablo.gold{uri} 308
+}

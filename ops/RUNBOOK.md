@@ -1,10 +1,20 @@
-# رانبوک استقرار مظنه آنلاین — بلیت ۱۱
+# رانبوک استقرار تابلو — بلیت ۱۱
 
 > اجرای نظارت‌شده. هر گامی که با ‏👤 علامت خورده «فقط با حضور صاحب کسب‌وکار»
 > انجام می‌شود (دسترسی SSH، پنل آروان، سرچ‌کنسول، یا تصمیم برگشت‌ناپذیر).
 > سرور `37.32.27.201` با پروژه‌ی تولیدی پادل‌یار (۱۱ کانتینر + کدیِ لبه روی
 > ۸۰/۴۴۳) مشترک است — بند ۱۳ سند معماری، تصمیم ۵. قاعده‌ی طلایی کل این سند:
 > **پادل‌یار نباید حتی یک ثانیه بلرزد.**
+>
+> **دامنهٔ محصول: `tablo.gold`** (جایگزین mazane.online). بلوک کدی، آروان،
+> Search Console باید روی همین دامنه باشند.
+> برش دامنهٔ زنده روی سرور 👤 است — مخزن فقط snippet و `SITE_URL` را به‌روز
+> نگه می‌دارد؛ Caddyfile پادل‌یار را دستی عوض کنید (`ops/caddy-snippet.Caddyfile`).
+>
+> **تصمیم DNS/CDN (مالک، ۲۰۲۶-۰۸-۰۹):** دامنه با **نیم‌سرورهای ابرآروان**
+> (delegation کامل NS) مدیریت می‌شود — **نه** اتصال CDN از مسیر CNAME به
+> هاست‌نیم آروان. لبهٔ CDN همان پروکسی ابری روی رکوردهای DNS داخل پنل آروان
+> است. جزئیات: بخش ۶.
 
 فایل‌های مرتبط این مخزن:
 
@@ -19,11 +29,70 @@
 
 ---
 
+## ۰‑ب. برش دامنه به tablo.gold 👤
+
+وضعیت اعلام‌شدهٔ مالک (۲۰۲۶-۰۸-۰۹): دامنه خریده شده و **NS به ابرآروان** ست شده.
+مدل CDN = DNS کامل روی آروان + ابر/پروکسی روی رکورد A — **بدون CNAME به CDN**.
+
+اگر روی سرور هنوز بلوک قدیمی `mazane.online` در Caddyfile پادل‌یار است:
+
+1. صبر تا propagate نیم‌سرورها (`dig NS tablo.gold +short` باید NSهای آروان را بدهد).
+2. در پنل DNS آروان (نه رجیسترار): رکورد `A` برای `@` → `37.32.27.201` با **ابر روشن**؛ در صورت تمایل `www` به‌صورت A یا redirect داخل آروان — **CNAME به هاست‌نیم CDN نساز**.
+4. در Caddyfile لبه: بلوک فعلی `ops/caddy-snippet.Caddyfile` (`tablo.gold { … }`)؛ `caddy reload`.
+5. عکس پست متغیر جدا نمی‌خواهد: نشانی عمومی از `TABLO_ARVAN_S3_ENDPOINT` و
+   `TABLO_ARVAN_S3_BUCKET` ساخته می‌شود (`<endpoint>/<bucket>/<key>`). فقط باکت
+   باید خواندنیِ عمومی باشد — آپلود خودش `ACL: public-read` می‌گذارد.
+6. `curl -sI https://tablo.gold/` و Host-هدر لوکال روی کدی را چک کنید.
+7. Search Console: property دامنهٔ `tablo.gold` + sitemap تازه.
+8. اگر `mazane.online` هنوز DNS دارد: ۳۰۱ به `tablo.gold` تا سئوی کهنه نسوزد.
+
+---
+
+## ۰‑ج. 👤 تغییر نام به «تابلو» — گام‌های اجباری روی سرور
+
+تغییر نام ۲۰۲۶-۰۸-۱۰ چند شناسه‌ی زیرساختی را عوض کرد. **پیش از نخستین استقرار
+پس از این تغییر** این‌ها را انجام دهید، وگرنه سرویس بالا نمی‌آید:
+
+۱. **شبکه‌ی لبه** — نام از `mazane-edge` به `tablo-edge` رفت:
+   ```
+   docker network create tablo-edge
+   docker network connect tablo-edge <نام کانتینر کدی پادل‌یار>
+   ```
+۲. **کدیِ لبه** — `reverse_proxy mazane-web:3000` را به `tablo-web:3000` عوض
+   کنید (`ops/caddy-snippet.Caddyfile` به‌روز است) و کدی را reload کنید.
+   بدون این، سایت ۵۰۲ می‌دهد.
+۳. **مسیر استقرار** — از `/opt/mazane` به `/opt/tablo` رفت. دایرکتوری را
+   منتقل کنید تا `.env` (که راز واقعی دارد) همراهش برود:
+   ```
+   sudo mv /opt/mazane /opt/tablo && sudo mv /opt/mazane-src /opt/tablo-src
+   ```
+۴. **متغیرهای محیطی** — همه‌ی `MAZANE_*` به `TABLO_*` تغییر نام دادند:
+   ```
+   sudo sed -i 's/^MAZANE_/TABLO_/' /opt/tablo/.env
+   ```
+   و `TABLO_IMAGE_CDN_BASE_URL` را کلاً حذف کنید — دیگر خوانده نمی‌شود.
+۵. **راستی‌آزمایی volume پستگرس** (مهم‌ترین گام):
+   ```
+   docker volume ls | grep postgres-data
+   ```
+   باید `mazane_mazane-postgres-data` باشد — همان نامی که در
+   `compose.prod.yml` پین شده. اگر نام دیگری دید، **پین را در آن فایل اصلاح
+   کنید، نه اینکه برش دارید**؛ وگرنه داکر volume تازه و خالی می‌سازد و
+   دیتابیس انگار پاک شده به نظر می‌رسد.
+
+**آنچه عمداً تغییر نکرد:** نام volume، و کاربر/دیتابیس پستگرس (`mazane`).
+این‌ها داخل volume موجودند و عوض‌کردنشان مهاجرت داده می‌خواهد، نه تغییر نام.
+
+**پیامد کوتاه‌مدت:** کلیدهای ردیس از `mazane:*` به `tablo:*` رفتند. تا نخستین
+نوبت گردآوری (~۳۰ ثانیه) جدول «قیمت در دسترس نیست» نشان می‌دهد — همان قاعده‌ی
+کهنگی، نه خطا. کوکی نشست مدیریت هم نامش عوض شد، پس یک بار باید دوباره وارد
+شوید.
+
 ## ۰. وضعیت معیارهای پذیرش بلیت ۱۱
 
 هر سه معیار پذیرش به سرور/آروان زنده نیاز دارند و در این پاس مخزنی **معوق**‌اند:
 
-- [ ] معوق — «mazane.online از پشت آروان صفحه‌ی زنده می‌دهد و برنامه‌های
+- [ ] معوق — «tablo.gold از پشت آروان صفحه‌ی زنده می‌دهد و برنامه‌های
       موجود سرور سالم می‌مانند» ⟸ گام‌های ۳ تا ۶
 - [ ] معوق — «با خواباندن عمدی مبدأ، لبه پاسخ ۲۰۰ کهنه می‌دهد (آزمایش
       ثبت‌شده)» ⟸ گام ۷ — **پیش‌شرط سخت لانچ** (بند ۱۰.۲)
@@ -66,13 +135,26 @@
 
 ### ۱.۲ 👤 تصمیم رجیستری ایمیج
 
-ساخت روی سرور **گزینه نیست** (۱ هسته/۲GB — `vite build` بیش از رم آزاد سرور
-حافظه می‌خواهد). دو مسیر برای رساندن ایمیج به سرور:
+> 🔄 **تصمیم مالک (۲۰۲۶-۰۸-۰۸): روش استاندارد از این پس `./deploy.sh` است —
+> ساخت ایمیج **روی خودِ سرور**، دقیقاً مثل الگوی پروژه‌ی هم‌خانواده‌ی پادل‌یار
+> (`~/w/padelyar/deploy.sh`، همان سرور، همان پشته‌ی TanStack Start + Vite).
+> دلیل تغییر: پادل‌یار همین‌جا سال‌هاست همین کار را می‌کند بدون خرابی گزارش‌شده.
+> ریسک زیر (رم محدود) **رد نشده، پذیرفته شده** — `deploy.sh` پیش از هر build
+> رم آزاد را چک می‌کند و اگر خطرناک بود متوقف می‌شود، و دو ایمیج را پشت‌سرهم
+> می‌سازد نه هم‌زمان. اگر یک‌بار OOM واقعی افتاد، همین‌جا برگرد به مسیر لوکال
+> زیر (بند سه‌شنبه‌ای که نگه داشته شده، نه حذف‌شده).
+
+مسیر فعلی: **ساخت روی سرور با `./deploy.sh`** (ریشه‌ی مخزن). کد با `rsync`
+می‌رود (`web-crawler/` و `.env` صریحاً از rsync مستثنایند)، بعد
+`docker build -f Dockerfile.web` و `-f Dockerfile.collector` پشت‌سرهم روی
+خودِ سرور، بعد `docker compose up -d web collector`.
+
+مسیرهای قدیمی‌تر (اگر روزی لازم شد رجیستری یا ساخت لپ‌تاپی برگردد):
 
 | مسیر | خوبی | ریسک |
 |---|---|---|
-| **GHCR (توصیه‌شده):** جاب `images` در CI با `push: true` + روی سرور `docker compose pull` | تکرارپذیر، بدون انتقال دستی | دسترسی ایران به `ghcr.io` ممکن است فیلتر/محدود باشد — قبل از اتکا، از خود سرور تست شود: `curl -sI https://ghcr.io/v2/` |
-| **جایگزین بدون رجیستری:** از لپ‌تاپ `docker save mazane-web:v1 \| gzip \| ssh root@37.32.27.201 'gunzip \| docker load'` | به هیچ سرویس خارجی وابسته نیست | دستی؛ دیسک سرور فقط ~۸GB آزاد دارد — بعد از هر load، ایمیج‌های قدیمی پاک شوند (`docker image prune -f`) |
+| **GHCR:** جاب `images` در CI با `push: true` + روی سرور `docker compose pull` | تکرارپذیر، بدون انتقال دستی | دسترسی ایران به `ghcr.io` ممکن است فیلتر/محدود باشد — قبل از اتکا، از خود سرور تست شود: `curl -sI https://ghcr.io/v2/`. هیچ‌وقت راه‌اندازی نشد. |
+| **ساخت لپ‌تاپی + انتقال دستی:** `docker save tablo-web:v1 \| gzip \| ssh ubuntu@37.32.27.201 'gunzip \| sudo docker load'` | به هیچ سرویس خارجی وابسته نیست؛ صفر بار پردازشی روی سرور | دستی و کند (~۲.۵ دقیقه هر ایمیج روی این پهنای باند)؛ دیسک سرور فقط ~۷GB آزاد دارد — بعد از هر load، ایمیج‌های قدیمی پاک شوند (`sudo docker image prune -f`). دیپلوی بلیت ۳۴ (پنل مدیریت) با همین مسیر انجام شد، پیش از تصمیم بالا. |
 
 اگر GHCR انتخاب شد: در `.github/workflows/ci.yml` جاب `images` این‌ها اضافه
 می‌شود: `docker/login-action` با `GITHUB_TOKEN`، `push: true`، و تگ‌های
@@ -84,22 +166,22 @@
 روی لپ‌تاپ (مک ARM) حتماً با پلتفرم سرور:
 
 ```bash
-docker build --platform linux/amd64 -f Dockerfile.collector -t mazane-collector:v1 .
-docker build --platform linux/amd64 -f Dockerfile.web       -t mazane-web:v1 .
+docker build --platform linux/amd64 -f Dockerfile.collector -t tablo-collector:v1 .
+docker build --platform linux/amd64 -f Dockerfile.web       -t tablo-web:v1 .
 ```
 
 راستی‌آزمایی ایمیج وب **پیش از** فرستادن به سرور — عمداً بدون ردیس و بدون
 پستگرس، چون انتظار ۲۰۰ است نه ۵۰۰ (قاعده‌ی سخت ۵: قطع منبع کهنگی است نه خطا):
 
 ```bash
-docker run --rm -d --name mazane-web-smoke \
-  --memory 256m --cpus 0.5 -p 127.0.0.1:3399:3000 mazane-web:v1
+docker run --rm -d --name tablo-web-smoke \
+  --memory 256m --cpus 0.5 -p 127.0.0.1:3399:3000 tablo-web:v1
 sleep 5
 curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3399/            # ۲۰۰
 curl -sI http://127.0.0.1:3399/fonts/vazirmatn-variable-33.0.3.woff2 \
   | grep -iE 'HTTP|cache-control'      # ۲۰۰ + immutable — فونت خودمیزبان
-docker stats --no-stream mazane-web-smoke                                  # ~۳۱MB
-docker rm -f mazane-web-smoke
+docker stats --no-stream tablo-web-smoke                                  # ~۳۱MB
+docker rm -f tablo-web-smoke
 ```
 
 همین دود-تست در CI (جاب `images`) هم اجرا می‌شود.
@@ -108,40 +190,42 @@ docker rm -f mazane-web-smoke
 
 از روی `.env.example`. نکات:
 
-- `POSTGRES_PASSWORD` و `MAZANE_REVALIDATE_TOKEN` با `openssl rand -hex 32`.
-- `MAZANE_REVALIDATE_TOKEN` بین گردآورنده و وب مشترک است (compose خودش به هر
+- `POSTGRES_PASSWORD` و `TABLO_REVALIDATE_TOKEN` با `openssl rand -hex 32`.
+- `TABLO_REVALIDATE_TOKEN` بین گردآورنده و وب مشترک است (compose خودش به هر
   دو می‌دهد). مسیر `/api/revalidate-blog` بدون توکنِ تنظیم‌شده **همیشه ۴۰۱**
   می‌دهد (fail closed) — پس اشتباه‌بودنش در لاگ گردآورنده دیده می‌شود.
   با مهاجرت از نکست دیگر کش صفحه‌ای در مبدأ نیست: پست تازه در بدترین حالت
   ۶۰ ثانیه (پنجره‌ی `s-maxage` لبه) دیرتر دیده می‌شود.
-- `MAZANE_DAILY_PUBLISH_CAP` سقف انتشار روزانه‌ی بلاگ (پیش‌فرض ۲ — تصمیم ۱۶).
-- `MAZANE_WEB_PORT` (پیش‌فرض ۳۳۰۰) نباید با درگاه‌های پادل‌یار تصادم کند —
+- `TABLO_DAILY_PUBLISH_CAP` سقف انتشار روزانه‌ی بلاگ (پیش‌فرض ۲ — تصمیم ۱۶).
+- `TABLO_WEB_PORT` (پیش‌فرض ۳۳۰۰) نباید با درگاه‌های پادل‌یار تصادم کند —
   روی سرور چک شود: `ss -ltn | grep 3300`.
-- اگر مسیر «بدون رجیستری» انتخاب شد، `MAZANE_IMAGE_*` را به تگ‌های load شده
-  بگذارید (مثلاً `mazane-web:v1`).
+- اگر مسیر «بدون رجیستری» انتخاب شد، `TABLO_IMAGE_*` را به تگ‌های load شده
+  بگذارید (مثلاً `tablo-web:v1`).
 - 👤 **رمز پنل مدیریت (بلیت ۲۰).** پنل زیر `/admin` فقط یک رمز عبور دارد
   (بدون جدول کاربر/نقش). خودِ رمز **هرگز** در مخزن یا `.env` نوشته نمی‌شود —
   فقط هشش. روی لپ‌تاپ یا سرور (هرجا Node ۲۲ هست):
   ```bash
   cd web && npm run admin:hash-password -- '<رمز عبور انتخابی>'
   ```
-  خروجی (فرمت `salt:hash` هگزادسیمال) را در `MAZANE_ADMIN_PASSWORD_HASH`
-  کپی کنید. برای `MAZANE_ADMIN_SESSION_SECRET` هم مثل بقیه: `openssl rand -hex 32`.
+  خروجی (فرمت `salt:hash` هگزادسیمال) را در `TABLO_ADMIN_PASSWORD_HASH`
+  کپی کنید. برای `TABLO_ADMIN_SESSION_SECRET` هم مثل بقیه: `openssl rand -hex 32`.
   رمز خام را جایی جز حافظه‌ی 👤 ننویسید — اسکریپت فقط هش را در stdout چاپ
   می‌کند و رمز را هیچ‌جا لاگ نمی‌کند.
 - 👤 **انبار عکس شاخص پست (بلیت ۲۴).** پیش از این گام، در پنل آروان‌کلود:
   1. یک باکت فضای ابری S3-سازگار بسازید (نام دلخواه، مثلاً `mazane-posts`)
      و یک کلید دسترسی (Access Key/Secret Key) اختصاصیِ همان باکت بسازید —
      کلید مشترک با سرویس‌های دیگر نسازید.
-  2. `MAZANE_ARVAN_S3_ENDPOINT`، `MAZANE_ARVAN_S3_REGION`،
-     `MAZANE_ARVAN_S3_BUCKET`، `MAZANE_ARVAN_S3_ACCESS_KEY` و
-     `MAZANE_ARVAN_S3_SECRET_KEY` را از همان پنل در `.env` بگذارید — این پنج
+  2. `TABLO_ARVAN_S3_ENDPOINT`، `TABLO_ARVAN_S3_REGION`،
+     `TABLO_ARVAN_S3_BUCKET`، `TABLO_ARVAN_S3_ACCESS_KEY` و
+     `TABLO_ARVAN_S3_SECRET_KEY` را از همان پنل در `.env` بگذارید — این پنج
      مقدار هیچ‌جای مخزن نیست و نباید باشد.
-  3. یک زیردامنه (مثلاً `cdn.mazane.online`) برای سرو عکس‌ها بسازید — رکورد
-     DNS در پنل آروان (همان بخش ۶) به همان باکت/CDN وصل شود و گواهی HTTPS
-     بگیرد؛ عکس **هرگز** از دامنه‌ی خام انبار سرو نمی‌شود (بند طراحی تیکت
-     ۲۴: هیچ دامنه‌ی بیگانه‌ای روی مسیر بحرانی رندر ننشیند).
-  4. `MAZANE_IMAGE_CDN_BASE_URL` را به همان زیردامنه (با `https://`) بگذارید.
+  3. **هیچ زیردامنه‌ی cdn لازم نیست** (تصمیم مالک ۲۰۲۶-۰۸-۰۷، تأییدشده
+     ۲۰۲۶-۰۸-۱۰): نشانی عمومی عکس از همان endpoint و bucket بالا ساخته
+     می‌شود — `<endpoint>/<bucket>/<key>`. فقط باکت باید خواندنیِ عمومی
+     باشد؛ آپلود خودش `ACL: public-read` می‌گذارد.
+     ⚠️ این انحرافِ آگاهانه از بند طراحی تیکت ۲۴ («هیچ دامنه‌ی بیگانه‌ای روی
+     مسیر بحرانی رندر ننشیند») است: دامنه‌ی آروان در HTML صفحه دیده می‌شود و
+     عوض‌کردن ارائه‌دهنده، نشانی همه‌ی عکس‌های قدیمی را می‌شکند.
   قطع این انبار فقط آپلود عکس تازه را می‌شکند — ذخیره‌ی متن پست و رندر
   پست‌های موجود اثر نمی‌پذیرند (مسیرهای کاملاً جدا).
 
@@ -150,7 +234,7 @@ docker rm -f mazane-web-smoke
 فقط این‌ها (کل مخزن لازم نیست):
 
 ```
-/opt/mazane/
+/opt/tablo/
 ├── compose.prod.yml
 ├── .env                        # از ۱.۴
 └── collector/migrations/*.sql  # همان ساختار نسبی که compose mount می‌کند
@@ -177,12 +261,12 @@ curl -sI https://<دامنه‌ی پادل‌یار>/ | head -5   # پادل‌�
 ## ۳. 👤 استقرار کانتینرها
 
 ```bash
-mkdir -p /opt/mazane
+mkdir -p /opt/tablo
 # فایل‌های گام ۱.۵ را scp کنید، سپس:
-cd /opt/mazane
+cd /opt/tablo
 chmod 600 .env
 
-docker network create mazane-edge        # شبکه‌ی مشترک با کدیِ لبه (گام ۵)
+docker network create tablo-edge        # شبکه‌ی مشترک با کدیِ لبه (گام ۵)
 
 # --- ایمیج‌ها: یکی از دو مسیر گام ۱.۲ ---
 docker compose -f compose.prod.yml pull            # مسیر GHCR
@@ -261,19 +345,19 @@ curl -sI https://<دامنه‌ی پادل‌یار>/ | head -3     # هنوز �
 
 ```bash
 CADDY=<نام کانتینر کدی پادل‌یار>          # از docker ps پیدا کنید
-docker network connect mazane-edge $CADDY
+docker network connect tablo-edge $CADDY
 
-# داخل کانتینر کدی، نام mazane-web باید resolve و پاسخ بدهد:
-docker exec $CADDY wget -qO- http://mazane-web:3000/ | head -3
+# داخل کانتینر کدی، نام tablo-web باید resolve و پاسخ بدهد:
+docker exec $CADDY wget -qO- http://tablo-web:3000/ | head -3
 ```
 
 سپس محتوای `ops/caddy-snippet.Caddyfile` (بدون کامنت‌های سرصفحه، از بلوک
-`mazane.online {` به بعد) به **انتهای** Caddyfile موجود اضافه شود. نکات:
+`tablo.gold {` به بعد) به **انتهای** Caddyfile موجود اضافه شود. نکات:
 
 - مسیر Caddyfile را از compose پادل‌یار پیدا کنید (معمولاً bind mount).
 - برای لاگ پایدار، `/var/log/caddy` کانتینر کدی باید volume/bind داشته باشد؛
   اگر ندارد، در compose پادل‌یار اضافه شود (یک خط volume — با اجازه‌ی 👤).
-- **TLS پشت آروان:** کدی برای `mazane.online` گواهی ACME می‌گیرد. مسیر
+- **TLS پشت آروان:** کدی برای `tablo.gold` گواهی ACME می‌گیرد. مسیر
   HTTP-01 باید از لبه‌ی آروان عبور کند (`/.well-known/acme-challenge/*` کش و
   مسدود نشود). اگر صدور گیر کرد: در پنل آروان رکورد A را موقتاً «فقط DNS»
   (بدون پراکسی) کنید، صدور که انجام شد پراکسی را برگردانید.
@@ -281,19 +365,27 @@ docker exec $CADDY wget -qO- http://mazane-web:3000/ | head -3
 ```bash
 docker exec $CADDY caddy validate --config /etc/caddy/Caddyfile   # اول اعتبارسنجی
 docker exec $CADDY caddy reload   --config /etc/caddy/Caddyfile   # سپس reload (بدون قطعی)
-docker exec $CADDY wget -qO- --header 'Host: mazane.online' http://127.0.0.1/ | head -3
+docker exec $CADDY wget -qO- --header 'Host: tablo.gold' http://127.0.0.1/ | head -3
 ```
 
 خرابی در reload = برگرداندن Caddyfile پشتیبان + reload دوباره (بازگشت گام ۱۱).
 
 ---
 
-## ۶. 👤 آروان — DNS و کش
+## ۶. 👤 آروان — DNS و کش (NS کامل، بدون CNAME به CDN)
+
+**مدل قطعی:** رجیسترار فقط نیم‌سرورهای ابرآروان را دارد. همه‌ی رکوردها و
+لبهٔ CDN داخل پنل DNS/CDN آروان ساخته می‌شوند. مسیر «CNAME دامنه به
+هاست‌نیم CDN آروان» برای این محصول **استفاده نمی‌شود**.
 
 در پنل آروان‌کلود (حساب موجود صاحب کسب‌وکار):
 
-1. **DNS:** رکورد `A` برای `@` (و در صورت تمایل `www`) به `37.32.27.201` با
-   **پراکسی روشن** (ابر). TTL کوتاه (۲ دقیقه) تا تثبیت.
+0. **نیم‌سرورها:** در رجیسترار `tablo.gold` به NSهای آروان اشاره کند (مالک:
+   انجام شده ۲۰۲۶-۰۸-۰۹). تا propagate، رکوردهای داخل پنل از اینترنت دیده
+   نمی‌شوند — با `dig NS tablo.gold` و `dig A tablo.gold` چک شود.
+1. **DNS داخل آروان:** رکورد `A` برای `@` (و در صورت تمایل `www`) به
+   `37.32.27.201` با **ابر/پراکسی روشن**. TTL کوتاه (۲ دقیقه) تا تثبیت.
+   مبدأ origin همان IP سرور است؛ ابر آروان ترافیک را از لبه می‌گیرد.
 2. **HTTPS لبه:** گواهی لبه‌ی آروان فعال؛ ارتباط لبه⟸مبدأ روی HTTPS (گواهی
    معتبر کدی از گام ۵) یا مطابق گزینه‌های پنل.
 3. **کش:** حالت «پیروی از هدر مبدأ» — صفحه‌ی اصلی
@@ -303,7 +395,7 @@ docker exec $CADDY wget -qO- --header 'Host: mazane.online' http://127.0.0.1/ | 
    شود — به‌ویژه `stale-if-error` که همان پیش‌شرط سخت گام ۷ است.
    دارایی‌های ایستا (`/assets/**` هش‌دار و `/fonts/**` نسخه‌دار) خودشان
    `max-age=31536000, immutable` می‌دهند؛ آن‌ها هم دست‌نخورده رد شوند.
-4. راستی‌آزمایی از بیرون: `curl -sI https://mazane.online/` ⟸ ۲۰۰ + همان
+4. راستی‌آزمایی از بیرون: `curl -sI https://tablo.gold/` ⟸ ۲۰۰ + همان
    `Cache-Control` + هدرهای کش آروان (`X-Cache` یا `Ar-Cache`؛ بار دوم HIT).
 
 ---
@@ -318,22 +410,22 @@ docker exec $CADDY wget -qO- --header 'Host: mazane.online' http://127.0.0.1/ | 
 
 ```bash
 # ۱) گرم کردن کش لبه و ثبت خط مبنا (از بیرون):
-curl -sI https://mazane.online/ ; sleep 5 ; curl -sI https://mazane.online/
+curl -sI https://tablo.gold/ ; sleep 5 ; curl -sI https://tablo.gold/
 # انتظار: ۲۰۰؛ بار دوم هدر کش آروان HIT
 
 # ۲) خواباندن عمدی مبدأ (روی سرور):
-docker compose -f /opt/mazane/compose.prod.yml stop web
+docker compose -f /opt/tablo/compose.prod.yml stop web
 
 # ۳) از بیرون، در دقیقه‌های ۱، ۲ و ۵ (مهم: بعد از انقضای s-maxage=60 هم):
-date -u ; curl -sI https://mazane.online/
+date -u ; curl -sI https://tablo.gold/
 # قبولی: هر سه بار «۲۰۰» با HTML کهنه. مردودی: هر 5xx/52x.
 
 # ۴) ثبت شواهد (معیار پذیرش «آزمایش ثبت‌شده»): خروجی کامل curl -i و date -u
 #    هر سه نوبت در یک فایل/اسکرین‌شات نگه داشته شود.
 
 # ۵) برگرداندن مبدأ:
-docker compose -f /opt/mazane/compose.prod.yml start web
-curl -sI https://mazane.online/        # دوباره ۲۰۰ تازه
+docker compose -f /opt/tablo/compose.prod.yml start web
+curl -sI https://tablo.gold/        # دوباره ۲۰۰ تازه
 ```
 
 اگر مردود شد: در تنظیمات کش آروان گزینه‌ی سروِ محتوای کش‌شده هنگام خطای مبدأ
@@ -348,8 +440,8 @@ curl -sI https://mazane.online/        # دوباره ۲۰۰ تازه
 یا نه. هر سرویس رایگان با نودهای خارجی کافی است (UptimeRobot، Better Stack،
 StatusCake — انتخاب با 👤 چون حساب به ایمیل او می‌خورد):
 
-- دو چک HTTPS هر ۵ دقیقه: `https://mazane.online/` و
-  `https://mazane.online/robots.txt`؛ شرط قبولی: وضعیت ۲۰۰.
+- دو چک HTTPS هر ۵ دقیقه: `https://tablo.gold/` و
+  `https://tablo.gold/robots.txt`؛ شرط قبولی: وضعیت ۲۰۰.
 - هشدار به ایمیل صاحب کسب‌وکار.
 - نکته: پس از آزمون گام ۷ فعال شود تا هشدار کاذب ندهد؛ یا هنگام آزمون در
   حالت pause باشد.
@@ -364,7 +456,7 @@ StatusCake — انتخاب با 👤 چون حساب به ایمیل او می�
 ```bash
 # روی سرور (python3 روی اوبونتو ۲۴.۰۴ موجود است) — اسکریپت را یک‌بار scp کنید:
 docker exec <کانتینر کدی> cat /var/log/caddy/mazane-access.log > /tmp/mazane-access.log
-python3 /opt/mazane/verify-googlebot.py /tmp/mazane-access.log
+python3 /opt/tablo/verify-googlebot.py /tmp/mazane-access.log
 ```
 
 خروجی: هیت‌های اصیل گوگل (PTR به `googlebot.com`/`google.com` + forward
@@ -377,7 +469,7 @@ python3 /opt/mazane/verify-googlebot.py /tmp/mazane-access.log
 
 ## ۱۰. 👤 سرچ‌کنسول — DNS TXT (بند ۱۰.۲، الزام ۳)
 
-1. در سرچ‌کنسول، property از نوع **Domain** برای `mazane.online`.
+1. در سرچ‌کنسول، property از نوع **Domain** برای `tablo.gold`.
 2. رکورد `TXT` پیشنهادی گوگل در **پنل DNS آروان** اضافه شود (به میزبانی
    وابسته نیست و با تغییر هاست نمی‌شکند — دلیل انتخاب این روش).
 3. سایت‌مپ نیاز به ثبت دستی ندارد: `robots.txt` خط `Sitemap:` دارد
@@ -392,14 +484,14 @@ python3 /opt/mazane/verify-googlebot.py /tmp/mazane-access.log
 ترتیب معکوس، بدون اثر بر پادل‌یار:
 
 ```bash
-# ۱) قطع ترافیک لبه: بلوک mazane.online از Caddyfile پادل‌یار حذف/کامنت شود
+# ۱) قطع ترافیک لبه: بلوک tablo.gold از Caddyfile پادل‌یار حذف/کامنت شود
 docker exec $CADDY caddy reload --config /etc/caddy/Caddyfile
 
 # ۲) خواباندن مظنه (داده‌ها در volume می‌مانند):
-docker compose -f /opt/mazane/compose.prod.yml down
+docker compose -f /opt/tablo/compose.prod.yml down
 # پاک‌سازی کامل (فقط اگر عمداً بخواهید تاریخچه هم برود): down -v
 
-# ۳) اختیاری: docker network disconnect mazane-edge $CADDY
+# ۳) اختیاری: docker network disconnect tablo-edge $CADDY
 # ۴) 👤 آروان: pause پراکسی یا حذف رکورد — فقط اگر لازم شد
 ```
 
@@ -416,8 +508,8 @@ docker compose -f /opt/mazane/compose.prod.yml down
 - [ ] ۲ 👤 عکس وضعیت پادل‌یار ثبت شد
 - [ ] ۳ 👤 چهار سرویس healthy؛ مهاجرت‌ها اعمال؛ `127.0.0.1:3300` پاسخ ۲۰۰
 - [ ] ۴ 👤 پادل‌یار سالم (بعد از هر گام)
-- [ ] ۵ 👤 کدی reload شد؛ `mazane.online` از لبه‌ی کدی سرو می‌شود
-- [ ] ۶ 👤 آروان: DNS پراکسی‌دار + کش پیرو هدر مبدأ
+- [ ] ۵ 👤 کدی reload شد؛ `tablo.gold` از لبه‌ی کدی سرو می‌شود
+- [ ] ۶ 👤 آروان: NS ست‌شده؛ A با ابر روشن (بدون CNAME به CDN) + کش پیرو هدر مبدأ
 - [ ] ۷ 👤 **آزمون ۲۰۰ کهنه پاس و شواهدش ثبت شد** (پیش‌شرط لانچ)
 - [ ] ۸ 👤 پایش بیرونی روی `/` و `/robots.txt` فعال
 - [ ] ۹ اولین اجرای `verify-googlebot.py` انجام و زمان‌بندی هفتگی گذاشته شد

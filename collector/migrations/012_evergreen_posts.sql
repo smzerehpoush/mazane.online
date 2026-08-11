@@ -1,5 +1,5 @@
 -- مهاجرت ۰۱۲ — سه پست تحریریه‌ی همیشه‌سبز، دست‌نویس (نه از خط لوله‌ی بلیت ۱۴).
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/012_evergreen_posts.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/012_evergreen_posts.sql
 --
 -- هدف: بلاگ (بلیت ۱۲) روز اول با فهرست خالی راه نیفتد. این سه پست جدا از
 -- بلیت ۱۵ (پنج پست لانچ داده‌محور از پایگاه) هستند — محتوای آموزشی عمومی

@@ -1,7 +1,7 @@
 -- مهاجرت ۰۱۶ — عکس شاخص پست (بلیت ۲۴).
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/016_post_images.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/016_post_images.sql
 --
--- ستون‌های تازه‌ی `posts`: نشانی عمومی عکس (زیردامنه‌ی cdn.mazane.online، نه
+-- ستون‌های تازه‌ی `posts`: نشانی عمومی عکس (مستقیم از باکت آروان، نه
 -- دامنه‌ی خام انبار)، متن جایگزین، و عرض/ارتفاعِ *پس از پردازش* — تا مرورگر
 -- جای عکس را پیش از رسیدنش رزرو کند و چیدمان نپرد.
 --

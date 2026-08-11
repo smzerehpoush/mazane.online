@@ -8,7 +8,7 @@
  *    برمی‌گردد — نه خطا (قاعده‌ی ۵ قراردادها).
  *
  * `parseChartConfigPayload` هم همین‌جا سنجیده می‌شود: فرود امنِ خواندن
- * کلید ردیس `mazane:chart_config` (`lib/server/chart-config-source.ts`)،
+ * کلید ردیس `tablo:chart_config` (`lib/server/chart-config-source.ts`)،
  * بدون نیاز به ردیس واقعی.
  */
 import { describe, expect, it } from "vitest";

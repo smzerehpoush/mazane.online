@@ -1,12 +1,13 @@
 /**
  * کارت نرخ صفحه‌ی سکو (بلیت ۲۷ + نوار زبانه‌ی بازه، بلیت ۳۰): عدد درشت
- * قیمت مرجع سکو + نمودار ناحیه‌ای روند، با سه بازه‌ی قابل‌انتخاب —
+ * «قیمت» سکو + نمودار ناحیه‌ای روند، با سه بازه‌ی قابل‌انتخاب —
  * روزانه/هفتگی/ماهانه.
  *
- * ⚠️ قاعده‌ی ۱ قراردادها: عدد درشت مستقیماً `referencePriceFor` است — یک
- * انتخاب از اعداد آماده‌ی گردآورنده، نه محاسبه؛ همیشه «الان» است و با تعویض
- * زبانه عوض نمی‌شود (فقط نمودار و سه آمار زیرش تاریخی‌اند). برچسب زیرش هم از
- * `hasUnknownFee` مشتق می‌شود، نه فهرست دستی. نمودار هر زبانه سری تاریخچه‌ی
+ * ⚠️ قاعده‌ی ۱ قراردادها: عدد درشت مستقیماً `priceToman` است — یک انتخاب از
+ * اعداد آماده‌ی گردآورنده، نه محاسبه؛ همیشه «الان» است و با تعویض زبانه عوض
+ * نمی‌شود (فقط نمودار و سه آمار زیرش تاریخی‌اند). برچسب زیرش دیگر شرطی نیست:
+ * از وقتی قیمت مؤثر حذف شد (سند تصمیم ۰۰۰۲) عدد همه‌ی سکوها یک چیز است —
+ * قیمت اعلامی خودشان، پیش از کارمزد. نمودار هر زبانه سری تاریخچه‌ی
  * همان بازه‌ی همین سکو را می‌کشد (`lib/history.ts`، الگوی نمودار چندسکویی
  * صفحه‌ی اصلی — `home-view.tsx::chartView`، فقط تک‌سکو و سه‌بازه). سه آمار
  * پایین کارت هم فقط از همان سری بیرون کشیده می‌شوند: کمینه/بیشینه‌ی خالص و
@@ -65,11 +66,10 @@ import {
   RATE_CARD_POLL_SECONDS,
   type LivePricesPayload,
 } from "@/lib/live-update";
-import { hasUnknownFee, referencePriceFor, type Row } from "@/lib/rows";
+import { priceToman, type Row } from "@/lib/rows";
 import { fa, RATE_CARD_RANGES, type RateCardRangeConfig } from "@/lib/site-content";
 
-const KNOWN_FEE_LABEL = "میانگین خرید و فروش این سکو";
-const UNKNOWN_FEE_LABEL = "قیمت اعلامی این سکو";
+const PRICE_LABEL = "قیمت اعلامی این سکو — پیش از کارمزد";
 const COMING_SOON_LABEL = "به‌زودی";
 
 /** پیام «سابقه ندارد» — روزانه دقیقاً متن قبل از بلیت ۳۰ می‌ماند. */
@@ -281,7 +281,7 @@ export function PlatformRateCard({
     };
   }, [row.platform.slug, row.updatedAt]);
 
-  const price = referencePriceFor(row, "GOLD_18K");
+  const price = priceToman(row, "GOLD_18K");
   const enabledRanges = useMemo(() => computeEnabledRanges(history), [history]);
   const activeHistory = history[activeRange];
   // useMemo هم اینجا: بی‌آن، فالبک `?? []` هر رندر یک آرایه‌ی تازه می‌سازد و
@@ -291,14 +291,14 @@ export function PlatformRateCard({
   const hasSeries = points.length > 0;
   const stats = useMemo(() => computeStats(points), [points]);
 
-  // سکوی بی‌قیمت مرجع (بی‌اسنپ‌شات یا فقط یک سمت باز) ⟸ کل کارت رندر نمی‌شود.
+  // سکوی بی‌قیمت (بی‌اسنپ‌شات، یا دفتر سفارشِ یک‌سمته) ⟸ کل کارت رندر نمی‌شود.
   if (price === null) return null;
 
   // کهنگی شمارنده را خاموش می‌کند — فقط برچسب Staleness زیر کارت می‌ماند.
   const staleNow =
     live.updatedAtIso === null || isStale(minutesSince(live.updatedAtIso, live.nowMs));
 
-  const label = hasUnknownFee(row) ? UNKNOWN_FEE_LABEL : KNOWN_FEE_LABEL;
+  const label = PRICE_LABEL;
 
   function selectRange(range: HistoryRange): void {
     if (enabledRanges[range] !== true) return; // زبانه‌ی «به‌زودی» بی‌کلیک است

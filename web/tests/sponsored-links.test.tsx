@@ -7,7 +7,7 @@
  * صفحه‌ی اصلی، صفحات سکو و صفحه‌ی دارایی را عمومی برای الگوی ‎href="http‎
  * می‌کاود؛ هر لینک خروجی به میزبان یک سکو (دور زدن ‎/go/‎) یا هر لینک خروجی
  * بدون rel کامل، شکست است. لینک ارجاع غیر درآمدزا به مراجع قیمت (tala.ir /
- * bonbast — بند ۱۲.۲) تنها استثناست: ساده ولی حتماً nofollow.
+ * تلا — بند ۱۲.۲) تنها استثناست: ساده ولی حتماً nofollow.
  *
  * همین‌جا قاعده‌ی مکمل بند ۶.۴ هم تست می‌شود: مرتب‌سازی هیچ ورودی‌ای از
  * فیلدهای معرف (referral_url / referral_param) نمی‌گیرد، و آن فیلدها اصلاً
@@ -21,7 +21,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { SlugPageView } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
-import { HomePage } from "../src/components/mazane/HomePage";
+import { HomePage } from "../src/components/tablo/HomePage";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import {
   freshIso,
@@ -42,8 +42,6 @@ import {
 const NON_REVENUE_REFERENCE_HOSTS: ReadonlySet<string> = new Set([
   "tala.ir",
   "www.tala.ir",
-  "bonbast.com",
-  "www.bonbast.com",
 ]);
 
 function attrOf(tag: string, name: string): string | null {
@@ -170,25 +168,16 @@ function seededStore(): SeededStore {
       wallgold: makeSnapshot({
         slug: "wallgold",
         mid: 18611000,
-        buy: 18704055,
-        sell: 18517945,
-        reference: 18611000,
         fetchedAt: now,
       }),
       talasea: makeSnapshot({
         slug: "talasea",
         mid: 18530000,
-        buy: 18715300,
-        sell: 18344700,
-        reference: 18530000,
         fetchedAt: now,
       }),
       milli: makeSnapshot({
         slug: "milli",
         mid: 18538000,
-        buy: 18630690,
-        sell: 18445310,
-        reference: 18538000,
         fetchedAt: now,
       }),
     },
@@ -303,21 +292,18 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     store.snapshots["milli"] = makeSnapshot({
       slug: "milli",
       mid: 18800000,
-      buy: 18894000,
-      sell: 18706000,
-      reference: 18800000,
       fetchedAt: now,
     });
     const html = renderToStaticMarkup(<HomePage data={await homeData(store)} />);
-    // ترتیب فقط از قیمت خرید: وال‌گلد < طلاسی < میلی (با وجود کد معرفش).
-    expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
-      html.indexOf('data-platform="talasea"'),
-    );
+    // ترتیب فقط از «قیمت»: طلاسی < وال‌گلد < میلی (با وجود کد معرفش).
     expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
+      html.indexOf('data-platform="wallgold"'),
+    );
+    expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
       html.indexOf('data-platform="milli"'),
     );
-    // نشان «ارزان‌ترین» هم به وال‌گلد می‌رسد، نه به سکوی کد-معرف‌دار.
-    expect(html).toContain('data-platform="wallgold" data-cheapest="true"');
+    // نشان «ارزان‌ترین» هم به طلاسی می‌رسد، نه به سکوی کد-معرف‌دار.
+    expect(html).toContain('data-platform="talasea" data-cheapest="true"');
     expect(html).not.toContain('data-platform="milli" data-cheapest="true"');
   });
 
@@ -327,9 +313,6 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     store.snapshots["milli"] = makeSnapshot({
       slug: "milli",
       mid: 18800000,
-      buy: 18894000,
-      sell: 18706000,
-      reference: 18800000,
       fetchedAt: now,
     });
     seed(store);
@@ -346,8 +329,8 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     // ⚠️ مسیرها با بازنویسی تنکستک به‌روز شدند؛ اگر فایلی جابه‌جا شد،
     // مسیر تازه‌اش را اینجا بگذارید — این فهرست حذف‌شدنی نیست.
     for (const file of [
-      "src/components/mazane/home-view.tsx",
-      "src/components/mazane/ComparisonTable.tsx",
+      "src/components/tablo/home-view.tsx",
+      "src/components/tablo/ComparisonTable.tsx",
       "src/components/content/AssetPage.tsx",
       "src/lib/rows.ts",
     ]) {

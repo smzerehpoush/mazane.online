@@ -6,12 +6,12 @@
  * سئوست و خزنده باید قیمت‌ها را در source صفحه ببیند، نه بعد از جاوااسکریپت.
  *
  * این فایل عمداً فقط **سیم‌کشی** است: نما و داده‌ی ساخت‌یافته در
- * `components/mazane/HomePage.tsx` اند تا بدون بستر روتر (و بدون کشاندن
+ * `components/tablo/HomePage.tsx` اند تا بدون بستر روتر (و بدون کشاندن
  * `ioredis`/`pg` به گراف تست) در مرز «استور seed شده ⟸ HTML» تست شوند.
  */
 import { createFileRoute } from "@tanstack/react-router";
 
-import { HomePage, homeHead } from "@/components/mazane/HomePage";
+import { HomePage, homeHead } from "@/components/tablo/HomePage";
 import { loadHomeData } from "@/lib/home-data";
 
 export const Route = createFileRoute("/")({

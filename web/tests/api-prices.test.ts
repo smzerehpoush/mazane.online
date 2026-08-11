@@ -42,17 +42,17 @@ describe("GET /api/prices", () => {
     ]);
   });
 
-  it("عدد هر سکو همان مؤثر خرید صفحه است — هم عدد و هم رشته‌ی نمایش fa-IR", async () => {
+  it("عدد هر سکو همان «قیمت» صفحه است — هم عدد و هم رشته‌ی نمایش fa-IR", async () => {
     const store = healthyStore();
     seed(store);
     const { payload } = await getPayload();
     const wallgold = payload.rows.find((row) => row.platform_slug === "wallgold");
     expect(wallgold).toMatchObject({
-      price_toman: 18704055,
-      price_display: formatToman(18704055), // «۱۸٬۷۰۴٬۰۵۵»
+      price_toman: 18611000,
+      price_display: formatToman(18611000), // «۱۸٬۶۱۱٬۰۰۰»
       updated_at: store.updatedAt["wallgold"],
     });
-    expect(wallgold?.price_display).toBe("۱۸٬۷۰۴٬۰۵۵");
+    expect(wallgold?.price_display).toBe("۱۸٬۶۱۱٬۰۰۰");
   });
 
   it("سکوی «کارمزد نامشخص» قیمت میانی می‌دهد — همان عددی که صفحه نشان می‌دهد", async () => {

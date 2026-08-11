@@ -142,7 +142,7 @@ describe("فهرست بلاگ — /blog", () => {
     seedBlog([
       {
         ...PUBLISHED_NEW,
-        image_url: "https://cdn.mazane.online/posts/x/h.webp",
+        image_url: "https://s3.tablo.test/tablo-media/posts/x/h.webp",
         image_alt: "توضیح عکس",
         image_width: 1600,
         image_height: 900,
@@ -150,7 +150,7 @@ describe("فهرست بلاگ — /blog", () => {
       PUBLISHED_OLD,
     ]);
     const html = await renderIndex();
-    expect(html).toMatch(/<img[^>]*src="https:\/\/cdn\.mazane\.online\/posts\/x\/h\.webp"[^>]*>/);
+    expect(html).toMatch(/<img[^>]*src="https:\/\/s3\.tablo\.test\/tablo-media\/posts\/x\/h\.webp"[^>]*>/);
     expect(html).toContain('width="1600"');
     expect(html).toContain('height="900"');
     expect(html).toContain('alt="توضیح عکس"');
@@ -186,7 +186,7 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     seedBlog([
       {
         ...PUBLISHED_NEW,
-        image_url: "https://cdn.mazane.online/posts/x/h.webp",
+        image_url: "https://s3.tablo.test/tablo-media/posts/x/h.webp",
         image_alt: "توضیح عکس",
         image_width: 1600,
         image_height: 900,
@@ -194,7 +194,7 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     ]);
     const html = await renderPost(PUBLISHED_NEW.slug);
 
-    expect(html).toMatch(/<img[^>]*src="https:\/\/cdn\.mazane\.online\/posts\/x\/h\.webp"[^>]*>/);
+    expect(html).toMatch(/<img[^>]*src="https:\/\/s3\.tablo\.test\/tablo-media\/posts\/x\/h\.webp"[^>]*>/);
     expect(html).toContain('width="1600"');
     expect(html).toContain('height="900"');
     expect(html).toContain('alt="توضیح عکس"');

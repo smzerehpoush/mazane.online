@@ -22,7 +22,7 @@ import { breadcrumbJsonLd, jsonLdString } from "@/lib/structured-data";
 
 /* ------------------------------------------------------------ فهرست بلاگ */
 
-export const BLOG_INDEX_TITLE = "بلاگ مظنه آنلاین";
+export const BLOG_INDEX_TITLE = "بلاگ تابلو";
 export const BLOG_INDEX_DESCRIPTION =
   "تحلیل‌های داده‌محور از کارمزد، قیمت مؤثر و هزینه‌ی رفت‌وبرگشت طلای آنلاین.";
 
@@ -138,8 +138,8 @@ function blogPostingJsonLd(post: PublishedPost): string {
     url,
     ...(image !== null ? { image: image.url } : {}),
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
-    author: { "@type": "Organization", name: "مظنه آنلاین", url: SITE_URL },
-    publisher: { "@type": "Organization", name: "مظنه آنلاین", url: SITE_URL },
+    author: { "@type": "Organization", name: "تابلو", url: SITE_URL },
+    publisher: { "@type": "Organization", name: "تابلو", url: SITE_URL },
   });
 }
 

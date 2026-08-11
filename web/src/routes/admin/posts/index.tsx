@@ -20,7 +20,7 @@ import { formatDateTimeFa } from "@/lib/format";
 export const Route = createFileRoute("/admin/posts/")({
   head: () => ({
     meta: [
-      { title: "پست‌ها — پنل مدیریت مظنه آنلاین" },
+      { title: "پست‌ها — پنل مدیریت تابلو" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),

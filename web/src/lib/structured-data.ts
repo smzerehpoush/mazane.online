@@ -3,7 +3,7 @@
  *
  * حکم‌های بند ۶.۵ که این ماژول اجرا می‌کند:
  *   - `Organization` + `WebSite` **بدون** `SearchAction` — فقط صفحه‌ی اصلی؛
- *     برند «مظنه آنلاین» با «مضنه آنلاین» در `alternateName` (بند ۱۱ + بند
+ *     برند «تابلو» با نام کامل دامنه در `alternateName` (بند ۱۱ + بند
  *     ۱۳، تصمیم ۱).
  *   - `BreadcrumbList` همه‌جا (جز خود ریشه).
  *   - `Product` + `AggregateOffer` فقط صفحات دارایی؛ **هیچ** `Offer`
@@ -21,12 +21,20 @@
  *   - ارقام لاتین (JSON.stringify روی number همیشه لاتین می‌دهد).
  */
 import type { InstrumentListing, ListedPlatform } from "./prices";
-import { effectiveBuyFor, isBuyOpen, type Row } from "./rows";
+import { isBuyOpen, priceToman, type Row } from "./rows";
 import { SITE_URL } from "./site";
 
-/** برند رسمی (بند ۱۳، تصمیم ۱) و غلط املایی رایج که فقط alternateName است. */
-export const BRAND_FA = "مظنه آنلاین";
-export const BRAND_ALTERNATE_FA = "مضنه آنلاین";
+/**
+ * برند رسمی (بند ۱۳، تصمیم ۱؛ تغییر نام ۲۰۲۶-۰۸-۱۰) و نام کامل با دامنه که
+ * فقط `alternateName` است.
+ *
+ * ⚠️ پیش‌تر `alternateName` غلط املایی «مضنه آنلاین» بود تا جست‌وجوی آن املا
+ * هم به برند برسد. با رفتن «مظنه» از نام برند، آن نگاشت موضوعش را از دست
+ * داد — ولی صفحه‌ی `/mazane-chist` هنوز هر دو املا را هدف می‌گیرد، چون آنجا
+ * «مظنه» واژه‌ی بازار است نه نام ما.
+ */
+export const BRAND_FA = "تابلو";
+export const BRAND_ALTERNATE_FA = "تابلو گلد";
 
 /**
  * سریال‌سازی JSON-LD: فقط داده‌ی JSON خودمان است (نه متن خام کاربر)؛
@@ -91,7 +99,7 @@ export function breadcrumbJsonLd(items: BreadcrumbItem[]): string {
  * `WebPage` صفحه‌ی سکو، با `about` تو در توی `Organization` (بلیت ۲۹).
  *
  * سکو اینجا **@id مستقل نمی‌گیرد** — بر خلاف `organizationWebSiteJsonLd`
- * که برای «مظنه آنلاین» یک `Organization` با `@id` ثابت در گراف اصلی
+ * که برای «تابلو» یک `Organization` با `@id` ثابت در گراف اصلی
  * می‌سازد، این `Organization` فقط شیء تو در توی `about` است، بدون `@id`،
  * پس هرگز موجودیت مستقلی در گراف دانش نمی‌شود که با برند خودمان اشتباه
  * گرفته شود. `website_url` هم فقط وقتی هست که ثبت شده باشد (فراداده‌ی
@@ -119,9 +127,16 @@ export function platformWebPageJsonLd(platform: ListedPlatform): string {
  * `Product` + `AggregateOffer` صفحه‌ی دارایی (بند ۱۳، تصمیم ۱۸: نگاشت
  * مستقیم نمای تک‌عددی به lowPrice/highPrice).
  *
- * ورودی همان گروه «معلوم‌ها»ی رندر است (ردیف‌های با مؤثر خرید معلوم، به
- * همان ترتیب صعودی صفحه) — نه هیچ fetch تازه‌ای؛ پس عدد JSON-LD با عدد
- * قابل‌مشاهده‌ی همان رندر ISR یکی است حتی وقتی هر دو ۶۰ ثانیه کهنه‌اند.
+ * ورودی همان ردیف‌های رندرشده‌ی صفحه است، به همان ترتیب — نه هیچ fetch
+ * تازه‌ای؛ پس عدد JSON-LD با عدد قابل‌مشاهده‌ی همان رندر ISR یکی است حتی
+ * وقتی هر دو ۶۰ ثانیه کهنه‌اند.
+ *
+ * ⚠️ `lowPrice`/`highPrice` از **قیمت** می‌آیند، نه از قیمت مؤثر (تصمیم
+ * مالک ۲۰۲۶-۰۸-۱۰). دلیلش قاعده‌ی همخوانی گوگل است: داده‌ی ساخت‌یافته باید
+ * نماینده‌ی محتوای **قابل مشاهده‌ی** صفحه باشد، و از وقتی قیمت مؤثر از
+ * رابط کاربری حذف شد، فرستادنش به گوگل یعنی عددی که در HTML صفحه نیست.
+ * پیامدش را بپذیرید: این بازه پیش-از-کارمزد است و از هزینه‌ی واقعی خرید
+ * پایین‌تر — همان چیزی که ستون‌های کارمزدِ کنارش توضیح می‌دهند.
  *
  * بازه‌ی lowPrice/highPrice بیان ساخت‌یافته‌ی «هیچ میانگین بین‌سکویی
  * منتشر نمی‌شود» است (بند ۱۳، تصمیم ۱۹): بازه می‌دهیم، عدد سراسری نه.
@@ -140,7 +155,7 @@ export function assetProductJsonLd(listing: InstrumentListing, knownRows: Row[])
   if (listing.currency !== "TOMAN") return null;
   const buysToman = knownRows
     .filter(isBuyOpen)
-    .map((row) => effectiveBuyFor(row, listing.instrument))
+    .map((row) => priceToman(row, listing.instrument))
     .filter((price): price is number => price !== null);
   if (buysToman.length === 0) return null;
   const url = `${SITE_URL}/${listing.slug}`;

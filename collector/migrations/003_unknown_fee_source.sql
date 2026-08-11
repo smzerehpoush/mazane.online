@@ -1,5 +1,5 @@
 -- مهاجرت ۰۰۳ — هشت آداپتر REST (بلیت ۴): کارمزد نامعلوم (UNKNOWN).
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/003_unknown_fee_source.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/003_unknown_fee_source.sql
 
 -- بعضی سکوها (ملی‌گلد، دیجی‌کالا، همراه‌گلد) کارمزدشان را هیچ‌جا منتشر
 -- نکرده‌اند: fee_source = 'UNKNOWN' و هر سه ستون کارمزد NULL — قیمت مؤثر

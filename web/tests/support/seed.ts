@@ -10,7 +10,7 @@
  * این فایل تست نیست (الگوی ‎*.test.*‎ را ندارد) — فقط کمک‌کار مرز وب است.
  */
 import type { SlugPageData } from "../../src/components/content/SlugPageView";
-import type { HomePageData } from "../../src/components/mazane/HomePage";
+import type { HomePageData } from "../../src/components/tablo/HomePage";
 import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
 import { setImageStore, type ImageStore, type UploadedImage } from "../../src/lib/images";
 import { setViewCounter, type ViewCounts } from "../../src/lib/views";
@@ -62,10 +62,8 @@ export function quote(
 
 export function makeSnapshot(opts: {
   slug: string;
+  /** «قیمت» سکو، پیش از کارمزد — تنها عددی که گردآورنده می‌نویسد. */
   mid: number;
-  /** برای fee_source=UNKNOWN نده — گردآورنده برای آن سکوها فقط MID می‌نویسد. */
-  buy?: number;
-  sell?: number;
   feeSource?: FeeSource;
   feeObservedAt?: string;
   fetchedAt?: string;
@@ -74,12 +72,6 @@ export function makeSnapshot(opts: {
   roundTrip?: string;
   /** پیش‌فرض GOLD_18K — صفحه‌ی دارایی (بلیت ۷) کد خودش را می‌دهد. */
   instrument?: string;
-  /**
-   * قیمت مرجع سکو — عدد آماده‌ی گردآورنده (تصمیم مالک ۲۰۲۶-۰۸-۰۶: تک‌قیمتی
-   * همان تک‌عددش، دوقیمتی میانگین دو عدد خودش). نده ⟸ کلیدی در payload نیست
-   * (کارمزد نامعلوم / دفتر یک‌طرفه).
-   */
-  reference?: number;
   buyEnabled?: boolean;
   sellEnabled?: boolean;
   minOrderToman?: string;
@@ -88,13 +80,8 @@ export function makeSnapshot(opts: {
   const feeSource = opts.feeSource ?? "API";
   const unknown = feeSource === "UNKNOWN";
   const instrument = opts.instrument ?? "GOLD_18K";
-  const quotes: Quote[] = [quote(opts.slug, "MID", opts.mid, fetchedAt, instrument)];
-  if (!unknown && opts.buy !== undefined) {
-    quotes.push(quote(opts.slug, "BUY", opts.buy, fetchedAt, instrument));
-  }
-  if (!unknown && opts.sell !== undefined) {
-    quotes.push(quote(opts.slug, "SELL", opts.sell, fetchedAt, instrument));
-  }
+  // یک سکو، یک سطر — همان چیزی که گردآورنده می‌نویسد (سند تصمیم ۰۰۰۲).
+  const quotes: Quote[] = [quote(opts.slug, "PRICE", opts.mid, fetchedAt, instrument)];
   return {
     platform_slug: opts.slug,
     quotes,
@@ -112,9 +99,6 @@ export function makeSnapshot(opts: {
     },
     fetched_at: fetchedAt,
     suppressed: false,
-    ...(opts.reference !== undefined
-      ? { reference_prices_toman: { [instrument]: opts.reference } }
-      : {}),
   };
 }
 
@@ -142,7 +126,7 @@ export interface SeededStore {
   listed?: ListedPlatform[];
   snapshots: Record<string, PlatformSnapshot | null>;
   updatedAt: Record<string, string | null>;
-  /** payload ‏`mazane:instruments`‏ (بلیت ۷) — پرچم دروازه از گردآورنده. */
+  /** payload ‏`tablo:instruments`‏ (بلیت ۷) — پرچم دروازه از گردآورنده. */
   instruments?: InstrumentListing[];
 }
 
@@ -342,32 +326,21 @@ export function healthyStore(): SeededStore {
       wallgold: makeSnapshot({
         slug: "wallgold",
         mid: 18611000,
-        buy: 18704055,
-        sell: 18517945,
-        reference: 18611000,
         fetchedAt: now,
       }),
       talasea: makeSnapshot({
         slug: "talasea",
         mid: 18530000,
-        buy: 18715300,
-        sell: 18344700,
-        reference: 18530000,
         fetchedAt: now,
       }),
       milli: makeSnapshot({
         slug: "milli",
         mid: 18538000,
-        buy: 18630690,
-        sell: 18445310,
-        reference: 18538000,
         fetchedAt: now,
       }),
       goldika: makeSnapshot({
         slug: "goldika",
         mid: 18514235,
-        buy: 18736406,
-        sell: 18292064,
         fetchedAt: now,
       }),
     },

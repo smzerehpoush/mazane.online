@@ -14,7 +14,7 @@
  * ⚠️ قاعده‌ی ۱ قراردادها: هیچ فرمول قیمتی اینجا نیست — فقط خواندن و بستن
  * payload. ⚠️ قاعده‌ی ۵: قطع منبع ⟸ ردیف بی‌اسنپ‌شات و فهرست خالی، نه خطا.
  */
-import type { HomePageData } from "@/components/mazane/HomePage";
+import type { HomePageData } from "@/components/tablo/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
 import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
@@ -59,7 +59,7 @@ export interface HomeReaders {
    */
   getViewCounts?(): Promise<ViewCounts>;
   /**
-   * اختیاری: پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱، `mazane:chart_config`
+   * اختیاری: پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱، `tablo:chart_config`
    * ردیس). `undefined` یا نبودِ این خواننده یعنی فهرست پیش‌فرض کد
    * (`chartSeriesConfig()` بدون آرگومان) — نه خطا؛ فرود امن در
    * `chartSeriesConfig` است.

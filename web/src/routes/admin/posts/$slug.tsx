@@ -39,7 +39,7 @@ import { renderMarkdown } from "@/lib/markdown";
 export const Route = createFileRoute("/admin/posts/$slug")({
   head: () => ({
     meta: [
-      { title: "ویرایش پست — پنل مدیریت مظنه آنلاین" },
+      { title: "ویرایش پست — پنل مدیریت تابلو" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),

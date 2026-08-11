@@ -101,9 +101,6 @@ function knownFeeRow(opts: { sellEnabled?: boolean } = {}): Row {
     snapshot: makeSnapshot({
       slug: "talasea",
       mid: 18530000,
-      buy: 18715300,
-      sell: 18344700,
-      reference: 18530000,
       fetchedAt: freshIso(),
       sellEnabled: opts.sellEnabled ?? true,
     }),
@@ -123,28 +120,27 @@ function unknownFeeRow(): Row {
   };
 }
 
-describe("PlatformCalculator — سکوی کارمزدمعلوم", () => {
-  it("زبانه‌ی خرید/فروش و دو ورودی دوسویه (وزن، مبلغ) با زبانه‌ی خرید پیش‌فرض فعال", () => {
+describe("PlatformCalculator — یک حالت برای همه‌ی سکوها", () => {
+  it("دو ورودی دوسویه (وزن، مبلغ) روی «قیمت» سکو، بدون زبانه", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={knownFeeRow()} hasOutbound={true} />,
     );
     expect(html).toContain("ماشین‌حساب معامله");
-    expect(html).toContain('role="tablist"');
-    expect(html).toContain(">خرید<");
-    expect(html).toContain(">فروش<");
-    expect(html).toMatch(/aria-selected="true"[^>]*>خرید</);
+    // زبانه‌ی خرید/فروش با حذف قیمت مؤثر بی‌موضوع شد: یک عدد بیشتر نیست
+    // (سند تصمیم ۰۰۰۲).
+    expect(html).not.toContain('role="tablist"');
     expect(html).toContain("data-calc-weight");
     expect(html).toContain("data-calc-amount");
-    expect(html).toContain("قیمت مؤثر خرید");
+    // برچسب صریح می‌گوید کارمزد در این عدد نیست.
+    expect(html).toContain("بدون احتساب کارمزد");
   });
 
-  it("سمت بسته (فروش) تب نمی‌گیرد — فقط سمت باز نشان داده می‌شود", () => {
+  it("بستن یک سمت شکل ماشین‌حساب را عوض نمی‌کند — عدد یکی است", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={knownFeeRow({ sellEnabled: false })} hasOutbound={true} />,
     );
     expect(html).not.toContain('role="tablist"');
-    expect(html).not.toContain(">فروش<");
-    expect(html).toContain("قیمت مؤثر خرید");
+    expect(html).toContain("data-calc-weight");
   });
 
   it("دکمه‌ی «شروع معامله» به /go/<slug> با rel و target کامل می‌رود", () => {
@@ -166,8 +162,8 @@ describe("PlatformCalculator — سکوی کارمزدمعلوم", () => {
   });
 });
 
-describe("PlatformCalculator — سکوی کارمزد نامعلوم", () => {
-  it("بدون زبانه، فقط یک ورودی وزن، با برچسب صریح نبودِ کارمزد", () => {
+describe("PlatformCalculator — سکوی کارمزد نامعلوم (همان شکل)", () => {
+  it("دقیقاً همان شکل سکوی کارمزدمعلوم — دیگر حالت ویژه‌ای نیست", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={unknownFeeRow()} hasOutbound={true} />,
     );
@@ -176,9 +172,8 @@ describe("PlatformCalculator — سکوی کارمزد نامعلوم", () => {
     expect(html).toContain("data-calc-weight");
     expect(html).toContain("data-calc-amount");
     expect(html).toContain("بدون احتساب کارمزد");
-    expect(html).toContain("سکو کارمزدش را اعلام نکرده است");
-    // بدون وزن واردشده، مبلغ هنوز محاسبه نشده — صفر/NaN جعلی نیست.
-    expect(html).toMatch(/data-calc-amount[^<]*>—</);
+    // ورودی مبلغ خالی می‌ماند — صفر/NaN جعلی جایش نمی‌نشیند.
+    expect(html).toMatch(/data-calc-amount[^>]*value=""/);
   });
 
   it("دکمه‌ی شروع معامله اینجا هم می‌آید", () => {
@@ -224,9 +219,6 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
         talasea: makeSnapshot({
           slug: "talasea",
           mid: 18530000,
-          buy: 18715300,
-          sell: 18344700,
-          reference: 18530000,
           fetchedAt: now,
         }),
         digikala: makeSnapshot({
@@ -255,10 +247,12 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
     expect(calcIndex).toBeGreaterThan(termsIndex);
   });
 
-  it("سکوی کارمزد نامعلوم: «قیمت امروز» نیست ولی ماشین‌حساب هست", async () => {
+  it("سکوی کارمزد نامعلوم هم «قیمت امروز» می‌گیرد و هم ماشین‌حساب", async () => {
     seed(store());
     const html = await renderSlug("digikala");
-    expect(html).not.toContain('aria-labelledby="terms-heading"');
+    // پیش‌تر این بخش برای چنین سکویی اصلاً رندر نمی‌شد چون قیمت مؤثر نداشت؛
+    // حالا قیمتش با بقیه هم‌جنس است (سند تصمیم ۰۰۰۲) و فقط کارمزدش نامشخص.
+    expect(html).toContain('aria-labelledby="terms-heading"');
     expect(html).toContain("data-platform-calculator");
     expect(html).toContain("بدون احتساب کارمزد");
   });

@@ -11,12 +11,12 @@
  * ⚠️ قاعده‌ی سخت ۲: عضویت نمودار اینجا هرگز به جدول قیمت راه پیدا نمی‌کند —
  * این فایل اصلاً چیزی درباره‌ی جدول قیمت نمی‌داند.
  * ⚠️ نوشتن فقط پستگرس است — پنل هرگز مستقیم به ردیس نمی‌نویسد؛ گردآورنده
- * خودش با تأخیر ~۲۰ ثانیه همگام می‌کند (`collector/src/mazane_collector/settings.py`).
+ * خودش با تأخیر ~۲۰ ثانیه همگام می‌کند (`collector/src/tablo_collector/settings.py`).
  *
  * لینک معرف (بلیت ۲۳): مالک نشانی معرف هر سکو را اینجا وارد/پاک می‌کند.
  * قلب اعتبارسنجی همین‌جاست (`validateReferralUrls`) — پیش از insert/update
  * پستگرس: فقط https، و hostname باید دقیقاً برابر hostname وبسایت رسمی
- * سکو (`website_url` — از `mazane:listed`، همان منبعی که `listPlatforms`
+ * سکو (`website_url` — از `tablo:listed`، همان منبعی که `listPlatforms`
  * برای فهرست سکوها می‌خواند) باشد یا زیردامنه‌ی آن. خالی‌کردن فیلد مجاز
  * است (یعنی حذف override — رفتار برمی‌گردد به `website_url`، نه ۴۰۴).
  *
@@ -35,7 +35,7 @@ import {
 
 export { isValidChartColor, MAX_CHART_PLATFORMS, MIN_CHART_PLATFORMS };
 
-/** یک سکوی قابل انتخاب — از فهرست سکوهای واقعاً قابل نمایش (`mazane:listed`). */
+/** یک سکوی قابل انتخاب — از فهرست سکوهای واقعاً قابل نمایش (`tablo:listed`). */
 export interface PlatformOption {
   slug: string;
   name_fa: string;
@@ -56,7 +56,7 @@ export interface PlatformSettingEntry {
 }
 
 export interface PlatformSettingsSource {
-  /** سکوهای قابل نمایش عمومی — همان چیزی که `mazane:listed` می‌دهد. */
+  /** سکوهای قابل نمایش عمومی — همان چیزی که `tablo:listed` می‌دهد. */
   listPlatforms(): Promise<PlatformOption[]>;
   /** ردیف‌های ذخیره‌شده‌ی `platform_settings` — فقط اسلاگ‌هایی که تا حالا نوشته شده‌اند. */
   readSettings(): Promise<PlatformSettingEntry[]>;

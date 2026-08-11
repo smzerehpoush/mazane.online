@@ -2,7 +2,7 @@
  * تنها راه ورود لایوت `/admin` به بررسی نشست — سیم‌کشی نازک، دقیقاً مثل
  * `home-data.ts`: بدنه‌ی `handler` را کامپایلر Start به ماژول سمت‌سروری جدا
  * می‌برد و کلاینت فقط یک RPC می‌بیند، پس `admin-session.ts` (و در نتیجه
- * `node:crypto`، `MAZANE_ADMIN_SESSION_SECRET`) هرگز به باندل مرورگر نمی‌رود.
+ * `node:crypto`، `TABLO_ADMIN_SESSION_SECRET`) هرگز به باندل مرورگر نمی‌رود.
  *
  * ⚠️ چرا این فایل بیرون از `src/lib/server/` است: پلاگین import-protection
  * تنکستک هر مسیری با پوشه‌ی `server/` را از گراف کلاینت رد می‌کند، و این

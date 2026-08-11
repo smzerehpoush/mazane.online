@@ -19,7 +19,7 @@ from decimal import Decimal
 
 import pytest
 
-from mazane_collector.content.gate import (
+from tablo_collector.content.gate import (
     SIMILARITY_THRESHOLD,
     DataGapError,
     DigitOutsideSlotError,
@@ -30,9 +30,9 @@ from mazane_collector.content.gate import (
     similarity,
     validate_draft,
 )
-from mazane_collector.content.queue import enqueue_draft
-from mazane_collector.retention import HourlyRollup, SourceKind, hour_floor
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.content.queue import enqueue_draft
+from tablo_collector.retention import HourlyRollup, SourceKind, hour_floor
+from tablo_collector.store.memory import InMemoryStore
 
 from test_content_queue import BASE, FakeContentGateway
 

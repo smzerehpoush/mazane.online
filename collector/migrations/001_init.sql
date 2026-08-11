@@ -1,6 +1,6 @@
 -- مهاجرت ۰۰۱ — جدول‌های تاریخچه‌ی گردآورنده (بند ۲.۲ سند معماری).
 -- اجرا: در docker-compose.dev.yml به‌صورت خودکار در اولین بوت پستگرس mount می‌شود؛
--- دستی: psql "$MAZANE_DATABASE_URL" -f collector/migrations/001_init.sql
+-- دستی: psql "$TABLO_DATABASE_URL" -f collector/migrations/001_init.sql
 
 create table if not exists quotes (
     id            bigserial primary key,

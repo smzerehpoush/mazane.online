@@ -1,4 +1,4 @@
-# CI مظنه آنلاین (بلیت ۱۱)
+# CI تابلو (بلیت ۱۱)
 #
 # دو جاب تست/تایپ‌چک روی هر push و PR؛ جاب ساخت ایمیج فقط روی push به main.
 # ساخت ایمیج «فقط» همین‌جا یا روی لپ‌تاپ انجام می‌شود — هرگز روی سرورِ
@@ -84,7 +84,7 @@ jobs:
       # import اشتباه هم برنگردد — نه فقط منبع.
       - name: No admin-auth secrets in the client bundle
         run: |
-          if grep -rIlE "scryptSync|MAZANE_ADMIN_PASSWORD_HASH|MAZANE_ADMIN_SESSION_SECRET|mazane_admin_session" .output/public; then
+          if grep -rIlE "scryptSync|TABLO_ADMIN_PASSWORD_HASH|TABLO_ADMIN_SESSION_SECRET|mazane_admin_session" .output/public; then
             echo "::error::ردی از منطق/env احراز هویت پنل در باندل کلاینت پیدا شد"
             exit 1
           fi
@@ -119,7 +119,7 @@ jobs:
           file: Dockerfile.collector
           platforms: linux/amd64
           push: false
-          tags: mazane-collector:ci
+          tags: tablo-collector:ci
           cache-from: type=gha,scope=collector
           cache-to: type=gha,scope=collector,mode=max
 
@@ -132,7 +132,7 @@ jobs:
           platforms: linux/amd64
           push: false
           load: true
-          tags: mazane-web:ci
+          tags: tablo-web:ci
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
 
@@ -141,16 +141,16 @@ jobs:
       # سقف حافظه همان compose.prod.yml تا اگر ایمیج سنگین شد اینجا لو برود.
       - name: Smoke test the web image
         run: |
-          docker run -d --name mazane-web-ci \
+          docker run -d --name tablo-web-ci \
             --memory 256m --cpus 0.5 \
-            -p 127.0.0.1:3000:3000 mazane-web:ci
+            -p 127.0.0.1:3000:3000 tablo-web:ci
           for i in $(seq 1 60); do
             code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ || true)
             [ "$code" = "200" ] && break
             sleep 1
           done
           echo "GET / -> $code"
-          [ "$code" = "200" ] || { docker logs mazane-web-ci; exit 1; }
+          [ "$code" = "200" ] || { docker logs tablo-web-ci; exit 1; }
           # نام فایل از خود مخزن خوانده می‌شود، نه hardcode — ارتقای نسخه‌ی
           # فونت نباید CI را با پیام گیج‌کننده بشکند.
           fontfile=$(basename web/public/fonts/*.woff2)
@@ -158,8 +158,8 @@ jobs:
             "http://127.0.0.1:3000/fonts/$fontfile")
           echo "GET /fonts/$fontfile -> $font"
           [ "$font" = "200" ] || { echo "::error::فونت خودمیزبان سرو نشد"; exit 1; }
-          docker inspect --format 'OOMKilled={{.State.OOMKilled}}' mazane-web-ci
+          docker inspect --format 'OOMKilled={{.State.OOMKilled}}' tablo-web-ci
 
       - name: Stop smoke container
         if: always()
-        run: docker rm -f mazane-web-ci || true
+        run: docker rm -f tablo-web-ci || true

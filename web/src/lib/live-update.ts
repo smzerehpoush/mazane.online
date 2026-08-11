@@ -24,7 +24,7 @@ import { formatMinutesAgoFa, isStale, minutesSince } from "./format";
  */
 export interface LivePriceRow {
   platform_slug: string;
-  /** مؤثر خرید (یا میانی برای کارمزد نامشخص) — همان انتخاب displayPriceToman سرور. */
+  /** «قیمت» سکو پیش از کارمزد — همان انتخاب `priceToman` سرور. */
   price_toman: number | null;
   /** رشته‌ی آماده‌ی نمایش با ارقام فارسی — دقیقاً همان قالب سلول قیمت صفحه. */
   price_display: string | null;

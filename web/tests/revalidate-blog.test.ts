@@ -41,7 +41,7 @@ async function post(opts: {
 }
 
 beforeEach(() => {
-  vi.stubEnv("MAZANE_REVALIDATE_TOKEN", TOKEN);
+  vi.stubEnv("TABLO_REVALIDATE_TOKEN", TOKEN);
 });
 
 afterEach(() => {
@@ -66,7 +66,7 @@ describe("POST /api/revalidate-blog", () => {
   });
 
   it("توکن تنظیم‌نشده در سرور ⟸ ۴۰۱ حتی با هدر خالی (fail closed)", async () => {
-    vi.stubEnv("MAZANE_REVALIDATE_TOKEN", "");
+    vi.stubEnv("TABLO_REVALIDATE_TOKEN", "");
     const { status } = await post({ token: "", body: { slug: "x" } });
     expect(status).toBe(401);
   });

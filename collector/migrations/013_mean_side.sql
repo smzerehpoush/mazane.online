@@ -1,5 +1,5 @@
 -- مهاجرت ۰۱۳ — سمت تازه‌ی 'MEAN': «قیمت مرجع سکو» سطر ماندگار می‌شود.
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/013_mean_side.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/013_mean_side.sql
 -- (شماره‌ی ۰۱۲ پیش‌تر با 012_evergreen_posts.sql گرفته شده بود.)
 --
 -- چرا: تا امروز قیمت مرجع هر سکو فقط یک computed_field در JSON کانونی بود

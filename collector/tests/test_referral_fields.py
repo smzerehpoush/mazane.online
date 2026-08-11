@@ -3,16 +3,16 @@
 قرارداد: `referral_url` امروز برای همه None است (کدهای معرف را صاحب
 کسب‌وکار بعداً می‌دهد ⟸ ‎/go/‎ فعلاً به website_url می‌رود) و
 `referral_param` فقط الگوی مستند سند تحقیق ۰۱ بند ۶.۲ را ثبت می‌کند —
-پارامترِ بی‌کد. هر دو باید در payload فهرست عمومی (`mazane:listed`، همان
+پارامترِ بی‌کد. هر دو باید در payload فهرست عمومی (`tablo:listed`، همان
 که وب می‌خواند) سریال شوند.
 """
 
 import json
 
-from mazane_collector.models import DataPolicy, Platform
-from mazane_collector.platforms import PLATFORMS
-from mazane_collector.store.memory import InMemoryStore
-from mazane_collector.store.redis_store import LISTED_KEY, RedisStore
+from tablo_collector.models import DataPolicy, Platform
+from tablo_collector.platforms import PLATFORMS
+from tablo_collector.store.memory import InMemoryStore
+from tablo_collector.store.redis_store import LISTED_KEY, RedisStore
 
 # سند تحقیق ۰۱، بند ۶.۲ — تنها الگوهای مستند؛ بقیه None (حدس ممنوع).
 DOCUMENTED_PARAMS = {
@@ -58,7 +58,7 @@ def test_registry_records_only_documented_referral_params() -> None:
 
 
 async def test_listed_payload_carries_referral_fields_in_redis() -> None:
-    """payload ‏`mazane:listed`‏ (همان JSON ای که ‎web/lib/redis-source.ts‎
+    """payload ‏`tablo:listed`‏ (همان JSON ای که ‎web/lib/redis-source.ts‎
     می‌خواند) هر دو کلید معرف را برای هر سکو دارد."""
     client = FakeRedis()
     store = RedisStore(client)
@@ -93,7 +93,7 @@ def test_platform_from_listed_row_merges_registry_metadata() -> None:
     باگ واقعی: مولد محتوا از مسیر پستگرس سکوها را بدون `delivery_note_fa`
     می‌دید و موضوع «تحویل فیزیکی» را «بدون داده» رد می‌کرد.
     """
-    from mazane_collector.store.postgres_store import platform_from_listed_row
+    from tablo_collector.store.postgres_store import platform_from_listed_row
 
     row = {"slug": "milli", "name_fa": "میلی", "data_policy": "ALLOWED", "market_model": "OTC"}
     platform = platform_from_listed_row(row)

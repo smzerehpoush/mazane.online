@@ -1,10 +1,10 @@
 -- مهاجرت ۰۱۵ — تنظیمات سکو از پنل مدیریت (بلیت ۲۱): عضویت نمودار، رنگ، ترتیب.
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/015_platform_settings.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/015_platform_settings.sql
 --
 -- مالک از پنل تعیین می‌کند کدام سکوها بالای صفحه‌ی اصلی روی نمودار باشند،
 -- با چه رنگ و ترتیبی. پنل فقط همین جدول پستگرس را می‌نویسد — هرگز مستقیم
 -- به ردیس (بند طراحی تیکت ۲۱)؛ گردآورنده هر ~۲۰ ثانیه همین جدول را می‌خواند
--- و به `mazane:chart_config` همگام می‌کند (`collector/src/mazane_collector/settings.py`).
+-- و به `tablo:chart_config` همگام می‌کند (`collector/src/tablo_collector/settings.py`).
 --
 -- referral_url همین حالا اضافه می‌شود ولی هنوز هیچ کد/UI ای ندارد — تیکت
 -- بعدی (#23) پرش می‌کند؛ اضافه‌کردن ستون الان از یک مهاجرت دوم جلوگیری

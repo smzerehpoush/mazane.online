@@ -2,11 +2,14 @@
  * ردیف نمایش و خواندنش از منبع داده — لایه‌ی مشترک صفحه‌ی اصلی و
  * ‎GET /api/prices‎ (بلیت ۸).
  *
- * هر دو مصرف‌کننده باید عین هم بخوانند و عین هم «عدد نمایشی» را انتخاب
- * کنند (مؤثر خرید؛ برای کارمزد نامشخص فقط میانی) تا به‌روزرسان کلاینت
- * دقیقاً همان عددی را جایگزین کند که رندر ISR گذاشته. هیچ فرمول قیمتی
- * اینجا نیست — فقط انتخاب از میان اعداد آماده‌ی گردآورنده (قاعده‌ی ۱
- * قراردادها).
+ * هر دو مصرف‌کننده باید عین هم بخوانند تا به‌روزرسان کلاینت دقیقاً همان
+ * عددی را جایگزین کند که رندر ISR گذاشته. هیچ فرمول قیمتی اینجا نیست —
+ * فقط انتخاب از میان اعداد آماده‌ی گردآورنده (قاعده‌ی ۱ قراردادها).
+ *
+ * ⚠️ از سند تصمیم ۰۰۰۲ به بعد هر سکو **یک** عدد دارد: «قیمت»، پیش از هر
+ * کارمزد. قیمت مؤثر خرید/فروش دیگر نه ذخیره می‌شود، نه محاسبه، نه نمایش
+ * داده — کارمزد جدا در `terms` می‌آید و هیچ لایه‌ای آن را در قیمت ضرب
+ * نمی‌کند. اگر روزی دوباره لازم شد، اول `CONTEXT.md` را عوض کنید.
  */
 import { listPlatforms } from "./catalog";
 import {
@@ -24,29 +27,51 @@ export interface Row {
 }
 
 /**
- * انتخاب سطر یک سمت برای یک دارایی. پیش‌فرض GOLD_18K — قرارداد صفحه‌ی
- * اصلی/‏api؛ صفحه‌ی دارایی (بلیت ۷) کد دارایی خودش را می‌دهد.
+ * سطر قیمت یک دارایی. پیش‌فرض GOLD_18K — قرارداد صفحه‌ی اصلی/‏api؛ صفحه‌ی
+ * دارایی (بلیت ۷) کد دارایی خودش را می‌دهد.
  */
-export function findQuote(
-  quotes: Quote[],
-  side: Quote["side"],
-  instrument: string = "GOLD_18K",
-): Quote | null {
-  return quotes.find((q) => q.side === side && q.instrument === instrument) ?? null;
+export function findQuote(quotes: Quote[], instrument: string = "GOLD_18K"): Quote | null {
+  return quotes.find((q) => q.side === "PRICE" && q.instrument === instrument) ?? null;
 }
 
-export function effectiveBuy(row: Row): number | null {
+/**
+ * **عدد نمایشی ستون اول** — «قیمت» همان سکو برای آن دارایی، پیش از کارمزد.
+ *
+ * یک تابع برای همه‌ی سکوها: سکوی کارمزدنامعلوم دیگر حالت ویژه نیست، چون
+ * عددش با بقیه هم‌جنس است (همه پیش-از-کارمزدند). این تفاوت مهمی با مدل
+ * قبلی است، جایی که آن چهار سکو عددی داشتند که با مؤثرها هم‌مقایسه نبود و
+ * ته جدول تبعید می‌شدند.
+ */
+export function priceToman(row: Row, instrument: string = "GOLD_18K"): number | null {
   if (row.snapshot === null) return null;
-  return findQuote(row.snapshot.quotes, "BUY")?.price_toman ?? null;
-}
-
-export function midPrice(row: Row): number | null {
-  if (row.snapshot === null) return null;
-  return findQuote(row.snapshot.quotes, "MID")?.price_toman ?? null;
+  return findQuote(row.snapshot.quotes, instrument)?.price_toman ?? null;
 }
 
 export function hasUnknownFee(row: Row): boolean {
   return row.snapshot !== null && row.snapshot.terms.fee_source === "UNKNOWN";
+}
+
+/** درصد کارمزد، یا `null` وقتی سکو اعلامش نکرده — جدول «—» می‌گذارد. */
+function feeNumber(raw: string | null | undefined): number | null {
+  if (raw === null || raw === undefined) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+export function buyFeePercent(row: Row): number | null {
+  return row.snapshot === null ? null : feeNumber(row.snapshot.terms.buy_fee_percent);
+}
+
+export function sellFeePercent(row: Row): number | null {
+  return row.snapshot === null ? null : feeNumber(row.snapshot.terms.sell_fee_percent);
+}
+
+/**
+ * هزینه‌ی رفت‌وبرگشت — تنها عددی که هزینه‌ی **کل** را میان سکوها مقایسه
+ * می‌کند (CONTEXT.md). از دو کارمزد گردآورنده می‌آید، نه از قیمت.
+ */
+export function roundTripPercent(row: Row): number | null {
+  return row.snapshot === null ? null : feeNumber(row.snapshot.terms.round_trip_percent);
 }
 
 /**
@@ -69,63 +94,18 @@ export function isSellOpen(row: Row): boolean {
 }
 
 /**
- * عدد نمایشی ستون «برای یک گرم می‌پردازید» — همان قاعده‌ی تصمیم ۱۸:
- * مؤثر خرید؛ برای سکوی «کارمزد نامشخص» قیمت میانی (تنها عددی که دارد).
- */
-export function displayPriceToman(row: Row): number | null {
-  return hasUnknownFee(row) ? midPrice(row) : effectiveBuy(row);
-}
-
-/**
- * قرینه‌ی بالا برای ستون «قیمت فروش» جدول چهارستونی صفحه‌ی اصلی: مؤثر فروش؛
- * برای سکوی «کارمزد نامشخص» همان قیمت میانی (تنها عددی که دارد) — پس ستون
- * خرید و فروشش یک عدد یکسان نشان می‌دهند، بدون برچسب. باز هم فقط انتخاب از
- * اعداد آماده‌ی گردآورنده است، نه محاسبه.
- */
-export function displaySellPriceToman(row: Row): number | null {
-  if (row.snapshot === null) return null;
-  return hasUnknownFee(row)
-    ? midPrice(row)
-    : (findQuote(row.snapshot.quotes, "SELL")?.price_toman ?? null);
-}
-
-/**
- * کمک‌کارهای دارایی‌محور صفحه‌ی دارایی (بلیت ۷) — همان الگوی بالا با کد
- * دارایی صریح. مثل همیشه فقط انتخاب از اعداد آماده‌ی گردآورنده است.
- */
-export function effectiveBuyFor(row: Row, instrument: string): number | null {
-  if (row.snapshot === null) return null;
-  return findQuote(row.snapshot.quotes, "BUY", instrument)?.price_toman ?? null;
-}
-
-export function effectiveSellFor(row: Row, instrument: string): number | null {
-  if (row.snapshot === null) return null;
-  return findQuote(row.snapshot.quotes, "SELL", instrument)?.price_toman ?? null;
-}
-
-export function midFor(row: Row, instrument: string): number | null {
-  if (row.snapshot === null) return null;
-  return findQuote(row.snapshot.quotes, "MID", instrument)?.price_toman ?? null;
-}
-
-/**
- * قیمت مرجع سکو برای یک دارایی — عدد آماده‌ی گردآورنده. قاعده‌ی قطعی مالک
- * (CONTEXT.md؛ ۲۰۲۶-۰۸-۰۶، اصلاح‌شده ۲۰۲۶-۰۸-۰۷): میانگین قیمت مؤثر خرید و
- * فروش **خودش** وقتی هر دو موجودند؛ وگرنه (کارمزد نامعلوم) قیمت اسمی خودش —
- * نه میانگین. سکوی فقط‌یک‌سمت‌باز (نه خرید نه فروش) اصلاً قیمت مرجع ندارد.
- * همیشه به یک سکوی نام‌برده منتسب است؛ هیچ میانگین بین‌سکویی‌ای در هیچ
- * لایه‌ای وجود ندارد (قاعده‌ی ۴).
+ * ترتیب ردیف‌های هر جدول مقایسه‌ای — **فقط قیمت** (تصمیم مالک ۲۰۲۶-۰۸-۱۰).
  *
- * ترتیب خواندن — هر دو فقط انتخاب‌اند، نه محاسبه:
- *   ۱. سطر `MEAN` همین دارایی در quotes (شکل تازه).
- *   ۲. کلید `reference_prices_toman[instrument]` (payload قدیمی‌تر).
- * هیچ‌کدام نبود ⟸ null، و صفحه «ثبت نشده» می‌گوید، نه عدد جعلی.
+ * ⚠️ بند ۶.۴: هیچ فیلد درآمدزایی ورودی ترتیب نیست — نگهبان سطح کد در
+ * `tests/sponsored-links.test.tsx` حتی نامشان را در این فایل قرمز می‌کند.
+ *
+ * سکوی بی‌قیمت (قطع منبع، یا دفتر سفارشِ یک‌سمته) ته فهرست می‌رود — نه چون
+ * گران است، بلکه چون عددی برای مقایسه ندارد.
  */
-export function referencePriceFor(row: Row, instrument: string = "GOLD_18K"): number | null {
-  if (row.snapshot === null) return null;
-  const mean = findQuote(row.snapshot.quotes, "MEAN", instrument);
-  if (mean !== null) return mean.price_toman;
-  return row.snapshot.reference_prices_toman?.[instrument] ?? null;
+export function compareByPrice(instrument: string = "GOLD_18K") {
+  return (a: Row, b: Row): number =>
+    (priceToman(a, instrument) ?? Number.POSITIVE_INFINITY) -
+    (priceToman(b, instrument) ?? Number.POSITIVE_INFINITY);
 }
 
 /**

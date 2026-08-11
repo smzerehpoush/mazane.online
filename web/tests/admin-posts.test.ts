@@ -352,7 +352,7 @@ describe("retractPost", () => {
 
 describe("setPostImage", () => {
   const image: PostImagePatch = {
-    image_url: "https://cdn.mazane.online/posts/akkas/deadbeef.webp",
+    image_url: "https://s3.tablo.test/tablo-media/posts/akkas/deadbeef.webp",
     image_alt: "نمودار قیمت طلا روی صفحه‌ی موبایل",
     image_width: 1600,
     image_height: 900,

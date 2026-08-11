@@ -1,6 +1,6 @@
 /**
- * نشست پنل مدیریت — تنها جای خواندن `MAZANE_ADMIN_PASSWORD_HASH` و
- * `MAZANE_ADMIN_SESSION_SECRET` واقعی، ساخت هدر `Set-Cookie` واقعی، و
+ * نشست پنل مدیریت — تنها جای خواندن `TABLO_ADMIN_PASSWORD_HASH` و
+ * `TABLO_ADMIN_SESSION_SECRET` واقعی، ساخت هدر `Set-Cookie` واقعی، و
  * نگهداری وضعیت قفل موقت. تصمیم‌های الگوریتمی (هش/امضا/قفل) در
  * `lib/admin-auth.ts` است — این فایل فقط آن‌ها را به env/کوکی واقعی وصل
  * می‌کند (همان تفکیک `views.ts` ⟸ `server/view-counter.ts`).
@@ -24,7 +24,7 @@ import {
 } from "../admin-auth";
 
 /** نام کوکی نشست پنل. */
-export const ADMIN_SESSION_COOKIE = "mazane_admin_session";
+export const ADMIN_SESSION_COOKIE = "tablo_admin_session";
 
 const SESSION_TTL_SECONDS = Math.floor(SESSION_TTL_MS / 1000);
 
@@ -71,17 +71,17 @@ function envOrNull(name: string): string | null {
  * همان قاعده‌ی `revalidate-blog.ts` برای توکن تنظیم‌نشده.
  */
 export function verifyAdminPassword(password: string): boolean {
-  const hash = envOrNull("MAZANE_ADMIN_PASSWORD_HASH");
+  const hash = envOrNull("TABLO_ADMIN_PASSWORD_HASH");
   if (hash === null) return false;
   return verifyPassword(password, hash);
 }
 
 /**
- * هدر `Set-Cookie` نشست تازه — `null` یعنی `MAZANE_ADMIN_SESSION_SECRET`
+ * هدر `Set-Cookie` نشست تازه — `null` یعنی `TABLO_ADMIN_SESSION_SECRET`
  * تنظیم نشده (پیکربندی ناقص سرور، نه خطای کاربر).
  */
 export function buildSessionCookie(nowMs: number = Date.now()): string | null {
-  const secret = envOrNull("MAZANE_ADMIN_SESSION_SECRET");
+  const secret = envOrNull("TABLO_ADMIN_SESSION_SECRET");
   if (secret === null) return null;
   const token = createSessionToken(secret, nowMs);
   return [
@@ -129,7 +129,7 @@ function readCookie(cookieHeader: string | null, name: string): string | null {
  * (با `getRequestHeader("cookie")`) یکسان صدا زده می‌شود.
  */
 export function hasValidSession(cookieHeader: string | null, nowMs: number = Date.now()): boolean {
-  const secret = envOrNull("MAZANE_ADMIN_SESSION_SECRET");
+  const secret = envOrNull("TABLO_ADMIN_SESSION_SECRET");
   if (secret === null) return false;
   const token = readCookie(cookieHeader, ADMIN_SESSION_COOKIE);
   if (token === null) return false;

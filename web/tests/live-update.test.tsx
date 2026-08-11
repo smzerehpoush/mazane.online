@@ -15,7 +15,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { HomePage } from "../src/components/mazane/HomePage";
+import { HomePage } from "../src/components/tablo/HomePage";
 import {
   nextRateCardCountdown,
   nextRowDomState,
@@ -133,19 +133,19 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
 describe("قلاب‌های data-live در HTML سروررندر", () => {
   it("سلول قیمت هر ردیف قلاب price و زمانش قلاب updated-at و stale دارد", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
-    for (const [slug, buy] of [
-      ["wallgold", "۱۸٬۷۰۴٬۰۵۵"],
-      ["talasea", "۱۸٬۷۱۵٬۳۰۰"],
-      ["milli", "۱۸٬۶۳۰٬۶۹۰"],
+    for (const [slug, price] of [
+      ["wallgold", "۱۸٬۶۱۱٬۰۰۰"],
+      ["talasea", "۱۸٬۵۳۰٬۰۰۰"],
+      ["milli", "۱۸٬۵۳۸٬۰۰۰"],
     ] as const) {
       const row = rowOf(html, slug);
-      expect(row).toMatch(new RegExp(`<span[^>]*data-live="price"[^>]*>${buy}</span>`));
+      expect(row).toMatch(new RegExp(`<span[^>]*data-live="price"[^>]*>${price}</span>`));
       expect(row).toMatch(/<time[^>]*data-live="updated-at"/);
       expect(row).toMatch(/<strong[^>]*data-live="stale"/);
     }
   });
 
-  it("ردیف «کارمزد نامشخص» هم قلاب price دارد (تک‌عددش زنده می‌شود)", async () => {
+  it("ردیف «کارمزد نامشخص» هم قلاب price دارد (قیمتش زنده می‌شود)", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(storeWithUnknownFee())} />);
     expect(rowOf(html, "digikala")).toMatch(/<span[^>]*data-live="price"[^>]*>۱۸٬۵۲۰٬۰۰۰<\/span>/);
   });

@@ -33,17 +33,18 @@ import { formatDateTimeFa, formatDateFa, formatPercentPointsFa, formatToman } fr
 import type { PlatformHistoryByRange } from "@/lib/history";
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import type { ReferencePrice } from "@/lib/reference-price";
-import { findQuote, hasUnknownFee, type Row } from "@/lib/rows";
+import { priceToman, type Row } from "@/lib/rows";
 
 const NOT_RECORDED = "ثبت نشده است";
 const UNKNOWN = "نامشخص";
 
 /**
- * توضیح صادقانه‌ی منبع کارمزد (بلیت ۳۲): جمله‌ی عمومی، نه ادعای تک/دوقیمتی —
- * کد امروز نمی‌تواند تشخیص دهد سکو خودش دو عدد جدا می‌دهد یا کارمزد را روی
- * یک عدد اعمال کرده (سند CONTEXT.md، «سکوی دوقیمتی»)، پس فقط همین را می‌گوید.
+ * توضیح ستون قیمت (سند تصمیم ۰۰۰۲): عدد درشت **آنچه می‌پردازید نیست** —
+ * کارمزد جدا زیرش می‌آید و در قیمت ضرب نشده. بدون این جمله، کاربر عدد
+ * پیش-از-کارمزد را هزینه‌ی خرید می‌خواند.
  */
-const FEE_SOURCE_EXPLANATION_FA = "کارمزد از فاصله‌ی خرید و فروش همین سکو می‌آید.";
+const PRICE_EXPLANATION_FA =
+  "این عدد قیمت اعلامی همین سکوست، پیش از کارمزد. آنچه می‌پردازید یا می‌گیرید، به کارمزد خرید و فروش زیر بستگی دارد.";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -54,24 +55,12 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** یک کارت قیمت — عدد آماده‌ی گردآورنده (BUY یا SELL)، بدون هیچ محاسبه‌ای. */
-function PriceCard({
-  label,
-  toman,
-  side,
-}: {
-  label: string;
-  toman: number | null;
-  side: "buy" | "sell";
-}) {
+/** کارت «قیمت» — عدد آماده‌ی گردآورنده، بدون هیچ محاسبه‌ای. */
+function PriceCard({ toman }: { toman: number | null }) {
   return (
     <div className="rounded-2xl bg-surface px-4 py-4">
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p
-        data-effective-buy-price={side === "buy" ? true : undefined}
-        data-effective-sell-price={side === "sell" ? true : undefined}
-        className="mt-1 text-lg font-bold tabular-nums sm:text-xl"
-      >
+      <p className="text-[11px] text-muted-foreground">قیمت هر گرم (پیش از کارمزد)</p>
+      <p data-price className="mt-1 text-lg font-bold tabular-nums sm:text-xl">
         {toman === null ? "—" : `${formatToman(toman)} تومان`}
       </p>
     </div>
@@ -108,9 +97,11 @@ function UnionRateBar({ referencePrice }: { referencePrice: ReferencePrice | nul
 }
 
 /**
- * «قیمت امروز» — فقط سکوی کارمزدمعلوم (`!hasUnknownFee`). برای کارمزد
- * نامعلوم این بخش اصلاً رندر نمی‌شود؛ نه «نامشخص»، نه صفر، نه کارت خالی —
- * چون قیمت مؤثر برای آن سکوها اصلاً وجود ندارد (جعل نمی‌شود، قاعده‌ی ۱).
+ * «قیمت امروز» — حالا برای **همه‌ی** سکوها رندر می‌شود، از جمله
+ * کارمزدنامعلوم‌ها (سند تصمیم ۰۰۰۲). پیش‌تر آن چهار سکو این بخش را اصلاً
+ * نمی‌گرفتند چون قیمت مؤثر برایشان وجود نداشت؛ حالا قیمتشان با بقیه
+ * هم‌جنس است و فقط ردیف‌های کارمزد «نامشخص» می‌مانند — و «نامشخص» یعنی
+ * اعلام‌نشده، نه صفر.
  */
 function TermsSection({
   row,
@@ -121,11 +112,8 @@ function TermsSection({
   snapshot: PlatformSnapshot;
   updatedAt: string | null;
 }) {
-  if (hasUnknownFee(row)) return null;
-
   const { terms } = snapshot;
-  const buy = findQuote(snapshot.quotes, "BUY");
-  const sell = findQuote(snapshot.quotes, "SELL");
+  const price = priceToman(row);
   const minOrder = terms.min_order_toman ?? null;
   const dateLabel = updatedAt === null ? null : formatDateFa(updatedAt);
 
@@ -135,21 +123,12 @@ function TermsSection({
         قیمت امروز{dateLabel === null ? null : ` — ${dateLabel}`}
       </h2>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <PriceCard
-          label="قیمت مؤثر خرید هر گرم"
-          toman={buy === null ? null : buy.price_toman}
-          side="buy"
-        />
-        <PriceCard
-          label="قیمت مؤثر فروش هر گرم"
-          toman={sell === null ? null : sell.price_toman}
-          side="sell"
-        />
+      <div className="mt-4">
+        <PriceCard toman={price} />
       </div>
 
       <p className="mt-4 text-[12px] leading-6 text-muted-foreground">
-        {FEE_SOURCE_EXPLANATION_FA}
+        {PRICE_EXPLANATION_FA}
       </p>
 
       <dl className="mt-3">

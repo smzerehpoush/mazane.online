@@ -57,7 +57,7 @@ function AdminLoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>ورود به پنل مدیریت</CardTitle>
-          <CardDescription>مظنه آنلاین</CardDescription>
+          <CardDescription>تابلو</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">

@@ -13,10 +13,10 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
-from mazane_collector.models import FeeSource, Instrument, Side
-from mazane_collector.pipeline import AdapterError, collect_once
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
+from tablo_collector.models import FeeSource, Instrument, Side
+from tablo_collector.pipeline import AdapterError, collect_once
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "talasea_gold_price.json"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -44,10 +44,9 @@ async def test_fixture_payload_is_stored_with_explicit_x1000_scale() -> None:
     assert stored.platform_slug == "talasea"
     assert stored.suppressed is False
 
-    by_side = {quote.side: quote for quote in stored.quotes}
-    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
-    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
+    (price,) = stored.quotes
+    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
+    assert price.side is Side.PRICE
 
     # مقدار خام و ضریب صریح آداپتر — طلاسی تومان بر میلی‌گرم، ×۱۰۰۰
     # (سند تحقیق ۰۱، بند ۳.۳).
@@ -58,10 +57,7 @@ async def test_fixture_payload_is_stored_with_explicit_x1000_scale() -> None:
         assert quote.fetched_at == FETCHED_AT
 
     # ریاضی مقیاس: 18530 × 1000 = 18,530,000 تومان بر گرم.
-    assert by_side[Side.MID].price_toman == 18530000
-    # مشتق‌ها فقط در گردآورنده: fee = 0.01 از خود API.
-    assert by_side[Side.BUY].price_toman == 18715300  # 18530000 × 1.01
-    assert by_side[Side.SELL].price_toman == 18344700  # 18530000 × 0.99
+    assert price.price_toman == 18530000
 
 
 async def test_terms_fee_comes_from_api_with_status_flags() -> None:

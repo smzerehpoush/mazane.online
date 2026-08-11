@@ -14,10 +14,10 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.ecogold import ECOGOLD_ENDPOINT, EcogoldAdapter
-from mazane_collector.models import FeeSource, Instrument, Side
-from mazane_collector.pipeline import AdapterError, collect_once
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.adapters.ecogold import ECOGOLD_ENDPOINT, EcogoldAdapter
+from tablo_collector.models import FeeSource, Instrument, Side
+from tablo_collector.pipeline import AdapterError, collect_once
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "ecogold_prices_otc.json"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -48,10 +48,9 @@ async def test_fixture_payload_is_stored_with_user_view_side_mapping() -> None:
     assert stored is not None
     assert stored.platform_slug == "ecogold"
 
-    by_side = {quote.side: quote for quote in stored.quotes}
-    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
-    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
+    (price,) = stored.quotes
+    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
+    assert price.side is Side.PRICE
 
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
@@ -60,15 +59,10 @@ async def test_fixture_payload_is_stored_with_user_view_side_mapping() -> None:
         assert quote.raw_scale == Decimal("1")
 
     # نام‌گذاری اکوگلد «دید کاربر» است: buy_price بزرگ‌تر = آنچه کاربر می‌پردازد.
-    assert by_side[Side.BUY].price_toman == 18533000
-    assert by_side[Side.SELL].price_toman == 18495000
-    assert by_side[Side.MID].price_toman == 18514000
-
-    assert by_side[Side.BUY].raw_value == Decimal("18533000.00000000")
-    assert by_side[Side.SELL].raw_value == Decimal("18495000.00000000")
+    assert price.price_toman == 18514000
 
 
-async def test_terms_are_implied_from_dealer_spread_as_api() -> None:
+async def test_terms_are_implied_from_dealer_spread_as_implied() -> None:
     store = InMemoryStore()
 
     await collect_once(EcogoldAdapter(), make_fetcher(load_fixture()), store, now=FETCHED_AT)
@@ -77,7 +71,7 @@ async def test_terms_are_implied_from_dealer_spread_as_api() -> None:
     assert stored is not None
     terms = stored.terms
 
-    assert terms.fee_source == FeeSource.API
+    assert terms.fee_source == FeeSource.IMPLIED
     assert terms.buy_fee_percent == Decimal("0.1026")
     assert terms.sell_fee_percent == Decimal("0.1026")
     # سند تحقیق ۰۱ (بند ۳.۸): اکوگلد ارزان‌ترین رفت‌وبرگشت بازار (~۰٫۲۱٪).

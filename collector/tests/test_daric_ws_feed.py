@@ -22,17 +22,17 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.daric import (
+from tablo_collector.adapters.daric import (
     DARIC_REST_ENDPOINT,
     DARIC_WS_ENDPOINT,
     DaricAdapter,
     decode_signalr_message,
 )
-from mazane_collector.models import Side
-from mazane_collector.pipeline import collect_round
-from mazane_collector.platforms import PLATFORMS
-from mazane_collector.store.memory import InMemoryStore
-from mazane_collector.ws import FeedCache, FeedStale, ReconnectingFeedClient, compose_fetch
+from tablo_collector.models import Side
+from tablo_collector.pipeline import collect_round
+from tablo_collector.platforms import PLATFORMS
+from tablo_collector.store.memory import InMemoryStore
+from tablo_collector.ws import FeedCache, FeedStale, ReconnectingFeedClient, compose_fetch
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -46,7 +46,7 @@ def load_frames() -> list[str]:
 
 
 def load_rest_payload() -> Any:
-    return json.loads((FIXTURES / "daric_topprice.json").read_text(encoding="utf-8"))
+    return json.loads((FIXTURES / "daric_collateral_price.json").read_text(encoding="utf-8"))
 
 
 def decode_all(frames: list[str]) -> Any:
@@ -95,10 +95,10 @@ async def test_ws_frame_payload_is_stored_via_the_same_daric_parse() -> None:
 
     stored = await store.get_snapshot("daric")
     assert stored is not None
-    by_side = {q.side: q for q in stored.quotes}
-    assert by_side[Side.BUY].price_toman == 18581000  # bestSell دفتر
-    assert by_side[Side.SELL].price_toman == 18425000  # bestBuy دفتر
-    assert by_side[Side.MID].price_toman == 18503000
+    (price,) = stored.quotes
+    # میانگین دو سرِ دفترِ فریم: (18,581,000 + 18,425,000) / 2.
+    assert price.side is Side.PRICE
+    assert price.price_toman == 18503000
 
 
 # ― «دو خوراک، یک سکو»: تقدم وب‌سوکت، برگشت به REST، کهنگی نه خطا ―
@@ -127,7 +127,7 @@ async def test_fresh_ws_frame_takes_priority_over_rest_in_a_round() -> None:
 
     stored = await store.get_snapshot("daric")
     assert stored is not None
-    mid = next(q for q in stored.quotes if q.side is Side.MID)
+    mid = next(q for q in stored.quotes if q.side is Side.PRICE)
     assert mid.price_toman == 18503000  # عدد وب‌سوکت، نه REST (18501634)
 
 
@@ -152,7 +152,7 @@ async def test_disconnected_ws_falls_back_to_rest_without_error() -> None:
 
     stored = await store.get_snapshot("daric")
     assert stored is not None
-    mid = next(q for q in stored.quotes if q.side is Side.MID)
+    mid = next(q for q in stored.quotes if q.side is Side.PRICE)
     assert mid.price_toman == 18501634  # عدد REST
 
 

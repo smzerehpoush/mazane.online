@@ -80,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "مظنه آنلاین — مقایسه‌ی قیمت واقعی طلا" },
+      { title: "تابلو — مقایسه‌ی قیمت واقعی طلا" },
       { name: "description", content: "مقایسه‌ی لحظه‌ای قیمت خرید و فروش طلای ۱۸ عیار در سکوهای ایرانی." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

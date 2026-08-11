@@ -6,10 +6,21 @@ scope: >-
   و مستندات رسمی فریم‌ورک‌ها) دربارهٔ ریسک «Thin affiliate»، مکانیزم‌های ایندکس شدن،
   داده‌های ساخت‌یافته، SEO فارسی/RTL، محدودیت‌های ایران، و انتخاب استراتژی رندرینگ.
 status: draft
-audience: تیم فنی و محتوایی mazane.online
+audience: تیم فنی و محتوایی tablo.gold
 ---
 
 # SEO، ایندکس شدن و سیاست‌های گوگل برای مضنه آنلاین
+
+> ⚠️ **بازنگری‌شده در ۲۰۲۶-۰۸-۱۰ — سند تصمیم ۰۰۰۲.** این سند یافته‌های تحقیق
+> در تاریخ خودش را ثبت می‌کند و دست‌نخورده می‌ماند. ولی توصیه‌هایش درباره‌ی
+> «قیمت مؤثر» دیگر مبنای پیاده‌سازی نیستند: از هر سکو **یک قیمت** (پیش از
+> کارمزد) ثبت می‌شود و دو کارمزد **جدا** کنارش می‌نشیند. مشخصات جاری در
+> `CONTEXT.md` و `docs/design/` است.
+>
+> ‏⚠️ **تغییر نام ۲۰۲۶-۰۸-۱۰:** برند از «مظنه آنلاین» به «تابلو» تغییر کرد.
+> هرجا در همین سند نام قدیم آمده، ثبت تاریخی است. واژه‌ی «مظنه» به‌عنوان
+> اصطلاح بازار (قیمت مثقال طلای آب‌شده) سر جایش است — آن نام ما نبود،
+> واژه‌ی دامنه است.
 
 > **قاعدهٔ این سند:** هر ادعا با URL منبع مالکِ آن ادعا همراه است. جایی که حرف من است نه حرف گوگل، صریحاً با برچسب **[توصیهٔ من]** مشخص شده. جایی که منبع درجه‌دوم است، با **[منبع ثانویه]** علامت خورده.
 >
@@ -271,7 +282,7 @@ Disallow: /api/
 Disallow: /*?sort=
 Disallow: /*?utm_
 
-Sitemap: https://mazane.online/sitemap.xml
+Sitemap: https://tablo.gold/sitemap.xml
 ```
 
 ### ۲.۵ IndexNow — مفید ولی نه برای گوگل
@@ -325,7 +336,7 @@ Sitemap: https://mazane.online/sitemap.xml
 /?ref=xyz      → canonical به /  + Disallow در robots.txt
 ```
 
-- هر صفحه یک self-referential canonical مطلق (`https://mazane.online/gold/abshode`) داشته باشد.
+- هر صفحه یک self-referential canonical مطلق (`https://tablo.gold/gold/abshode`) داشته باشد.
 - فیلتر و مرتب‌سازی را با `history.replaceState` یا بدون تغییر URL انجام دهید تا اصلاً URL جدید ساخته نشود. **[توصیهٔ من]**
 - برای «تازگی»، به‌جای canonical از `dateModified` در structured data و نمایش timestamp در متن صفحه استفاده کنید.
 
@@ -407,27 +418,27 @@ Sitemap: https://mazane.online/sitemap.xml
   "@graph": [
     {
       "@type": "WebSite",
-      "@id": "https://mazane.online/#website",
-      "url": "https://mazane.online/",
+      "@id": "https://tablo.gold/#website",
+      "url": "https://tablo.gold/",
       "name": "مضنه آنلاین",
       "alternateName": ["Mazane Online", "مضنه"],
       "inLanguage": "fa-IR",
-      "publisher": { "@id": "https://mazane.online/#organization" }
+      "publisher": { "@id": "https://tablo.gold/#organization" }
     },
     {
       "@type": "Organization",
-      "@id": "https://mazane.online/#organization",
+      "@id": "https://tablo.gold/#organization",
       "name": "مضنه آنلاین",
       "alternateName": "Mazane Online",
-      "url": "https://mazane.online/",
+      "url": "https://tablo.gold/",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://mazane.online/logo.png",
+        "url": "https://tablo.gold/logo.png",
         "width": 512,
         "height": 512
       },
       "description": "مقایسهٔ زندهٔ قیمت طلا در پلتفرم‌های معاملهٔ آنلاین طلای ایران",
-      "email": "info@mazane.online",
+      "email": "info@tablo.gold",
       "sameAs": [
         "https://t.me/mazaneonline",
         "https://www.instagram.com/mazaneonline"
@@ -436,7 +447,7 @@ Sitemap: https://mazane.online/sitemap.xml
     {
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "خانه", "item": "https://mazane.online/" }
+        { "@type": "ListItem", "position": 1, "name": "خانه", "item": "https://tablo.gold/" }
       ]
     }
   ]
@@ -458,10 +469,10 @@ Sitemap: https://mazane.online/sitemap.xml
   "@graph": [
     {
       "@type": "Product",
-      "@id": "https://mazane.online/gold/coin-emami#product",
+      "@id": "https://tablo.gold/gold/coin-emami#product",
       "name": "سکه تمام بهار آزادی طرح امام",
       "description": "مقایسهٔ زندهٔ قیمت خرید و فروش سکه امامی در پلتفرم‌های معاملهٔ آنلاین طلا",
-      "image": "https://mazane.online/images/coin-emami.jpg",
+      "image": "https://tablo.gold/images/coin-emami.jpg",
       "category": "طلا و سکه",
       "offers": {
         "@type": "AggregateOffer",
@@ -475,7 +486,7 @@ Sitemap: https://mazane.online/sitemap.xml
             "priceCurrency": "IRR",
             "price": "920000000",
             "availability": "https://schema.org/InStock",
-            "url": "https://mazane.online/go/platform-a",
+            "url": "https://tablo.gold/go/platform-a",
             "seller": { "@type": "Organization", "name": "پلتفرم الف" }
           },
           {
@@ -483,7 +494,7 @@ Sitemap: https://mazane.online/sitemap.xml
             "priceCurrency": "IRR",
             "price": "934500000",
             "availability": "https://schema.org/InStock",
-            "url": "https://mazane.online/go/platform-b",
+            "url": "https://tablo.gold/go/platform-b",
             "seller": { "@type": "Organization", "name": "پلتفرم ب" }
           }
         ]
@@ -492,9 +503,9 @@ Sitemap: https://mazane.online/sitemap.xml
     {
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "خانه", "item": "https://mazane.online/" },
-        { "@type": "ListItem", "position": 2, "name": "طلا", "item": "https://mazane.online/gold" },
-        { "@type": "ListItem", "position": 3, "name": "سکه امامی", "item": "https://mazane.online/gold/coin-emami" }
+        { "@type": "ListItem", "position": 1, "name": "خانه", "item": "https://tablo.gold/" },
+        { "@type": "ListItem", "position": 2, "name": "طلا", "item": "https://tablo.gold/gold" },
+        { "@type": "ListItem", "position": 3, "name": "سکه امامی", "item": "https://tablo.gold/gold/coin-emami" }
       ]
     }
   ]
@@ -512,7 +523,7 @@ Sitemap: https://mazane.online/sitemap.xml
   "@graph": [
     {
       "@type": "Review",
-      "@id": "https://mazane.online/platform/example-gold#review",
+      "@id": "https://tablo.gold/platform/example-gold#review",
       "headline": "بررسی کامل پلتفرم اگزمپل‌گلد: کارمزد، اسپرد و سرعت برداشت",
       "reviewBody": "ما با خرید واقعی ۱۰ میلیون تومان طلا در این پلتفرم، کارمزد مؤثر و زمان تسویه را اندازه گرفتیم…",
       "datePublished": "2026-08-06",
@@ -520,12 +531,12 @@ Sitemap: https://mazane.online/sitemap.xml
       "author": {
         "@type": "Person",
         "name": "مهدیار زره‌پوش",
-        "url": "https://mazane.online/authors/mahdiyar"
+        "url": "https://tablo.gold/authors/mahdiyar"
       },
-      "publisher": { "@id": "https://mazane.online/#organization" },
+      "publisher": { "@id": "https://tablo.gold/#organization" },
       "itemReviewed": {
         "@type": "Organization",
-        "@id": "https://mazane.online/platform/example-gold#org",
+        "@id": "https://tablo.gold/platform/example-gold#org",
         "name": "اگزمپل‌گلد",
         "url": "https://example-gold.ir/"
       },
@@ -552,9 +563,9 @@ Sitemap: https://mazane.online/sitemap.xml
     {
       "@type": "BreadcrumbList",
       "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "خانه", "item": "https://mazane.online/" },
-        { "@type": "ListItem", "position": 2, "name": "پلتفرم‌ها", "item": "https://mazane.online/platform" },
-        { "@type": "ListItem", "position": 3, "name": "اگزمپل‌گلد", "item": "https://mazane.online/platform/example-gold" }
+        { "@type": "ListItem", "position": 1, "name": "خانه", "item": "https://tablo.gold/" },
+        { "@type": "ListItem", "position": 2, "name": "پلتفرم‌ها", "item": "https://tablo.gold/platform" },
+        { "@type": "ListItem", "position": 3, "name": "اگزمپل‌گلد", "item": "https://tablo.gold/platform/example-gold" }
       ]
     }
   ]
@@ -571,13 +582,13 @@ Sitemap: https://mazane.online/sitemap.xml
 {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
-  "@id": "https://mazane.online/blog/gold-spread-explained#article",
+  "@id": "https://tablo.gold/blog/gold-spread-explained#article",
   "headline": "اسپرد در معاملات طلای آنلاین چیست و چقدر از سود شما را می‌خورد؟",
   "description": "توضیح اسپرد خرید و فروش، محاسبهٔ کارمزد مؤثر و مقایسهٔ آن در پلتفرم‌های ایرانی",
   "image": [
-    "https://mazane.online/blog/gold-spread-16x9.jpg",
-    "https://mazane.online/blog/gold-spread-4x3.jpg",
-    "https://mazane.online/blog/gold-spread-1x1.jpg"
+    "https://tablo.gold/blog/gold-spread-16x9.jpg",
+    "https://tablo.gold/blog/gold-spread-4x3.jpg",
+    "https://tablo.gold/blog/gold-spread-1x1.jpg"
   ],
   "datePublished": "2026-08-06T09:00:00+03:30",
   "dateModified": "2026-08-06T09:00:00+03:30",
@@ -585,12 +596,12 @@ Sitemap: https://mazane.online/sitemap.xml
   "author": {
     "@type": "Person",
     "name": "مهدیار زره‌پوش",
-    "url": "https://mazane.online/authors/mahdiyar"
+    "url": "https://tablo.gold/authors/mahdiyar"
   },
-  "publisher": { "@id": "https://mazane.online/#organization" },
+  "publisher": { "@id": "https://tablo.gold/#organization" },
   "mainEntityOfPage": {
     "@type": "WebPage",
-    "@id": "https://mazane.online/blog/gold-spread-explained"
+    "@id": "https://tablo.gold/blog/gold-spread-explained"
   }
 }
 ```
@@ -647,9 +658,9 @@ Sitemap: https://mazane.online/sitemap.xml
 نمونه (اگر روزی `/en/` اضافه شد):
 
 ```html
-<link rel="alternate" hreflang="fa-IR" href="https://mazane.online/gold/coin-emami" />
-<link rel="alternate" hreflang="en"    href="https://mazane.online/en/gold/coin-emami" />
-<link rel="alternate" hreflang="x-default" href="https://mazane.online/gold/coin-emami" />
+<link rel="alternate" hreflang="fa-IR" href="https://tablo.gold/gold/coin-emami" />
+<link rel="alternate" hreflang="en"    href="https://tablo.gold/en/gold/coin-emami" />
+<link rel="alternate" hreflang="x-default" href="https://tablo.gold/gold/coin-emami" />
 ```
 
 هر دو صفحه باید **همین بلوک کامل** را داشته باشند.
@@ -892,9 +903,9 @@ import type { MetadataRoute } from 'next'
 export default async function sitemap(): MetadataRoute.Sitemap {
   const posts = await getPosts()
   return [
-    { url: 'https://mazane.online', lastModified: new Date('2026-08-06') },
+    { url: 'https://tablo.gold', lastModified: new Date('2026-08-06') },
     ...posts.map((p) => ({
-      url: `https://mazane.online/blog/${p.slug}`,
+      url: `https://tablo.gold/blog/${p.slug}`,
       lastModified: p.updatedAt,   // تاریخ ویرایش واقعی، نه now()
     })),
   ]
@@ -1304,7 +1315,7 @@ q = "مضنه طلا"  →  هر ۱۰ پیشنهاد بدون استثنا «م�
 | نام برند در متن | **مظنه آنلاین** | همان |
 | `Organization.name` | `مظنه آنلاین` | |
 | `Organization.alternateName` | `["مضنه آنلاین", "Mazane Online", "مظنه"]` | هر دو املا را پوشش می‌دهد بدون آنکه غلط را ترویج کند |
-| دامنه | `mazane.online` بدون تغییر | ترانویسی لاتین است و برای هر دو املا کار می‌کند — **خوشبختانه دامنه مشکلی ندارد** |
+| دامنه | `tablo.gold` | دامنهٔ محصول (تغییر مالک از mazane.online)؛ پوشش املای مظنه/مضنه فقط از مسیر محتوا و `alternateName` است، نه خود دامنه |
 | یک مقالهٔ بلاگ | «مظنه یا مضنه؟ املای درست و معنای مظنه در بازار طلا» | کوئری واقعی `مضنه یا مزنه` را می‌گیرد، هر دو املا را در یک صفحه دارد، و ارزش آموزشی واقعی دارد |
 
 این کار هم ترافیک هر دو املا را می‌گیرد، هم برند را روی فرم درست می‌نشاند. **اگر امروز تغییر ندهید، بعداً تغییر نام برند پرهزینه است.**

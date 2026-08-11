@@ -80,7 +80,7 @@ export function createPgBlogSource(): BlogSource {
 /**
  * استخر مشترک پستگرس — بلاگ و تاریخچه‌ی نمودار هر دو از همین یکی می‌خوانند
  * تا سرور تک‌هسته‌ای دو استخر جدا باز نکند. پیش‌فرض نشانی همان گردآورنده است
- * (`collector/src/mazane_collector/main.py`).
+ * (`collector/src/tablo_collector/main.py`).
  */
 let sharedPool: Pool | null = null;
 
@@ -88,7 +88,7 @@ export function pgPool(): Pool {
   if (sharedPool === null) {
     sharedPool = new Pool({
       connectionString:
-        process.env["MAZANE_DATABASE_URL"] ?? "postgresql://mazane:mazane@127.0.0.1:5432/mazane",
+        process.env["TABLO_DATABASE_URL"] ?? "postgresql://mazane:mazane@127.0.0.1:5432/mazane",
       max: 5,
     });
   }

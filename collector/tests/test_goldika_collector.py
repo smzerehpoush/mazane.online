@@ -16,10 +16,10 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
-from mazane_collector.models import FeeSource, Instrument, Side
-from mazane_collector.pipeline import AdapterError, collect_once
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
+from tablo_collector.models import FeeSource, Instrument, Side
+from tablo_collector.pipeline import AdapterError, collect_once
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "goldika_v2_price.json"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -46,10 +46,9 @@ async def test_fixture_payload_is_stored_with_explicit_div10_scale() -> None:
     assert stored is not None
     assert stored.platform_slug == "goldika"
 
-    by_side = {quote.side: quote for quote in stored.quotes}
-    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
-    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
+    (price,) = stored.quotes
+    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
+    assert price.side is Side.PRICE
 
     # مقدار خام و ضریب صریح آداپتر — گلدیکا ریال بر گرم، ÷۱۰
     # (سند تحقیق ۰۱، بند ۳.۳).
@@ -59,11 +58,9 @@ async def test_fixture_payload_is_stored_with_explicit_div10_scale() -> None:
         assert quote.raw_scale == Decimal("0.1")
 
     # ریاضی مقیاس: 185142350 ریال ÷ 10 = 18,514,235 تومان بر گرم.
-    assert by_side[Side.MID].price_toman == 18514235
+    assert price.price_toman == 18514235
     # کارمزد ۱٫۲٪ از خود API؛ تحقیق تأیید کرد buy = mid × 1.012 دقیقاً —
     # پس این اعداد با old_price.buy/sell خود گلدیکا هم‌خوان‌اند.
-    assert by_side[Side.BUY].price_toman == 18736406  # 18514235 × 1.012 گرد
-    assert by_side[Side.SELL].price_toman == 18292064  # 18514235 × 0.988 گرد
 
 
 async def test_terms_commission_comes_from_api() -> None:

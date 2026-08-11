@@ -7,7 +7,7 @@
  *
  * چه می‌خوانَد: آخرین ردیف `kind='REFERENCE'` برای اسلاگ منبع + دارایی
  * خواسته‌شده. مرجع همیشه با `Side.MID` نوشته می‌شود
- * (`collector/src/mazane_collector/references/talair.py`) — برخلاف
+ * (`collector/src/tablo_collector/references/talair.py`) — برخلاف
  * `history-source.ts` که بین `MEAN`/`MID` سکو ترجیح می‌دهد، اینجا فقط یک
  * سمت وجود دارد، پس مستقیم فیلتر می‌شود.
  *

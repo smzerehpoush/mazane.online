@@ -1,7 +1,7 @@
 /**
- * منبع واقعی پیکربندی نمودار: ردیس، کلید `mazane:chart_config` —
+ * منبع واقعی پیکربندی نمودار: ردیس، کلید `tablo:chart_config` —
  * گردآورنده هر ~۲۰ ثانیه از تنظیمات پنل (`platform_settings` پستگرس)
- * همگام می‌کند (`collector/src/mazane_collector/settings.py` +
+ * همگام می‌کند (`collector/src/tablo_collector/settings.py` +
  * `main.py::settings_sync_loop`).
  *
  * **فقط سمت سرور** — همان دلیل `price-source.ts`: `ioredis` نباید به
@@ -20,13 +20,13 @@ import Redis from "ioredis";
 
 import { parseChartConfigPayload, type ChartPlatformConfig } from "../site-content";
 
-const CHART_CONFIG_KEY = "mazane:chart_config";
+const CHART_CONFIG_KEY = "tablo:chart_config";
 
 let client: Redis | null = null;
 
 function redisClient(): Redis {
   if (client === null) {
-    client = new Redis(process.env["MAZANE_REDIS_URL"] ?? "redis://127.0.0.1:6379/0", {
+    client = new Redis(process.env["TABLO_REDIS_URL"] ?? "redis://127.0.0.1:6379/0", {
       // فرمان معطل نماند: یک تلاش اتصال، بعد رد — لایه‌ی بالا فهرست پیش‌فرض می‌دهد.
       maxRetriesPerRequest: 1,
     });

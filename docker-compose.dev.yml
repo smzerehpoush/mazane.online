@@ -8,6 +8,9 @@ services:
   postgres:
     image: postgres:16
     environment:
+      # کاربر/دیتابیس عمداً «mazane» مانده‌اند (تغییر نام ۲۰۲۶-۰۸-۱۰): volume
+      # موجود با همین نام‌ها ساخته شده و عوض‌کردنشان یعنی اتصال به دیتابیسی
+      # که وجود ندارد. نام برند و بقیه‌ی شناسه‌ها تابلو شده‌اند.
       POSTGRES_USER: mazane
       POSTGRES_PASSWORD: mazane
       POSTGRES_DB: mazane

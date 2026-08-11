@@ -58,7 +58,7 @@ interface CollectorRegistry {
 }
 
 const SCRIPT = fileURLToPath(new URL("./support/dump-collector-registry.py", import.meta.url));
-const COLLECTOR = fileURLToPath(new URL("../../collector/src/mazane_collector", import.meta.url));
+const COLLECTOR = fileURLToPath(new URL("../../collector/src/tablo_collector", import.meta.url));
 
 /**
  * نبود `python3` را عمداً **پنهان نمی‌کنیم**: نگهبانی که در سکوت رد شود

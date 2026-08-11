@@ -37,7 +37,9 @@ import { ADMIN_SESSION_COOKIE } from "../src/lib/server/admin-session";
 import { seedBrokenImageStore, seedImageStore } from "./support/seed";
 
 const SECRET = "test-session-secret";
-const CDN_BASE = "https://cdn.mazane.test";
+const S3_ENDPOINT = "https://s3.tablo.test";
+const S3_BUCKET = "tablo-media";
+const PUBLIC_BASE = `${S3_ENDPOINT}/${S3_BUCKET}`;
 
 class FakeAdminPostsSource implements AdminPostsSource {
   posts = new Map<string, BlogPost>();
@@ -101,7 +103,7 @@ function seedFake(...posts: BlogPost[]): FakeAdminPostsSource {
   return fake;
 }
 
-const URL_FOR = (slug: string) => `https://mazane.online/api/admin-posts/${slug}/image`;
+const URL_FOR = (slug: string) => `https://tablo.gold/api/admin-posts/${slug}/image`;
 
 function form(opts: { alt?: string; fileBytes?: Uint8Array; fileType?: string } = {}): FormData {
   const fd = new FormData();
@@ -136,8 +138,9 @@ function anonRequest(slug: string, body: FormData): Request {
 const SMALL_IMAGE = new Uint8Array([1, 2, 3, 4, 5]);
 
 beforeEach(() => {
-  vi.stubEnv("MAZANE_ADMIN_SESSION_SECRET", SECRET);
-  vi.stubEnv("MAZANE_IMAGE_CDN_BASE_URL", CDN_BASE);
+  vi.stubEnv("TABLO_ADMIN_SESSION_SECRET", SECRET);
+  vi.stubEnv("TABLO_ARVAN_S3_ENDPOINT", S3_ENDPOINT);
+  vi.stubEnv("TABLO_ARVAN_S3_BUCKET", S3_BUCKET);
 });
 
 afterEach(() => {
@@ -260,7 +263,7 @@ describe("آپلود موفق", () => {
     expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
 
     const body = (await response.json()) as { post: BlogPost };
-    expect(body.post.image_url).toBe(`${CDN_BASE}/posts/akkas/fake-hash.webp`);
+    expect(body.post.image_url).toBe(`${PUBLIC_BASE}/posts/akkas/fake-hash.webp`);
     expect(body.post.image_alt).toBe("نمودار قیمت طلا روی موبایل");
     expect(body.post.image_width).toBe(1600);
     expect(body.post.image_height).toBe(900);

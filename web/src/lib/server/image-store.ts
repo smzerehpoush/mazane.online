@@ -1,6 +1,7 @@
 /**
  * انبار واقعی عکس شاخص پست — فضای ابری آروان (S3-سازگار)، سرو از
- * `MAZANE_IMAGE_CDN_BASE_URL` (بلیت ۲۴).
+ * نشانی عمومی از **خودِ باکت آروان** ساخته می‌شود (بلیت ۲۴؛ تصمیم مالک
+ * ۲۰۲۶-۰۸-۰۷، تأییدشده ۲۰۲۶-۰۸-۱۰: هیچ زیردامنه‌ی cdn ای در کار نیست).
  *
  * **فقط سمت سرور** (همان دلیل `price-source.ts`: `@aws-sdk/client-s3` و
  * `sharp` هرگز نباید به باندل مرورگر بروند). مصرف‌کننده‌ها توابع این فایل را
@@ -60,12 +61,12 @@ let cachedClient: S3Client | null = null;
 function s3Client(): S3Client {
   if (cachedClient !== null) return cachedClient;
   cachedClient = new S3Client({
-    endpoint: requiredEnv("MAZANE_ARVAN_S3_ENDPOINT"),
-    region: process.env["MAZANE_ARVAN_S3_REGION"] ?? "default",
+    endpoint: requiredEnv("TABLO_ARVAN_S3_ENDPOINT"),
+    region: process.env["TABLO_ARVAN_S3_REGION"] ?? "default",
     forcePathStyle: true,
     credentials: {
-      accessKeyId: requiredEnv("MAZANE_ARVAN_S3_ACCESS_KEY"),
-      secretAccessKey: requiredEnv("MAZANE_ARVAN_S3_SECRET_KEY"),
+      accessKeyId: requiredEnv("TABLO_ARVAN_S3_ACCESS_KEY"),
+      secretAccessKey: requiredEnv("TABLO_ARVAN_S3_SECRET_KEY"),
     },
   });
   return cachedClient;
@@ -84,16 +85,15 @@ async function processAndUpload(slug: string, bytes: Uint8Array): Promise<Upload
 
   await s3Client().send(
     new PutObjectCommand({
-      Bucket: requiredEnv("MAZANE_ARVAN_S3_BUCKET"),
+      Bucket: requiredEnv("TABLO_ARVAN_S3_BUCKET"),
       Key: objectKey,
       Body: processed.data,
       ContentType: "image/webp",
       // محتوامحور و تغییرناپذیر — جایگزینی عکس همیشه کلید تازه می‌سازد.
       CacheControl: "public, max-age=31536000, immutable",
-      // بدون این، آروان شیء را خصوصی می‌نویسد و MAZANE_IMAGE_CDN_BASE_URL
-      // (نشانی مستقیم باکت — تصمیم مالک، ۲۰۲۶-۰۸-۰۷: بدون زیردامنه‌ی
-      // اختصاصی) برای بازدیدکننده‌ی بی‌احرازهویت ۴۰۳ می‌دهد. با کلید واقعی
-      // آروان تأیید شد که این پرچم را رعایت می‌کند (بوکت-پالیسی نبود).
+      // بدون این، آروان شیء را خصوصی می‌نویسد و نشانی مستقیم باکت برای
+      // بازدیدکننده‌ی بی‌احرازهویت ۴۰۳ می‌دهد. با کلید واقعی آروان تأیید شد
+      // که این پرچم را رعایت می‌کند (بوکت-پالیسی نبود).
       ACL: "public-read",
     }),
   );
@@ -107,10 +107,24 @@ export function createS3ImageStore(): ImageStore {
   };
 }
 
-/** نشانی عمومی نهایی از objectKey — همیشه از زیردامنه‌ی خودمان، نه دامنه‌ی خام انبار. */
+/**
+ * نشانی عمومی نهایی از objectKey — مستقیم از باکت آروان، سبک path-style
+ * (`<endpoint>/<bucket>/<key>`) تا با `forcePathStyle: true`ِ همین کلاینت
+ * بخواند: جایی که می‌نویسیم و جایی که می‌خوانیم یک آدرس است.
+ *
+ * ⚠️ **انحراف عمدی از بند طراحی بلیت ۲۴** («هیچ دامنه‌ی بیگانه‌ای روی مسیر
+ * بحرانی رندر ننشیند»): تصمیم مالک ۲۰۲۶-۰۸-۰۷، تأییدشده ۲۰۲۶-۰۸-۱۰ — نه
+ * `cdn.tablo.gold` و نه هیچ زیردامنه‌ی دیگری. پیامدش این است که دامنه‌ی
+ * آروان در HTML صفحه دیده می‌شود و اگر روزی آروان را عوض کنید، نشانی همه‌ی
+ * عکس‌های قدیمی می‌شکند.
+ *
+ * متغیر جداگانه‌ی `*_IMAGE_CDN_BASE_URL` عمداً حذف شد: یک آدرسِ دستیِ دیگر
+ * یعنی یک جای دیگر برای واگرا شدن از باکت واقعی.
+ */
 export function publicImageUrl(objectKey: string): string {
-  const base = requiredEnv("MAZANE_IMAGE_CDN_BASE_URL").replace(/\/+$/, "");
-  return `${base}/${objectKey}`;
+  const endpoint = requiredEnv("TABLO_ARVAN_S3_ENDPOINT").replace(/\/+$/, "");
+  const bucket = requiredEnv("TABLO_ARVAN_S3_BUCKET");
+  return `${endpoint}/${bucket}/${objectKey}`;
 }
 
 let registered = false;

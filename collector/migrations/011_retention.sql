@@ -1,5 +1,5 @@
 -- مهاجرت ۰۱۱ — بلیت ۱۶: نگه‌داری داده — تجمیع ساعتی برای همیشه + هرس خام.
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/011_retention.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/011_retention.sql
 --
 -- بند ۷.۱ (الزام معماری ۲): آرشیو منتسبِ «چه قیمتی، کی، از کدام منبع» دفاع
 -- حقوقی است و هرگز نباید بشکند. سیاست (بند ۱۳، تصمیم ۱۳): خام ۹۰ روز با

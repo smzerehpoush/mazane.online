@@ -9,8 +9,8 @@
 import type { HistoryRange } from "./history";
 
 export const brand = {
-  name: "مظنه آنلاین",
-  title: "مظنه آنلاین — مقایسه‌ی قیمت واقعی طلا",
+  name: "تابلو",
+  title: "تابلو — مقایسه‌ی قیمت واقعی طلا",
   description:
     "مقایسه‌ی لحظه‌ای قیمت خرید و فروش طلای آب‌شده در سکوهای معتبر ایرانی؛ شفاف، بی‌طرف و بدون کارمزد پنهان.",
 } as const;
@@ -18,7 +18,7 @@ export const brand = {
 /**
  * ناوبری سرصفحه. مقصدها همان مسیرهای زنده‌ی سایت‌اند (اسلاگ‌ها لاتین‌اند،
  * قراردادها بخش استک): `tala-18` اسلاگ دارایی طلای ۱۸ عیار در جدول مرکزی
- * اسلاگ گردآورنده است (`collector/src/mazane_collector/instruments.py`).
+ * اسلاگ گردآورنده است (`collector/src/tablo_collector/instruments.py`).
  */
 export const nav = [
   { label: "طلای ۱۸ عیار", href: "/tala-18" },
@@ -28,7 +28,7 @@ export const nav = [
 ] as const;
 
 export const legalNote =
-  "قیمت‌ها متعلق به سکوهای نام‌برده است و هر ۳۰ ثانیه به‌روزرسانی می‌شود. مظنه آنلاین معامله‌گر یا مشاور سرمایه‌گذاری نیست.";
+  "قیمت‌ها متعلق به سکوهای نام‌برده است و هر ۳۰ ثانیه به‌روزرسانی می‌شود. تابلو معامله‌گر یا مشاور سرمایه‌گذاری نیست.";
 
 /** کد دارایی نمودار و جدول صفحه‌ی اصلی. */
 export const HOME_INSTRUMENT = "GOLD_18K";
@@ -38,10 +38,10 @@ export const HOME_CHART_HOURS = 24;
 
 /**
  * پنج سکوی ثابت نمودار (تصمیم مالک، ۲۰۲۶-۰۸-۰۶). اسلاگ‌ها همان‌هایی‌اند که
- * گردآورنده می‌شناسد (`collector/src/mazane_collector/platforms.py`) — پس
+ * گردآورنده می‌شناسد (`collector/src/tablo_collector/platforms.py`) — پس
  * `slug` مستقیماً برای خواندن ردیس و `hourly_rollups` به کار می‌رود.
  *
- * `name_fa` فقط پشتیبان است: نام نمایشی درست از `mazane:listed` می‌آید.
+ * `name_fa` فقط پشتیبان است: نام نمایشی درست از `tablo:listed` می‌آید.
  * `color` انتخاب طراحی است و هیچ معنایی درباره‌ی قیمت ندارد.
  */
 export interface ChartPlatformConfig {
@@ -109,8 +109,8 @@ export function chartSeriesConfig(
 }
 
 /**
- * پارس payload خام کلید ردیس `mazane:chart_config` (گردآورنده هر ~۲۰ ثانیه
- * از تنظیمات پنل می‌نویسد — `collector/src/mazane_collector/settings.py`).
+ * پارس payload خام کلید ردیس `tablo:chart_config` (گردآورنده هر ~۲۰ ثانیه
+ * از تنظیمات پنل می‌نویسد — `collector/src/tablo_collector/settings.py`).
  *
  * خالص و بی‌وابستگی به `ioredis` تا فرود امن («کلید نبود، JSON بدشکل، یا
  * کمتر از ۲/بیش از ۶ ورودی معتبر ⟸ `undefined`») بدون ردیس واقعی تست شود.
