@@ -78,13 +78,26 @@ ssh "${SSH_OPTS[@]}" "$SERVER" "
     echo '    ⚠️ مهاجرت تازه‌ی اجرا‌نشده:'
     cat /tmp/tablo-new-migrations.txt
     echo '    رانبوک بخش ۳: docker compose exec postgres psql ... -f /docker-entrypoint-initdb.d/<فایل>'
+    echo '    ⚠️ همین حالا اجرا کن: گام ۵ فایل را در دایرکتوری اجرا کپی می‌کند و'
+    echo '       این هشدار در دیپلوی بعدی دیگر تکرار نمی‌شود (کپی ≠ اجرا).'
   else
     echo '    چیزی تازه نیست.'
   fi
 "
 
-echo "==> [5/6] بالا آوردن نسخه‌ی تازه…"
+echo "==> [5/6] همگام‌سازی دایرکتوری اجرا + بالا آوردن نسخه‌ی تازه…"
+# ⚠️ ساخت از $REMOTE_SRC_DIR است ولی compose از $REMOTE_RUN_DIR اجرا می‌شود.
+# پیش از این، این دو هرگز همگام نمی‌شدند: دایرکتوری اجرا compose.prod.yml و
+# migrations خودش را داشت که با هر دیپلوی کهنه‌تر می‌شد. در دیپلوی تغییر نام
+# (۲۰۲۶-۰۸-۱۰) همین باعث شد compose هنوز MAZANE_* بخواند و با
+# «required variable MAZANE_REVALIDATE_TOKEN is missing» بایستد.
+#
+# ‎.env‎ عمداً کپی نمی‌شود: راز واقعی فقط روی سرور است و rsync هم صریحاً
+# کنارش می‌گذارد.
 ssh "${SSH_OPTS[@]}" "$SERVER" "
+  sudo cp $REMOTE_SRC_DIR/compose.prod.yml $REMOTE_RUN_DIR/compose.prod.yml
+  sudo mkdir -p $REMOTE_RUN_DIR/collector/migrations
+  sudo cp $REMOTE_SRC_DIR/collector/migrations/*.sql $REMOTE_RUN_DIR/collector/migrations/
   sudo sed -i 's|^TABLO_IMAGE_WEB=.*|TABLO_IMAGE_WEB=tablo-web:deploy|' $REMOTE_RUN_DIR/.env
   sudo sed -i 's|^TABLO_IMAGE_COLLECTOR=.*|TABLO_IMAGE_COLLECTOR=tablo-collector:deploy|' $REMOTE_RUN_DIR/.env
   cd $REMOTE_RUN_DIR && sudo docker compose -f compose.prod.yml up -d web collector
