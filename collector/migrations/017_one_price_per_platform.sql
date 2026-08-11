@@ -41,26 +41,31 @@ delete from hourly_rollups
 -- ── ۳) تغییر نام سمتِ باقی‌مانده ───────────────────────────────────────
 -- «MID» یعنی وسطِ ask و bid؛ برای وال‌گلد و ملی‌گلد و بقیه‌ی تک‌قیمتی‌ها
 -- عددشان وسطِ هیچ‌چیز نبود. حالا که تنها سمت است، نامش «PRICE» می‌شود.
+-- ⚠️ قید قدیمی **پیش از** update برداشته می‌شود، نه بعدش: پستگرس قید را
+-- روی هر سطرِ به‌روزشده همان لحظه بررسی می‌کند، و `side in (…,'MID',…)`
+-- مقدار تازه‌ی 'PRICE' را رد می‌کند. اگر ترتیب برعکس باشد، کل تراکنش با
+-- «violates check constraint quotes_side_check» برمی‌گردد.
+alter table quotes           drop constraint if exists quotes_side_check;
+alter table reference_quotes drop constraint if exists reference_quotes_side_check;
+alter table hourly_rollups   drop constraint if exists hourly_rollups_side_check;
+alter table reference_quotes drop constraint if exists reference_quotes_instrument_check;
+
 update quotes           set side = 'PRICE' where side = 'MID';
 update reference_quotes set side = 'PRICE' where side = 'MID';
 update hourly_rollups   set side = 'PRICE' where side = 'MID';
 
--- ── ۴) قیدها: تک‌مقداری‌شدن side ───────────────────────────────────────
+-- ── ۴) قیدهای تازه: تک‌مقداری‌شدن side ────────────────────────────────
 -- ستون side عمداً حذف نمی‌شود گرچه یک مقدار بیشتر ندارد: جزو کلید طبیعی
 -- unique (kind, source_slug, instrument, side, hour_start) در hourly_rollups
 -- است و حذفش مهاجرتی بی‌دلیل بود. خواننده‌ی بعدی نباید فکر کند جا افتاده.
-alter table quotes drop constraint if exists quotes_side_check;
 alter table quotes add constraint quotes_side_check check (side = 'PRICE');
 
-alter table reference_quotes drop constraint if exists reference_quotes_side_check;
 alter table reference_quotes
     add constraint reference_quotes_side_check check (side = 'PRICE');
 
-alter table hourly_rollups drop constraint if exists hourly_rollups_side_check;
 alter table hourly_rollups
     add constraint hourly_rollups_side_check check (side = 'PRICE');
 
-alter table reference_quotes drop constraint if exists reference_quotes_instrument_check;
 alter table reference_quotes
     add constraint reference_quotes_instrument_check
         check (instrument = 'GOLD_18K_TOMAN');
