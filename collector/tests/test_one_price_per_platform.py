@@ -14,6 +14,7 @@
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
+from functools import partial
 
 import pytest
 
@@ -24,7 +25,7 @@ from tablo_collector.adapters.common import (
     unknown_fee_snapshot,
 )
 from tablo_collector.adapters.daric import DaricAdapter
-from tablo_collector.models import FeeSource, PlatformSnapshot, Quote, Side
+from tablo_collector.models import FeeSource, Instrument, PlatformSnapshot, Quote, Side
 from tablo_collector.pipeline import AdapterError, collect_round
 from tablo_collector.platforms import PLATFORMS
 from tablo_collector.store.memory import InMemoryStore
@@ -68,9 +69,13 @@ def test_two_sided_source_price_is_mean_of_its_own_two_numbers() -> None:
 def test_field_order_of_two_sided_source_does_not_change_the_price() -> None:
     """قاعده‌ی ثابت `ask_bid`: نام فیلد منبع بی‌اهمیت است (طلاین و زرافزا
     وارونه نام‌گذاری می‌کنند) — جابه‌جایی دو ورودی هیچ عددی را عوض نمی‌کند."""
-    kwargs = {"slug": "tlyn", "scale": Decimal("1"), "fetched_at": FETCHED_AT}
-    forward = dealer_snapshot(raw_first=Decimal("100"), raw_second=Decimal("90"), **kwargs)
-    reversed_ = dealer_snapshot(raw_first=Decimal("90"), raw_second=Decimal("100"), **kwargs)
+    # ⚠️ `partial` و نه یک dict که با `**` باز شود: مقادیر این آرگومان‌ها
+    # سه نوع متفاوت‌اند (str، Decimal، datetime)، پس dict به `dict[str, object]`
+    # استنتاج می‌شود و mypy هر آرگومان را رد می‌کند. partial هم همان قصد را
+    # می‌رساند («بقیه‌ی ورودی‌ها عیناً یکی‌اند») و هم تایپ‌ها را نگه می‌دارد.
+    same_inputs = partial(dealer_snapshot, slug="tlyn", scale=Decimal("1"), fetched_at=FETCHED_AT)
+    forward = same_inputs(raw_first=Decimal("100"), raw_second=Decimal("90"))
+    reversed_ = same_inputs(raw_first=Decimal("90"), raw_second=Decimal("100"))
     assert forward.quotes[0].price_toman == reversed_.quotes[0].price_toman
     assert forward.terms.buy_fee_percent == reversed_.terms.buy_fee_percent
 
@@ -179,7 +184,7 @@ def test_two_rows_for_one_instrument_is_rejected() -> None:
     def row(value: int) -> Quote:
         return Quote(
             platform_slug="wallgold",
-            instrument="GOLD_18K",
+            instrument=Instrument.GOLD_18K,
             price_toman=value,
             raw_value=Decimal(value),
             raw_scale=Decimal("1"),
