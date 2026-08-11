@@ -77,7 +77,7 @@ function seedSettings(initial: PlatformSettingEntry[] = []): FakeSource {
 
 function authedRequest(method: string, body?: unknown): Request {
   const token = createSessionToken(SECRET, Date.now());
-  return new Request("https://mazane.online/api/admin-platform-settings", {
+  return new Request("https://tablo.gold/api/admin-platform-settings", {
     method,
     headers: {
       cookie: `${ADMIN_SESSION_COOKIE}=${token}`,
@@ -88,7 +88,7 @@ function authedRequest(method: string, body?: unknown): Request {
 }
 
 function anonRequest(method: string, body?: unknown): Request {
-  return new Request("https://mazane.online/api/admin-platform-settings", {
+  return new Request("https://tablo.gold/api/admin-platform-settings", {
     method,
     ...(body === undefined ? {} : { body: typeof body === "string" ? body : JSON.stringify(body) }),
   });
@@ -102,7 +102,7 @@ const VALID_ENTRIES: PlatformSettingEntry[] = [
 ];
 
 beforeEach(() => {
-  vi.stubEnv("MAZANE_ADMIN_SESSION_SECRET", SECRET);
+  vi.stubEnv("TABLO_ADMIN_SESSION_SECRET", SECRET);
 });
 
 afterEach(() => {

@@ -1,4 +1,4 @@
-# web — لایه‌ی نمایش مظنه آنلاین
+# web — لایه‌ی نمایش تابلو
 
 اپ TanStack Start (React 19، Vite، Tailwind 4، shadcn/ui، recharts، Nitro با
 هدف `node-server`). این لایه فقط **می‌خوانَد و رندر می‌کند**: هیچ فرمول
@@ -41,9 +41,9 @@ src/lib/home-data.ts تابع سروری صفحه‌ی اصلی (createServerFn)
 
 | متغیر | کاربرد |
 | --- | --- |
-| `MAZANE_REDIS_URL` | قیمت جاری (پیش‌فرض `redis://127.0.0.1:6379/0`) |
-| `MAZANE_DATABASE_URL` | بلاگ و تاریخچه‌ی نمودار |
-| `MAZANE_REVALIDATE_TOKEN` | بازاعتبارسنجی بلاگ |
+| `TABLO_REDIS_URL` | قیمت جاری (پیش‌فرض `redis://127.0.0.1:6379/0`) |
+| `TABLO_DATABASE_URL` | بلاگ و تاریخچه‌ی نمودار |
+| `TABLO_REVALIDATE_TOKEN` | بازاعتبارسنجی بلاگ |
 
 قطع هر کدام «کهنگی» است، نه خطا: صفحه ۲۰۰ می‌ماند و «آخرین به‌روزرسانی» را
 نشان می‌دهد (قاعده‌ی ۵).

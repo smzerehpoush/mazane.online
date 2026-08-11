@@ -1,70 +1,66 @@
 /**
  * صفحه‌ی دارایی — «هر دارایی فقط یک صفحه دارد» (بند ۱۳، تصمیم ۱۹).
  *
- * جدول هر سکوی پشتیبان را با **سه عدد آماده‌ی گردآورنده** نشان می‌دهد: مؤثر
- * خرید، مؤثر فروش، و قیمت مرجع همان سکو. هیچ فرمولی اینجا نیست (قاعده‌ی ۱)
- * و **هیچ عدد بین‌سکویی‌ای وجود ندارد** (قاعده‌ی ۴): هر عدد به سکوی خودش
- * منتسب است.
+ * جدول هر سکوی پشتیبان را با **سه عدد آماده‌ی گردآورنده** نشان می‌دهد:
+ * «قیمت» (پیش از کارمزد)، کارمزد خرید، کارمزد فروش. هیچ فرمولی اینجا نیست
+ * (قاعده‌ی ۱) و **هیچ عدد بین‌سکویی‌ای وجود ندارد** (قاعده‌ی ۴): هر عدد به
+ * سکوی خودش منتسب است.
  *
- * ترتیب همان تصمیم ۱۸: صعودی بر اساس مؤثر خرید؛ سکوهای «کارمزد نامشخص»
- * (فقط MID) در گروه جدا بعد از معلوم‌ها — قیمت میانی با مؤثرها هم‌مقایسه
- * نیست و قیمت مرجع هم برایشان جعل نمی‌شود. منبع قطع ⟸ ردیف با برچسب کهنگی،
- * نه خطا (قاعده‌ی ۵).
+ * ترتیب صعودی بر اساس **قیمت** (تصمیم مالک ۲۰۲۶-۰۸-۱۰؛ سند تصمیم ۰۰۰۲).
+ * گروه‌بندی دوطبقه‌ی قبلی حذف شد: تا وقتی ستون عدد «مؤثر خرید» بود، چهار
+ * سکوی کارمزدنامشخص عددی داشتند که با بقیه هم‌جنس نبود و ته جدول تبعید
+ * می‌شدند؛ حالا قیمت همه پیش-از-کارمزد است و مستقیم مقایسه می‌شود — فقط
+ * ستون کارمزدشان «—» است. منبع قطع ⟸ ردیف با برچسب کهنگی، نه خطا
+ * (قاعده‌ی ۵).
  */
 import { Madde5Bar } from "@/components/content/LegalNotice";
 import { ClosedBadges, MarketModelBadge, Staleness } from "@/components/content/RowParts";
-import { formatToman } from "@/lib/format";
+import { formatPercentPointsFa, formatToman } from "@/lib/format";
 import type { InstrumentListing } from "@/lib/prices";
 import {
-  effectiveBuyFor,
-  effectiveSellFor,
-  hasUnknownFee,
-  midFor,
-  referencePriceFor,
+  buyFeePercent,
+  compareByPrice,
+  priceToman,
+  sellFeePercent,
   type Row,
 } from "@/lib/rows";
 
-const COLUMN_COUNT = 5;
-
 /**
  * ⚠️ بند ۶.۴ (قاعده‌ی مکمل): مرتب‌سازی هیچ ورودی‌ای از فیلدهای معرف سکو
- * نمی‌گیرد — فقط قیمت مؤثر/میانی گردآورنده. نگهبان CI حضور نام آن فیلدها را
- * در این فایل هم قرمز می‌کند.
+ * نمی‌گیرد — فقط «قیمت» گردآورنده. نگهبان CI حضور نام آن فیلدها را در این
+ * فایل هم قرمز می‌کند.
  *
- * صادر شده چون سرصفحه‌ی مسیر (‎routes/$slug.tsx‎) دقیقاً همین گروه «معلوم‌ها»
- * را به `assetProductJsonLd` می‌دهد — پس عدد JSON-LD همان عدد رندرشده است،
- * بدون هیچ fetch جدا.
+ * صادر شده چون سرصفحه‌ی مسیر (‎routes/$slug.tsx‎) دقیقاً همین ردیف‌ها را به
+ * `assetProductJsonLd` می‌دهد — پس عدد JSON-LD همان عدد رندرشده است، بدون
+ * هیچ fetch جدا.
+ *
+ * `priced` و `unpriced` تنها تفکیک باقی‌مانده است و درباره‌ی **وجود عدد**
+ * است، نه درباره‌ی کارمزد: سکوی بی‌قیمت (قطع منبع یا دفتر سفارشِ یک‌سمته)
+ * چیزی برای مقایسه ندارد.
  */
 export function groupRows(
   rows: Row[],
   instrument: string,
-): { known: Row[]; unknown: Row[]; unpriced: Row[] } {
-  const known = rows
-    .filter((row) => !hasUnknownFee(row) && effectiveBuyFor(row, instrument) !== null)
-    .sort(
-      (a, b) =>
-        (effectiveBuyFor(a, instrument) as number) -
-        (effectiveBuyFor(b, instrument) as number),
-    );
-  const unknown = rows
-    .filter(hasUnknownFee)
-    .sort(
-      (a, b) =>
-        (midFor(a, instrument) ?? Number.POSITIVE_INFINITY) -
-        (midFor(b, instrument) ?? Number.POSITIVE_INFINITY),
-    );
-  const unpriced = rows.filter(
-    (row) => !hasUnknownFee(row) && effectiveBuyFor(row, instrument) === null,
-  );
-  return { known, unknown, unpriced };
+): { priced: Row[]; unpriced: Row[] } {
+  const priced = rows
+    .filter((row) => priceToman(row, instrument) !== null)
+    .sort(compareByPrice(instrument));
+  const unpriced = rows.filter((row) => priceToman(row, instrument) === null);
+  return { priced, unpriced };
 }
 
 const CELL = "px-3 py-3 text-xs tabular-nums sm:text-sm";
 const HEAD_CELL = "px-3 py-3 text-right font-medium";
 
-function PriceCell({ toman }: { toman: number | null }) {
+/**
+ * کارمزد تهی ⟸ «—»، هرگز «۰٪». تهی یعنی سکو اعلامش نکرده؛ صفر یعنی
+ * می‌دانیم کارمزدی نیست (داریک). این دو یکی نیستند.
+ */
+function FeeCell({ percent }: { percent: number | null }) {
   return (
-    <td className={CELL}>{toman === null ? "—" : `${formatToman(toman)} تومان`}</td>
+    <td data-fee className={CELL}>
+      {percent === null ? "—" : formatPercentPointsFa(percent)}
+    </td>
   );
 }
 
@@ -85,7 +81,7 @@ function PlatformCell({ row }: { row: Row }) {
   );
 }
 
-function KnownRow({
+function PricedRow({
   row,
   instrument,
   nowMs,
@@ -94,60 +90,18 @@ function KnownRow({
   instrument: string;
   nowMs: number;
 }) {
-  const reference = referencePriceFor(row, instrument);
+  const price = priceToman(row, instrument);
   return (
     <tr
       data-platform={row.platform.slug}
       className="transition-smooth border-t border-border/70 hover:bg-surface"
     >
       <PlatformCell row={row} />
-      <PriceCell toman={effectiveBuyFor(row, instrument)} />
-      <PriceCell toman={effectiveSellFor(row, instrument)} />
-      <td data-reference-price className={CELL}>
-        {reference === null ? "—" : `${formatToman(reference)} تومان`}
+      <td data-price className={CELL}>
+        {price === null ? "—" : `${formatToman(price)} تومان`}
       </td>
-      <td className="px-4 py-3 sm:px-6">
-        <Staleness updatedAt={row.updatedAt} nowMs={nowMs} />
-      </td>
-    </tr>
-  );
-}
-
-function UnknownFeeRow({
-  row,
-  instrument,
-  nowMs,
-}: {
-  row: Row;
-  instrument: string;
-  nowMs: number;
-}) {
-  const mid = midFor(row, instrument);
-  return (
-    <tr
-      data-platform={row.platform.slug}
-      className="transition-smooth border-t border-border/70 hover:bg-surface"
-    >
-      <PlatformCell row={row} />
-      <td colSpan={2} className={CELL}>
-        {mid === null ? (
-          "قیمت در دسترس نیست"
-        ) : (
-          <>
-            {formatToman(mid)} تومان{" "}
-            <span
-              title="کارمزد این سکو اعلام نشده است؛ این قیمت میانیِ بدون کارمزد است و با قیمت‌های مؤثر هم‌مقایسه نیست."
-              className="mid-price-note text-[11px] text-muted-foreground"
-            >
-              (قیمت میانی — بدون کارمزد)
-            </span>
-          </>
-        )}
-      </td>
-      {/* قیمت مرجع بدون هر دو سمت مؤثر جعل نمی‌شود. */}
-      <td data-reference-price className={CELL}>
-        —
-      </td>
+      <FeeCell percent={buyFeePercent(row)} />
+      <FeeCell percent={sellFeePercent(row)} />
       <td className="px-4 py-3 sm:px-6">
         <Staleness updatedAt={row.updatedAt} nowMs={nowMs} />
       </td>
@@ -182,15 +136,15 @@ export function AssetPage({
   rows: Row[];
   nowMs: number;
 }) {
-  const { known, unknown, unpriced } = groupRows(rows, listing.instrument);
+  const { priced, unpriced } = groupRows(rows, listing.instrument);
 
   return (
     <>
       <header className="mb-6">
         <h1 className="text-xl font-bold sm:text-2xl">قیمت {listing.name_fa}</h1>
         <p className="mt-2 text-[13px] leading-7 text-muted-foreground">
-          قیمت مؤثر خرید و فروش {listing.name_fa} در سکوهای آنلاین — با احتساب کارمزد،
-          نه قیمت اسمی.
+          قیمت اعلامی {listing.name_fa} در سکوهای آنلاین، همراه با کارمزد خرید و
+          فروش هر سکو — جدا از قیمت، نه پخته در آن.
           {listing.currency === "TOMAN" ? ` (تومان بر ${listing.unit_fa})` : null}
         </p>
       </header>
@@ -201,7 +155,7 @@ export function AssetPage({
             مقایسه‌ی سکوها
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            مرتب‌شده از ارزان‌ترین قیمت مؤثر خرید
+            مرتب‌شده از ارزان‌ترین قیمت — کارمزد در ستون‌های بعدی جداست
           </p>
         </div>
 
@@ -218,44 +172,23 @@ export function AssetPage({
                     سکو
                   </th>
                   <th scope="col" className={HEAD_CELL}>
-                    مؤثر خرید (می‌پردازید)
+                    قیمت
                   </th>
                   <th scope="col" className={HEAD_CELL}>
-                    مؤثر فروش (می‌گیرید)
+                    کارمزد خرید
                   </th>
                   <th scope="col" className={HEAD_CELL}>
-                    قیمت مرجع سکو
+                    کارمزد فروش
                   </th>
                   <th scope="col" className="px-4 py-3 text-right font-medium sm:px-6">
                     آخرین به‌روزرسانی
                   </th>
                 </tr>
               </thead>
-              {known.length > 0 ? (
+              {priced.length > 0 ? (
                 <tbody>
-                  {known.map((row) => (
-                    <KnownRow
-                      key={row.platform.slug}
-                      row={row}
-                      instrument={listing.instrument}
-                      nowMs={nowMs}
-                    />
-                  ))}
-                </tbody>
-              ) : null}
-              {unknown.length > 0 ? (
-                <tbody data-group="unknown-fee">
-                  <tr className="border-t border-border/70 bg-surface-2/60">
-                    <th
-                      colSpan={COLUMN_COUNT}
-                      scope="colgroup"
-                      className="px-4 py-2 text-right text-[11px] font-medium text-muted-foreground sm:px-6"
-                    >
-                      کارمزد نامشخص — فقط قیمت میانی
-                    </th>
-                  </tr>
-                  {unknown.map((row) => (
-                    <UnknownFeeRow
+                  {priced.map((row) => (
+                    <PricedRow
                       key={row.platform.slug}
                       row={row}
                       instrument={listing.instrument}
@@ -276,8 +209,9 @@ export function AssetPage({
         )}
 
         <p className="page-lead border-t border-border/70 px-4 py-4 text-[11px] leading-6 text-muted-foreground sm:px-6">
-          «قیمت مرجع سکو» عددی است که <strong>همان سکو</strong> را نمایندگی می‌کند —
-          سکوی تک‌قیمتی همان تک‌عددش، سکوی دوقیمتی میانگین دو عدد خودش؛ مظنه آنلاین هیچ
+          ستون «قیمت» عدد اعلامی <strong>همان سکو</strong> است، پیش از کارمزد؛ سکویی
+          که خودش دو عدد جدا برای خرید و فروش می‌دهد، میانگین همان دو ثبت می‌شود.
+          کارمزد «—» یعنی سکو آن را اعلام نکرده، نه اینکه صفر است. تابلو هیچ
           میانگین بین‌سکویی‌ای محاسبه یا منتشر نمی‌کند.
         </p>
       </section>

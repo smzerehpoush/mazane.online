@@ -21,7 +21,7 @@ from decimal import Decimal
 import httpx
 import pytest
 
-from mazane_collector.content.generator import (
+from tablo_collector.content.generator import (
     GAP_INSTRUMENT,
     GAP_LOOKBACK,
     MECHANICAL_MODEL,
@@ -32,8 +32,8 @@ from mazane_collector.content.generator import (
     GeminiClient,
     generate_launch_drafts,
 )
-from mazane_collector.content.generator import main as generate_main
-from mazane_collector.models import (
+from tablo_collector.content.generator import main as generate_main
+from tablo_collector.models import (
     DataPolicy,
     FeeSource,
     Instrument,
@@ -43,8 +43,8 @@ from mazane_collector.models import (
     Quote,
     Side,
 )
-from mazane_collector.retention import HourlyRollup, SourceKind, hour_floor
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.retention import HourlyRollup, SourceKind, hour_floor
+from tablo_collector.store.memory import InMemoryStore
 
 from test_content_queue import FakeContentGateway
 
@@ -77,17 +77,16 @@ def _snapshot(
     min_order_toman: int | None = None,
     sell_enabled: bool = True,
 ) -> PlatformSnapshot:
-    quotes = tuple(
+    quotes = (
         Quote(
             platform_slug=slug,
             instrument=Instrument.GOLD_18K,
-            side=side,
+            side=Side.PRICE,
             price_toman=1_000_000,
             raw_value=Decimal(1),
             raw_scale=Decimal(1),
             fetched_at=NOW,
-        )
-        for side in (Side.BUY, Side.SELL)
+        ),
     )
     terms = PlatformTerms(
         platform_slug=slug,
@@ -331,7 +330,7 @@ def test_cli_without_api_key_fails_gracefully(
     """معیار قرارداد: بدون GEMINI_API_KEY خطای فارسی روشن، خروج تمیز (کد ۲)،
     بدون traceback — پیش از هر تماس پایگاه/شبکه."""
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-    monkeypatch.setattr(sys, "argv", ["mazane-generate"])
+    monkeypatch.setattr(sys, "argv", ["tablo-generate"])
 
     with pytest.raises(SystemExit) as excinfo:
         generate_main()
@@ -345,7 +344,7 @@ def test_cli_without_api_key_fails_gracefully(
 def test_cli_rejects_unknown_arguments(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["mazane-generate", "--chert"])
+    monkeypatch.setattr(sys, "argv", ["tablo-generate", "--chert"])
 
     with pytest.raises(SystemExit) as excinfo:
         generate_main()

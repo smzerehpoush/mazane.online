@@ -1,5 +1,5 @@
 -- مهاجرت ۰۰۴ — بلیت ۵: مدل معاملاتی سکو + جدول مراجع قیمت.
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/004_references.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/004_references.sql
 
 -- داریک دفتر سفارش است نه OTC (بند ۹.۲ نکته‌ی ۵) — لایه‌ی وب از همین
 -- ستون برچسب «دفتر سفارش» می‌زند. بقیه‌ی سکوها OTC اند.

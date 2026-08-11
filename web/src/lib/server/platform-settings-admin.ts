@@ -13,8 +13,8 @@
  * می‌خواهد.
  *
  * ⚠️ این فایل هرگز به ردیس نمی‌نویسد — نوشتن پنل فقط پستگرس است؛ گردآورنده
- * خودش با تأخیر ~۲۰ ثانیه `mazane:chart_config` را همگام می‌کند و override
- * نشانی معرف را روی رجیستری زنده می‌نشاند (`mazane_collector.settings`).
+ * خودش با تأخیر ~۲۰ ثانیه `tablo:chart_config` را همگام می‌کند و override
+ * نشانی معرف را روی رجیستری زنده می‌نشاند (`tablo_collector.settings`).
  */
 import "@tanstack/react-start/server-only";
 

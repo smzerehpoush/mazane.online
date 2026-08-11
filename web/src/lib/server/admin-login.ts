@@ -64,8 +64,8 @@ export async function adminLoginResponse(request: Request): Promise<Response> {
   registerSuccessfulLogin();
   const cookie = buildSessionCookie();
   if (cookie === null) {
-    // پیکربندی ناقص سرور (MAZANE_ADMIN_SESSION_SECRET نیست) — نه خطای کاربر.
-    console.error("admin-login: MAZANE_ADMIN_SESSION_SECRET تنظیم نشده");
+    // پیکربندی ناقص سرور (TABLO_ADMIN_SESSION_SECRET نیست) — نه خطای کاربر.
+    console.error("admin-login: TABLO_ADMIN_SESSION_SECRET تنظیم نشده");
     return json({ error: "پیکربندی سرور ناقص است" }, 500);
   }
 

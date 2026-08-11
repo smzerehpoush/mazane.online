@@ -9,7 +9,7 @@
  */
 import type { ReactNode } from "react";
 
-import { SiteHeader } from "@/components/mazane/SiteHeader";
+import { SiteHeader } from "@/components/tablo/SiteHeader";
 import { legalNote } from "@/lib/site-content";
 
 export function PageShell({

@@ -1,0 +1,59 @@
+"""آداپتر طلاسی — `api.talasea.ir/api/market/getGoldPrice`.
+
+نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۳ و ۳.۶):
+
+- `price` تومان بر **میلی‌گرم** است ⟸ ضریب صریح ×۱۰۰۰ (بند ۴ سند معماری).
+- کارمزد از خود API می‌آید: `fee` (و `feeTable` پلکانی، برای ماشین‌حساب
+  بلیت‌های بعدی) ⟸ `fee_source = API`.
+- `disableBuy` / `disableSell` وضعیت باز بودن هر سمت است — قابلیتی که هیچ
+  رقیبی ندارد (بند ۵ سند معماری).
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+from typing import Any
+
+from ..models import (
+    FeeSource,
+    Instrument,
+    PlatformSnapshot,
+)
+from ..pipeline import AdapterError
+from .common import known_fee_snapshot
+
+TALASEA_ENDPOINT = "https://api.talasea.ir/api/market/getGoldPrice"
+
+
+class TalaseaAdapter:
+    slug = "talasea"
+    instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
+    endpoint = TALASEA_ENDPOINT
+    # ضریب صریح این منبع: تومان بر میلی‌گرم، ×۱۰۰۰ (سند تحقیق ۰۱، بند ۳.۳).
+    scale = Decimal("1000")
+
+    def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
+        if not isinstance(payload, dict):
+            raise AdapterError("طلاسی: payload یک شیء JSON نیست")
+
+        raw_price = payload.get("price")
+        if raw_price is None:
+            raise AdapterError("طلاسی: قیمت در payload تهی است")
+        try:
+            raw_value = Decimal(str(raw_price))
+            fee = Decimal(str(payload["fee"]))
+        except (InvalidOperation, KeyError) as exc:
+            raise AdapterError(f"طلاسی: payload نامعتبر: {exc!r}") from exc
+
+        return known_fee_snapshot(
+            slug=self.slug,
+            raw_price=raw_value,
+            scale=self.scale,
+            fetched_at=fetched_at,
+            buy_fee=fee,
+            sell_fee=fee,
+            fee_source=FeeSource.API,
+            buy_enabled=not payload.get("disableBuy", False),
+            sell_enabled=not payload.get("disableSell", False),
+        )

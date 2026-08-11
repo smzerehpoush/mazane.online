@@ -1,5 +1,5 @@
 -- مهاجرت ۰۰۲ — چندمنبعی (بلیت ۳): پرچم سرکوب چک میانه + فراداده‌ی سکوها.
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/002_multi_source.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/002_multi_source.sql
 
 -- رد چک میانه‌ی تقاطعی (قاعده‌ی ۳ قراردادها): در تاریخچه می‌ماند، منتشر نمی‌شود.
 alter table quotes

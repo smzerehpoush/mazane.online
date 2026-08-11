@@ -16,15 +16,15 @@ import logging
 
 import pytest
 
-from mazane_collector.content.gateway import ContentGateway, PostRow
-from mazane_collector.content.publisher import drain_pass, publish_due
-from mazane_collector.content.queue import (
+from tablo_collector.content.gateway import ContentGateway, PostRow
+from tablo_collector.content.publisher import drain_pass, publish_due
+from tablo_collector.content.queue import (
     QUEUE_ALERT_DAYS,
     check_queue_depth,
     enqueue_draft,
 )
-from mazane_collector.content.retract import RetractOutcome, retract_post
-from mazane_collector.slugs import (
+from tablo_collector.content.retract import RetractOutcome, retract_post
+from tablo_collector.slugs import (
     InvalidSlugError,
     ReservedSlugError,
     SlugCollisionError,

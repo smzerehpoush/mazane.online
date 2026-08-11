@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mazane-collector"
+name = "tablo-collector"
 version = "0.1.0"
 description = "گردآورنده‌ی مظنه آنلاین — آداپترها، نرمال‌سازی و ذخیره‌ی قیمت مؤثر"
 requires-python = ">=3.12"
@@ -23,12 +23,12 @@ dev = [
 ]
 
 [project.scripts]
-mazane-collector = "mazane_collector.main:main"
+tablo-collector = "tablo_collector.main:main"
 # بلیت ۱۳ — خط لوله‌ی محتوا: صف کردن دستی پیش‌نویس و پس‌گیری تک‌فرمانی.
-mazane-enqueue = "mazane_collector.content.queue:main"
-mazane-retract = "mazane_collector.content.retract:main"
+tablo-enqueue = "tablo_collector.content.queue:main"
+tablo-retract = "tablo_collector.content.retract:main"
 # بلیت ۱۴ — مولد محتوای لپ‌تاپ (جمینای): کوئری داده ⟸ دروازه ⟸ صف.
-mazane-generate = "mazane_collector.content.generator:main"
+tablo-generate = "tablo_collector.content.generator:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

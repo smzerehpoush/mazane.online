@@ -27,7 +27,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-import type { HomePageData } from "@/components/mazane/HomePage";
+import type { HomePageData } from "@/components/tablo/HomePage";
 import { assembleHomeData } from "./page-data";
 import { getChartPlatforms } from "./server/chart-config-source";
 import { listPublishedPosts } from "./server/blog-source";
@@ -35,7 +35,7 @@ import { getPlatformHistory } from "./server/history-source";
 import { fetchRows } from "./server/price-source";
 import { getViewCounts } from "./server/view-counter";
 
-/** نام قدیمی همان قرارداد — مالک شکل، نماست (`components/mazane/HomePage`). */
+/** نام قدیمی همان قرارداد — مالک شکل، نماست (`components/tablo/HomePage`). */
 export type HomeData = HomePageData;
 
 export const loadHomeData = createServerFn({ method: "GET" }).handler(async (): Promise<HomeData> =>

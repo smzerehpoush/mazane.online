@@ -10,13 +10,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from mazane_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
-from mazane_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
-from mazane_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
-from mazane_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
-from mazane_collector.pipeline import collect_round
-from mazane_collector.platforms import PLATFORMS
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
+from tablo_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
+from tablo_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
+from tablo_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
+from tablo_collector.pipeline import collect_round
+from tablo_collector.platforms import PLATFORMS
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)

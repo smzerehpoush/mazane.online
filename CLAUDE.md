@@ -1,4 +1,4 @@
-# mazane.online
+# tablo.gold
 
 ## Agent skills
 

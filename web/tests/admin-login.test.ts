@@ -34,15 +34,15 @@ const PASSWORD = "correct-horse-battery-staple";
 const SECRET = "test-session-secret";
 
 function loginRequest(body: unknown): Request {
-  return new Request("https://mazane.online/api/admin-login", {
+  return new Request("https://tablo.gold/api/admin-login", {
     method: "POST",
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
 
 beforeEach(() => {
-  vi.stubEnv("MAZANE_ADMIN_PASSWORD_HASH", hashPassword(PASSWORD));
-  vi.stubEnv("MAZANE_ADMIN_SESSION_SECRET", SECRET);
+  vi.stubEnv("TABLO_ADMIN_PASSWORD_HASH", hashPassword(PASSWORD));
+  vi.stubEnv("TABLO_ADMIN_SESSION_SECRET", SECRET);
   resetLoginAttempts();
 });
 
@@ -58,7 +58,7 @@ describe("POST /api/admin-login", () => {
 
     const cookie = response.headers.get("set-cookie");
     expect(cookie).not.toBeNull();
-    expect(cookie).toContain("mazane_admin_session=");
+    expect(cookie).toContain("tablo_admin_session=");
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("Secure");
     expect(cookie).toContain("SameSite=Strict");
@@ -111,7 +111,7 @@ describe("POST /api/admin-login", () => {
   });
 
   it("هش رمز تنظیم‌نشده ⟸ همیشه ۴۰۱ (fail closed)", async () => {
-    vi.stubEnv("MAZANE_ADMIN_PASSWORD_HASH", "");
+    vi.stubEnv("TABLO_ADMIN_PASSWORD_HASH", "");
     const response = await adminLoginResponse(loginRequest({ password: PASSWORD }));
     expect(response.status).toBe(401);
   });
@@ -134,7 +134,7 @@ describe("POST /api/admin-logout", () => {
     const response = adminLogoutResponse();
     expect(response.status).toBe(204);
     const cookie = response.headers.get("set-cookie");
-    expect(cookie).toContain("mazane_admin_session=;");
+    expect(cookie).toContain("tablo_admin_session=;");
     expect(cookie).toContain("Max-Age=0");
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("Secure");
@@ -188,10 +188,10 @@ describe("hasValidSession — بررسی نشست از هدر خام Cookie", ()
     expect(hasValidSession("some_other_cookie=abc")).toBe(false);
   });
 
-  it("MAZANE_ADMIN_SESSION_SECRET تنظیم‌نشده ⟸ همیشه نامعتبر (fail closed)", () => {
+  it("TABLO_ADMIN_SESSION_SECRET تنظیم‌نشده ⟸ همیشه نامعتبر (fail closed)", () => {
     const cookie = buildSessionCookie(1000);
     const header = `${ADMIN_SESSION_COOKIE}=${cookieValue(cookie as string)}`;
-    vi.stubEnv("MAZANE_ADMIN_SESSION_SECRET", "");
+    vi.stubEnv("TABLO_ADMIN_SESSION_SECRET", "");
     expect(hasValidSession(header, 1000)).toBe(false);
   });
 });

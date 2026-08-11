@@ -1,7 +1,7 @@
 /**
  * نمای مسیر تخت ‎/<slug>‎ — صفحه‌ی دارایی یا صفحه‌ی سکو — و سرصفحه‌ی آن.
  *
- * **بدون هیچ وابستگی به روتر** (همان دلیل `mazane/HomePage.tsx`): مرز تست وب
+ * **بدون هیچ وابستگی به روتر** (همان دلیل `tablo/HomePage.tsx`): مرز تست وب
  * «استور seed شده ⟸ خروجی رندرشده» است و مسیر تنکستک بدون بستر روتر رندر
  * نمی‌شود. مسیر فقط سیم‌کشی می‌ماند.
  *
@@ -72,16 +72,17 @@ interface HeadTag {
 /**
  * اسکریپت‌های داده‌ی ساخت‌یافته‌ی همین صفحه (بند ۶.۵).
  *
- * `Product` + `AggregateOffer` فقط صفحه‌ی دارایی، و از **همان** گروه
- * «معلوم‌ها»یی که جدول رندر می‌کند (`groupRows` مشترک است) — پس عدد JSON-LD
- * با عدد قابل‌مشاهده یکی است، بدون هیچ fetch جدا. برای سکو هیچ Product/Offer
+ * `Product` + `AggregateOffer` فقط صفحه‌ی دارایی، و از **همان** ردیف‌های
+ * قیمت‌داری که جدول رندر می‌کند (`groupRows` مشترک است) — پس عدد JSON-LD
+ * با عدد قابل‌مشاهده یکی است، بدون هیچ fetch جدا. این همخوانی از وقتی
+ * `lowPrice` به «قیمت» سوئیچ شد (سند تصمیم ۰۰۰۲) الزام سخت‌تری است. برای سکو هیچ Product/Offer
  * ساخته نمی‌شود: ما فروشنده نیستیم؛ به‌جایش `WebPage` با `about` از نوع
  * `Organization` (نام سکو + website_url خودش) — بلیت ۲۹، بدون @id مستقل.
  */
 export function slugJsonLdTags(data: SlugPageData): HeadTag[] {
   if (data.kind === "instrument") {
-    const { known } = groupRows(data.rows, data.listing.instrument);
-    const product = assetProductJsonLd(data.listing, known);
+    const { priced } = groupRows(data.rows, data.listing.instrument);
+    const product = assetProductJsonLd(data.listing, priced);
     const tags: HeadTag[] = [
       {
         type: "application/ld+json",
@@ -119,12 +120,12 @@ export function slugHead(data: SlugPageData | undefined) {
   const [title, description, slug] =
     data.kind === "instrument"
       ? ([
-          `قیمت ${data.listing.name_fa} در سکوهای آنلاین — مظنه آنلاین`,
+          `قیمت ${data.listing.name_fa} در سکوهای آنلاین — تابلو`,
           `مقایسه‌ی قیمت مؤثر خرید و فروش ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران — با احتساب کارمزد و قیمت مرجع هر سکو.`,
           data.listing.slug,
         ] as const)
       : ([
-          `${data.platform.name_fa} — شرایط، کارمزد و قیمت‌ها — مظنه آنلاین`,
+          `${data.platform.name_fa} — شرایط، کارمزد و قیمت‌ها — تابلو`,
           `شرایط تجاری ${data.platform.name_fa}: کارمزد خرید و فروش با منبع، تحویل فیزیکی، هویت حقوقی و قیمت‌های مؤثر لحظه‌ای.`,
           data.platform.slug,
         ] as const);

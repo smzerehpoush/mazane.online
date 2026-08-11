@@ -1,5 +1,5 @@
 -- مهاجرت ۰۱۰ — جدول پست‌های بلاگ (بلیت ۱۲).
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/010_blog.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/010_blog.sql
 --
 -- بدنه «مارک‌داون» است (تصمیم بلیت ۱۲؛ رندر امن سمت وب در web/lib/markdown.tsx —
 -- نه HTML خام). اسلاگ لاتینِ تخت زیر فضای رزروشده‌ی /blog/ (بند ۱۳، تصمیم ۱۱).

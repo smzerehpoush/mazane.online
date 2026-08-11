@@ -21,7 +21,7 @@ import { Breadcrumbs, PageShell } from "@/components/content/PageShell";
 import { SITE_URL } from "@/lib/site";
 import { breadcrumbJsonLd } from "@/lib/structured-data";
 
-const TITLE = "مظنه چیست؟ مظنه یا مضنه؟ — مظنه آنلاین";
+const TITLE = "مظنه چیست؟ مظنه یا مضنه؟ — تابلو";
 const DESCRIPTION =
   "مظنه در بازار طلا یعنی قیمت یک مثقال طلای آب‌شده — مبنای قیمت‌گذاری طلا در بازار ایران. املای درست «مظنه» است و «مضنه» غلط املایی رایج همان واژه.";
 
@@ -92,10 +92,10 @@ export function MazaneChist() {
         </p>
 
         <h2 className="mt-9 text-lg font-semibold text-foreground">
-          مظنه در مظنه آنلاین
+          مظنه در تابلو
         </h2>
         <p className="mt-3">
-          مظنه آنلاین خودش هیچ نرخ مظنه یا میانگین بازاری اعلام نمی‌کند؛ هر عدد این سایت
+          تابلو خودش هیچ نرخ مظنه یا میانگین بازاری اعلام نمی‌کند؛ هر عدد این سایت
           قیمت اعلامی یک سکوی مشخص در لحظه‌ی مشخص است. کاری که می‌کنیم مقایسه است:{" "}
           <strong className="font-semibold text-foreground">
             قیمت مؤثر خرید و فروش

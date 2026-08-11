@@ -13,14 +13,14 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.milli import (
+from tablo_collector.adapters.milli import (
     MILLI_ENDPOINT,
     MILLI_FEE_OBSERVED_AT,
     MilliAdapter,
 )
-from mazane_collector.models import FeeSource, Instrument, Side
-from mazane_collector.pipeline import AdapterError, collect_once
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.models import FeeSource, Instrument, Side
+from tablo_collector.pipeline import AdapterError, collect_once
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "milli_price_external.json"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -47,10 +47,9 @@ async def test_fixture_payload_is_stored_with_explicit_x100_scale() -> None:
     assert stored is not None
     assert stored.platform_slug == "milli"
 
-    by_side = {quote.side: quote for quote in stored.quotes}
-    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
-    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
+    (price,) = stored.quotes
+    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
+    assert price.side is Side.PRICE
 
     # مقدار خام و ضریب صریح آداپتر — میلی ریال بر میلی‌گرم، ×۱۰۰
     # (سند تحقیق ۰۱، بند ۳.۳).
@@ -60,10 +59,8 @@ async def test_fixture_payload_is_stored_with_explicit_x100_scale() -> None:
         assert quote.raw_scale == Decimal("100")
 
     # ریاضی مقیاس: 185380 × 100 = 18,538,000 تومان بر گرم.
-    assert by_side[Side.MID].price_toman == 18538000
+    assert price.price_toman == 18538000
     # کارمزد دستی ۰٫۵٪ هر سمت (سند تحقیق ۰۱، بند ۳.۴).
-    assert by_side[Side.BUY].price_toman == 18630690  # 18538000 × 1.005
-    assert by_side[Side.SELL].price_toman == 18445310  # 18538000 × 0.995
 
 
 async def test_manual_fee_is_labeled_with_observation_date() -> None:

@@ -9,14 +9,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from mazane_collector.models import DataPolicy, Platform
-from mazane_collector.settings import (
+from tablo_collector.models import DataPolicy, Platform
+from tablo_collector.settings import (
     ChartConfigEntry,
     PlatformSettingRow,
     chart_config_from_settings,
     platforms_with_referral_overrides,
 )
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.store.memory import InMemoryStore
 
 NOW = datetime(2026, 8, 7, 9, 30, 0, tzinfo=UTC)
 
@@ -208,7 +208,7 @@ def test_referral_override_applies_regardless_of_listing_status() -> None:
 
 async def test_referral_override_reaches_listed_platforms_via_save_platforms() -> None:
     """مسیر کامل بلیت ۲۳: تنظیمات پنل ⟸ merge با رجیستری ⟸ همان مسیر
-    `save_platforms` که `platform_loop` هر نوبت صدا می‌زند ⟸ `mazane:listed`
+    `save_platforms` که `platform_loop` هر نوبت صدا می‌زند ⟸ `tablo:listed`
     (اینجا: `store.get_listed_platforms`) — بدون کلید ردیس تازه، و بدون
     اثر روی سکوهایی که override ندارند."""
     gateway = FakeSettingsGateway(

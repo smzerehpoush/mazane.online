@@ -1,6 +1,8 @@
-"""مرز گردآورنده — بلیت ۷: قیمت مرجع هر سکو، موجودیت دارایی با دروازه‌ی
-انتشار «دست‌کم دو سکوی پشتیبان»، و جدول مرکزی اسلاگ با قید یکتایی و
-کلمات رزرو (بند ۱۳، تصمیم‌های ۱۰، ۱۱ و ۱۹).
+"""مرز گردآورنده — بلیت ۷: موجودیت دارایی با دروازه‌ی انتشار «دست‌کم دو
+سکوی پشتیبان» و جدول مرکزی اسلاگ با قید یکتایی و کلمات رزرو (بند ۱۳،
+تصمیم‌های ۱۰ و ۱۱).
+
+قاعده‌ی «یک قیمت به‌ازای هر سکو» در `test_one_price_per_platform.py` است.
 
 مثل بقیه‌ی مرز گردآورنده: payload فیکسچر ⟸ آنچه در استور (فیک
 درون‌حافظه‌ای) ذخیره شده. هیچ تماس شبکه‌ای نیست.
@@ -8,25 +10,19 @@
 
 import json
 from datetime import UTC, datetime
-from decimal import Decimal
 
 import pytest
 
-from mazane_collector.adapters.common import (
-    dealer_snapshot,
-    one_sided_book_snapshot,
-    unknown_fee_snapshot,
-)
-from mazane_collector.instruments import (
+from tablo_collector.instruments import (
     INSTRUMENTS,
     PUBLISH_GATE_MIN_PLATFORMS,
     InstrumentListing,
     build_listings,
 )
-from mazane_collector.models import Instrument, Side
-from mazane_collector.pipeline import collect_round
-from mazane_collector.platforms import PLATFORMS
-from mazane_collector.slugs import (
+from tablo_collector.models import Instrument
+from tablo_collector.pipeline import collect_round
+from tablo_collector.platforms import PLATFORMS
+from tablo_collector.slugs import (
     PUBLIC_SLUGS,
     RESERVED_WORDS,
     STATIC_PAGE_SLUGS,
@@ -37,7 +33,7 @@ from mazane_collector.slugs import (
     SlugRegistry,
     build_registry,
 )
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.store.memory import InMemoryStore
 
 from test_full_roster_round import (
     ALL_ADAPTERS,
@@ -47,93 +43,6 @@ from test_full_roster_round import (
 )
 
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
-
-
-# ――― قیمت مرجع هر سکو = میانگین مؤثر خرید و فروش خودش (تصمیم ۱۹) ―――
-
-
-async def test_reference_price_is_mean_of_platforms_own_effective_buy_and_sell() -> None:
-    """سکوی دوقیمتی: قیمت مرجع ذخیره‌شده دقیقاً میانگین مؤثر خرید و فروش
-    **همان سکو** است (گرد نیم‌بالا) — هیچ عدد دیگری نه. `reference_prices_toman`
-    فقط سطر MEAN را انتخاب می‌کند، پس JSON و جدول `quotes` نمی‌توانند
-    واگرا شوند."""
-    store = InMemoryStore()
-    await collect_round(
-        ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT
-    )
-
-    for slug in KNOWN_FEE_LISTED:
-        snapshot = await store.get_snapshot(slug)
-        assert snapshot is not None
-        buy = next(q.price_toman for q in snapshot.quotes if q.side is Side.BUY)
-        sell = next(q.price_toman for q in snapshot.quotes if q.side is Side.SELL)
-        expected = int(
-            (Decimal(buy + sell) / 2).quantize(Decimal("1"), rounding="ROUND_HALF_UP")
-        )
-        assert snapshot.reference_prices_toman == {"GOLD_18K": expected}
-        mean = next(q for q in snapshot.quotes if q.side is Side.MEAN)
-        assert mean.price_toman == expected
-        assert mean.platform_slug == slug  # منتسب به همین سکو، نه هیچ‌جای دیگر
-
-
-async def test_single_price_platform_reference_price_is_its_only_number() -> None:
-    """سکوی تک‌قیمتی: همان تک‌عددی که منتشر می‌کند قیمت مرجع اوست (قاعده‌ی
-    قطعی صاحب کسب‌وکار ۲۰۲۶-۰۸-۰۶) — حتی وقتی کارمزدش نامعلوم است.
-
-    این جعل نیست: هیچ کارمزدی روی عدد نرفته و هیچ سطر BUY/SELL ساخته نشده؛
-    فقط همان عدد با برچسب «نماینده‌ی این سکو» ثبت می‌شود تا خطش روی نمودار
-    ۲۴ ساعته وجود داشته باشد."""
-    store = InMemoryStore()
-    await collect_round(
-        ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT
-    )
-    for slug in UNKNOWN_FEE_LISTED:
-        snapshot = await store.get_snapshot(slug)
-        assert snapshot is not None
-        mid = next(q.price_toman for q in snapshot.quotes if q.side is Side.MID)
-        assert snapshot.reference_prices_toman == {"GOLD_18K": mid}
-        assert not any(q.side in (Side.BUY, Side.SELL) for q in snapshot.quotes)
-
-    mid_only = unknown_fee_snapshot(
-        slug="digikala",
-        raw_mid=Decimal("18520000"),
-        scale=Decimal("1"),
-        fetched_at=FETCHED_AT,
-    )
-    assert mid_only.reference_prices_toman == {"GOLD_18K": 18520000}
-    mean = next(q for q in mid_only.quotes if q.side is Side.MEAN)
-    # مقدار خام و ضریب همان سطر MID اند — چیزی محاسبه نشده که بازسازی‌ناپذیر باشد.
-    assert (mean.raw_value, mean.raw_scale) == (Decimal("18520000"), Decimal("1"))
-
-
-async def test_reference_price_absent_for_one_sided_order_book() -> None:
-    """دفتر سفارش یک‌طرفه هیچ «عدد نماینده»ای ندارد: نه دو عدد که میانگینشان
-    را بگیریم، نه عددی دوطرفه ⟸ قیمت مرجع غایب می‌ماند و از یک سمتِ تنها
-    جعل نمی‌شود."""
-    one_sided = one_sided_book_snapshot(
-        slug="daric",
-        side=Side.BUY,
-        raw_value=Decimal("18579884"),
-        scale=Decimal("1"),
-        fetched_at=FETCHED_AT,
-    )
-    assert one_sided.reference_prices_toman == {}
-    assert [q.side for q in one_sided.quotes] == [Side.BUY]
-
-
-def test_reference_price_serialized_in_canonical_json() -> None:
-    """قرارداد با وب: JSON کانونی اسنپ‌شات (همان که ردیس نگه می‌دارد) کلید
-    `reference_prices_toman` را حمل می‌کند — وب فقط می‌خواند، حساب نمی‌کند."""
-    snapshot = dealer_snapshot(
-        slug="ecogold",
-        raw_first=Decimal("18436000"),
-        raw_second=Decimal("18398000"),
-        scale=Decimal("1"),
-        fetched_at=FETCHED_AT,
-    )
-    payload = json.loads(snapshot.model_dump_json())
-    # میانگین ۱۸٬۴۳۶٬۰۰۰ و ۱۸٬۳۹۸٬۰۰۰ = ۱۸٬۴۱۷٬۰۰۰
-    assert payload["reference_prices_toman"] == {"GOLD_18K": 18417000}
 
 
 # ――― موجودیت دارایی + دروازه‌ی انتشار «دست‌کم دو سکو» (تصمیم ۱۰) ―――
@@ -191,7 +100,7 @@ def test_publish_gate_requires_at_least_two_listed_platforms() -> None:
 
 
 async def test_instruments_payload_shape_is_web_contract() -> None:
-    """قرارداد `mazane:instruments` با `web/lib/prices.ts`: همین کلیدها،
+    """قرارداد `tablo:instruments` با `web/lib/prices.ts`: همین کلیدها،
     وب هیچ مشتقی نمی‌سازد — دروازه فقط از پرچم `published` خوانده می‌شود."""
     store = InMemoryStore()
     await collect_round(

@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { HomePage } from "../src/components/mazane/HomePage";
+import { HomePage } from "../src/components/tablo/HomePage";
 import { fa } from "../src/lib/site-content";
 import type { PlatformHistory } from "../src/lib/history";
 import { REGISTRY_PLATFORMS } from "../src/lib/registry";
@@ -65,26 +65,27 @@ function srcOf(relative: string): string {
   return readFileSync(join(__dirname, "..", relative), "utf8");
 }
 
-describe("صفحه‌ی اصلی — جدول چهارستونی مقایسه", () => {
-  it("وال‌گلد، طلاسی و میلی را با قیمت مؤثر و ارقام فارسی نشان می‌دهد", async () => {
+describe("صفحه‌ی اصلی — جدول قیمت و کارمزد", () => {
+  it("وال‌گلد، طلاسی و میلی را با «قیمت» خودشان و ارقام فارسی نشان می‌دهد", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("وال‌گلد");
     expect(html).toContain("طلاسی");
     expect(html).toContain("میلی");
-    expect(html).toContain("۱۸٬۷۰۴٬۰۵۵"); // مؤثر خرید وال‌گلد
-    expect(html).toContain("۱۸٬۷۱۵٬۳۰۰"); // مؤثر خرید طلاسی
-    expect(html).toContain("۱۸٬۶۳۰٬۶۹۰"); // مؤثر خرید میلی
-    expect(html).toContain("۱۸٬۴۴۵٬۳۱۰"); // مؤثر فروش میلی
+    // عدد اعلامی خود سکو، پیش از کارمزد — نه ضربِ mid×(1±f) (سند تصمیم ۰۰۰۲).
+    expect(html).toContain("۱۸٬۶۱۱٬۰۰۰"); // وال‌گلد
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // طلاسی
+    expect(html).toContain("۱۸٬۵۳۸٬۰۰۰"); // میلی
   });
 
-  it("هر ردیف دقیقاً چهار ستون دارد: خرید، فروش و دکمه‌ی خروجی کنار نام سکو", async () => {
+  it("هر ردیف پنج ستون دارد: قیمت، دو کارمزد و دکمه‌ی خروجی کنار نام سکو", async () => {
     const html = await renderHome(healthyStore());
     const cells = cellsOf(rowOf(html, "wallgold"));
-    expect(cells).toHaveLength(4);
+    expect(cells).toHaveLength(5);
     expect(cells[0]).toContain("وال‌گلد");
-    expect(cells[1]).toContain("۱۸٬۷۰۴٬۰۵۵"); // ستون قیمت خرید = مؤثر خرید
-    expect(cells[2]).toContain("۱۸٬۵۱۷٬۹۴۵"); // ستون قیمت فروش = مؤثر فروش
-    expect(cells[3]).toContain('href="/go/wallgold"');
+    expect(cells[1]).toContain("۱۸٬۶۱۱٬۰۰۰"); // ستون قیمت — پیش از کارمزد
+    expect(cells[2]).toContain("۰٫۵٪"); // کارمزد خرید
+    expect(cells[3]).toContain("۰٫۵٪"); // کارمزد فروش
+    expect(cells[4]).toContain('href="/go/wallgold"');
   });
 
   it("نام سکو پیوند داخلی به مسیر تخت خودش است، جدا از دکمه‌ی خروجی (بلیت ۲۸)", async () => {
@@ -93,35 +94,40 @@ describe("صفحه‌ی اصلی — جدول چهارستونی مقایسه", 
     // سلول نام: پیوند داخلی به /wallgold، نه به /go/wallgold.
     expect(cells[0]).toContain('href="/wallgold"');
     expect(cells[0]).not.toContain('href="/go/wallgold"');
-    // دکمه‌ی خروجی همچنان دست‌نخورده در سلول چهارم است.
-    expect(cells[3]).toContain('href="/go/wallgold"');
+    // دکمه‌ی خروجی همچنان دست‌نخورده در آخرین سلول است.
+    expect(cells[4]).toContain('href="/go/wallgold"');
   });
 
-  it("سرستون‌ها همان چهار عنوان تصمیم مالک‌اند و ستون پنجمی نیست", async () => {
+  it("سرستون‌ها همان پنج عنوان تصمیم مالک‌اند و ستون ششمی نیست", async () => {
     const html = await renderHome(healthyStore());
     const headers = [...html.matchAll(/<th\b[^>]*scope="col"[^>]*>([\s\S]*?)<\/th>/g)].map((m) =>
       (m[1] ?? "").replace(/<[^>]+>/g, "").trim(),
     );
-    expect(headers).toEqual(["سکو", "قیمت خرید", "قیمت فروش", "رفتن به سایت سکو"]);
+    expect(headers).toEqual([
+      "سکو",
+      "قیمت",
+      "کارمزد خرید",
+      "کارمزد فروش",
+      "رفتن به سایت سکو",
+    ]);
   });
 
-  it("ردیف‌ها بر اساس قیمت خرید صعودی مرتب‌اند", async () => {
+  it("ردیف‌ها بر اساس «قیمت» صعودی مرتب‌اند، نه بر اساس کارمزد", async () => {
     const html = await renderHome(healthyStore());
-    // میلی (۱۸٬۶۳۰٬۶۹۰) < وال‌گلد (۱۸٬۷۰۴٬۰۵۵) < طلاسی (۱۸٬۷۱۵٬۳۰۰)
+    // طلاسی (۱۸٬۵۳۰٬۰۰۰) < میلی (۱۸٬۵۳۸٬۰۰۰) < وال‌گلد (۱۸٬۶۱۱٬۰۰۰)
+    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
+      html.indexOf('data-platform="milli"'),
+    );
     expect(html.indexOf('data-platform="milli"')).toBeLessThan(
       html.indexOf('data-platform="wallgold"'),
     );
-    expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
-      html.indexOf('data-platform="talasea"'),
-    );
   });
 
-  it("ارزان‌ترین ردیف نشان می‌گیرد و همان برنده‌ی کارت «بهترین خرید» است", async () => {
+  it("ارزان‌ترین ردیف نشان می‌گیرد و همان برنده‌ی کارت «کمترین قیمت» است", async () => {
     const html = await renderHome(healthyStore());
-    const milli = rowOf(html, "milli");
-    expect(milli).toContain('data-cheapest="true"');
-    expect(milli).toContain("ارزان‌ترین");
-    expect(html).toContain('data-best="buy" data-platform-best="milli"');
+    const talasea = rowOf(html, "talasea");
+    expect(talasea).toContain('data-cheapest="true"');
+    expect(talasea).toContain("ارزان‌ترین");
     // هیچ ردیف دیگری نشان ارزان‌ترین نمی‌گیرد.
     expect(html.match(/data-cheapest="true"/g)).toHaveLength(1);
   });
@@ -132,7 +138,7 @@ describe("صفحه‌ی اصلی — جدول چهارستونی مقایسه", 
     expect(store.snapshots["goldika"]).not.toBeNull();
     const html = await renderHome(store);
     expect(html).not.toContain("گلدیکا");
-    expect(html).not.toContain("۱۸٬۷۳۶٬۴۰۶"); // مؤثر خرید گلدیکا
+    expect(html).not.toContain("۱۸٬۵۶۰٬۰۰۰"); // قیمت گلدیکا
   });
 
   it("در استور سالم هیچ ردیفی برچسب کهنگی ندارد", async () => {
@@ -141,110 +147,62 @@ describe("صفحه‌ی اصلی — جدول چهارستونی مقایسه", 
   });
 });
 
-describe("صفحه‌ی اصلی — کارت‌های بهترین خرید و فروش (قاعده‌ی ۴)", () => {
-  it("هر کارت یک عدد با نام سکوی صاحبش دارد — نه میانگین بین‌سکویی", async () => {
-    const html = await renderHome(healthyStore());
-    const buy = html.match(/data-best="buy"[\s\S]*?<\/div>\s*<\/div>/);
-    expect(buy?.[0]).toContain("میلی"); // کمترین مؤثر خرید
-    expect(buy?.[0]).toContain("۱۸٬۶۳۰٬۶۹۰");
-    expect(html).toContain('data-best="sell" data-platform-best="wallgold"');
-    expect(html).toContain("۱۸٬۵۱۷٬۹۴۵"); // بیشترین مؤثر فروش
-    expect(html).toContain("کمترین قیمت مؤثر خرید");
-    expect(html).toContain("بیشترین قیمت مؤثر فروش");
-  });
-
+describe("صفحه‌ی اصلی — نشان «ارزان‌ترین» (قاعده‌ی ۴)", () => {
   /**
-   * ⚠️ رگرسیون: یک شمارنده‌ی صعودی رقم کارت را از ~۹۷٫۲٪ مقدار واقعی بالا
-   * می‌آورد، پس ~۱٫۱ ثانیه بعد از hydration عددی روی صفحه بود که هیچ سکویی
-   * اعلامش نکرده بود (برای ۱۸٬۶۳۰٬۶۹۰ نخستین فریم ~۱۸٬۱۰۹٬۰۳۱). نقض
-   * قاعده‌ی ۱ (وب عدد نمی‌سازد) و قاعده‌ی ۴ (هر عدد منتسب به یک سکو).
+   * کارت‌های «کمترین/بیشترین قیمت» در ۲۰۲۶-۰۸-۱۰ به‌کلی حذف شدند (تصمیم
+   * مالک). با رفتن قیمت مؤثر، آن کارت‌ها دو سرِ یک ستون مرتب‌شده را تکرار
+   * می‌کردند و چیزی به جدول اضافه نمی‌کردند. نشان «ارزان‌ترین» ماند، چون
+   * ردیف اول را برای کاربری که ستون را نمی‌خواند علامت می‌زند.
    */
-  it("عدد کارت دقیقاً همان عدد گردآورنده و همان عدد ستون جدول است", async () => {
+  it("فقط یک ردیف نشان می‌گیرد و همان ارزان‌ترینِ قابل‌خرید است", async () => {
     const html = await renderHome(healthyStore());
-    // اعداد seed = همان اعداد آماده‌ی گردآورنده، بی‌هیچ دستکاری.
-    expect(bestCardPrice(html, "buy")).toBe(fa(18630690)); // مؤثر خرید میلی
-    expect(bestCardPrice(html, "sell")).toBe(fa(18517945)); // مؤثر فروش وال‌گلد
-    // و همان عدد در ستون جدولِ همان سکو نشسته است — یک عدد، دو جا.
-    expect(cellsOf(rowOf(html, "milli"))[1]).toContain(fa(18630690));
-    expect(cellsOf(rowOf(html, "wallgold"))[2]).toContain(fa(18517945));
+    expect(rowOf(html, "talasea")).toContain('data-cheapest="true"');
+    expect(html.match(/data-cheapest="true"/g)).toHaveLength(1);
   });
 
-  /**
-   * نگهبان سطح کد (مثل نگهبان ‎lang/dir‎ پایین این فایل): خودِ باگ فقط بعد از
-   * hydration دیده می‌شد و محیط تست `node` است — پس HTML سروری هرگز قرمز
-   * نمی‌شد. این نگهبان جلوی برگشتن هر انیمیشن روی رقم را می‌گیرد.
-   */
-  it("رقم قیمت هیچ انیمیشن یا حالت کلاینتی ندارد", () => {
-    const source = srcOf("src/components/mazane/BestCards.tsx");
-    for (const banned of [
-      "requestAnimationFrame",
-      "useCountUp",
-      "useState",
-      "useEffect",
-      "setInterval",
-      "setTimeout",
-    ]) {
-      expect(source, `رقم کارت نباید ${banned} داشته باشد`).not.toContain(banned);
-    }
-    // حرکت فقط روی محفظه: کلاس ‎rise-in‎ روی خود کارت، نه روی رقم.
-    expect(source).toContain("rise-in");
-    expect(existsSync(join(__dirname, "..", "src/hooks/use-count-up.ts"))).toBe(false);
-  });
-
-  it("سکویی که همان سمت معامله‌اش بسته است نامزد نمی‌شود", async () => {
+  it("سکویی که خریدش بسته است نشان نمی‌گیرد، حتی اگر ارزان‌ترین باشد", async () => {
     const store = healthyStore();
     const now = freshIso();
-    // وال‌گلد بیشترین مؤثر فروش را دارد ولی فروشش بسته است ⟸ نامزد نیست.
-    store.snapshots["wallgold"] = makeSnapshot({
-      slug: "wallgold",
-      mid: 18611000,
-      buy: 18704055,
-      sell: 18517945,
-      reference: 18611000,
-      sellEnabled: false,
+    // طلاسی ارزان‌ترین است؛ خریدش را می‌بندیم ⟸ نشان باید به میلی برسد.
+    store.snapshots["talasea"] = makeSnapshot({
+      slug: "talasea",
+      mid: 18530000,
+      buyEnabled: false,
       fetchedAt: now,
     });
     const html = await renderHome(store);
-    expect(html).toContain('data-best="sell" data-platform-best="milli"');
+    expect(rowOf(html, "talasea")).not.toContain('data-cheapest="true"');
+    expect(rowOf(html, "milli")).toContain('data-cheapest="true"');
   });
 
-  it("بدون هیچ سکوی با کارمزد معلوم، هیچ کارتی رندر نمی‌شود (عدد جعل نمی‌شود)", async () => {
-    const now = freshIso();
-    const html = await renderHome({
-      listed: [{ slug: "digikala", name_fa: "دیجی‌کالا", data_policy: "ALLOWED" }],
-      snapshots: {
-        digikala: makeSnapshot({
-          slug: "digikala",
-          mid: 18520000,
-          feeSource: "UNKNOWN",
-          fetchedAt: now,
-        }),
-      },
-      updatedAt: { digikala: now },
-    });
-    expect(html).not.toContain('data-best="buy"');
-    expect(html).not.toContain('data-best="sell"');
-    // ولی جدول سر جایش است — قاعده‌ی ۵.
-    expect(rowOf(html, "digikala")).toContain("۱۸٬۵۲۰٬۰۰۰");
+  it("کامپوننت کارت‌ها دیگر وجود ندارد", () => {
+    expect(existsSync(join(__dirname, "..", "src/components/tablo/BestCards.tsx"))).toBe(
+      false,
+    );
   });
 });
 
 describe("صفحه‌ی اصلی — سکوی «کارمزد نامشخص» (تصمیم مالک: بدون برچسب)", () => {
-  it("تک‌عددش در هر دو ستون می‌نشیند و هیچ برچسبی نمی‌گیرد", async () => {
+  it("قیمتش در ستون قیمت می‌نشیند و کارمزدش «—» می‌شود، نه «۰٪»", async () => {
     const html = await renderHome(storeWithUnknownFee());
     const cells = cellsOf(rowOf(html, "digikala"));
     expect(cells[1]).toContain("۱۸٬۵۲۰٬۰۰۰");
-    expect(cells[2]).toContain("۱۸٬۵۲۰٬۰۰۰");
+    // تهی یعنی اعلام‌نشده؛ صفر یعنی می‌دانیم کارمزدی نیست. این دو یکی نیستند.
+    expect(cells[2]).toContain("—");
+    expect(cells[3]).toContain("—");
+    expect(cells[2]).not.toContain("۰٪");
     expect(rowOf(html, "digikala")).not.toContain("قیمت میانی");
     expect(rowOf(html, "digikala")).not.toContain("اسمی");
   });
 
-  it("کارت «بهترین» نامزدش نمی‌کند، هرچند عددش از همه پایین‌تر است", async () => {
+  it("در همان فهرست مرتب می‌شود و ته جدول تبعید نمی‌شود", async () => {
     const html = await renderHome(storeWithUnknownFee());
-    // ۱۸٬۵۲۰٬۰۰۰ از همه‌ی مؤثرهای خرید کمتر است، ولی اسمی است.
-    expect(html).not.toContain('data-platform-best="digikala"');
-    expect(html).toContain('data-best="buy" data-platform-best="milli"');
-    expect(rowOf(html, "digikala")).not.toContain("ارزان‌ترین");
+    // ۱۸٬۵۲۰٬۰۰۰ کمترین قیمت است ⟸ ردیف اول، و نشان «ارزان‌ترین» را می‌گیرد.
+    // در مدل قبلی این سکو گروه جداگانه‌ای ته جدول داشت.
+    expect(rowOf(html, "digikala")).toContain("ارزان‌ترین");
+    expect(html.indexOf('data-platform="digikala"')).toBeLessThan(
+      html.indexOf('data-platform="talasea"'),
+    );
   });
 });
 
@@ -267,7 +225,7 @@ describe("صفحه‌ی اصلی — چیپ‌های پنج سکوی ثابت ن
     expect(html).toContain("به‌زودی");
   });
 
-  it("سکوی با کارمزد نامعلوم برچسب «اسمی» می‌گیرد — عددش مؤثر نیست", async () => {
+  it("سکوی با کارمزد نامعلوم دیگر برچسب «اسمی» نمی‌گیرد — همه‌ی اعداد اسمی‌اند", async () => {
     const store = storeWithUnknownFee();
     const now = freshIso();
     // ملی‌گلد یکی از پنج سکوی ثابت نمودار است؛ کارمزدش اعلام نشده.
@@ -276,13 +234,14 @@ describe("صفحه‌ی اصلی — چیپ‌های پنج سکوی ثابت ن
       slug: "melligold",
       mid: 18490000,
       feeSource: "UNKNOWN",
-      reference: 18490000,
       fetchedAt: now,
     });
     store.updatedAt["melligold"] = now;
     const html = await renderHome(store);
     const chip = html.match(/data-platform-chip="melligold"[\s\S]*?<\/div>\s*<\/div>/);
-    expect(chip?.[0]).toContain("اسمی");
+    // تفکیک «اسمی/مؤثر» با حذف قیمت مؤثر موضوعش را از دست داد (سند تصمیم ۰۰۰۲).
+    expect(chip?.[0]).not.toContain("اسمی");
+    expect(chip?.[0]).toContain("۱۸٬۴۹۰٬۰۰۰");
   });
 });
 
@@ -302,7 +261,7 @@ describe("صفحه‌ی اصلی — نمودار ۲۴ ساعته", () => {
           { hour: "2026-08-06T10:00:00.000Z", value: 18538000 },
         ],
         latest: 18538000,
-        side_used: "MEAN",
+        side_used: "PRICE",
       },
     ];
     const html = await renderHome(healthyStore(), { history });
@@ -327,9 +286,6 @@ describe("صفحه‌ی اصلی — برچسب «دفتر سفارش» (بند 
     store.snapshots["daric"] = makeSnapshot({
       slug: "daric",
       mid: 18501633,
-      buy: 18579884,
-      sell: 18423383,
-      reference: 18501634,
       fetchedAt: now,
     });
     store.updatedAt["daric"] = now;
@@ -357,9 +313,6 @@ describe("صفحه‌ی اصلی — نشان‌های «خرید بسته» / �
     store.snapshots["talasea"] = makeSnapshot({
       slug: "talasea",
       mid: 18530000,
-      buy: 18715300,
-      sell: 18344700,
-      reference: 18530000,
       buyEnabled: false,
       fetchedAt: now,
     });
@@ -368,7 +321,7 @@ describe("صفحه‌ی اصلی — نشان‌های «خرید بسته» / �
     expect(talasea).toContain('data-badge="buy-closed"');
     expect(talasea).toContain("خرید بسته است");
     // قیمتش هم سر جایش می‌ماند — نشان است، نه حذف.
-    expect(cellsOf(talasea)[1]).toContain("۱۸٬۷۱۵٬۳۰۰");
+    expect(cellsOf(talasea)[1]).toContain("۱۸٬۵۳۰٬۰۰۰");
   });
 
   it("سکوی فروش‌بسته نشان فروش می‌گیرد و سکوی باز هیچ نشانی نمی‌گیرد", async () => {
@@ -377,9 +330,6 @@ describe("صفحه‌ی اصلی — نشان‌های «خرید بسته» / �
     store.snapshots["wallgold"] = makeSnapshot({
       slug: "wallgold",
       mid: 18611000,
-      buy: 18704055,
-      sell: 18517945,
-      reference: 18611000,
       sellEnabled: false,
       fetchedAt: now,
     });
@@ -515,7 +465,7 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
           status: "published",
           published_at: "2026-08-01T09:00:00.000Z",
           updated_at: "2026-08-01T09:00:00.000Z",
-          image_url: "https://cdn.mazane.online/posts/hazine/h.webp",
+          image_url: "https://s3.tablo.test/tablo-media/posts/hazine/h.webp",
           image_alt: "هزینه‌ی رفت‌وبرگشت طلا",
           image_width: 1600,
           image_height: 900,
@@ -523,7 +473,7 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
       ],
     });
     expect(html).toMatch(
-      /<img[^>]*src="https:\/\/cdn\.mazane\.online\/posts\/hazine\/h\.webp"[^>]*>/,
+      /<img[^>]*src="https:\/\/s3\.tablo\.test\/tablo-media\/posts\/hazine\/h\.webp"[^>]*>/,
     );
     expect(html).toContain('width="1600"');
     expect(html).toContain('height="900"');
@@ -566,6 +516,6 @@ describe("صفحه‌ی اصلی — نوار ماده ۵ و یادداشت حق
     const html = await renderHome(healthyStore());
     expect(html).toContain('data-legal-notice="madde-5"');
     expect(html).toContain("معاملات طلای برخط صرفاً با پذیرش ریسک از سوی طرفین انجام می‌شود");
-    expect(html).toContain("مظنه آنلاین معامله‌گر یا مشاور سرمایه‌گذاری نیست.");
+    expect(html).toContain("تابلو معامله‌گر یا مشاور سرمایه‌گذاری نیست.");
   });
 });

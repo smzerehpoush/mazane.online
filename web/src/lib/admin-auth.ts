@@ -23,7 +23,7 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 const SCRYPT_KEYLEN = 64;
 
 /**
- * هش رمز عبور برای ذخیره در `MAZANE_ADMIN_PASSWORD_HASH`. فرمت:
+ * هش رمز عبور برای ذخیره در `TABLO_ADMIN_PASSWORD_HASH`. فرمت:
  * `"<salt هگزادسیمال>:<hash هگزادسیمال>"`. مصرف‌کننده: `scripts/hash-admin-password.mjs`.
  */
 export function hashPassword(password: string): string {

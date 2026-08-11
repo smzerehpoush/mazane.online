@@ -3,7 +3,7 @@
  * صفحه‌ی «مظنه چیست» و انضباط lastmod.
  *
  * حکم‌های بند ۶.۵ که اینجا قفل می‌شوند:
- *   - Organization + WebSite (با «مضنه آنلاین» در alternateName) فقط صفحه‌ی
+ *   - Organization + WebSite (با «تابلو گلد» در alternateName) فقط صفحه‌ی
  *     اصلی — بدون SearchAction؛
  *   - BreadcrumbList روی دارایی/سکو/بلاگ/ایستا، نه ریشه؛
  *   - Product + AggregateOffer **فقط** صفحه‌ی دارایی (نه صفحه‌ی اصلی)، با
@@ -26,8 +26,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { blogIndexHead, blogPostHead } from "../src/components/content/BlogViews";
 import { SlugPageView, slugHead } from "../src/components/content/SlugPageView";
-import { HomePage, homeHead } from "../src/components/mazane/HomePage";
-import type { HomePageData } from "../src/components/mazane/HomePage";
+import { HomePage, homeHead } from "../src/components/tablo/HomePage";
+import type { HomePageData } from "../src/components/tablo/HomePage";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
 import { getPublishedPost, type BlogPost, type PublishedPost } from "../src/lib/blog";
 import { formatToman } from "../src/lib/format";
@@ -127,9 +127,16 @@ const TALA18: InstrumentListing = makeListing({
   purity: "750",
 });
 
-/** مؤثرهای معلوم: داریک ۱۸٬۵۷۹٬۸۸۴ (کمینه) … طلاسی ۱۸٬۷۱۵٬۳۰۰ (بیشینه). */
-const KNOWN_BUY_MIN_TOMAN = 18579884;
-const KNOWN_BUY_MAX_TOMAN = 18715300;
+/**
+ * `lowPrice`/`highPrice` از **قیمت** می‌آیند، نه از قیمت مؤثر (سند تصمیم
+ * ۰۰۰۲): داده‌ی ساخت‌یافته باید نماینده‌ی محتوای قابل مشاهده‌ی صفحه باشد، و
+ * قیمت مؤثر دیگر هیچ‌جای صفحه نیست.
+ *
+ * سکوی کارمزدنامعلوم هم می‌شمرد: عددش با بقیه هم‌جنس است.
+ * دیجی‌کالا ۱۸٬۴۰۰٬۰۰۰ (کمینه) … وال‌گلد ۱۸٬۶۱۱٬۰۰۰ (بیشینه).
+ */
+const PRICE_MIN_TOMAN = 18400000;
+const PRICE_MAX_TOMAN = 18611000;
 
 function assetStore(): SeededStore {
   const now = freshIso();
@@ -140,28 +147,19 @@ function assetStore(): SeededStore {
       wallgold: makeSnapshot({
         slug: "wallgold",
         mid: 18611000,
-        buy: 18704055,
-        sell: 18517945,
-        reference: 18611000,
         fetchedAt: now,
       }),
       talasea: makeSnapshot({
         slug: "talasea",
         mid: 18530000,
-        buy: KNOWN_BUY_MAX_TOMAN,
-        sell: 18344700,
-        reference: 18530000,
         fetchedAt: now,
       }),
       daric: makeSnapshot({
         slug: "daric",
         mid: 18501633,
-        buy: KNOWN_BUY_MIN_TOMAN,
-        sell: 18423383,
-        reference: 18501634,
         fetchedAt: now,
       }),
-      // کارمزد نامعلوم: فقط MID — هرگز وارد AggregateOffer نمی‌شود.
+      // کارمزد نامعلوم — ولی قیمتش با بقیه هم‌جنس است و می‌شمرد.
       digikala: makeSnapshot({
         slug: "digikala",
         mid: 18400000,
@@ -185,7 +183,7 @@ const PUBLISHED_POST: BlogPost = {
 /** همان PUBLISHED_POST به‌همراه عکس شاخص کامل (بلیت ۲۵). */
 const PUBLISHED_POST_WITH_IMAGE: BlogPost = {
   ...PUBLISHED_POST,
-  image_url: "https://cdn.mazane.online/posts/moghayese-karmozd-sakooha/hash.webp",
+  image_url: "https://s3.tablo.test/tablo-media/posts/moghayese-karmozd-sakooha/hash.webp",
   image_alt: "نمودار مقایسه‌ی کارمزد سکوهای طلای آنلاین",
   image_width: 1600,
   image_height: 900,
@@ -208,20 +206,20 @@ async function home(): Promise<HomePageData> {
 /* ---------- Organization + WebSite — فقط صفحه‌ی اصلی ---------- */
 
 describe("Organization + WebSite (بند ۶.۵ + بند ۱۱)", () => {
-  it("صفحه‌ی اصلی هر دو را با برند «مظنه آنلاین» و alternateName «مضنه آنلاین» دارد", () => {
+  it("صفحه‌ی اصلی هر دو را با برند «تابلو» و alternateName «تابلو گلد» دارد", () => {
     const head = homeHead();
     const graphBlock = jsonLdBlocks(head).find((block) => "@graph" in block);
     expect(graphBlock).toBeDefined();
     const graph = (graphBlock as Record<string, unknown>)["@graph"] as Record<string, unknown>[];
 
     expect(graph.find((node) => node["@type"] === "Organization")).toMatchObject({
-      name: "مظنه آنلاین",
-      alternateName: "مضنه آنلاین",
+      name: "تابلو",
+      alternateName: "تابلو گلد",
       url: SITE_URL,
     });
     expect(graph.find((node) => node["@type"] === "WebSite")).toMatchObject({
-      name: "مظنه آنلاین",
-      alternateName: "مضنه آنلاین",
+      name: "تابلو",
+      alternateName: "تابلو گلد",
       url: SITE_URL,
       inLanguage: "fa",
     });
@@ -244,7 +242,7 @@ describe("Organization + WebSite (بند ۶.۵ + بند ۱۱)", () => {
       // جز خانه تکرار نمی‌شود — صفحه‌ی سکو یک Organization دیگر (تو در توی
       // about، بدون @id) دارد که نباید با این یکی اشتباه شود (بلیت ۲۹).
       expect(raw).not.toContain(`${SITE_URL}/#organization`);
-      expect(raw).not.toContain("مضنه آنلاین");
+      expect(raw).not.toContain("تابلو گلد");
     }
     // صفحه‌ی دارایی اصلاً Organization نمی‌گیرد (نه سراسری، نه تو در تو).
     const assetRaw = rawJsonLd(slugHead(await pageOf("tala-18")));
@@ -294,9 +292,6 @@ describe("WebPage + about:Organization (بند ۶.۵ + بلیت ۲۹)", () => {
         wallgold: makeSnapshot({
           slug: "wallgold",
           mid: 18611000,
-          buy: 18704055,
-          sell: 18517945,
-          reference: 18611000,
           fetchedAt: now,
         }),
       },
@@ -339,19 +334,20 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     expect(offers["@type"]).toBe("AggregateOffer");
     expect(offers["priceCurrency"]).toBe("IRR");
     // عدد JSON (نه رشته) — و دقیقاً ×۱۰ تومانِ گردآورنده.
-    expect(offers["lowPrice"]).toBe(KNOWN_BUY_MIN_TOMAN * 10);
-    expect(offers["highPrice"]).toBe(KNOWN_BUY_MAX_TOMAN * 10);
+    expect(offers["lowPrice"]).toBe(PRICE_MIN_TOMAN * 10);
+    expect(offers["highPrice"]).toBe(PRICE_MAX_TOMAN * 10);
     // هم‌ارزی با عدد قابل‌مشاهده‌ی همان رندر: ÷۱۰ همان قالب فارسی صفحه است.
     expect(html).toContain(formatToman((offers["lowPrice"] as number) / 10));
     expect(html).toContain(formatToman((offers["highPrice"] as number) / 10));
   });
 
-  it("offerCount = فقط سکوهای با مؤثر خرید معلوم (کارمزد نامشخص نمی‌شمرد)", async () => {
+  it("offerCount = هر سکوی قیمت‌دارِ بازِ خرید (کارمزد نامشخص هم می‌شمرد)", async () => {
     seed(assetStore());
     const product = findByType(jsonLdBlocks(slugHead(await pageOf("tala-18"))), "Product");
     const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
-    // چهار سکوی پشتیبان، ولی دیجی‌کالا (UNKNOWN) مؤثر ندارد ⟸ ۳.
-    expect(offers["offerCount"]).toBe(3);
+    // چهار سکوی پشتیبان، هر چهار قیمت دارند ⟸ ۴. دیجی‌کالا دیگر کنار
+    // گذاشته نمی‌شود: عددش با بقیه هم‌جنس است (سند تصمیم ۰۰۰۲).
+    expect(offers["offerCount"]).toBe(4);
   });
 
   it("ارقام قیمت JSON-LD لاتین‌اند (بند ۶.۶ — متن فارسی مجاز، عدد فارسی نه)", async () => {
@@ -359,8 +355,8 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const raw = rawJsonLd(slugHead(await pageOf("tala-18")));
     const offers = raw.match(/"offers":\{[^}]*\}/);
     expect(offers).not.toBeNull();
-    expect((offers as RegExpMatchArray)[0]).toContain(`"lowPrice":${KNOWN_BUY_MIN_TOMAN * 10}`);
-    expect((offers as RegExpMatchArray)[0]).toContain(`"highPrice":${KNOWN_BUY_MAX_TOMAN * 10}`);
+    expect((offers as RegExpMatchArray)[0]).toContain(`"lowPrice":${PRICE_MIN_TOMAN * 10}`);
+    expect((offers as RegExpMatchArray)[0]).toContain(`"highPrice":${PRICE_MAX_TOMAN * 10}`);
     expect((offers as RegExpMatchArray)[0]).not.toMatch(/[۰-۹]/);
   });
 
@@ -381,20 +377,21 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     expect(assetRaw).toContain("AggregateOffer");
   });
 
-  it("عدد کارت «بهترین خرید» صفحه‌ی اصلی همان lowPrice صفحه‌ی دارایی است", async () => {
+  it("عدد نشان‌دار صفحه‌ی اصلی همان lowPrice صفحه‌ی دارایی است", async () => {
     const html = renderToStaticMarkup(<HomePage data={await home()} />);
     seed(assetStore());
     const product = findByType(jsonLdBlocks(slugHead(await pageOf("tala-18"))), "Product");
     const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
-    // یک عدد، سه جا: کارت صفحه‌ی اصلی، جدول صفحه‌ی دارایی، و JSON-LD دارایی.
-    expect(html).toContain('data-best="buy" data-platform-best="daric"');
-    expect(html).toContain(formatToman(KNOWN_BUY_MIN_TOMAN));
-    expect(offers["lowPrice"]).toBe(KNOWN_BUY_MIN_TOMAN * 10);
+    // یک عدد، سه جا: ردیف «ارزان‌ترین» صفحه‌ی اصلی، جدول صفحه‌ی دارایی، و
+    // JSON-LD دارایی. (کارت‌های «بهترین» در ۲۰۲۶-۰۸-۱۰ حذف شدند.)
+    expect(html).toContain('data-platform="digikala" data-cheapest="true"');
+    expect(html).toContain(formatToman(PRICE_MIN_TOMAN));
+    expect(offers["lowPrice"]).toBe(PRICE_MIN_TOMAN * 10);
   });
 
   /**
-   * ⚠️ رگرسیون: `buy_enabled=false` وال‌گلد کارت «بهترین خرید» را درست به
-   * طلاسی می‌برد ولی `lowPrice` همان قیمتِ سکوی **بسته** می‌ماند — یعنی به
+   * ⚠️ رگرسیون: `buy_enabled=false` کارت «کمترین قیمت» را درست جابه‌جا
+   * می‌کرد ولی `lowPrice` همان قیمتِ سکوی **بسته** می‌ماند — یعنی به
    * گوگل پیشنهادی تبلیغ می‌شد که در دسترس نیست و با متن همان صفحه (نشان
    * «خرید بسته است») در تناقض بود. یک تعریف واحد از «سمت باز» برای هر سه
    * مصرف‌کننده: کارت، جدول، AggregateOffer.
@@ -402,13 +399,11 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
   it("سکوی خریدبسته در AggregateOffer نمی‌آید ولی ردیفش با نشان سر جایش می‌ماند", async () => {
     const store = assetStore();
     const now = freshIso();
-    // داریک کمینه‌ی مطلق است؛ خریدش را می‌بندیم ⟸ lowPrice باید بالا برود.
-    store.snapshots["daric"] = makeSnapshot({
-      slug: "daric",
-      mid: 18501633,
-      buy: KNOWN_BUY_MIN_TOMAN,
-      sell: 18423383,
-      reference: 18501634,
+    // دیجی‌کالا کمینه‌ی مطلق است؛ خریدش را می‌بندیم ⟸ lowPrice باید بالا برود.
+    store.snapshots["digikala"] = makeSnapshot({
+      slug: "digikala",
+      mid: 18400000,
+      feeSource: "UNKNOWN",
       buyEnabled: false,
       fetchedAt: now,
     });
@@ -418,38 +413,30 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const offers = (findByType(jsonLdBlocks(slugHead(data)), "Product") as Record<string, unknown>)[
       "offers"
     ] as Record<string, unknown>;
-    // کمینه‌ی سکوهای **باز**: وال‌گلد ۱۸٬۷۰۴٬۰۵۵ — نه عدد داریکِ بسته.
-    expect(offers["lowPrice"]).toBe(18704055 * 10);
-    expect(offers["highPrice"]).toBe(KNOWN_BUY_MAX_TOMAN * 10);
-    // سه سکوی معلوم بودند؛ یکی بسته شد ⟸ ۲.
-    expect(offers["offerCount"]).toBe(2);
-    expect(rawJsonLd(slugHead(data))).not.toContain(String(KNOWN_BUY_MIN_TOMAN * 10));
+    // کمینه‌ی سکوهای **باز**: داریک ۱۸٬۵۰۱٬۶۳۳ — نه عدد دیجی‌کالای بسته.
+    expect(offers["lowPrice"]).toBe(18501633 * 10);
+    expect(offers["highPrice"]).toBe(PRICE_MAX_TOMAN * 10);
+    // چهار سکوی قیمت‌دار بودند؛ یکی بسته شد ⟸ ۳.
+    expect(offers["offerCount"]).toBe(3);
+    expect(rawJsonLd(slugHead(data))).not.toContain(String(PRICE_MIN_TOMAN * 10));
 
-    // ولی ردیف داریک حذف نمی‌شود — با نشان «خرید بسته است» می‌ماند.
+    // ولی ردیف دیجی‌کالا حذف نمی‌شود — با نشان «خرید بسته است» می‌ماند.
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
-    expect(rowOf(html, "daric")).toContain('data-badge="buy-closed"');
-    expect(rowOf(html, "daric")).toContain("خرید بسته است");
+    expect(rowOf(html, "digikala")).toContain('data-badge="buy-closed"');
+    expect(rowOf(html, "digikala")).toContain("خرید بسته است");
   });
 
-  it("بدون حتی یک ردیف معلوم، AggregateOffer جعل نمی‌شود (اسکریپت غایب است)", async () => {
+  it("بدون حتی یک ردیف قیمت‌دار، AggregateOffer جعل نمی‌شود (اسکریپت غایب است)", async () => {
     const now = freshIso();
     const store: SeededStore = {
+      // هر چهار منبع قطع‌اند ⟸ هیچ قیمتی نیست. معیار حالا «قیمت دارد یا نه»
+      // است، نه «کارمزدش معلوم است یا نه» (سند تصمیم ۰۰۰۲).
       listed: PLATFORMS,
       instruments: [TALA18],
-      snapshots: {
-        // فقط کارمزد نامشخص (MID) و منبع قطع — هیچ مؤثر معلومی نیست.
-        digikala: makeSnapshot({
-          slug: "digikala",
-          mid: 18400000,
-          feeSource: "UNKNOWN",
-          fetchedAt: now,
-        }),
-        wallgold: null,
-        talasea: null,
-        daric: null,
-      },
-      updatedAt: { digikala: now, wallgold: null, talasea: null, daric: null },
+      snapshots: { digikala: null, wallgold: null, talasea: null, daric: null },
+      updatedAt: { digikala: null, wallgold: null, talasea: null, daric: null },
     };
+    void now;
     seed(store);
     const head = slugHead(await pageOf("tala-18"));
     expect(rawJsonLd(head)).not.toContain("AggregateOffer");

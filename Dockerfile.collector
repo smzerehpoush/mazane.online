@@ -4,7 +4,7 @@
 # و directive خارجی یعنی یک pull اضافه از Docker Hub که روی شبکه‌های محدود
 # — از جمله دسترسی ایران به هاب — ساخت را می‌شکند/کند می‌کند.)
 #
-#   docker build -f Dockerfile.collector -t mazane-collector .
+#   docker build -f Dockerfile.collector -t tablo-collector .
 #
 # context = ریشه‌ی مخزن (فیلترشده با ‎.dockerignore‎ ریشه).
 # ساخت «بیرون از سرور» انجام می‌شود (CI یا لپ‌تاپ با ‎--platform linux/amd64‎)؛
@@ -38,12 +38,12 @@ COPY ops/collector-healthcheck.py /app/healthcheck.py
 RUN useradd --system --uid 10001 --home-dir /nonexistent --shell /usr/sbin/nologin mazane
 USER mazane
 
-# healthcheck: ردیس در دسترس + تازه‌ترین ‎mazane:updated_at:*‎ جوان‌تر از آستانه.
+# healthcheck: ردیس در دسترس + تازه‌ترین ‎tablo:updated_at:*‎ جوان‌تر از آستانه.
 # منطق و توجیهش (سازگاری با «کهنگی، نه خطا») داخل خود اسکریپت مستند است.
 # start-period سخاوتمندانه: اولین نوبت گردآوری باید کامل شود.
 HEALTHCHECK --interval=60s --timeout=15s --start-period=120s --retries=5 \
     CMD ["python", "/app/healthcheck.py"]
 
-# پیکربندی با متغیرهای محیطی (MAZANE_REDIS_URL، MAZANE_DATABASE_URL،
-# MAZANE_REVALIDATE_URL/TOKEN، MAZANE_DAILY_PUBLISH_CAP) — از compose می‌آیند.
-CMD ["mazane-collector"]
+# پیکربندی با متغیرهای محیطی (TABLO_REDIS_URL، TABLO_DATABASE_URL،
+# TABLO_REVALIDATE_URL/TOKEN، TABLO_DAILY_PUBLISH_CAP) — از compose می‌آیند.
+CMD ["tablo-collector"]

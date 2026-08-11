@@ -18,10 +18,10 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.digikala import DIGIKALA_ENDPOINT, DigikalaAdapter
-from mazane_collector.models import FeeSource, Instrument, Side
-from mazane_collector.pipeline import AdapterError, collect_once
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.adapters.digikala import DIGIKALA_ENDPOINT, DigikalaAdapter
+from tablo_collector.models import FeeSource, Instrument, Side
+from tablo_collector.pipeline import AdapterError, collect_once
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "digikala_prices.json"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -39,7 +39,7 @@ def make_fetcher(payload: Any) -> Any:
     return fetch_json
 
 
-async def test_fixture_payload_stores_only_mid_with_x100_scale() -> None:
+async def test_fixture_payload_stores_one_price_with_x100_scale() -> None:
     store = InMemoryStore()
 
     await collect_once(DigikalaAdapter(), make_fetcher(load_fixture()), store, now=FETCHED_AT)
@@ -49,25 +49,17 @@ async def test_fixture_payload_stores_only_mid_with_x100_scale() -> None:
     assert stored.platform_slug == "digikala"
 
     # کارمزد نامعلوم ⟸ فقط MID و سطر MEAN که بازتاب همان تک‌عدد است
-    # (سکوی تک‌قیمتی: عددی که منتشر می‌کند قیمت مرجع اوست). قیمت مؤثر
     # همچنان جعل نمی‌شود — نه BUY هست نه SELL.
-    assert [quote.side for quote in stored.quotes] == [Side.MID, Side.MEAN]
+    assert [quote.side for quote in stored.quotes] == [Side.PRICE]
 
-    mid, mean = stored.quotes
-    # سطر MEAN بازتاب بی‌کم‌وکاست همان MID است — نه گردی تازه‌ای، نه ضریبی.
-    assert (mean.price_toman, mean.raw_value, mean.raw_scale, mean.fetched_at) == (
-        mid.price_toman,
-        mid.raw_value,
-        mid.raw_scale,
-        mid.fetched_at,
-    )
-    assert mid.instrument == Instrument.GOLD_18K
+    (price,) = stored.quotes
+    assert price.instrument == Instrument.GOLD_18K
     # ضریب صریح این منبع: ریال ÷۱۰۰۰، ×۱۰۰ به تومان بر گرم
     # (سند تحقیق ۰۱، بند ۳.۳ — همان مقیاس میلی).
-    assert mid.raw_scale == Decimal("100")
-    assert mid.raw_value == Decimal("185946")
+    assert price.raw_scale == Decimal("100")
+    assert price.raw_value == Decimal("185946")
     # ریاضی مقیاس: 185946 × 100 = 18,594,600 تومان بر گرم.
-    assert mid.price_toman == 18594600
+    assert price.price_toman == 18594600
 
 
 async def test_terms_carry_unknown_fee_without_fabricated_numbers() -> None:

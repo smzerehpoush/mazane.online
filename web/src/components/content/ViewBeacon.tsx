@@ -26,7 +26,7 @@ export function ViewBeacon({ slug }: { slug: string }) {
     if (typeof window === "undefined") return;
     if (navigator.webdriver) return;
 
-    const key = `mazane:viewed:${slug}`;
+    const key = `tablo:viewed:${slug}`;
     try {
       if (window.sessionStorage.getItem(key) !== null) return;
     } catch {

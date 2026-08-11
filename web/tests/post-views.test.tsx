@@ -14,7 +14,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { HomePage } from "../src/components/mazane/HomePage";
+import { HomePage } from "../src/components/tablo/HomePage";
 import type { BlogPost, PublishedPost } from "../src/lib/blog";
 import { postViewMethodNotAllowed, postViewResponse } from "../src/lib/server/post-view";
 import { byPopularity, hasViewData, type ViewCounts } from "../src/lib/views";
@@ -43,7 +43,7 @@ const MID = post("be", { published_at: "2026-08-02T09:00:00.000Z" });
 const NEW = post("pe", { published_at: "2026-08-03T09:00:00.000Z" });
 
 function request(body: unknown, method = "POST"): Request {
-  return new Request("https://mazane.online/api/post-view", {
+  return new Request("https://tablo.gold/api/post-view", {
     method,
     body: typeof body === "string" ? body : JSON.stringify(body),
   });

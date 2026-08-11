@@ -133,7 +133,7 @@ describe("sitemap.xml", () => {
 
   it("نشانی را در XML فرار می‌دهد", () => {
     const xml = renderSitemapXml([{ path: "/a&b" }]);
-    expect(xml).toContain("<loc>https://mazane.online/a&amp;b</loc>");
+    expect(xml).toContain("<loc>https://tablo.gold/a&amp;b</loc>");
   });
 });
 

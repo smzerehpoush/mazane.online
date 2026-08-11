@@ -20,7 +20,7 @@ import { renderMarkdown } from "@/lib/markdown";
 export const Route = createFileRoute("/admin/posts/new")({
   head: () => ({
     meta: [
-      { title: "پست تازه — پنل مدیریت مظنه آنلاین" },
+      { title: "پست تازه — پنل مدیریت تابلو" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),

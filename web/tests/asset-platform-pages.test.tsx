@@ -101,25 +101,16 @@ function assetStore(): SeededStore {
       wallgold: makeSnapshot({
         slug: "wallgold",
         mid: 18611000,
-        buy: 18704055,
-        sell: 18517945,
-        reference: 18611000,
         fetchedAt: now,
       }),
       talasea: makeSnapshot({
         slug: "talasea",
         mid: 18530000,
-        buy: 18715300,
-        sell: 18344700,
-        reference: 18530000,
         fetchedAt: now,
       }),
       daric: makeSnapshot({
         slug: "daric",
         mid: 18501633,
-        buy: 18579884,
-        sell: 18423383,
-        reference: 18501634,
         fetchedAt: now,
       }),
       // کارمزد نامعلوم: فقط MID و **بدون** قیمت مرجع (جعل نمی‌شود).
@@ -211,26 +202,20 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
       slug: "wallgold",
       instrument: "SILVER_990",
       mid: 210000,
-      buy: 211050,
-      sell: 208950,
-      reference: 210000,
       fetchedAt: now,
     });
     store.snapshots["talasea"] = makeSnapshot({
       slug: "talasea",
       instrument: "SILVER_990",
       mid: 209000,
-      buy: 210045,
-      sell: 207955,
-      reference: 209000,
       fetchedAt: now,
     });
     seed(store);
 
     const html = await renderSlug("noghre");
     expect(html).toContain("قیمت نقره‌ی ۹۹۰");
-    expect(html).toContain("۲۱۱٬۰۵۰"); // مؤثر خرید وال‌گلد
-    expect(html).toContain("۲۱۰٬۰۴۵"); // مؤثر خرید طلاسی
+    expect(html).toContain("۲۱۰٬۰۰۰"); // قیمت وال‌گلد
+    expect(html).toContain("۲۰۹٬۰۰۰"); // قیمت طلاسی
   });
 
   it("سایت‌مپ فقط دارایی‌های دروازه‌گذشته + سکوها را دارد", () => {
@@ -247,45 +232,49 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
 });
 
 describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
-  it("h1 فارسی دارد و هر سکو مؤثر خرید، مؤثر فروش و قیمت مرجع خودش را نشان می‌دهد", async () => {
+  it("h1 فارسی دارد و هر سکو «قیمت» و دو کارمزد خودش را نشان می‌دهد", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
 
     expect(html).toMatch(/<h1[^>]*>قیمت طلای ۱۸ عیار<\/h1>/);
     const wallgold = rowOf(html, "wallgold");
-    expect(wallgold).toContain("۱۸٬۷۰۴٬۰۵۵"); // مؤثر خرید
-    expect(wallgold).toContain("۱۸٬۵۱۷٬۹۴۵"); // مؤثر فروش
-    expect(wallgold).toContain("۱۸٬۶۱۱٬۰۰۰"); // قیمت مرجع خودِ وال‌گلد
+    expect(wallgold).toContain("۱۸٬۶۱۱٬۰۰۰"); // قیمت، پیش از کارمزد
+    expect(wallgold).toMatch(/data-fee[^>]*>۰٫۵٪/);
     const talasea = rowOf(html, "talasea");
-    expect(talasea).toContain("۱۸٬۷۱۵٬۳۰۰");
-    expect(talasea).toContain("۱۸٬۳۴۴٬۷۰۰");
     expect(talasea).toContain("۱۸٬۵۳۰٬۰۰۰");
+    expect(talasea).toMatch(/data-fee[^>]*>۰٫۵٪/);
+    // قیمت مؤثر هیچ‌جای صفحه نیست (سند تصمیم ۰۰۰۲).
+    expect(html).not.toContain("۱۸٬۷۰۴٬۰۵۵");
+    expect(html).not.toContain("مؤثر");
   });
 
-  it("ردیف‌ها صعودی بر اساس مؤثر خرید مرتب‌اند", async () => {
+  it("ردیف‌ها صعودی بر اساس «قیمت» مرتب‌اند", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
-    // داریک (۱۸٬۵۷۹٬۸۸۴) < وال‌گلد (۱۸٬۷۰۴٬۰۵۵) < طلاسی (۱۸٬۷۱۵٬۳۰۰)
+    // دیجی‌کالا (۱۸٬۴۰۰٬۰۰۰) < داریک (۱۸٬۵۰۱٬۶۳۳) < طلاسی (۱۸٬۵۳۰٬۰۰۰) < وال‌گلد
     expect(html.indexOf('data-platform="daric"')).toBeLessThan(
-      html.indexOf('data-platform="wallgold"'),
-    );
-    expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
       html.indexOf('data-platform="talasea"'),
     );
+    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
+      html.indexOf('data-platform="wallgold"'),
+    );
   });
 
-  it("سکوی کارمزد-نامعلوم در گروه جدا: قیمت میانی، بدون قیمت مرجع جعلی", async () => {
+  it("سکوی کارمزد-نامعلوم دیگر گروه جدا ندارد — فقط ستون کارمزدش تهی است", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
-    expect(html).toContain("کارمزد نامشخص");
-    // دیجی‌کالا (mid از همه پایین‌تر) باز هم بعد از همه‌ی معلوم‌ها.
-    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
-      html.indexOf('data-platform="digikala"'),
+    // گروه‌بندی دوطبقه منحل شد: قیمت همه پیش-از-کارمزد و هم‌جنس است.
+    expect(html).not.toContain("کارمزد نامشخص — فقط قیمت میانی");
+    // دیجی‌کالا کمترین قیمت را دارد ⟸ حالا **بالای** بقیه می‌نشیند.
+    expect(html.indexOf('data-platform="digikala"')).toBeLessThan(
+      html.indexOf('data-platform="talasea"'),
     );
     const row = rowOf(html, "digikala");
     expect(row).toContain("۱۸٬۴۰۰٬۰۰۰");
-    expect(row).toContain("قیمت میانی");
-    expect(row).toMatch(/data-reference-price[^>]*>—/);
+    expect(row).not.toContain("قیمت میانی");
+    // تهی یعنی اعلام‌نشده — نه صفر.
+    expect(row).toMatch(/data-fee[^>]*>—/);
+    expect(row).not.toMatch(/data-fee[^>]*>۰٪/);
   });
 
   it("برچسب دفتر سفارش و کهنگی از تکه‌های مشترک بازاستفاده می‌شوند", async () => {
@@ -298,7 +287,7 @@ describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
     expect(daric).toContain("کهنه");
   });
 
-  it("قیمت مرجع صریحاً «مالِ همان سکو» توضیح داده می‌شود و سرصفحه canonical تخت دارد", async () => {
+  it("ستون قیمت صریحاً «مالِ همان سکو» توضیح داده می‌شود و سرصفحه canonical تخت دارد", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
     expect(html).toContain("هیچ میانگین بین‌سکویی");
@@ -340,13 +329,13 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(html).toContain("۰٫۵٪");
     expect(html).toContain("رفت‌وبرگشت");
     expect(html).toContain("از API سکو");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // «قیمت» طلاسی، پیش از کارمزد
     // هویت حقوقی و تحویل فیزیکی مستندشده:
     expect(html).toContain("شرکت توسعه راهکار الوند ارسباران");
     expect(html).toContain("تحویل فیزیکی با اجرت ساخت");
-    // قیمت مؤثر خرید/فروش خودِ سکو (بلیت ۳۲: دو کارت «قیمت امروز»):
-    expect(html).toContain("۱۸٬۷۱۵٬۳۰۰");
-    expect(html).toContain("۱۸٬۳۴۴٬۷۰۰");
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودش (کارت قهرمان)
+    // قیمت مؤثر هیچ‌جای صفحه نیست (سند تصمیم ۰۰۰۲).
+    expect(html).not.toContain("۱۸٬۷۱۵٬۳۰۰");
+    expect(html).not.toContain("۱۸٬۳۴۴٬۷۰۰");
     // بلیت ۲۶: جدول «قیمت‌های این سکو» (QuotesSection، همه‌ی دارایی‌ها) حذف شده.
     expect(html).not.toContain("قیمت‌های این سکو");
   });
@@ -363,9 +352,6 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     store.snapshots["wallgold"] = makeSnapshot({
       slug: "wallgold",
       mid: 18611000,
-      buy: 18704055,
-      sell: 18517945,
-      reference: 18611000,
       sellEnabled: false,
       fetchedAt: now,
     });
@@ -417,7 +403,7 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
 });
 
 describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد معلوم/نامعلوم (بلیت ۳۲)", () => {
-  it("کارمزد معلوم ⟸ دو کارت خرید/فروش کنار هم با تاریخ شمسی در تیتر و توضیح صادقانه‌ی منبع کارمزد", async () => {
+  it("کارت «قیمت» با تاریخ شمسی در تیتر و توضیح صریح اینکه کارمزد در آن نیست", async () => {
     const store = assetStore();
     seed(store);
     const html = await renderSlug("talasea");
@@ -426,30 +412,29 @@ describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد �
     const expectedDate = formatDateFa(store.updatedAt["talasea"] as string);
     expect(html).toContain(expectedDate);
 
-    // دو کارت خرید/فروش، هرکدام قیمت مؤثر خودِ سکو (انتخاب، نه محاسبه).
-    expect(html).toContain("قیمت مؤثر خرید هر گرم");
-    expect(html).toContain("قیمت مؤثر فروش هر گرم");
-    expect(html).toContain("۱۸٬۷۱۵٬۳۰۰"); // مؤثر خرید طلاسی
-    expect(html).toContain("۱۸٬۳۴۴٬۷۰۰"); // مؤثر فروش طلاسی
+    // یک کارت، یک عدد — انتخاب از اعداد آماده‌ی گردآورنده، نه محاسبه.
+    expect(html).toContain("قیمت هر گرم (پیش از کارمزد)");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
 
-    // توضیح صادقانه‌ی منبع کارمزد — عمومی، بدون ادعای تک/دوقیمتی که کد
-    // نمی‌تواند تأیید کند (سند تیکت ۳۲).
-    expect(html).toContain("کارمزد از فاصله‌ی خرید و فروش همین سکو می‌آید");
+    // برچسب باید صریح بگوید این عدد آنچه می‌پردازید نیست.
+    expect(html).toContain("پیش از کارمزد");
     expect(html).not.toContain("دوقیمتی");
     expect(html).not.toContain("تک‌قیمتی");
   });
 
-  it("کارمزد نامعلوم ⟸ بخش اصلاً نمی‌آید — نه «نامشخص»، نه صفر، نه کارت خالی", async () => {
+  it("کارمزد نامعلوم ⟸ بخش می‌آید، با قیمت و کارمزدِ «نامشخص»", async () => {
     seed(assetStore());
     const html = await renderSlug("digikala");
 
     expect(html).toContain("دیجی‌کالا");
-    expect(html).not.toContain("قیمت مؤثر خرید هر گرم");
-    expect(html).not.toContain("قیمت مؤثر فروش هر گرم");
-    expect(html).not.toContain("کارمزد خرید");
-    expect(html).not.toContain("کارمزد فروش");
-    expect(html).not.toContain("هزینه‌ی رفت‌وبرگشت");
-    expect(html).not.toContain("منبع کارمزد");
+    // پیش‌تر کل بخش رندر نمی‌شد چون قیمت مؤثری وجود نداشت. حالا قیمت هست و
+    // فقط کارمزدها نامشخص‌اند (سند تصمیم ۰۰۰۲).
+    expect(html).toContain("قیمت هر گرم (پیش از کارمزد)");
+    expect(html).toContain("۱۸٬۴۰۰٬۰۰۰");
+    expect(html).toContain("کارمزد خرید");
+    expect(html).toContain("نامشخص");
+    // ولی صفرِ ساختگی جایش نمی‌نشیند.
+    expect(html).toContain("سکو کارمزدش را اعلام نکرده است");
   });
 
   it("جدول «قیمت‌های این سکو» (QuotesSection) دیگر نیست — نه برای کارمزد معلوم، نه نامعلوم", async () => {
@@ -515,13 +500,15 @@ describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳
 });
 
 describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲۷)", () => {
-  it("عدد درشت = referencePriceFor؛ کارمزد معلوم ⟸ «میانگین خرید و فروش این سکو»", async () => {
+  it("عدد درشت = «قیمت» سکو، با برچسبی که پیش-از-کارمزد بودنش را می‌گوید", async () => {
     seed(assetStore());
     seedHistory([]);
     const html = await renderSlug("talasea");
     expect(html).toContain("data-rate-price");
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودِ طلاسی (تصمیم ۱۹)
-    expect(html).toContain("میانگین خرید و فروش این سکو");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
+    expect(html).toContain("قیمت اعلامی این سکو — پیش از کارمزد");
+    // برچسب دیگر شرطی نیست: عدد همه‌ی سکوها یک چیز است.
+    expect(html).not.toContain("میانگین خرید و فروش این سکو");
   });
 
   it("کارمزد نامعلوم ⟸ برچسب «قیمت اعلامی این سکو»، از hasUnknownFee نه فهرست دستی", async () => {
@@ -538,7 +525,6 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
       slug: "melligold",
       mid: 18490000,
       feeSource: "UNKNOWN",
-      reference: 18490000,
       fetchedAt: now,
     });
     store.updatedAt["melligold"] = now;
@@ -560,7 +546,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
           { hour: "2026-08-06T21:00:00.000Z", value: 18530000 },
         ],
         latest: 18530000,
-        side_used: "MEAN",
+        side_used: "PRICE",
       },
     ];
     seedHistory(history);
@@ -585,7 +571,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
           { hour: "2026-08-06T21:00:00.000Z", value: 18611000 },
         ],
         latest: 18611000,
-        side_used: "MEAN",
+        side_used: "PRICE",
       },
     ]);
     const html = await renderSlug("wallgold");
@@ -689,7 +675,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
             platform_slug: "talasea",
             points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
             latest: 18400000,
-            side_used: "MEAN",
+            side_used: "PRICE",
             has_enough_coverage: true,
           },
         ];
@@ -700,7 +686,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
             platform_slug: "talasea",
             points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
             latest: 18400000,
-            side_used: "MEAN",
+            side_used: "PRICE",
             has_enough_coverage: false, // کمتر از نیم پنجره — «به‌زودی»
           },
         ];
@@ -726,7 +712,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
         platform_slug: "talasea",
         points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
         latest: 18400000,
-        side_used: "MEAN",
+        side_used: "PRICE",
       },
     ]);
     const html = await renderSlug("talasea");

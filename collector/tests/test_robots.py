@@ -10,7 +10,7 @@
   مصداق: اسکریپر HTML بن‌بست؛
 - نبودِ `robots.txt` (پاسخ ۴۰۴) یعنی همه‌چیز مجاز؛
 - قطعی `robots.txt` (پاسخ ۵۰۰ یا خطای شبکه) **باز-به-شکست** است با هشدار
-  در لاگ — تصمیم مستند ماژول `mazane_collector.robots`: قطعی robots نباید
+  در لاگ — تصمیم مستند ماژول `tablo_collector.robots`: قطعی robots نباید
   گردآوری اندپوینت‌های ازپیش‌بررسی‌شده را متوقف کند.
 
 پاسخ‌های `robots.txt` از فیکسچرهای همین پوشه می‌آیند؛ هیچ تماس شبکه‌ای نیست.
@@ -24,30 +24,26 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from mazane_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
-from mazane_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
-from mazane_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
-from mazane_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
-from mazane_collector.main import USER_AGENT
-from mazane_collector.pipeline import collect_round
-from mazane_collector.platforms import PLATFORMS
-from mazane_collector.references.bonbast import (
-    BONBAST_JSON_ENDPOINT,
-    BONBAST_PAGE_ENDPOINT,
-)
-from mazane_collector.references.pipeline import (
+from tablo_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
+from tablo_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
+from tablo_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
+from tablo_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
+from tablo_collector.main import USER_AGENT
+from tablo_collector.pipeline import collect_round
+from tablo_collector.platforms import PLATFORMS
+from tablo_collector.references.pipeline import (
     REFERENCE_SOURCES,
     collect_reference_round,
 )
-from mazane_collector.references.talair import TALAIR_ENDPOINT
-from mazane_collector.references.transport import RobotsCheckedTransport
-from mazane_collector.robots import (
+from tablo_collector.references.talair import TALAIR_ENDPOINT
+from tablo_collector.references.transport import RobotsCheckedTransport
+from tablo_collector.robots import (
     PERMISSION_OVERRIDE_HOSTS,
     ROBOTS_TTL_SECONDS,
     RobotsGate,
     robots_checked_fetch,
 )
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -139,7 +135,7 @@ def make_fetcher(payloads: dict[str, Any]) -> Any:
 async def test_gate_honors_rules_aimed_at_our_user_agent_token() -> None:
     responses = {
         robots_url(WALLGOLD_ENDPOINT): RobotsResponse(
-            200, fixture_text("robots_disallow_mazanebot.txt")
+            200, fixture_text("robots_disallow_tablobot.txt")
         )
     }
     gate = RobotsGate(FakeRobotsClient(responses), user_agent=USER_AGENT)
@@ -191,7 +187,7 @@ async def test_disallowed_endpoint_is_skipped_as_staleness_not_crash(
 ) -> None:
     responses = allow_all_everywhere()
     responses[robots_url(WALLGOLD_ENDPOINT)] = RobotsResponse(
-        200, fixture_text("robots_disallow_mazanebot.txt")
+        200, fixture_text("robots_disallow_tablobot.txt")
     )
     gate = RobotsGate(FakeRobotsClient(responses), user_agent=USER_AGENT)
     fetch = robots_checked_fetch(gate, make_fetcher(all_payloads()))
@@ -263,7 +259,7 @@ async def test_cache_ttl_and_url_that_becomes_disallowed(caplog: Any) -> None:
 
     # میزبان والدگلد مسیر را می‌بندد؛ تا سررسید TTL همان برداشت کش معتبر است.
     robots_client.responses[robots_url(WALLGOLD_ENDPOINT)] = RobotsResponse(
-        200, fixture_text("robots_disallow_mazanebot.txt")
+        200, fixture_text("robots_disallow_tablobot.txt")
     )
     second = await collect_round(
         ALL_ADAPTERS, fetch, store, platforms=PLATFORMS, now=second_at
@@ -309,59 +305,19 @@ class FakeReferenceTransport:
         return self._post[url]
 
 
-async def test_bonbast_json_becoming_disallowed_stales_only_bonbast(
-    caplog: Any,
-) -> None:
-    """گردش بن‌بست وسط راه (پیش از `POST /json`) می‌ایستد؛ طلا دات‌آی‌آر می‌ماند."""
-    responses = {
-        robots_url(TALAIR_ENDPOINT): RobotsResponse(
-            200, fixture_text("robots_allow_all.txt")
-        ),
-        robots_url(BONBAST_PAGE_ENDPOINT): RobotsResponse(
-            200, fixture_text("robots_disallow_json_path.txt")
-        ),
-    }
-    gate = RobotsGate(FakeRobotsClient(responses), user_agent=USER_AGENT)
-    inner = FakeReferenceTransport(
-        get_responses={
-            TALAIR_ENDPOINT: json.dumps(load_json("talair_price.json")),
-            BONBAST_PAGE_ENDPOINT: fixture_text("bonbast_page.html"),
-        },
-        post_responses={BONBAST_JSON_ENDPOINT: fixture_text("bonbast_json.json")},
-    )
-    transport = RobotsCheckedTransport(gate, inner)
-    store = InMemoryStore()
-
-    with caplog.at_level(logging.WARNING, logger=ROBOTS_LOGGER):
-        saved = await collect_reference_round(
-            REFERENCE_SOURCES, transport, store, now=FETCHED_AT
-        )
-
-    assert {s.reference_slug for s in saved} == {"talair"}
-    assert await store.get_reference("talair") is not None
-    assert await store.get_reference("bonbast") is None
-    # درخواست ممنوع اصلاً بیرون نرفت — داوری پیش از POST بود.
-    assert inner.posted == []
-    assert any(
-        BONBAST_JSON_ENDPOINT in r.getMessage()
-        for r in caplog.records
-        if r.name == ROBOTS_LOGGER
-    )
-
-
 async def test_allowed_robots_leaves_reference_round_untouched() -> None:
+    """تنها مرجع باقی‌مانده طلا دات‌آی‌آر است (سند تصمیم ۰۰۰۲).
+
+    تست «Disallow روی مسیر POST» با حذف بن‌بست موضوعش را از دست داد: هیچ
+    مرجعی دیگر گردش دومرحله‌ای (GET صفحه ⟸ POST توکن) ندارد. داوری robots
+    برای GET همچنان در تست‌های سکوها پوشش دارد.
+    """
     text = fixture_text("robots_allow_all.txt")
-    responses = {
-        robots_url(TALAIR_ENDPOINT): RobotsResponse(200, text),
-        robots_url(BONBAST_PAGE_ENDPOINT): RobotsResponse(200, text),
-    }
+    responses = {robots_url(TALAIR_ENDPOINT): RobotsResponse(200, text)}
     gate = RobotsGate(FakeRobotsClient(responses), user_agent=USER_AGENT)
     inner = FakeReferenceTransport(
-        get_responses={
-            TALAIR_ENDPOINT: json.dumps(load_json("talair_price.json")),
-            BONBAST_PAGE_ENDPOINT: fixture_text("bonbast_page.html"),
-        },
-        post_responses={BONBAST_JSON_ENDPOINT: fixture_text("bonbast_json.json")},
+        get_responses={TALAIR_ENDPOINT: json.dumps(load_json("talair_price.json"))},
+        post_responses={},
     )
     transport = RobotsCheckedTransport(gate, inner)
     store = InMemoryStore()
@@ -370,7 +326,8 @@ async def test_allowed_robots_leaves_reference_round_untouched() -> None:
         REFERENCE_SOURCES, transport, store, now=FETCHED_AT
     )
 
-    assert {s.reference_slug for s in saved} == {"talair", "bonbast"}
+    assert {s.reference_slug for s in saved} == {"talair"}
+    assert inner.posted == []
 
 
 async def test_permission_override_hosts_bypass_full_disallow() -> None:

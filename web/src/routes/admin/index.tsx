@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({
-    meta: [{ title: "پنل مدیریت — مظنه آنلاین" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "پنل مدیریت — تابلو" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminHomePage,
 });

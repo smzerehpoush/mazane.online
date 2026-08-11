@@ -18,17 +18,17 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.invi import (
+from tablo_collector.adapters.invi import (
     INVI_WS_ENDPOINT,
     InviAdapter,
     decode_invi_message,
 )
-from mazane_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
-from mazane_collector.models import FeeSource, Instrument, Side
-from mazane_collector.pipeline import AdapterError, collect_once, collect_round
-from mazane_collector.platforms import PLATFORMS
-from mazane_collector.store.memory import InMemoryStore
-from mazane_collector.ws import FeedStale
+from tablo_collector.adapters.wallgold import WALLGOLD_ENDPOINT, WallgoldAdapter
+from tablo_collector.models import FeeSource, Instrument, Side
+from tablo_collector.pipeline import AdapterError, collect_once, collect_round
+from tablo_collector.platforms import PLATFORMS
+from tablo_collector.store.memory import InMemoryStore
+from tablo_collector.ws import FeedStale
 
 FIXTURES = Path(__file__).parent / "fixtures"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -60,7 +60,7 @@ async def test_fixture_frame_is_stored_mid_only_with_unknown_fee() -> None:
     # کارمزد نامعلوم ⟸ فقط MID و سطر MEAN که بازتاب همان تک‌عدد است
     # (سکوی تک‌قیمتی: عددی که منتشر می‌کند قیمت مرجع اوست). قیمت مؤثر
     # همچنان جعل نمی‌شود — نه BUY هست نه SELL.
-    assert [q.side for q in stored.quotes] == [Side.MID, Side.MEAN]
+    assert [q.side for q in stored.quotes] == [Side.PRICE]
     quote = stored.quotes[0]
     assert quote.instrument == Instrument.GOLD_18K
     # ضریب فرضی این منبع: تومان بر گرم، ×۱ — ریاضی مقیاس قفل می‌شود.

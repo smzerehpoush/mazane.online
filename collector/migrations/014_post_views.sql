@@ -1,5 +1,5 @@
 -- مهاجرت ۰۱۴ — شمارنده‌ی بازدید پست‌های بلاگ.
--- اجرا: psql "$MAZANE_DATABASE_URL" -f collector/migrations/014_post_views.sql
+-- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/014_post_views.sql
 --
 -- چرا جدول جدا و نه یک ستون روی `posts`؟ دو دلیل، هر دو سخت:
 --

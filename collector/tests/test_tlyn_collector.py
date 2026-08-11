@@ -16,10 +16,10 @@ from typing import Any
 
 import pytest
 
-from mazane_collector.adapters.tlyn import TLYN_ENDPOINT, TlynAdapter
-from mazane_collector.models import FeeSource, Instrument, Side
-from mazane_collector.pipeline import AdapterError, collect_once
-from mazane_collector.store.memory import InMemoryStore
+from tablo_collector.adapters.tlyn import TLYN_ENDPOINT, TlynAdapter
+from tablo_collector.models import FeeSource, Instrument, Side
+from tablo_collector.pipeline import AdapterError, collect_once
+from tablo_collector.store.memory import InMemoryStore
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "tlyn_price.json"
 FETCHED_AT = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
@@ -50,10 +50,9 @@ async def test_fixture_payload_is_stored_with_x1000_scale_and_inverted_sides() -
     assert stored is not None
     assert stored.platform_slug == "tlyn"
 
-    by_side = {quote.side: quote for quote in stored.quotes}
-    # سکوی دوقیمتی ⟸ سطر MEAN هم دارد: قیمت مرجع خودِ همین سکو، میانگین
-    # دو سمت خودش (نه میانگین بین‌سکویی). سازنده‌اش خود مدل است نه آداپتر.
-    assert set(by_side) == {Side.MID, Side.BUY, Side.SELL, Side.MEAN}
+    (price,) = stored.quotes
+    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
+    assert price.side is Side.PRICE
 
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
@@ -64,13 +63,8 @@ async def test_fixture_payload_is_stored_with_x1000_scale_and_inverted_sides() -
     # وارونگی سمت‌ها: در فیکسچر `price.sell = 18599` و `price.buy = 18451`؛
     # BUY مؤثر (آنچه کاربر می‌پردازد) باید از فیلد **sell** منبع بیاید.
     fixture_price = gold18(load_fixture())["price"]
-    assert by_side[Side.BUY].price_toman == fixture_price["sell"] * 1000  # 18,599,000
-    assert by_side[Side.SELL].price_toman == fixture_price["buy"] * 1000  # 18,451,000
-    assert by_side[Side.MID].price_toman == 18525000
-
-    assert by_side[Side.BUY].raw_value == Decimal("18599")
-    assert by_side[Side.SELL].raw_value == Decimal("18451")
-    assert by_side[Side.MID].raw_value == Decimal("18525")
+    assert price.price_toman == 18525000
+    assert price.raw_value == Decimal("18525")
 
 
 async def test_terms_are_implied_from_spread_with_status_flag() -> None:
@@ -82,7 +76,7 @@ async def test_terms_are_implied_from_spread_with_status_flag() -> None:
     assert stored is not None
     terms = stored.terms
 
-    assert terms.fee_source == FeeSource.API
+    assert terms.fee_source == FeeSource.IMPLIED
     assert terms.buy_fee_percent == Decimal("0.3995")
     assert terms.sell_fee_percent == Decimal("0.3995")
     # سند تحقیق ۰۱ (بند ۳.۸) رفت‌وبرگشت طلاین را ~۰٫۸۰٪ اندازه گرفته بود.

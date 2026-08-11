@@ -56,7 +56,7 @@ const percentPointsFormatter = new Intl.NumberFormat("fa-IR", {
  * درصدِ آماده‌ی گردآورنده — رشته‌ای بر حسب واحد درصد (مثلاً "0.9950") ⟸
  * «۰٫۹۹۵٪». فقط قالب‌بندی همان عدد؛ هیچ محاسبه‌ای در کار نیست.
  */
-export function formatPercentPointsFa(points: string): string {
+export function formatPercentPointsFa(points: string | number): string {
   return `${percentPointsFormatter.format(Number(points))}٪`;
 }
 

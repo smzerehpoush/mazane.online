@@ -11,7 +11,7 @@ import type { HistoryPoint } from "../src/lib/history";
 import { getPlatformHistory, resetHistorySource, setHistorySource } from "../src/lib/history";
 import { assemble, resampleHourlyPoints } from "../src/lib/server/history-source";
 
-function row(slug: string, side: "MEAN" | "MID", hour: string, close: string) {
+function row(slug: string, side: "PRICE", hour: string, close: string) {
   return {
     source_slug: slug,
     side,
@@ -30,8 +30,8 @@ describe("assemble", () => {
     const result = assemble(
       ["milli"],
       [
-        row("milli", "MEAN", "2026-08-06T10:00:00Z", "18500000"),
-        row("milli", "MEAN", "2026-08-06T11:00:00Z", "18610000"),
+        row("milli", "PRICE", "2026-08-06T10:00:00Z", "18500000"),
+        row("milli", "PRICE", "2026-08-06T11:00:00Z", "18610000"),
       ],
     );
 
@@ -43,38 +43,26 @@ describe("assemble", () => {
           { hour: "2026-08-06T11:00:00.000Z", value: 18610000 },
         ],
         latest: 18610000,
-        side_used: "MEAN",
+        side_used: "PRICE",
       },
     ]);
   });
 
-  it("MEAN بر MID مقدم است وقتی هر دو هستند", () => {
+  it("تنها یک سمت وجود دارد — ترجیح بین سمت‌ها موضوعش را از دست داد", () => {
+    // پیش‌تر اینجا دو تست بود: «MEAN بر MID مقدم است» و «بدون MEAN به MID
+    // برمی‌گردد». مهاجرت ۰۱۷ همه‌ی سطرها را به `PRICE` رساند (سند تصمیم
+    // ۰۰۰۲)، پس چیزی برای ترجیح‌دادن نمانده و آن دو حالت اصلاً ساختنی نیستند.
     const result = assemble(
       ["wallgold"],
-      [
-        row("wallgold", "MEAN", "2026-08-06T10:00:00Z", "18611000"),
-        row("wallgold", "MID", "2026-08-06T10:00:00Z", "18500000"),
-      ],
+      [row("wallgold", "PRICE", "2026-08-06T10:00:00Z", "18611000")],
     );
-
-    expect(result[0]?.side_used).toBe("MEAN");
+    expect(result[0]?.side_used).toBe("PRICE");
     expect(result[0]?.latest).toBe(18611000);
   });
-
-  it("بدون سطر MEAN به MID برمی‌گردد تا نمودار خالی نماند", () => {
-    const result = assemble(
-      ["melligold"],
-      [row("melligold", "MID", "2026-08-06T10:00:00Z", "18470000")],
-    );
-
-    expect(result[0]?.side_used).toBe("MID");
-    expect(result[0]?.latest).toBe(18470000);
-  });
-
   it("سکوی بی‌سابقه ردیف خالی می‌گیرد، نه حذف — ترتیب ورودی حفظ می‌شود", () => {
     const result = assemble(
       ["milli", "talasea", "tlyn"],
-      [row("tlyn", "MID", "2026-08-06T10:00:00Z", "18400000")],
+      [row("tlyn", "PRICE", "2026-08-06T10:00:00Z", "18400000")],
     );
 
     expect(result.map((entry) => entry.platform_slug)).toEqual(["milli", "talasea", "tlyn"]);
@@ -90,8 +78,8 @@ describe("assemble", () => {
     const result = assemble(
       ["milli", "wallgold"],
       [
-        row("milli", "MID", "2026-08-06T10:00:00Z", "18000000"),
-        row("wallgold", "MID", "2026-08-06T10:00:00Z", "19000000"),
+        row("milli", "PRICE", "2026-08-06T10:00:00Z", "18000000"),
+        row("wallgold", "PRICE", "2026-08-06T10:00:00Z", "19000000"),
       ],
     );
 
@@ -104,15 +92,15 @@ describe("assemble", () => {
     const result = assemble(
       ["milli"],
       [
-        row("milli", "MEAN", "2026-08-06T10:00:00Z", "18500000"),
-        row("milli", "MEAN", "2026-08-06T10:15:00Z", "18510000"),
-        row("milli", "MEAN", "2026-08-06T10:30:00Z", "18520000"),
+        row("milli", "PRICE", "2026-08-06T10:00:00Z", "18500000"),
+        row("milli", "PRICE", "2026-08-06T10:15:00Z", "18510000"),
+        row("milli", "PRICE", "2026-08-06T10:30:00Z", "18520000"),
       ],
     );
 
     expect(result[0]?.points).toHaveLength(3);
     expect(result[0]?.latest).toBe(18520000);
-    expect(result[0]?.side_used).toBe("MEAN");
+    expect(result[0]?.side_used).toBe("PRICE");
   });
 });
 
@@ -124,7 +112,7 @@ describe("getPlatformHistory", () => {
           platform_slug: "milli",
           points: [{ hour: "2026-08-06T10:00:00.000Z", value: 18500000 }],
           latest: 18500000,
-          side_used: "MEAN",
+          side_used: "PRICE",
         },
       ],
     });

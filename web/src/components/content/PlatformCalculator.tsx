@@ -1,32 +1,26 @@
 /**
- * ماشین‌حساب دوحالته‌ی صفحه‌ی سکو (بلیت ۳۵) — زیر بخش «قیمت امروز»
+ * ماشین‌حساب صفحه‌ی سکو (بلیت ۳۵) — زیر بخش «قیمت امروز»
  * (`PlatformPage.tsx::TermsSection`).
  *
- * **سکوی کارمزدمعلوم** (`!hasUnknownFee`): زبانه‌ی خرید/فروش، هرکدام دو
- * ورودی دوسویه‌ی وزن (گرم) و مبلغ (تومان) روی قیمت مؤثر همان سمت
- * (`effectiveBuyFor`/`effectiveSellFor` از `lib/rows.ts` — همان انتخاب
- * آماده‌ی گردآورنده که `TermsSection` هم استفاده می‌کند، نه محاسبه‌ی تازه).
+ * **یک حالت برای همه‌ی سکوها** (سند تصمیم ۰۰۰۲): دو ورودی دوسویه‌ی وزن
+ * (گرم) و مبلغ (تومان) روی «قیمت» همان سکو — همان عدد آماده‌ی گردآورنده که
+ * `TermsSection` هم نشان می‌دهد، نه محاسبه‌ی تازه.
  *
- * **سکوی کارمزد نامعلوم** (`hasUnknownFee`): بدون زبانه، فقط یک ورودی وزن
- * که مبلغ را با قیمت اسمی (`midPrice`) حساب می‌کند و برچسبش صریح می‌گوید
- * کارمزد در این عدد نیست — با همان بند پایانی جمله‌ی `FeeSourceLabel`
- * («سکو کارمزدش را اعلام نکرده است») برای یکدستی واژگان؛ آغاز جمله جدا
- * می‌ماند چون این بافت ماشین‌حساب است («بدون احتساب کارمزد»)، نه بافت
- * برچسب منبع کارمزد.
+ * پیش‌تر دو حالت داشت: زبانه‌ی خرید/فروش روی دو قیمت مؤثر برای
+ * کارمزدمعلوم‌ها، و یک ورودی ساده برای کارمزدنامعلوم‌ها. با حذف قیمت مؤثر
+ * هر دو حالت به یکی رسیدند و زبانه بی‌موضوع شد — یک عدد بیشتر وجود ندارد.
+ *
+ * ⚠️ برچسب صریح می‌گوید کارمزد در این عدد **نیست**: ماشین‌حسابی که عدد
+ * پیش-از-کارمزد بدهد و این را نگوید، از نبودنش بدتر است.
  *
  * تبدیل وزن⟸مبلغ خودش تابع خالص `lib/calculator.ts` است (ضرب/تقسیم ساده
  * روی یک قیمت واحدِ آماده — قاعده‌ی ۱ قراردادها؛ اینجا فقط قیمت درست را
  * انتخاب و اثر جانبی state را مدیریت می‌کند).
  *
- * سوییچ زبانه عمداً ورودی‌های زبانه‌ی قبلی را ریست می‌کند (`key={activeSide}`
- * روی `TwoWaySide`) نه اینکه با useEffect دوباره محاسبه‌شان کند — ساده‌تر و
- * بدون حالت پنهان؛ کاربر با عوض‌کردن زبانه دارد آگاهانه معامله‌ی دیگری
- * می‌سنجد.
- *
- * قطع منبع (`row.snapshot === null`) یا نبودِ قیمت هر دو سمت ⟸ چیزی برای
- * حساب‌کردن نیست، کامپوننت `null` برمی‌گرداند (قاعده‌ی ۵: نه throw، نه کارت
- * خالی گمراه‌کننده) — صفحه همچنان با «قیمت در دسترس نیست» بالای همین بخش
- * صادق می‌ماند.
+ * قطع منبع (`row.snapshot === null`) یا نبودِ قیمت ⟸ چیزی برای حساب‌کردن
+ * نیست، کامپوننت `null` برمی‌گرداند (قاعده‌ی ۵: نه throw، نه کارت خالی
+ * گمراه‌کننده) — صفحه همچنان با «قیمت در دسترس نیست» بالای همین بخش صادق
+ * می‌ماند.
  *
  * دکمه‌ی «شروع معامله» دقیقاً همان الگوی لینک وب‌سایت بالای صفحه است:
  * ‎/go/<slug>‎ با ‎rel="sponsored nofollow noopener"‎ و ‎target="_blank"‎
@@ -37,24 +31,13 @@ import { useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { amountFromWeight, parseCalculatorInput, weightFromAmount } from "@/lib/calculator";
 import { fa } from "@/lib/site-content";
-import {
-  effectiveBuyFor,
-  effectiveSellFor,
-  hasUnknownFee,
-  isBuyOpen,
-  isSellOpen,
-  midPrice,
-  type Row,
-} from "@/lib/rows";
+import { priceToman, type Row } from "@/lib/rows";
 
 /** صفحه‌ی سکو فقط طلای ۱۸ عیار را نشان می‌دهد (همان قرارداد TermsSection/PlatformRateCard). */
 const ASSET_INSTRUMENT = "GOLD_18K";
 
-const UNKNOWN_FEE_NOTE = "بدون احتساب کارمزد — سکو کارمزدش را اعلام نکرده است.";
-
-type TradeSide = "buy" | "sell";
-
-const SIDE_LABEL: Record<TradeSide, string> = { buy: "خرید", sell: "فروش" };
+const PRICE_NOTE =
+  "بر پایه‌ی قیمت اعلامی همین سکو، بدون احتساب کارمزد — کارمزد خرید و فروش بالاتر جداگانه آمده است.";
 
 function TradeButton({
   slug,
@@ -208,112 +191,20 @@ function TwoWaySide({ unitPriceToman }: { unitPriceToman: number }) {
   );
 }
 
-function KnownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boolean }) {
-  const buyPrice = isBuyOpen(row) ? effectiveBuyFor(row, ASSET_INSTRUMENT) : null;
-  const sellPrice = isSellOpen(row) ? effectiveSellFor(row, ASSET_INSTRUMENT) : null;
-  const available: TradeSide[] = [
-    ...(buyPrice !== null ? (["buy"] as const) : []),
-    ...(sellPrice !== null ? (["sell"] as const) : []),
-  ];
-
-  const [side, setSide] = useState<TradeSide | null>(available[0] ?? null);
-  const activeSide = side !== null && available.includes(side) ? side : (available[0] ?? null);
-
-  // نه سمت خرید نه فروش هیچ عددی دارد ⟸ چیزی برای حساب‌کردن نیست.
-  if (activeSide === null) return null;
-  const unitPrice = activeSide === "buy" ? buyPrice : sellPrice;
-  if (unitPrice === null) return null;
-
-  return (
-    <CalculatorSection
-      row={row}
-      hasOutbound={hasOutbound}
-      headerExtra={
-        available.length < 2 ? null : (
-          <div
-            role="tablist"
-            aria-label="خرید یا فروش"
-            className="flex items-center gap-1 rounded-full bg-surface p-1"
-          >
-            {available.map((tradeSide) => (
-              <button
-                key={tradeSide}
-                type="button"
-                role="tab"
-                aria-selected={activeSide === tradeSide}
-                onClick={() => setSide(tradeSide)}
-                className={`transition-smooth rounded-full px-3 py-1.5 text-xs font-medium ${
-                  activeSide === tradeSide
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {SIDE_LABEL[tradeSide]}
-              </button>
-            ))}
-          </div>
-        )
-      }
-    >
-      {/* سوییچ زبانه ⟸ ورودی‌های زبانه‌ی قبلی ریست می‌شوند (بند بالای فایل). */}
-      <TwoWaySide key={activeSide} unitPriceToman={unitPrice} />
-
-      <p className="mt-4 text-[12px] leading-6 text-muted-foreground">
-        بر پایه‌ی قیمت مؤثر {SIDE_LABEL[activeSide]} همین سکو — کارمزد از قبل در این عدد لحاظ شده
-        است.
-      </p>
-    </CalculatorSection>
-  );
-}
-
-function UnknownFeeCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boolean }) {
-  // هوک‌ها همیشه، بدون قید و شرط، پیش از هر return زودهنگام — قانون Hooks:
-  // اگر midPrice بین دو رندر همین نمونه از عدد به null (یا برعکس) عوض شود،
-  // ترتیب فراخوانی هوک نباید تغییر کند، وگرنه React کرش می‌کند.
-  const [weightRaw, setWeightRaw] = useState("");
-  const [amountRaw, setAmountRaw] = useState("");
-
-  const midPriceValue = midPrice(row);
-  if (midPriceValue === null) return null;
-  // اسم تازه با نوع number خالص (نه number|null) — تا closure زیر هم بدون
-  // نیاز به تنگ‌کردن دوباره‌ی جریان کنترل همین نوع را ببیند.
-  const price: number = midPriceValue;
-
-  function onWeightChange(next: string): void {
-    setWeightRaw(next);
-    const weight = parseCalculatorInput(next);
-    setAmountRaw(weight === null ? "" : fa(amountFromWeight(weight, price)));
-  }
+function PriceCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boolean }) {
+  const price = priceToman(row, ASSET_INSTRUMENT);
+  if (price === null) return null;
 
   return (
     <CalculatorSection row={row} hasOutbound={hasOutbound}>
-      <p className="mt-1 text-[12px] leading-6 text-muted-foreground">{UNKNOWN_FEE_NOTE}</p>
+      <TwoWaySide unitPriceToman={price} />
 
-      <div className="mt-4 max-w-xs">
-        <NumberField
-          label="وزن"
-          unit="گرم"
-          placeholder="مثلاً ۱"
-          value={weightRaw}
-          onChange={onWeightChange}
-          kind="weight"
-        />
-      </div>
-
-      <p className="mt-3 text-sm">
-        <span data-calc-amount className="font-semibold tabular-nums">
-          {amountRaw === "" ? "—" : `${amountRaw} تومان`}
-        </span>
-      </p>
+      <p className="mt-4 text-[12px] leading-6 text-muted-foreground">{PRICE_NOTE}</p>
     </CalculatorSection>
   );
 }
 
 export function PlatformCalculator({ row, hasOutbound }: { row: Row; hasOutbound: boolean }) {
   if (row.snapshot === null) return null;
-  return hasUnknownFee(row) ? (
-    <UnknownFeeCalculator row={row} hasOutbound={hasOutbound} />
-  ) : (
-    <KnownFeeCalculator row={row} hasOutbound={hasOutbound} />
-  );
+  return <PriceCalculator row={row} hasOutbound={hasOutbound} />;
 }

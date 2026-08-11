@@ -4,7 +4,7 @@
  * قرارداد فراخوانی (پس از هر انتشار، ویرایش یا پس‌گیری) دست‌نخورده مانده:
  *
  *     POST /api/revalidate-blog
- *     Authorization: Bearer $MAZANE_REVALIDATE_TOKEN
+ *     Authorization: Bearer $TABLO_REVALIDATE_TOKEN
  *     Content-Type: application/json
  *     {"slug": "<post-slug>"}        // اختیاری؛ بدون آن فقط فهرست و سایت‌مپ
  *
@@ -55,7 +55,7 @@ function json(body: unknown, status: number): Response {
 }
 
 export async function revalidateBlogResponse(request: Request): Promise<Response> {
-  const token = process.env["MAZANE_REVALIDATE_TOKEN"];
+  const token = process.env["TABLO_REVALIDATE_TOKEN"];
   const authorization = request.headers.get("authorization") ?? "";
   if (
     token === undefined ||

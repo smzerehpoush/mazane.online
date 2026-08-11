@@ -120,11 +120,11 @@ function anonRequest(url: string, method: string, body?: unknown): Request {
   });
 }
 
-const LIST_URL = "https://mazane.online/api/admin-posts";
-const slugUrl = (slug: string) => `https://mazane.online/api/admin-posts/${slug}`;
+const LIST_URL = "https://tablo.gold/api/admin-posts";
+const slugUrl = (slug: string) => `https://tablo.gold/api/admin-posts/${slug}`;
 
 beforeEach(() => {
-  vi.stubEnv("MAZANE_ADMIN_SESSION_SECRET", SECRET);
+  vi.stubEnv("TABLO_ADMIN_SESSION_SECRET", SECRET);
 });
 
 afterEach(() => {
