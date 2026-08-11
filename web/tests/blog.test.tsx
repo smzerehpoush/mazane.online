@@ -114,9 +114,7 @@ describe("فهرست بلاگ — /blog", () => {
     seedBlog(ALL_POSTS);
     const html = await renderIndex();
     expect(html.indexOf(PUBLISHED_NEW.title_fa)).toBeGreaterThan(-1);
-    expect(html.indexOf(PUBLISHED_NEW.title_fa)).toBeLessThan(
-      html.indexOf(PUBLISHED_OLD.title_fa),
-    );
+    expect(html.indexOf(PUBLISHED_NEW.title_fa)).toBeLessThan(html.indexOf(PUBLISHED_OLD.title_fa));
   });
 
   it("پیش‌نویس و پس‌گرفته در فهرست نیستند", async () => {
@@ -150,7 +148,9 @@ describe("فهرست بلاگ — /blog", () => {
       PUBLISHED_OLD,
     ]);
     const html = await renderIndex();
-    expect(html).toMatch(/<img[^>]*src="https:\/\/s3\.tablo\.test\/tablo-media\/posts\/x\/h\.webp"[^>]*>/);
+    expect(html).toMatch(
+      /<img[^>]*src="https:\/\/s3\.tablo\.test\/tablo-media\/posts\/x\/h\.webp"[^>]*>/,
+    );
     expect(html).toContain('width="1600"');
     expect(html).toContain('height="900"');
     expect(html).toContain('alt="توضیح عکس"');
@@ -194,7 +194,9 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     ]);
     const html = await renderPost(PUBLISHED_NEW.slug);
 
-    expect(html).toMatch(/<img[^>]*src="https:\/\/s3\.tablo\.test\/tablo-media\/posts\/x\/h\.webp"[^>]*>/);
+    expect(html).toMatch(
+      /<img[^>]*src="https:\/\/s3\.tablo\.test\/tablo-media\/posts\/x\/h\.webp"[^>]*>/,
+    );
     expect(html).toContain('width="1600"');
     expect(html).toContain('height="900"');
     expect(html).toContain('alt="توضیح عکس"');
@@ -234,10 +236,7 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     seedBlog(ALL_POSTS);
     const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;
     const blocks = jsonLdOf(blogPostHead(post));
-    expect(blocks.map((block) => block["@type"])).toEqual([
-      "BlogPosting",
-      "BreadcrumbList",
-    ]);
+    expect(blocks.map((block) => block["@type"])).toEqual(["BlogPosting", "BreadcrumbList"]);
   });
 
   it("HTML خام داخل مارک‌داون escape می‌شود، نه اجرا", async () => {

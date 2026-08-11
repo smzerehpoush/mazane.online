@@ -14,9 +14,10 @@
  * خاموش هم دیده می‌شود. `aria-hidden` است چون همان اطلاعات به‌صورت متنی
  * (قیمت کنارش) موجود است — بند ۱۲.
  */
+import { Staleness } from "@/components/content/RowParts";
 import type { RailSource } from "@/lib/dashboard";
 
-export function SourceCards({ sources }: { sources: RailSource[] }) {
+export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: number }) {
   return (
     <section className="card-surface overflow-hidden px-5 py-4 sm:px-6">
       <div>
@@ -65,6 +66,18 @@ export function SourceCards({ sources }: { sources: RailSource[] }) {
                 </span>
               )}
             </span>
+
+            {/*
+              ⚠️ برچسب کهنگیِ **هر سکو** — نه سطح صفحه. برچسب بالای محور
+              بیشینه‌ی زمان همه‌ی سکوهاست، پس یک سکوی مرده پشت تازگیِ بقیه
+              پنهان می‌ماند؛ جدول قدیمی این را به‌ازای هر ردیف داشت و با
+              حذفش گم شده بود (قاعده‌ی سخت ۵، بند ۶.۲ سند معماری).
+              `nowMs` از `generated_at` سرور می‌آید نه `Date.now()`، پس
+              هیدریشن واگرا نمی‌شود.
+            */}
+            <div className="mb-1.5 text-[10px]">
+              <Staleness updatedAt={source.updatedAt} nowMs={nowMs} />
+            </div>
 
             {source.sparkline.line === null ? (
               /* بند ۱۱: بدون تاریخچه، جای خالی حفظ می‌شود و خطی رسم نمی‌شود. */

@@ -7,24 +7,35 @@
  * نمی‌خورد**. اختلاف‌ها و آنچه هنوز از بک‌اند نمی‌آید در `docs/api-gaps.md`
  * مستند است.
  *
- * ⚠️ **همه‌چیز اینجا سمت سرور اجرا می‌شود** (بند ۱۴): هندسه‌ی محور، آمار بازه،
- * مسیرهای SVG، و **قالب‌بندی فارسی اعداد**. کلاینت رشته‌ی آماده می‌گیرد و فقط
- * می‌نشاندش. دو دلیل: اول اینکه HTML اولیه باید عدد واقعی داشته باشد (سئو و
- * «بدون جاوااسکریپت هم بخوان»)، دوم اینکه هر قالب‌بندی سمت کلاینت یک منبع
- * تازه‌ی hydration mismatch است.
+ * ⚠️ **همه‌ی محاسبه اینجا انجام می‌شود** (بند ۱۴): هندسه‌ی محور، آمار بازه،
+ * مسیرهای SVG، و **قالب‌بندی فارسی اعداد و ساعت**. لایه‌ی زنده رشته‌ی آماده
+ * می‌گیرد و فقط می‌نشاندش. دو دلیل: HTML اولیه باید عدد واقعی داشته باشد
+ * (سئو و «بدون جاوااسکریپت هم بخوان»)، و هر قالب‌بندی مستقلِ سمت کلاینت یک
+ * منبع تازه‌ی hydration mismatch است.
+ *
+ * ⚠️ ولی **«سمت سرور» به معنای «فقط سرور» نیست**: `HomePage` این تابع را در
+ * بدنه‌ی رندر صدا می‌زند، پس موقع hydration روی مرورگر هم اجرا می‌شود. برای
+ * همین هر چیزی که از اینجا بیرون می‌رود باید **قطعی** باشد — نه فقط خالص.
+ * `Intl` (چه عدد چه تاریخ) قطعی نیست، چون به نسخه‌ی ICU محیط وابسته است؛
+ * به همین دلیل هیچ فراخوانی `Intl` در این فایل نمانده.
  *
  * ⚠️ قاعده‌ی سخت ۱ قراردادها: **هیچ فرمول قیمتی اینجا نیست.** هر عدد قیمتی
- * همان است که گردآورنده ذخیره کرده. آنچه محاسبه می‌شود دو دسته است و هر دو
+ * همان است که گردآورنده ذخیره کرده. آنچه محاسبه می‌شود سه دسته است و هر سه
  * مجازند:
  *   - **هندسه‌ی نمایش** (درصد موقعیت روی محور، مختصات SVG) — مقیاس است، نه قیمت.
  *   - **کمینه/بیشینه/کسر تغییرِ یک سریِ تک‌سکویی** — همان الگوی مجازی که از
  *     قبل در `PlatformRateCard::computeStats` هست.
+ *   - **فاصله‌ی دو سرِ همان محور** (`spreadDisplay`) — تفاضل دو قیمتِ
+ *     منتشرشده‌ی نام‌دار، نه قیمتی تازه. بند ۵ سند طراحی صریحاً می‌خواهدش
+ *     («بازه اختلاف {max-min} تومان») و هر دو سرش با نام صاحبشان روی همان
+ *     محور دیده می‌شوند. یک آماره‌ی پراکندگی است، نه ادعای قیمت — تصمیم ۸
+ *     بند ۱۵. مرزش هم روشن است: تفاضل مجاز، **میانگین ممنوع** (قاعده‌ی ۴).
  *
  * ⚠️ قاعده‌ی سخت ۴: **هیچ میانگین بین‌سکویی‌ای ساخته نمی‌شود** و هیچ درصد
  * اختلافی بین دو سکو حساب نمی‌شود (بند ۱۵، تصمیم ۳). خلاصه بازار عدد
  * **سکوی مرجع** را نشان می‌دهد، با نام خودش.
  */
-import { formatFaNumber } from "./fa-number";
+import { formatFaClock, formatFaNumber } from "./fa-number";
 import { formatSignedPercentFa } from "./format";
 import type { HistoryRange, PlatformHistory, PlatformHistoryByRange } from "./history";
 import { priceToman, type Row } from "./rows";
@@ -67,6 +78,22 @@ export interface RailSource {
   /** متن جایگزین نشانگر برای صفحه‌خوان (بند ۱۲). */
   ariaLabel: string;
   sparkline: { line: string | null; area: string | null };
+  /**
+   * زمان تازه‌ترین داده‌ی **همین سکو** — ورودی برچسب کهنگی کارت.
+   *
+   * ⚠️ سطح-صفحه کافی نیست: `updatedAt` کل داشبورد بیشینه‌ی همه‌ی سکوهاست، پس
+   * یک سکوی مرده پشت تازگیِ بقیه پنهان می‌ماند. قاعده‌ی سخت ۵ کهنگی را به
+   * ازای **همان منبع** می‌خواهد، نه به ازای صفحه.
+   */
+  updatedAt: string | null;
+  /**
+   * قیمت از اسنپ‌شات جاری نیامده، از آخرین نقطه‌ی تاریخچه آمده.
+   *
+   * ⚠️ این یعنی عدد **قدیمی** است. نمایشش مجاز است (قاعده‌ی ۵: عدد قدیمی با
+   * زمانش، نه پیام خطا) ولی **فقط در کنار برچسب کهنگی** — بدون آن، یک نقطه‌ی
+   * تجمیع ساعتی بی‌سروصدا به‌جای «قیمت الان» جا می‌زند.
+   */
+  priceFromHistory: boolean;
 }
 
 export interface RailView {
@@ -157,12 +184,13 @@ export interface SummaryView {
 const SUMMARY_WIDTH = 320;
 const SUMMARY_HEIGHT = 108;
 
-const hourFormatter = new Intl.DateTimeFormat("fa-IR", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-  timeZone: "Asia/Tehran",
-});
+/**
+ * ⚠️ اینجا `Intl.DateTimeFormat` بود و **باگ بود**: این تابع رشته‌هایی می‌سازد
+ * که رندر می‌شوند (ساعت وقوع کمینه/بیشینه و برچسب «آخرین به‌روزرسانی»)، و
+ * `buildDashboard` در بدنه‌ی رندر `HomePage` صدا زده می‌شود — پس هم روی سرور
+ * و هم موقع hydration اجرا می‌شود. یعنی همان واگرایی نسخه‌ی ICU که
+ * `lib/fa-number.ts` برای عدد بسته بود، از در تاریخ برگشته بود.
+ */
 
 /**
  * فقط انتخاب و یک تقسیم روی همان سری — کمینه، بیشینه، و کسر تفاضل سر و ته.
@@ -200,8 +228,11 @@ function summaryOf(
     key: range.key,
     label: range.label,
     currentDisplay: formatFaNumber(last),
-    high: { valueDisplay: formatFaNumber(highPoint.value), atDisplay: formatHour(highPoint.hour) },
-    low: { valueDisplay: formatFaNumber(lowPoint.value), atDisplay: formatHour(lowPoint.hour) },
+    high: {
+      valueDisplay: formatFaNumber(highPoint.value),
+      atDisplay: formatFaClock(highPoint.hour),
+    },
+    low: { valueDisplay: formatFaNumber(lowPoint.value), atDisplay: formatFaClock(lowPoint.hour) },
     changeFraction,
     changeDisplay: formatSignedPercentFa(changeFraction),
     area: seriesPaths(
@@ -210,10 +241,6 @@ function summaryOf(
     ),
     enabled: true,
   };
-}
-
-function formatHour(iso: string): string {
-  return hourFormatter.format(new Date(iso));
 }
 
 /* ------------------------------------------------------------- کل داشبورد */
@@ -263,12 +290,17 @@ export function buildDashboard(input: DashboardInput): DashboardView {
   const priced = input.platforms.map((platform) => {
     const row = rowBySlug.get(platform.slug) ?? null;
     const entry = historyBySlug.get(platform.slug) ?? null;
+    const livePrice = row === null ? null : priceToman(row, HOME_INSTRUMENT);
     return {
       platform,
       row,
       // اسنپ‌شات جاری مقدم است؛ نبودش ⟸ آخرین نقطه‌ی تاریخچه (هر دو انتخاب‌اند،
       // نه محاسبه). هیچ‌کدام ⟸ سکو در این نوبت قیمت ندارد.
-      price: (row === null ? null : priceToman(row, HOME_INSTRUMENT)) ?? entry?.latest ?? null,
+      price: livePrice ?? entry?.latest ?? null,
+      // ⚠️ جدول قدیمی این فرود را نداشت و برای سکوی مرده «قیمت در دسترس نیست»
+      // می‌گذاشت. فرود مفید است (عدد قدیمی بهتر از هیچ)، ولی باید **دیده شود**
+      // که قدیمی است — وگرنه نقطه‌ی تجمیع ساعتی جای «قیمت الان» می‌نشیند.
+      priceFromHistory: livePrice === null && (entry?.latest ?? null) !== null,
       points: entry?.points ?? [],
       name: row?.platform.name_fa ?? platform.name_fa,
     };
@@ -307,6 +339,8 @@ export function buildDashboard(input: DashboardInput): DashboardView {
         item.points.map((point) => point.value),
         { width: SPARK_WIDTH, height: SPARK_HEIGHT },
       ),
+      updatedAt: item.row?.updatedAt ?? null,
+      priceFromHistory: item.priceFromHistory,
     };
   });
 
@@ -329,7 +363,7 @@ export function buildDashboard(input: DashboardInput): DashboardView {
       ranges: RATE_CARD_RANGES.map((range) => summaryOf(range, input.referenceHistory[range.key])),
     },
     updatedAt,
-    updatedAtDisplay: updatedAt === null ? null : formatHour(updatedAt),
+    updatedAtDisplay: updatedAt === null ? null : formatFaClock(updatedAt),
   };
 }
 
@@ -338,8 +372,13 @@ export function buildDashboard(input: DashboardInput): DashboardView {
  *
  * ⚠️ بک‌اند زمان **به‌ازای هر سکو** می‌دهد و هیچ زمان سطح-صفحه‌ای ندارد؛ فتیله
  * یکی می‌خواهد (بند ۱۴). بیشینه انتخاب شد نه کمینه: فتیله «چقدر از تازه‌ترین
- * داده گذشته» را می‌شمارد، و یک سکوی کهنه نباید فتیله‌ی کل صفحه را عقب بکشد —
- * کهنگی خودِ آن سکو جای دیگری برچسب می‌خورد. مستند در `docs/api-gaps.md`.
+ * داده گذشته» را می‌شمارد، و یک سکوی کهنه نباید فتیله‌ی کل صفحه را عقب بکشد.
+ *
+ * ⚠️ این عدد **جانشین کهنگیِ هر سکو نیست** و نباید بشود: بیشینه دقیقاً یعنی
+ * یک سکوی مرده پشت تازگیِ بقیه پنهان می‌ماند. برچسب هر سکو از
+ * `RailSource.updatedAt` می‌آید و روی کارت خودش رندر می‌شود. (نسخه‌ی اول این
+ * فایل ادعا می‌کرد کهنگی «جای دیگری برچسب می‌خورد» در حالی که هیچ‌جا نمی‌خورد —
+ * بازبینی کد گرفتش.) مستند در `docs/api-gaps.md`.
  */
 function latestUpdatedAt(rows: readonly Row[]): string | null {
   let latest: string | null = null;

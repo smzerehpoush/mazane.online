@@ -12,10 +12,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import {
-  DarbarePishnahad,
-  darbarePishnahadHead,
-} from "../src/routes/darbare-pishnahad";
+import { DarbarePishnahad, darbarePishnahadHead } from "../src/routes/darbare-pishnahad";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 import { nav } from "../src/lib/site-content";

@@ -14,7 +14,12 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { PlatformCalculator } from "../src/components/content/PlatformCalculator";
-import { amountFromWeight, parseCalculatorInput, weightFromAmount } from "../src/lib/calculator";
+import {
+  amountFromWeight,
+  jewelryTotal,
+  parseCalculatorInput,
+  weightFromAmount,
+} from "../src/lib/calculator";
 import type { ListedPlatform } from "../src/lib/prices";
 import type { Row } from "../src/lib/rows";
 import { SlugPageView } from "../src/components/content/SlugPageView";
@@ -255,5 +260,72 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
     expect(html).toContain('aria-labelledby="terms-heading"');
     expect(html).toContain("data-platform-calculator");
     expect(html).toContain("بدون احتساب کارمزد");
+  });
+});
+
+/**
+ * ماشین‌حساب طلای زینتی (بند ۸ سند طراحی) — فرمول خالص.
+ *
+ * ⚠️ این تابع اول داخل `JewelryCalculator.tsx` نوشته شده بود و بی‌تست ماند.
+ * جایش `lib/calculator.ts` است، کنار `amountFromWeight` — همان‌جایی که فایل
+ * خودش را «تنها دروازه» می‌نامد.
+ */
+describe("jewelryTotal — مبلغ طلای زینتی", () => {
+  const PRICE = 18_500_000;
+
+  it("بدون هیچ درصدی، فقط وزن × قیمت است", () => {
+    expect(
+      jewelryTotal({
+        weightGrams: 2,
+        pricePerGram: PRICE,
+        wagePercent: 0,
+        profitPercent: 0,
+        vatPercent: 0,
+      }),
+    ).toBe(37_000_000);
+  });
+
+  /**
+   * ⚠️ ترتیب اعمال مهم است و اشتباه‌گرفتنش خطای ساکت می‌دهد: اجرت روی قیمت
+   * طلا، سود روی **مجموع طلا و اجرت**، و مالیات روی **کل**. اگر هر سه را
+   * جداگانه روی قیمت طلا بزنند، عدد کم‌تر درمی‌آید.
+   */
+  it("اجرت روی طلا، سود روی طلا+اجرت، مالیات روی کل", () => {
+    const total = jewelryTotal({
+      weightGrams: 1,
+      pricePerGram: 1_000_000,
+      wagePercent: 10,
+      profitPercent: 7,
+      vatPercent: 10,
+    });
+    // ۱٬۰۰۰٬۰۰۰ × ۱٫۱ = ۱٬۱۰۰٬۰۰۰ → × ۱٫۰۷ = ۱٬۱۷۷٬۰۰۰ → × ۱٫۱ = ۱٬۲۹۴٬۷۰۰
+    expect(total).toBe(1_294_700);
+    // جمعِ ساده‌ی درصدها (۱٫۲۷) عدد دیگری می‌دهد — نگهبان ترتیب.
+    expect(total).not.toBe(Math.round(1_000_000 * 1.27));
+  });
+
+  it("به نزدیک‌ترین تومان گرد می‌شود", () => {
+    expect(
+      Number.isInteger(
+        jewelryTotal({
+          weightGrams: 1.337,
+          pricePerGram: PRICE,
+          wagePercent: 8.5,
+          profitPercent: 7,
+          vatPercent: 10,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("درصد صفر هیچ اثری ندارد (کاربری که فقط وزن زده، قیمت خام می‌بیند)", () => {
+    const bare = jewelryTotal({
+      weightGrams: 3,
+      pricePerGram: PRICE,
+      wagePercent: 0,
+      profitPercent: 0,
+      vatPercent: 0,
+    });
+    expect(bare).toBe(amountFromWeight(3, PRICE));
   });
 });

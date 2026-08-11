@@ -105,6 +105,9 @@ export function HomePage({ data }: { data: HomePageData }) {
   // مقدار اولیه از سرور می‌آید و این هوک موقع mount هیچ فچی نمی‌زند (بند ۱۴).
   const live = useLiveDashboard();
 
+  // ⚠️ از `generated_at` سرور، نه `Date.now()`: برچسب کهنگی باید در رندر
+  // سرور و در hydration یک متن بدهد (بند ۱۴، مورد ۲).
+  const nowMs = Date.parse(data.generated_at);
   const reference = dashboard.rail.sources.find((source) => source.isReference) ?? null;
   const latestPosts = sidebarPosts(data.posts);
   const morePosts = bottomPosts(data.posts, data.viewCounts);
@@ -146,7 +149,7 @@ export function HomePage({ data }: { data: HomePageData }) {
               onRefresh={live.refreshNow}
             />
             <MarketSummary summary={dashboard.summary} />
-            <SourceCards sources={dashboard.rail.sources} />
+            <SourceCards sources={dashboard.rail.sources} nowMs={nowMs} />
           </div>
         </div>
 

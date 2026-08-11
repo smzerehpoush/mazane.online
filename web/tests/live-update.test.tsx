@@ -145,9 +145,7 @@ describe("قلاب‌های داشبورد در HTML سروررندر", () => {
     ] as const) {
       expect(html, slug).toContain(`data-rail-marker="${slug}"`);
       const marker = html.match(new RegExp(`<a[^>]*data-rail-marker="${slug}"[\\s\\S]*?</a>`));
-      expect(marker?.[0], slug).toMatch(
-        new RegExp(`data-rail-price[^>]*>${price}</span>`),
-      );
+      expect(marker?.[0], slug).toMatch(new RegExp(`data-rail-price[^>]*>${price}</span>`));
     }
   });
 
@@ -225,9 +223,7 @@ describe("هم‌ارزی payload با رندر سرور", () => {
     const payload = await livePricesPayload();
     for (const source of payload.dashboard?.sources ?? []) {
       if (source.rail_percent === null) continue;
-      const marker = html.match(
-        new RegExp(`<a[^>]*data-rail-marker="${source.slug}"[^>]*>`),
-      );
+      const marker = html.match(new RegExp(`<a[^>]*data-rail-marker="${source.slug}"[^>]*>`));
       if (marker === null) continue;
       expect(marker[0], source.slug).toContain(`right:${source.rail_percent}%`);
     }

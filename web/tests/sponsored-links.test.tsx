@@ -39,10 +39,7 @@ import {
  * میزبان‌های مراجع قیمت (بند ۱۲.۲) — ارجاع تحریری غیر درآمدزا؛ لینکشان
  * ساده می‌ماند ولی حداقل nofollow می‌خواهد. هیچ سکویی اینجا نمی‌آید.
  */
-const NON_REVENUE_REFERENCE_HOSTS: ReadonlySet<string> = new Set([
-  "tala.ir",
-  "www.tala.ir",
-]);
+const NON_REVENUE_REFERENCE_HOSTS: ReadonlySet<string> = new Set(["tala.ir", "www.tala.ir"]);
 
 function attrOf(tag: string, name: string): string | null {
   const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
@@ -101,9 +98,7 @@ function assertOutboundLinkPolicy(
         }
       }
       if (attrOf(tag, "target") !== "_blank") {
-        throw new Error(
-          `لینک ${href} در «${pageName}» باید target="_blank" داشته باشد (${tag})`,
-        );
+        throw new Error(`لینک ${href} در «${pageName}» باید target="_blank" داشته باشد (${tag})`);
       }
     }
   }
@@ -213,11 +208,7 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
     for (const platform of PLATFORMS) {
       seed(seededStore());
       const html = await renderSlug(platform.slug);
-      const goLinks = assertOutboundLinkPolicy(
-        html,
-        PLATFORM_HOSTS,
-        `صفحه‌ی ${platform.slug}`,
-      );
+      const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, `صفحه‌ی ${platform.slug}`);
       expect(goLinks).toBeGreaterThanOrEqual(1);
       expect(html).toContain(`href="/go/${platform.slug}"`);
       expect(html).not.toContain(REFERRAL_CODE);
@@ -255,36 +246,26 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
 describe("کاونده‌ی سیاست لینک — نقض‌ها واقعاً شکست می‌خورند", () => {
   it("لینک مستقیم به میزبان سکو (دور زدن /go/) ⟸ شکست", () => {
     const bad = '<a href="https://wallgold.ir" rel="sponsored nofollow noopener">و</a>';
-    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /دور می‌زند/,
-    );
+    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(/دور می‌زند/);
   });
 
   it("لینک خروجی بدون sponsored ⟸ شکست", () => {
     const bad = '<a href="https://tabligh.example" rel="nofollow noopener">آ</a>';
-    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /sponsored/,
-    );
+    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(/sponsored/);
   });
 
   it("لینک /go/ بدون rel کامل یا بدون target=_blank ⟸ شکست", () => {
     const noRel = '<a href="/go/milli" rel="nofollow noopener" target="_blank">م</a>';
-    expect(() => assertOutboundLinkPolicy(noRel, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /sponsored/,
-    );
+    expect(() => assertOutboundLinkPolicy(noRel, PLATFORM_HOSTS, "آزمایشی")).toThrow(/sponsored/);
     const noTarget = '<a href="/go/milli" rel="sponsored nofollow noopener">م</a>';
-    expect(() => assertOutboundLinkPolicy(noTarget, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /_blank/,
-    );
+    expect(() => assertOutboundLinkPolicy(noTarget, PLATFORM_HOSTS, "آزمایشی")).toThrow(/_blank/);
   });
 
   it("ارجاع غیر درآمدزا به مرجع قیمت: ساده ولی حتماً nofollow", () => {
     const ok = '<a href="https://www.tala.ir/price" rel="nofollow noopener">طلا</a>';
     expect(assertOutboundLinkPolicy(ok, PLATFORM_HOSTS, "آزمایشی")).toBe(0);
     const bare = '<a href="https://www.tala.ir/price">طلا</a>';
-    expect(() => assertOutboundLinkPolicy(bare, PLATFORM_HOSTS, "آزمایشی")).toThrow(
-      /rel کامل/,
-    );
+    expect(() => assertOutboundLinkPolicy(bare, PLATFORM_HOSTS, "آزمایشی")).toThrow(/rel کامل/);
   });
 });
 

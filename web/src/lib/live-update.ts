@@ -46,6 +46,12 @@ export interface LiveDashboardSource {
   price_display: string | null;
   rail_percent: number | null;
   stem_long: boolean;
+  /**
+   * زمان تازه‌ترین داده‌ی همین سکو — تا برچسب کهنگی کارت با گذر زمان پیر شود.
+   * بدون این، سکویی که از کار افتاده عددش را روی صفحه نگه می‌داشت و هیچ‌وقت
+   * «کهنه» نمی‌شد (قاعده‌ی سخت ۵).
+   */
+  updated_at: string | null;
 }
 
 /** هندسه و پاورقی تازه‌ی محور — همان چیزی که `buildDashboard` ساخته. */

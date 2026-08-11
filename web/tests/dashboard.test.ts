@@ -4,6 +4,9 @@
  * مرز تست: ورودی خالص، خروجی خالص. این همان کدی است که سرور اجرا می‌کند —
  * نه نسخه‌ی دومش.
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -377,5 +380,82 @@ describe("قالب‌بندی سمت سرور — بند ۱۴", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(JSON.stringify(buildDashboard(input()))).toBe(JSON.stringify(buildDashboard(input())));
     warn.mockRestore();
+  });
+});
+
+/**
+ * نگهبان سطح کد. `buildDashboard` در بدنه‌ی رندر `HomePage` صدا زده می‌شود،
+ * پس روی سرور **و** موقع hydration اجرا می‌شود؛ هر رشته‌ای که تولید می‌کند
+ * باید قطعی باشد. `Intl` قطعی نیست (به نسخه‌ی ICU محیط وابسته است) و یک بار
+ * از در تاریخ برگشته بود — `formatHour` با `Intl.DateTimeFormat` نوشته شده
+ * بود و سه رشته‌ی رندرشده را می‌ساخت. تست رفتاری این را نمی‌گیرد چون در یک
+ * محیط اجرا می‌شود و هر دو سمت همان ICU را دارند.
+ */
+describe("قطعیت — هیچ Intl در مسیر رندر داشبورد", () => {
+  /**
+   * کامنت‌ها اول برداشته می‌شوند: خودِ این فایل‌ها در توضیحشان می‌گویند چرا
+   * `Intl` را کنار گذاشته‌اند، و نگهبانی که به متن توضیح گیر بدهد، نویسنده را
+   * از **مستندکردن دلیل** منصرف می‌کند.
+   */
+  function codeWithoutComments(relative: string): string {
+    return readFileSync(join(__dirname, "..", relative), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+  }
+
+  it.each(["src/lib/dashboard.ts", "src/lib/spline.ts"])("%s هیچ فراخوانی Intl ندارد", (file) => {
+    const calls = codeWithoutComments(file)
+      .split("\n")
+      .filter((line) => /\bIntl\./.test(line));
+    expect(calls, `Intl در ${file}: ${calls.join(" | ")}`).toEqual([]);
+  });
+});
+
+/**
+ * ⚠️ رگرسیون واقعی که بازبینی کد گرفت. جدول قدیمی برای هر ردیف برچسب کهنگی
+ * داشت و **فرود به تاریخچه نداشت**: سکوی مرده «قیمت در دسترس نیست» می‌گرفت.
+ * نسخه‌ی اول داشبورد هر دو را از دست داد — عددِ آخرین نقطه‌ی تجمیع ساعتی را
+ * بی‌هیچ نشانه‌ای به‌جای «قیمت الان» می‌نشاند. این دقیقاً چیزی است که
+ * قاعده‌ی سخت ۵ ممنوع می‌کند: عدد قدیمی مجاز است، عدد قدیمیِ **بی‌زمان** نه.
+ */
+describe("کهنگی به‌ازای هر سکو — قاعده‌ی سخت ۵", () => {
+  it("زمان هر سکو جدا حمل می‌شود، نه فقط زمان صفحه", () => {
+    const { rail, updatedAt } = buildDashboard(
+      input({
+        rows: [
+          row("milli", 18_600_000, "2026-08-11T09:00:00.000Z"),
+          row("wallgold", 18_500_000, "2026-08-11T06:00:00.000Z"),
+        ],
+      }),
+    );
+    expect(rail.sources.find((s) => s.slug === "milli")?.updatedAt).toBe(
+      "2026-08-11T09:00:00.000Z",
+    );
+    // سکوی کهنه زمان **خودش** را نگه می‌دارد و پشت بیشینه‌ی صفحه پنهان نمی‌شود.
+    expect(rail.sources.find((s) => s.slug === "wallgold")?.updatedAt).toBe(
+      "2026-08-11T06:00:00.000Z",
+    );
+    expect(updatedAt).toBe("2026-08-11T09:00:00.000Z");
+  });
+
+  it("قیمتِ آمده از تاریخچه علامت‌گذاری می‌شود", () => {
+    const { rail } = buildDashboard(
+      input({
+        rows: [row("milli", 18_600_000, "2026-08-11T09:00:00.000Z"), row("wallgold", null)],
+        history: [history("wallgold", [18_400_000, 18_450_000])],
+      }),
+    );
+    const fromHistory = rail.sources.find((s) => s.slug === "wallgold");
+    expect(fromHistory?.priceDisplay).toBe("۱۸٬۴۵۰٬۰۰۰");
+    expect(fromHistory?.priceFromHistory).toBe(true);
+    // سکوی زنده علامت نمی‌گیرد.
+    expect(rail.sources.find((s) => s.slug === "milli")?.priceFromHistory).toBe(false);
+  });
+
+  it("سکوی بی‌قیمت و بی‌تاریخچه هم علامت تاریخچه نمی‌گیرد", () => {
+    const { rail } = buildDashboard(
+      input({ rows: [row("milli", 18_600_000), row("wallgold", null)] }),
+    );
+    expect(rail.sources.find((s) => s.slug === "wallgold")?.priceFromHistory).toBe(false);
   });
 });

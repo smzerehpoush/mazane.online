@@ -20,6 +20,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  formatFaClock,
   formatFaNumber,
   formatFaPercentFromFraction,
   formatFaPercentPoints,
@@ -216,5 +217,52 @@ describe("قطعی‌بودن", () => {
 
   it("هیچ نویسه‌ی لاتینی در خروجی نیست (جز علامت + که خودِ Intl هم لاتین می‌دهد)", () => {
     expect(formatFaNumber(1234567.89, { maximumFractionDigits: 2 })).not.toMatch(/[0-9.,]/);
+  });
+});
+
+/**
+ * ساعت فارسی — آخرین رشته‌ی رندرشده‌ای که هنوز از `Intl` رد می‌شد.
+ *
+ * ⚠️ چرا این هم لازم شد: `lib/dashboard.ts` برچسب «آخرین به‌روزرسانی» و ساعت
+ * وقوع کمینه/بیشینه‌ی خلاصه بازار را با `Intl.DateTimeFormat` می‌ساخت، و
+ * `buildDashboard` در بدنه‌ی رندر `HomePage` صدا زده می‌شود — یعنی **هم روی
+ * سرور و هم موقع hydration** اجرا می‌شد. همان ریسک واگرایی ICU که این فایل
+ * برای عدد بسته بود، از در دیگری برگشته بود.
+ *
+ * انتظارها با خروجی `Intl.DateTimeFormat("fa-IR", {hour:"2-digit",
+ * minute:"2-digit", hour12:false, timeZone:"Asia/Tehran"})` روی ICU 78.3
+ * راستی‌آزمایی شده‌اند — دو نقطه‌ی جداکننده در آن خروجی **کولون ASCII**
+ * (U+003A) است، نه نویسه‌ی عربی.
+ */
+describe("ساعت فارسی — بدون Intl", () => {
+  it("زمان UTC را به ساعت تهران می‌برد", () => {
+    expect(formatFaClock("2026-08-11T09:00:00Z")).toBe("۱۲:۳۰");
+  });
+
+  it("گذر از نیمه‌شب را درست می‌چرخاند", () => {
+    expect(formatFaClock("2026-01-15T20:35:00Z")).toBe("۰۰:۰۵");
+    expect(formatFaClock("2026-08-11T20:30:00Z")).toBe("۰۰:۰۰");
+  });
+
+  it("همیشه دو رقمی است و با کولون ASCII جدا می‌شود", () => {
+    const out = formatFaClock("2026-08-11T04:35:00Z");
+    expect(out).toBe("۰۸:۰۵");
+    expect(out.charCodeAt(2)).toBe(0x3a);
+  });
+
+  /**
+   * ایران از ۱۴۰۱ (۲۰۲۲) ساعت تابستانی را برداشته و تهران تمام سال +۳:۳۰
+   * است. اگر روزی برگردد، این تست باید بشکند — همان‌جاست که باید ببینیمش.
+   */
+  it("تابستان و زمستان یک اختلاف دارند (ایران ساعت تابستانی ندارد)", () => {
+    expect(formatFaClock("2026-01-15T12:00:00Z")).toBe("۱۵:۳۰");
+    expect(formatFaClock("2026-07-15T12:00:00Z")).toBe("۱۵:۳۰");
+  });
+
+  it("ورودی نامعتبر «—» می‌دهد و بی‌صدا رد نمی‌شود", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(formatFaClock("چرند")).toBe("—");
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
   });
 });

@@ -505,3 +505,33 @@ describe("صفحه‌ی اصلی — نوار ماده ۵ و یادداشت حق
     expect(html).toContain("تابلو معامله‌گر یا مشاور سرمایه‌گذاری نیست.");
   });
 });
+
+describe("صفحه‌ی اصلی — کهنگی هر سکو روی کارت خودش (قاعده‌ی سخت ۵)", () => {
+  /**
+   * ⚠️ برچسب سطح-صفحه کافی نیست: بیشینه‌ی زمان همه‌ی سکوهاست، پس یک سکوی
+   * مرده پشت تازگیِ بقیه پنهان می‌ماند. جدول قدیمی این را به‌ازای هر ردیف
+   * داشت؛ با حذفش گم شد و بازبینی کد گرفتش.
+   */
+  it("هر کارت منبع برچسب زمان خودش را در HTML سروری دارد", async () => {
+    const html = await renderHome(healthyStore());
+    for (const slug of ["wallgold", "talasea", "milli"]) {
+      expect(cardOf(html, slug), slug).toMatch(/<time[^>]*data-live="updated-at"/);
+    }
+  });
+
+  it("سکوی کهنه روی کارت خودش «کهنه» می‌گیرد، حتی وقتی بقیه تازه‌اند", async () => {
+    const store = healthyStore();
+    store.updatedAt["talasea"] = staleIso();
+    const html = await renderHome(store);
+    expect(cardOf(html, "talasea")).toContain("کهنه");
+    expect(cardOf(html, "wallgold")).not.toContain("کهنه");
+  });
+
+  it("سکوی بی‌سابقه دروغ نمی‌گوید", async () => {
+    const store = healthyStore();
+    store.snapshots["talasea"] = null;
+    store.updatedAt["talasea"] = null;
+    const html = await renderHome(store);
+    expect(cardOf(html, "talasea")).toContain("هنوز داده‌ای ثبت نشده است");
+  });
+});

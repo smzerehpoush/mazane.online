@@ -231,3 +231,49 @@ export function formatFaPercentFromFraction(
 export function formatFaPercentPoints(points: number, options: FaNumberOptions = {}): string {
   return formatFaNumber(points, options) + PERCENT_SIGN;
 }
+
+/**
+ * اختلاف ثابت تهران از UTC، به دقیقه (‎+۳:۳۰‎).
+ *
+ * ⚠️ این عدد یک **فرض قابل‌ابطال** است، نه یک ثابت ابدی: ایران از سال ۱۴۰۱
+ * (۲۰۲۲) ساعت تابستانی را برداشته و تهران تمام سال ‎+۳:۳۰‎ است. اگر روزی
+ * ساعت تابستانی برگردد، ساعت‌های نمایشی نیمی از سال یک ساعت غلط می‌شوند.
+ * تستِ «تابستان و زمستان یک اختلاف دارند» همین را پین کرده تا اگر روزی این
+ * فرض باطل شد، در تست دیده شود نه روی سایت.
+ *
+ * چرا با این ریسک باز هم بهتر از `Intl` است: خطای احتمالی‌اش **مرئی و
+ * یک‌جا**ست (یک ساعت جابه‌جایی که تست می‌گیردش)، در حالی که خطای `Intl`
+ * واگرایی خاموش سرور/مرورگر است که ری‌اکت بی‌صدا در hydration دور می‌ریزد.
+ */
+const TEHRAN_UTC_OFFSET_MINUTES = 210;
+
+/**
+ * زمان ISO ⟸ ساعت تهران به شکل «۱۲:۳۰».
+ *
+ * جانشین `Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit",
+ * hour12: false, timeZone: "Asia/Tehran" })` — خروجی بایت‌به‌بایت همان است،
+ * از جمله جداکننده که در آن خروجی **کولون ASCII** (U+003A) است نه نویسه‌ی
+ * عربی.
+ *
+ * ⚠️ چرا لازم شد: `lib/dashboard.ts` این رشته‌ها را می‌سازد و
+ * `buildDashboard` در بدنه‌ی رندر `HomePage` صدا زده می‌شود — یعنی هم روی
+ * سرور و هم موقع hydration اجرا می‌شود. همان ریسکی که برای عدد بسته شده بود
+ * از در تاریخ برگشته بود.
+ *
+ * تاریخ کامل (روز/ماه/سال جلالی) عمداً اینجا نیست و در `lib/format.ts` روی
+ * `Intl` می‌ماند: تقویم جلالی را نمی‌شود بدون یک پیاده‌سازی کامل و پرخطر
+ * دستی نوشت، و آن رشته‌ها در مسیر رندر داشبورد نیستند.
+ */
+export function formatFaClock(iso: string): string {
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) {
+    console.warn(`formatFaClock: زمان نامعتبر — ${iso}`);
+    return INVALID_PLACEHOLDER;
+  }
+  const shifted = new Date(ms + TEHRAN_UTC_OFFSET_MINUTES * 60_000);
+  // getUTC* بعد از جابه‌جایی دستی: مقدارِ محلیِ ماشین هرگز وارد نمی‌شود، پس
+  // خروجی به منطقه‌ی زمانی سرور یا مرورگر کاربر وابسته نیست.
+  const hours = String(shifted.getUTCHours()).padStart(2, "0");
+  const minutes = String(shifted.getUTCMinutes()).padStart(2, "0");
+  return toPersianDigits(`${hours}:${minutes}`);
+}

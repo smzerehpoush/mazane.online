@@ -59,6 +59,7 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
         price_display: source.priceDisplay,
         rail_percent: source.railPercent,
         stem_long: source.stemLong,
+        updated_at: source.updatedAt,
       })),
       max_display: dashboard.rail.maxDisplay,
       min_display: dashboard.rail.minDisplay,

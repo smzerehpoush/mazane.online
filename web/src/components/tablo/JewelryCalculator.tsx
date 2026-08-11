@@ -5,18 +5,16 @@
  * مبنا همیشه قیمت گرم طلای ۱۸ عیارِ **سکوی مرجع** است و نامش زیر خروجی
  * می‌آید (قاعده‌ی سخت ۴: هر عدد نام صاحبش را دارد).
  *
- * ⚠️ **این «فرمول قیمت» به معنای قاعده‌ی سخت ۱ نیست.** قاعده‌ی ۱ می‌گوید وب
- * نباید قیمت **سکو** را بسازد یا مشتق کند؛ اینجا هیچ قیمتی ساخته نمی‌شود.
- * ورودی‌ها را خودِ کاربر می‌زند و خروجی هرگز ذخیره، منتشر یا به سکویی منتسب
- * نمی‌شود — یک ابزار حساب برای کاربر است، مثل ماشین‌حساب جیبی. فرمولش هم
- * همان چیزی است که سند طراحی نوشته و در پاورقی کارت برای کاربر باز شده.
+ * ⚠️ خودِ فرمول اینجا نیست: در `lib/calculator.ts` است — «تنها دروازه»ی حساب
+ * ماشین‌حساب، که تست خودش را دارد. دلیل اینکه چرا ناقض قاعده‌ی سخت ۱ نیست
+ * هم همان‌جا نوشته شده، کنار `amountFromWeight` که از پیش همان دسته بود.
  *
  * ⚠️ پوسته سروررندر است (بند ۱۴) و فقط محاسبه بعد از تعامل کاربر انجام
  * می‌شود. با جاوااسکریپت خاموش، فیلدها دیده می‌شوند و خروجی «—» می‌ماند.
  */
 import { useState } from "react";
 
-import { parseCalculatorInput } from "@/lib/calculator";
+import { jewelryTotal, parseCalculatorInput } from "@/lib/calculator";
 import { formatFaNumber } from "@/lib/fa-number";
 
 interface Field {
@@ -32,27 +30,6 @@ const FIELDS: readonly Field[] = [
   { key: "profit", label: "سود (٪)", initial: "" },
   { key: "vat", label: "مالیات بر ارزش افزوده (٪)", initial: "" },
 ];
-
-/**
- * مبلغ نهایی طلای زینتی از روی قیمت گرم.
- *
- * `وزن × قیمت × (۱ + اجرت) × (۱ + سود) × (۱ + مالیات)` — همان ترتیب مرسوم
- * بازار: اجرت روی قیمت طلا، سود روی مجموع طلا و اجرت، و مالیات روی کل.
- * درصدِ نداده‌شده صفر فرض می‌شود، نه اینکه محاسبه را متوقف کند.
- */
-export function jewelryTotal(options: {
-  weightGrams: number;
-  pricePerGram: number;
-  wagePercent: number;
-  profitPercent: number;
-  vatPercent: number;
-}): number {
-  const { weightGrams, pricePerGram, wagePercent, profitPercent, vatPercent } = options;
-  const gold = weightGrams * pricePerGram;
-  const withWage = gold * (1 + wagePercent / 100);
-  const withProfit = withWage * (1 + profitPercent / 100);
-  return Math.round(withProfit * (1 + vatPercent / 100));
-}
 
 export function JewelryCalculator({
   pricePerGram,

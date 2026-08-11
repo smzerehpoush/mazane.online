@@ -35,11 +35,7 @@ describe("GET /api/prices", () => {
     // پیش‌شرط: اسنپ‌شات گلدیکا واقعاً در استور هست ولی در فهرست نیست.
     expect(store.snapshots["goldika"]).not.toBeNull();
     const { payload } = await getPayload();
-    expect(payload.rows.map((row) => row.platform_slug)).toEqual([
-      "wallgold",
-      "talasea",
-      "milli",
-    ]);
+    expect(payload.rows.map((row) => row.platform_slug)).toEqual(["wallgold", "talasea", "milli"]);
   });
 
   it("عدد هر سکو همان «قیمت» صفحه است — هم عدد و هم رشته‌ی نمایش fa-IR", async () => {

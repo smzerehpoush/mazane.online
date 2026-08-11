@@ -19,7 +19,7 @@
  */
 import { useEffect, useRef } from "react";
 
-import type { LiveDashboard } from "@/lib/live-update";
+import { nextRowDomState, type LiveDashboard } from "@/lib/live-update";
 
 const FLASH_MS = 900;
 
@@ -35,6 +35,8 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
 
   useEffect(() => {
     if (data === null) return;
+    // یک مبنای زمانی برای کل این نوبت، تا کارت‌ها با هم پیر شوند.
+    const nowMs = Date.now();
 
     for (const source of data.sources) {
       // ── نشانگر محور: فقط مقدار CSS، بدون هیچ دست‌کاری ساختار ──────────
@@ -54,6 +56,37 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       );
       if (card === null) continue;
       setText(card, "[data-source-price]", source.price_display);
+
+      // ⚠️ برچسب کهنگیِ همین کارت باید با گذر زمان **پیر شود**، وگرنه سکویی
+      // که از کار افتاده عددش را نگه می‌دارد و هیچ‌وقت «کهنه» نمی‌شود
+      // (قاعده‌ی سخت ۵). همان تابع خالصی که جدول قدیمی استفاده می‌کرد.
+      const timeEl = card.querySelector<HTMLElement>('[data-live="updated-at"]');
+      const staleEl = card.querySelector<HTMLElement>('[data-live="stale"]');
+      if (timeEl !== null) {
+        const current = {
+          priceText: source.price_display ?? "",
+          updatedAtIso: timeEl.getAttribute("datetime"),
+          updatedText: timeEl.textContent ?? "",
+          staleText: staleEl?.textContent ?? "",
+        };
+        const next = nextRowDomState(
+          current,
+          {
+            platform_slug: source.slug,
+            price_toman: source.price_toman,
+            price_display: source.price_display,
+            updated_at: source.updated_at,
+          },
+          nowMs,
+        );
+        if (next.updatedAtIso !== null && next.updatedAtIso !== current.updatedAtIso) {
+          timeEl.setAttribute("datetime", next.updatedAtIso);
+        }
+        if (next.updatedText !== current.updatedText) timeEl.textContent = next.updatedText;
+        if (staleEl !== null && next.staleText !== current.staleText) {
+          staleEl.textContent = next.staleText;
+        }
+      }
 
       const previous = previousPrices.current.get(source.slug);
       if (source.price_toman !== null) {

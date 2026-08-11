@@ -76,3 +76,34 @@ export function weightFromAmount(amountToman: number, unitPriceToman: number): n
   const grams = amountToman / unitPriceToman;
   return Math.round(grams * 10_000) / 10_000;
 }
+
+/**
+ * مبلغ نهایی طلای زینتی از روی قیمت گرم (بند ۸ سند طراحی).
+ *
+ * `وزن × قیمت × (۱ + اجرت) × (۱ + سود) × (۱ + مالیات)` — ترتیب مرسوم بازار:
+ * اجرت روی قیمت طلا، سود روی مجموع طلا و اجرت، و مالیات روی کل. درصدِ
+ * نداده‌شده صفر فرض می‌شود، نه «نامعتبر»: کاربری که فقط وزن را زده باید
+ * قیمت خام طلا را ببیند، نه خط تیره.
+ *
+ * ⚠️ **این ناقض قاعده‌ی سخت ۱ نیست، به همان دلیلی که بالای این فایل نوشته
+ * شده**: قاعده‌ی ۱ می‌گوید وب نباید قیمت **سکو** را بسازد یا مشتق کند. اینجا
+ * هیچ قیمتی ساخته نمی‌شود — ورودی‌ها را خودِ کاربر می‌زند و خروجی هرگز ذخیره،
+ * منتشر یا به سکویی منتسب نمی‌شود. این همان دسته‌ی `amountFromWeight` بالاست
+ * که از پیش پذیرفته شده بود؛ فقط چند ضرب بیشتر دارد.
+ *
+ * ⚠️ عمداً اینجاست و نه داخل کامپوننت: این فایل «تنها دروازه»ی حساب ماشین‌حساب
+ * است و تست خودش را دارد. فرمولی که داخل یک `.tsx` زندگی کند، بی‌تست می‌ماند.
+ */
+export function jewelryTotal(options: {
+  weightGrams: number;
+  pricePerGram: number;
+  wagePercent: number;
+  profitPercent: number;
+  vatPercent: number;
+}): number {
+  const { weightGrams, pricePerGram, wagePercent, profitPercent, vatPercent } = options;
+  const gold = weightGrams * pricePerGram;
+  const withWage = gold * (1 + wagePercent / 100);
+  const withProfit = withWage * (1 + profitPercent / 100);
+  return Math.round(withProfit * (1 + vatPercent / 100));
+}
