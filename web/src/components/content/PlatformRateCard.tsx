@@ -50,7 +50,6 @@
  */
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
-import { Area, AreaChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { Staleness } from "@/components/content/RowParts";
 import {
@@ -67,6 +66,7 @@ import {
   type LivePricesPayload,
 } from "@/lib/live-update";
 import { priceToman, type Row } from "@/lib/rows";
+import { seriesPaths } from "@/lib/spline";
 import { fa, RATE_CARD_RANGES, type RateCardRangeConfig } from "@/lib/site-content";
 
 const PRICE_LABEL = "قیمت اعلامی این سکو — پیش از کارمزد";
@@ -122,27 +122,6 @@ function nextEnabledIndex(start: number, direction: 1 | -1, enabled: readonly bo
     if (enabled[index] === true) return index;
   }
   return start;
-}
-
-function RateTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: { payload?: HistoryPoint }[];
-}) {
-  if (active !== true || payload === undefined || payload.length === 0) return null;
-  const point = payload[0]?.payload;
-  if (point === undefined) return null;
-  return (
-    <div className="min-w-36 rounded-xl border border-border bg-popover/95 px-3 py-2 text-xs shadow-lift backdrop-blur">
-      <div className="text-[11px] text-muted-foreground">{formatDateTimeFa(point.hour)}</div>
-      <div className="mt-0.5 font-semibold tabular-nums">
-        {formatToman(point.value)}{" "}
-        <span className="text-[11px] font-normal text-muted-foreground">تومان</span>
-      </div>
-    </div>
-  );
 }
 
 function Stat({ label, children }: { label: string; children: ReactNode }) {
@@ -290,6 +269,17 @@ export function PlatformRateCard({
   const points = useMemo(() => activeHistory?.points ?? [], [activeHistory]);
   const hasSeries = points.length > 0;
   const stats = useMemo(() => computeStats(points), [points]);
+  // مسیر SVG سمت سرور ساخته می‌شود — همان ماژول مشترکی که اسپارک‌لاین
+  // کارت‌های منبع و نمودار خلاصه بازار هم از آن استفاده می‌کنند.
+  const shape = useMemo(
+    () =>
+      seriesPaths(
+        points.map((point) => point.value),
+        { width: 320, height: 96, padding: 4 },
+      ),
+    [points],
+  );
+  const [hovered, setHovered] = useState<HistoryPoint | null>(null);
 
   // سکوی بی‌قیمت (بی‌اسنپ‌شات، یا دفتر سفارشِ یک‌سمته) ⟸ کل کارت رندر نمی‌شود.
   if (price === null) return null;
@@ -365,37 +355,70 @@ export function PlatformRateCard({
         </div>
 
         {hasSeries ? (
-          <div key={activeRange} dir="ltr" className="h-20 w-full sm:h-24">
-            {mounted ? (
-              <ResponsiveContainer width="100%" height="100%" debounce={80}>
-                <AreaChart data={points} margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
-                  <defs>
-                    <linearGradient id="rate-card-fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <Tooltip
-                    content={<RateTooltip />}
-                    cursor={{
-                      stroke: "var(--color-ring)",
-                      strokeWidth: 1,
-                      strokeDasharray: "4 4",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="var(--color-primary)"
-                    strokeWidth={2}
-                    fill="url(#rate-card-fill)"
-                    isAnimationActive
-                    animationDuration={700}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full w-full rounded-xl bg-surface" />
+          <div key={activeRange} dir="ltr" className="relative h-20 w-full sm:h-24">
+            {/*
+              ⚠️ SVG دستی، نه ریچارتس. سه سود مستقیم دارد:
+                ۱. **سروررندر می‌شود** — پیش از این پشت `mounted` بود و تا
+                   hydration جعبه‌ی خالی می‌ماند (ResponsiveContainer ابعاد
+                   واقعی می‌خواهد). حالا در همان HTML اولیه است.
+                ۲. کل وابستگی `recharts` از پروژه حذف شد — ۳۵۵KB خام که
+                   **هر صفحه** دانلودش می‌کرد، چون در چانک مشترک نشسته بود.
+                ۳. یک پیاده‌سازی نمودار در کل سایت (`lib/spline.ts`)، نه دو تا.
+            */}
+            <svg
+              aria-hidden
+              viewBox="0 0 320 96"
+              preserveAspectRatio="none"
+              className="block h-full w-full"
+            >
+              <defs>
+                <linearGradient id="rate-card-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <path d={shape.area ?? ""} fill="url(#rate-card-fill)" />
+              <path
+                d={shape.line ?? ""}
+                fill="none"
+                stroke="var(--color-primary)"
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            </svg>
+
+            {/*
+              خواندنِ نقطه‌ی زیر نشانگر — جانشین Tooltip ریچارتس. فقط بعد از
+              mount فعال است و روی موبایل (بدون hover) هم چیزی را از بین
+              نمی‌برد: سه آمار زیر کارت همان اطلاعات را متنی می‌دهند (بند ۱۲).
+            */}
+            {mounted && (
+              <div
+                className="absolute inset-0"
+                onMouseLeave={() => setHovered(null)}
+                onMouseMove={(event) => {
+                  const box = event.currentTarget.getBoundingClientRect();
+                  const ratio = (event.clientX - box.left) / box.width;
+                  const index = Math.round(ratio * (points.length - 1));
+                  setHovered(points[Math.min(Math.max(index, 0), points.length - 1)] ?? null);
+                }}
+              />
+            )}
+            {hovered !== null && (
+              <div
+                dir="rtl"
+                className="pointer-events-none absolute top-0 right-0 rounded-xl border border-border bg-popover/95 px-3 py-2 text-xs shadow-lift backdrop-blur"
+              >
+                <div className="text-[11px] text-muted-foreground">
+                  {formatDateTimeFa(hovered.hour)}
+                </div>
+                <div className="mt-0.5 font-semibold tabular-nums">
+                  {formatToman(hovered.value)}{" "}
+                  <span className="text-[11px] font-normal text-muted-foreground">تومان</span>
+                </div>
+              </div>
             )}
           </div>
         ) : (

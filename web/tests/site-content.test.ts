@@ -49,16 +49,18 @@ describe("chartSeriesConfig", () => {
   });
 
   it("بدون آرگومان همان فهرست پیش‌فرض کد را می‌دهد", () => {
-    expect(chartSeriesConfig()).toBe(DEFAULT_CONFIG);
+    expect(chartSeriesConfig()).toEqual(DEFAULT_CONFIG);
   });
 
   it("override معتبر (۲ تا ۶ سکو، رنگ درست، اسلاگ یکتا) جایگزین می‌شود", () => {
-    expect(chartSeriesConfig(VALID_OVERRIDE)).toBe(VALID_OVERRIDE);
+    expect(chartSeriesConfig(VALID_OVERRIDE).map((p) => p.slug)).toEqual(
+      VALID_OVERRIDE.map((p) => p.slug),
+    );
   });
 
   it("override با کمتر از حداقل ⟸ فهرست پیش‌فرض کد", () => {
     const tooFew = VALID_OVERRIDE.slice(0, MIN_CHART_PLATFORMS - 1);
-    expect(chartSeriesConfig(tooFew)).toBe(DEFAULT_CONFIG);
+    expect(chartSeriesConfig(tooFew)).toEqual(DEFAULT_CONFIG);
   });
 
   it("override با بیش از حداکثر ⟸ فهرست پیش‌فرض کد", () => {
@@ -67,7 +69,7 @@ describe("chartSeriesConfig", () => {
       name_fa: `سکو ${i}`,
       color: "#123456",
     }));
-    expect(chartSeriesConfig(tooMany)).toBe(DEFAULT_CONFIG);
+    expect(chartSeriesConfig(tooMany)).toEqual(DEFAULT_CONFIG);
   });
 
   it("override با رنگ بدشکل ⟸ فهرست پیش‌فرض کد", () => {
@@ -75,7 +77,7 @@ describe("chartSeriesConfig", () => {
       { slug: "wallgold", name_fa: "وال‌گلد", color: "not-a-color" },
       { slug: "talasea", name_fa: "طلاسی", color: "#9b8ce8" },
     ];
-    expect(chartSeriesConfig(bad)).toBe(DEFAULT_CONFIG);
+    expect(chartSeriesConfig(bad)).toEqual(DEFAULT_CONFIG);
   });
 
   it("override با اسلاگ تکراری ⟸ فهرست پیش‌فرض کد", () => {
@@ -83,11 +85,11 @@ describe("chartSeriesConfig", () => {
       { slug: "wallgold", name_fa: "وال‌گلد", color: "#e0921d" },
       { slug: "wallgold", name_fa: "وال‌گلد", color: "#9b8ce8" },
     ];
-    expect(chartSeriesConfig(dup)).toBe(DEFAULT_CONFIG);
+    expect(chartSeriesConfig(dup)).toEqual(DEFAULT_CONFIG);
   });
 
   it("override تهی ⟸ فهرست پیش‌فرض کد", () => {
-    expect(chartSeriesConfig([])).toBe(DEFAULT_CONFIG);
+    expect(chartSeriesConfig([])).toEqual(DEFAULT_CONFIG);
   });
 });
 

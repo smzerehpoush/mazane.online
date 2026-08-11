@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 
+import { SERVER_THEME, THEME_INIT_SCRIPT } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -81,7 +82,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "تابلو — مقایسه‌ی قیمت واقعی طلا" },
-      { name: "description", content: "مقایسه‌ی لحظه‌ای قیمت خرید و فروش طلای ۱۸ عیار در سکوهای ایرانی." },
+      {
+        name: "description",
+        content: "مقایسه‌ی لحظه‌ای قیمت خرید و فروش طلای ۱۸ عیار در سکوهای ایرانی.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -110,11 +114,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+/**
+ * پوسته‌ی HTML.
+ *
+ * ⚠️ `suppressHydrationWarning` روی `<html>` اجباری است و بی‌ربط به سهل‌انگاری:
+ * سرور همیشه `data-theme="light"` می‌نویسد و اسکریپت inline زیر، پیش از
+ * رسیدن ری‌اکت، ممکن است `dark` کرده باشد. بدون این پرچم، ری‌اکت همان اختلاف
+ * را خطای hydration گزارش می‌کند — درحالی‌که دقیقاً رفتار طراحی‌شده است
+ * (بند ۱۴، مورد ۳).
+ *
+ * ⚠️ اسکریپت تم **باید** آخرین چیز داخل `<head>` و پیش از `<body>` باشد:
+ * مرورگر آن را همان‌جا همگام اجرا می‌کند، پس صفت پیش از نقاشی اولین پیکسل
+ * نشسته و فلش سفید رخ نمی‌دهد. جابه‌جا کردنش به انتهای بدنه یعنی برگشت فلش.
+ * `dangerouslySetInnerHTML` تنها راه نوشتن اسکریپت درون‌خطی در ری‌اکت است؛
+ * محتوایش ثابتِ کدنویسی‌شده است و هیچ ورودی کاربری در آن نیست.
+ */
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" data-theme={SERVER_THEME} suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
         {children}

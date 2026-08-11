@@ -1,11 +1,12 @@
 /**
  * محتوای ثابت سایت — برند، ناوبری، یادداشت حقوقی و قالب‌بندی کوتاه.
  *
- * اینها **داده‌ی ساختگی نیستند**: ثابت‌های واقعی سایت‌اند و ماندنی. آنچه هنوز
- * ساختگی است در `src/data/mock.ts` مانده و با داده‌ی واقعی جایگزین می‌شود.
+ * اینها **داده‌ی ساختگی نیستند**: ثابت‌های واقعی سایت‌اند و ماندنی. آخرین
+ * جای‌نگه‌دار ساختگی (`src/data/mock.ts`) با بازطراحی داشبورد حذف شد.
  *
  * قاعده‌ی ۱ قراردادها اینجا هم برقرار است: هیچ فرمول قیمتی نیست، فقط قالب.
  */
+import { formatFaNumber } from "./fa-number";
 import type { HistoryRange } from "./history";
 
 export const brand = {
@@ -48,7 +49,25 @@ export interface ChartPlatformConfig {
   slug: string;
   name_fa: string;
   color: string;
+  /**
+   * سکوی مرجع — لنگر محور قیمت و صاحب اعداد خلاصه بازار (بند ۱۵، تصمیم ۱).
+   *
+   * ⚠️ هرگز از payload پنل نمی‌آید و همیشه در `chartSeriesConfig` نشانده
+   * می‌شود؛ توضیحش آنجاست.
+   */
+  is_reference?: boolean;
 }
+
+/**
+ * اسلاگ سکوی مرجع — **تنها جایی که این انتخاب نوشته شده**.
+ *
+ * ⚠️ این باید یک تنظیم پنل مدیریت باشد (تصمیم مالک، ۲۰۲۶-۰۸-۱۱: «من در
+ * ادمین پنل یک قیمت را به عنوان مرجع انتخاب می‌کنم»). امروز ثابتِ کد است چون
+ * `platform_settings` ستون `is_reference` ندارد و بک‌اند در این مرحله دست
+ * نمی‌خورد. شکاف در `docs/api-gaps.md` ثبت شده؛ روزی که ستون آمد، فقط همین
+ * ثابت جایش را به مقدار خوانده‌شده می‌دهد و هیچ مصرف‌کننده‌ای عوض نمی‌شود.
+ */
+export const REFERENCE_PLATFORM_SLUG = "milli";
 
 const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
   { slug: "milli", name_fa: "میلی", color: "#1d6fe0" },
@@ -104,8 +123,37 @@ export function isValidChartPlatformList(list: readonly ChartPlatformConfig[]): 
 export function chartSeriesConfig(
   override?: readonly ChartPlatformConfig[],
 ): readonly ChartPlatformConfig[] {
-  if (override !== undefined && isValidChartPlatformList(override)) return override;
-  return CHART_PLATFORMS;
+  const list =
+    override !== undefined && isValidChartPlatformList(override) ? override : CHART_PLATFORMS;
+  return withReference(list);
+}
+
+/**
+ * نشاندن پرچم سکوی مرجع روی فهرست — **هر مسیری** که به فهرست منابع نمایشی
+ * برسد از همین‌جا رد می‌شود، چه پیش‌فرض کد باشد چه override پنل.
+ *
+ * ⚠️ چرا اینجا و نه در داده: payload پنل (`tablo:chart_config`) این فیلد را
+ * ندارد. اگر پرچم را فقط روی `CHART_PLATFORMS` می‌گذاشتیم، به‌محض اینکه مالک
+ * از پنل فهرست را تغییر می‌داد، سکوی مرجع بی‌سروصدا ناپدید می‌شد و محور
+ * لنگرش را از دست می‌داد — دقیقاً همان نوع خرابی که فقط در تولید دیده می‌شود.
+ *
+ * اگر اسلاگ مرجع در فهرست نباشد (مالک آن سکو را از نمایش برداشته)، **اولین
+ * عضو فهرست** مرجع می‌شود و هشدار می‌دهد — فرود امن، نه خطا (قاعده‌ی سخت ۵).
+ * بند ۹ سند طراحی همین رفتار را می‌خواهد.
+ */
+function withReference(list: readonly ChartPlatformConfig[]): readonly ChartPlatformConfig[] {
+  if (list.length === 0) return list;
+  const hasReference = list.some((platform) => platform.slug === REFERENCE_PLATFORM_SLUG);
+  if (!hasReference) {
+    console.warn(
+      `سکوی مرجع «${REFERENCE_PLATFORM_SLUG}» در فهرست نمایشی نیست — اولین عضو فهرست مرجع شد`,
+    );
+  }
+  const referenceSlug = hasReference ? REFERENCE_PLATFORM_SLUG : list[0]?.slug;
+  return list.map((platform) => ({
+    ...platform,
+    is_reference: platform.slug === referenceSlug,
+  }));
 }
 
 /**
@@ -167,9 +215,10 @@ export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
 /**
  * ارقام فارسی نمایش (قراردادها، بخش استک). ارقام داخل JSON-LD و URL لاتین
  * می‌مانند و از این توابع رد نمی‌شوند.
+ *
+ * ⚠️ از `lib/fa-number.ts` می‌آید نه `Intl.NumberFormat` — خروجی یکسان است
+ * ولی دیگر به نسخه‌ی ICU سرور/مرورگر گره نخورده (بند ۱۴ سند طراحی).
  */
-const faNumber = new Intl.NumberFormat("fa-IR");
+export const fa = (value: number): string => formatFaNumber(value);
 
-export const fa = (value: number): string => faNumber.format(value);
-
-export const toman = (value: number): string => `${faNumber.format(value)} تومان`;
+export const toman = (value: number): string => `${formatFaNumber(value)} تومان`;

@@ -2,34 +2,37 @@
  * مرز وب: استور seed شده ⟸ HTML رندرشده‌ی صفحه‌ی اصلی.
  *
  * منبع داده با `setPriceSource` تزریق می‌شود؛ هیچ ردیس/پستگرس/شبکه‌ای در کار
- * نیست. اعداد seed همان شکل JSON کانونی گردآورنده‌اند (pydantic
- * model_dump_json) — قیمت‌های مؤثر و «قیمت مرجع سکو» از قبل آنجا محاسبه
- * شده‌اند و وب فقط انتخابشان می‌کند (قاعده‌ی ۱ قراردادها).
+ * نیست. اعداد seed همان شکل JSON کانونی گردآورنده‌اند و وب فقط انتخابشان
+ * می‌کند (قاعده‌ی سخت ۱ قراردادها).
  *
  * فهرست سکوها (`getListedPlatforms`) همان داده‌ای است که گردآورنده نوشته:
  * از قبل فیلترشده. گلدیکا ممکن است در استور باشد ولی هرگز در فهرست نیست.
  *
- * طرح تازه (تصمیم مالک ۲۰۲۶-۰۸-۰۶): چیپ‌های پنج سکوی ثابت، نمودار ۲۴ ساعته،
- * دو کارت «بهترین خرید/فروش»، و جدول **دقیقاً چهارستونی** (نام سکو، قیمت
- * خرید، قیمت فروش، دکمه‌ی رفتن به سایت) با ترتیب صعودی ستون خرید.
+ * ⚠️ طرح این صفحه در ۲۰۲۶-۰۸-۱۱ عوض شد (`docs/design-spec.md`): جدول مقایسه،
+ * چیپ‌ها و نمودار خطی حذف شدند و جایشان محور قیمت، کارت‌های منبع و خلاصه
+ * بازار آمد. تست‌های ستون‌ها/سرستون‌ها/نشان «ارزان‌ترین» با خودِ جدول رفتند —
+ * ولی هر ثابتی که به طراحی وابسته نبود اینجا مانده و روی رابط تازه دوباره
+ * بسته شده: قیمت در HTML سروری، کهنگی نه خطا، فیلتر فهرست، و نوار ماده ۵.
+ *
+ * نشان‌های «خرید بسته»/«فروش بسته»/«دفتر سفارش» و ستون‌های کارمزد به صفحه‌ی
+ * سکو و صفحه‌ی دارایی منتقل شدند و تست‌هایشان در
+ * `tests/asset-platform-pages.test.tsx` است (بند ۱۵، تصمیم ۵ و ۶).
  */
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { HomePage } from "../src/components/tablo/HomePage";
-import { fa } from "../src/lib/site-content";
-import type { PlatformHistory } from "../src/lib/history";
 import { REGISTRY_PLATFORMS } from "../src/lib/registry";
+import { THEME_ATTRIBUTE, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "../src/lib/theme";
 import {
   freshIso,
   healthyStore,
   homeData,
   LISTED,
   makeSnapshot,
-  rowOf,
   staleIso,
   storeWithUnknownFee,
 } from "./support/seed";
@@ -47,368 +50,292 @@ function timeTagPattern(iso: string): RegExp {
   return new RegExp(`<time [^>]*datetime="${escaped}"`, "i");
 }
 
-/** سلول‌های ‎<td>‎ یک ردیف، به ترتیب ستون‌ها. */
-function cellsOf(rowHtml: string): string[] {
-  return [...rowHtml.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map((m) => m[1] ?? "");
+/** نشانگر یک سکو روی محور، با همه‌ی فرزندانش. */
+function markerOf(html: string, slug: string): string {
+  const match = html.match(new RegExp(`<a[^>]*data-rail-marker="${slug}"[\\s\\S]*?</a>`));
+  if (match === null) throw new Error(`نشانگر ${slug} در HTML نیست`);
+  return match[0];
 }
 
-/** متن خالص گره‌ی رقم یک کارت «بهترین» — بدون واحد و بدون هیچ تگی. */
-function bestCardPrice(html: string, side: "buy" | "sell"): string {
-  const card = html.match(new RegExp(`data-best="${side}"[\\s\\S]*?</p>`));
-  if (card === null) throw new Error(`کارت ${side} در HTML نیست`);
-  const digits = card[0].match(/data-best-price[^>]*>([\s\S]*?)<\/div>/);
-  if (digits === null) throw new Error(`گره‌ی رقم کارت ${side} در HTML نیست`);
-  return (digits[1] ?? "").replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").trim();
+/** کارت یک سکو. */
+function cardOf(html: string, slug: string): string {
+  const match = html.match(new RegExp(`<a[^>]*data-source-card="${slug}"[\\s\\S]*?</a>`));
+  if (match === null) throw new Error(`کارت ${slug} در HTML نیست`);
+  return match[0];
 }
 
-function srcOf(relative: string): string {
-  return readFileSync(join(__dirname, "..", relative), "utf8");
+/** درصد `right` یک نشانگر — موقعیتش روی محور. */
+function railPercentOf(html: string, slug: string): number {
+  const style = markerOf(html, slug).match(/right:\s*([\d.]+)%/);
+  if (style === null) throw new Error(`نشانگر ${slug} موقعیت ندارد`);
+  return Number(style[1]);
 }
 
-describe("صفحه‌ی اصلی — جدول قیمت و کارمزد", () => {
-  it("وال‌گلد، طلاسی و میلی را با «قیمت» خودشان و ارقام فارسی نشان می‌دهد", async () => {
+describe("صفحه‌ی اصلی — قیمت‌ها در HTML سروری (بند ۱۴)", () => {
+  /**
+   * ⚠️ معیار پذیرش صریح بند ۱۴: «با جاوااسکریپت غیرفعال قیمت‌ها دیده شوند».
+   * `renderToStaticMarkup` دقیقاً همان چیزی را می‌دهد که مرورگرِ بی‌جاوااسکریپت
+   * می‌بیند — هیچ افکتی اجرا نشده.
+   */
+  it("قیمت هر منبع با ارقام فارسی در همان HTML اولیه است", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain("وال‌گلد");
-    expect(html).toContain("طلاسی");
-    expect(html).toContain("میلی");
-    // عدد اعلامی خود سکو، پیش از کارمزد — نه ضربِ mid×(1±f) (سند تصمیم ۰۰۰۲).
     expect(html).toContain("۱۸٬۶۱۱٬۰۰۰"); // وال‌گلد
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // طلاسی
     expect(html).toContain("۱۸٬۵۳۸٬۰۰۰"); // میلی
   });
 
-  it("هر ردیف پنج ستون دارد: قیمت، دو کارمزد و دکمه‌ی خروجی کنار نام سکو", async () => {
+  it("موقعیت هر نشانگر در همان صفت style سروری است، نه بعد از hydration", async () => {
     const html = await renderHome(healthyStore());
-    const cells = cellsOf(rowOf(html, "wallgold"));
-    expect(cells).toHaveLength(5);
-    expect(cells[0]).toContain("وال‌گلد");
-    expect(cells[1]).toContain("۱۸٬۶۱۱٬۰۰۰"); // ستون قیمت — پیش از کارمزد
-    expect(cells[2]).toContain("۰٫۵٪"); // کارمزد خرید
-    expect(cells[3]).toContain("۰٫۵٪"); // کارمزد فروش
-    expect(cells[4]).toContain('href="/go/wallgold"');
+    expect(railPercentOf(html, "wallgold")).toBeGreaterThan(0);
+    expect(railPercentOf(html, "milli")).toBeGreaterThan(0);
   });
 
-  it("نام سکو پیوند داخلی به مسیر تخت خودش است، جدا از دکمه‌ی خروجی (بلیت ۲۸)", async () => {
-    const html = await renderHome(healthyStore());
-    const cells = cellsOf(rowOf(html, "wallgold"));
-    // سلول نام: پیوند داخلی به /wallgold، نه به /go/wallgold.
-    expect(cells[0]).toContain('href="/wallgold"');
-    expect(cells[0]).not.toContain('href="/go/wallgold"');
-    // دکمه‌ی خروجی همچنان دست‌نخورده در آخرین سلول است.
-    expect(cells[4]).toContain('href="/go/wallgold"');
+  it("مسیر اسپارک‌لاین سمت سرور تولید شده و در HTML است", async () => {
+    const html = await renderHome(healthyStore(), {
+      history: [
+        {
+          platform_slug: "milli",
+          points: [0, 1, 2, 3].map((index) => ({
+            hour: new Date(Date.UTC(2026, 7, 11, index)).toISOString(),
+            value: 18_500_000 + index * 1000,
+          })),
+          latest: 18_503_000,
+          side_used: "PRICE",
+        },
+      ],
+    });
+    expect(cardOf(html, "milli")).toMatch(/<path[^>]*d="M[\d.]+,[\d.]+C/);
   });
 
-  it("سرستون‌ها همان پنج عنوان تصمیم مالک‌اند و ستون ششمی نیست", async () => {
+  it("هیچ کتابخانه‌ی نموداری در خروجی نیست — SVG دستی است", async () => {
     const html = await renderHome(healthyStore());
-    const headers = [...html.matchAll(/<th\b[^>]*scope="col"[^>]*>([\s\S]*?)<\/th>/g)].map((m) =>
-      (m[1] ?? "").replace(/<[^>]+>/g, "").trim(),
-    );
-    expect(headers).toEqual([
-      "سکو",
-      "قیمت",
-      "کارمزد خرید",
-      "کارمزد فروش",
-      "رفتن به سایت سکو",
-    ]);
+    expect(html).not.toContain("recharts");
+  });
+});
+
+describe("صفحه‌ی اصلی — محور قیمت (بند ۵)", () => {
+  /**
+   * ⚠️ بند ۱.۴: «راست = ارزان‌تر». مقدار `right` فاصله از لبه‌ی راست است،
+   * پس ارزان‌ترین باید **کم‌ترین** درصد را داشته باشد. نسخه‌ی اول فرمول سند
+   * را عیناً پیاده کرد و ارزان‌ترین چپ‌ترین افتاد — خلاف زیرعنوان خودِ کارت.
+   */
+  it("ارزان‌ترین راست‌ترین است (بند ۱.۴: راست = ارزان‌تر)", async () => {
+    const html = await renderHome(healthyStore());
+    // طلاسی ۱۸٬۵۳۰٬۰۰۰ < میلی ۱۸٬۵۳۸٬۰۰۰ < وال‌گلد ۱۸٬۶۱۱٬۰۰۰
+    expect(railPercentOf(html, "talasea")).toBeLessThan(railPercentOf(html, "milli"));
+    expect(railPercentOf(html, "milli")).toBeLessThan(railPercentOf(html, "wallgold"));
   });
 
-  it("ردیف‌ها بر اساس «قیمت» صعودی مرتب‌اند، نه بر اساس کارمزد", async () => {
+  it("لنگر «قیمت مرجع» روی موقعیت سکوی مرجع می‌نشیند", async () => {
     const html = await renderHome(healthyStore());
-    // طلاسی (۱۸٬۵۳۰٬۰۰۰) < میلی (۱۸٬۵۳۸٬۰۰۰) < وال‌گلد (۱۸٬۶۱۱٬۰۰۰)
-    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
-      html.indexOf('data-platform="milli"'),
-    );
-    expect(html.indexOf('data-platform="milli"')).toBeLessThan(
-      html.indexOf('data-platform="wallgold"'),
-    );
+    expect(html).toContain("قیمت مرجع");
+    const anchor = html.match(/data-rail-anchor[^>]*style="right:\s*([\d.]+)%/);
+    expect(anchor).not.toBeNull();
+    expect(Number(anchor?.[1])).toBe(railPercentOf(html, "milli"));
   });
 
-  it("ارزان‌ترین ردیف نشان می‌گیرد و همان برنده‌ی کارت «کمترین قیمت» است", async () => {
+  it("پاورقی محور کمینه، بیشینه و بازه‌ی اختلاف را می‌دهد", async () => {
     const html = await renderHome(healthyStore());
-    const talasea = rowOf(html, "talasea");
-    expect(talasea).toContain('data-cheapest="true"');
-    expect(talasea).toContain("ارزان‌ترین");
-    // هیچ ردیف دیگری نشان ارزان‌ترین نمی‌گیرد.
-    expect(html.match(/data-cheapest="true"/g)).toHaveLength(1);
+    expect(html).toContain("گران‌تر · ۱۸٬۶۱۱٬۰۰۰");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰ · ارزان‌تر");
+    expect(html).toContain("بازه اختلاف ۸۱٬۰۰۰ تومان");
+  });
+
+  /**
+   * ⚠️ نگهبان بند ۵، «مورد لبه‌ای که حتماً باید حل شود». بدون کف ۵۰٬۰۰۰،
+   * این دو سکو که ۲٬۰۰۰ تومان فاصله دارند دو سرِ محور را می‌گرفتند.
+   */
+  it("با اختلاف ناچیز، نشانگرها حول مرکز جمع می‌مانند", async () => {
+    const store = healthyStore();
+    store.snapshots["wallgold"] = makeSnapshot({
+      slug: "wallgold",
+      mid: 18_531_000,
+      fetchedAt: freshIso(),
+    });
+    store.snapshots["milli"] = makeSnapshot({
+      slug: "milli",
+      mid: 18_529_000,
+      fetchedAt: freshIso(),
+    });
+    store.snapshots["talasea"] = makeSnapshot({
+      slug: "talasea",
+      mid: 18_530_000,
+      fetchedAt: freshIso(),
+    });
+    const html = await renderHome(store);
+    for (const slug of ["wallgold", "milli", "talasea"]) {
+      expect(railPercentOf(html, slug), slug).toBeGreaterThan(40);
+      expect(railPercentOf(html, slug), slug).toBeLessThan(60);
+    }
+  });
+
+  it("هر نشانگر برچسب دسترس‌پذیری با نام و قیمت دارد (بند ۱۲)", async () => {
+    const html = await renderHome(healthyStore());
+    expect(markerOf(html, "wallgold")).toContain('aria-label="وال‌گلد — ۱۸٬۶۱۱٬۰۰۰ تومان"');
+  });
+});
+
+describe("صفحه‌ی اصلی — کارت‌های منبع (بند ۶)", () => {
+  it("فقط کارت سکوی مرجع بج «قیمت مرجع» می‌گیرد", async () => {
+    const html = await renderHome(healthyStore());
+    expect(cardOf(html, "milli")).toContain("قیمت مرجع");
+    expect(cardOf(html, "wallgold")).not.toContain("قیمت مرجع");
+  });
+
+  /**
+   * ⚠️ نگهبان بند ۱۵، تصمیم ۳: درصد اختلاف نسبت به مرجع حذف شد و نه محاسبه
+   * می‌شود نه نمایش داده. اگر روزی برگردد، این تست باید قرمز شود.
+   */
+  it("هیچ بج درصد اختلافی روی کارت‌ها نیست", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).not.toMatch(/[−+][۰-۹٫]+٪/);
+  });
+});
+
+describe("صفحه‌ی اصلی — خلاصه بازار (بند ۷)", () => {
+  it("عدد درشت نام سکوی مرجع را کنار خودش دارد (قاعده‌ی سخت ۴)", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain("قیمت مرجع · میلی · تومان");
+  });
+
+  /** ⚠️ خط قرمز حقوقی بند ۷.۱ سند معماری. */
+  it("کلمه‌ی «میانگین» هیچ‌جای صفحه نیست", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).not.toContain("میانگین");
+  });
+
+  it("هر سه زبانه‌ی بازه در HTML سروری‌اند تا تعویضشان فچ نزند", async () => {
+    const html = await renderHome(healthyStore());
+    for (const key of ["DAILY", "WEEKLY", "MONTHLY"]) {
+      expect(html, key).toContain(`data-summary-tab="${key}"`);
+    }
+  });
+});
+
+describe("صفحه‌ی اصلی — جدول حذف شد (بند ۱.۱)", () => {
+  it("هیچ جدول قیمتی در صفحه نیست", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).not.toContain("<table");
+  });
+
+  /**
+   * حذف جدول یعنی ۷ تا ۱۱ سکو لینک داخلی درجه‌یکشان را از دست می‌دادند.
+   * فهرست پاصفحه جبرانش می‌کند (تصمیم مالک ۲۰۲۶-۰۸-۱۱).
+   */
+  it("همه‌ی سکوهای فهرست از پاصفحه لینک داخلی می‌گیرند", async () => {
+    const html = await renderHome(healthyStore());
+    for (const platform of LISTED) {
+      expect(html, platform.slug).toContain(`data-all-platform="${platform.slug}"`);
+    }
+  });
+
+  /**
+   * قطع ردیس ⟸ فهرست از رجیستری ثابت می‌آید (`lib/catalog.ts`)، پس حتی در
+   * قطع کامل هم هیچ صفحه‌ی سکویی لینک ورودی‌اش را از دست نمی‌دهد.
+   */
+  it("در قطع کامل هم فهرست پاصفحه از رجیستری پر می‌شود", async () => {
+    const html = await renderHome({ listed: [], snapshots: {}, updatedAt: {} });
+    for (const platform of REGISTRY_PLATFORMS) {
+      expect(html, platform.slug).toContain(`data-all-platform="${platform.slug}"`);
+    }
+  });
+
+  it("فهرست پاصفحه قیمت و کارمزد ندارد — جدول دوم نیست", async () => {
+    const html = await renderHome(healthyStore());
+    const footer = html.match(/<nav[^>]*all-platforms-heading[\s\S]*?<\/nav>/);
+    expect(footer).not.toBeNull();
+    expect(footer?.[0]).not.toMatch(/[۰-۹]٬[۰-۹]/);
   });
 
   it("گلدیکا در استور هست ولی هرگز رندر نمی‌شود (PERMISSION_PENDING)", async () => {
-    const store = healthyStore();
-    // پیش‌شرط: اسنپ‌شات گلدیکا واقعاً در استور موجود است.
-    expect(store.snapshots["goldika"]).not.toBeNull();
-    const html = await renderHome(store);
+    const html = await renderHome(healthyStore());
     expect(html).not.toContain("گلدیکا");
-    expect(html).not.toContain("۱۸٬۵۶۰٬۰۰۰"); // قیمت گلدیکا
-  });
-
-  it("در استور سالم هیچ ردیفی برچسب کهنگی ندارد", async () => {
-    const html = await renderHome(healthyStore());
-    expect(html).not.toContain("کهنه");
+    expect(html).not.toContain("goldika");
   });
 });
 
-describe("صفحه‌ی اصلی — نشان «ارزان‌ترین» (قاعده‌ی ۴)", () => {
+describe("صفحه‌ی اصلی — کارت‌های غیرفعال (بند ۸)", () => {
   /**
-   * کارت‌های «کمترین/بیشترین قیمت» در ۲۰۲۶-۰۸-۱۰ به‌کلی حذف شدند (تصمیم
-   * مالک). با رفتن قیمت مؤثر، آن کارت‌ها دو سرِ یک ستون مرتب‌شده را تکرار
-   * می‌کردند و چیزی به جدول اضافه نمی‌کردند. نشان «ارزان‌ترین» ماند، چون
-   * ردیف اول را برای کاربری که ستون را نمی‌خواند علامت می‌زند.
+   * حباب‌سنج داده ندارد (`docs/api-gaps.md` بند ۳): ورودی فرمولش انس و دلار
+   * است و هیچ‌کدام در گردآورنده نیستند. کارت می‌آید ولی هیچ عددی جعل نمی‌کند.
    */
-  it("فقط یک ردیف نشان می‌گیرد و همان ارزان‌ترینِ قابل‌خرید است", async () => {
+  it("حباب‌سنج رندر می‌شود ولی هیچ عددی ادعا نمی‌کند", async () => {
     const html = await renderHome(healthyStore());
-    expect(rowOf(html, "talasea")).toContain('data-cheapest="true"');
-    expect(html.match(/data-cheapest="true"/g)).toHaveLength(1);
+    const card = html.match(/<section[^>]*data-card="bubble"[\s\S]*?<\/section>/);
+    expect(card).not.toBeNull();
+    expect(card?.[0]).toContain("حباب سنج");
+    expect(card?.[0]).toContain("به زودی فعال می‌شود");
+    expect(card?.[0]).not.toMatch(/[۰-۹]٬[۰-۹]/);
   });
 
-  it("سکویی که خریدش بسته است نشان نمی‌گیرد، حتی اگر ارزان‌ترین باشد", async () => {
-    const store = healthyStore();
-    const now = freshIso();
-    // طلاسی ارزان‌ترین است؛ خریدش را می‌بندیم ⟸ نشان باید به میلی برسد.
-    store.snapshots["talasea"] = makeSnapshot({
-      slug: "talasea",
-      mid: 18530000,
-      buyEnabled: false,
-      fetchedAt: now,
-    });
-    const html = await renderHome(store);
-    expect(rowOf(html, "talasea")).not.toContain('data-cheapest="true"');
-    expect(rowOf(html, "milli")).toContain('data-cheapest="true"');
-  });
-
-  it("کامپوننت کارت‌ها دیگر وجود ندارد", () => {
-    expect(existsSync(join(__dirname, "..", "src/components/tablo/BestCards.tsx"))).toBe(
-      false,
-    );
-  });
-});
-
-describe("صفحه‌ی اصلی — سکوی «کارمزد نامشخص» (تصمیم مالک: بدون برچسب)", () => {
-  it("قیمتش در ستون قیمت می‌نشیند و کارمزدش «—» می‌شود، نه «۰٪»", async () => {
-    const html = await renderHome(storeWithUnknownFee());
-    const cells = cellsOf(rowOf(html, "digikala"));
-    expect(cells[1]).toContain("۱۸٬۵۲۰٬۰۰۰");
-    // تهی یعنی اعلام‌نشده؛ صفر یعنی می‌دانیم کارمزدی نیست. این دو یکی نیستند.
-    expect(cells[2]).toContain("—");
-    expect(cells[3]).toContain("—");
-    expect(cells[2]).not.toContain("۰٪");
-    expect(rowOf(html, "digikala")).not.toContain("قیمت میانی");
-    expect(rowOf(html, "digikala")).not.toContain("اسمی");
-  });
-
-  it("در همان فهرست مرتب می‌شود و ته جدول تبعید نمی‌شود", async () => {
-    const html = await renderHome(storeWithUnknownFee());
-    // ۱۸٬۵۲۰٬۰۰۰ کمترین قیمت است ⟸ ردیف اول، و نشان «ارزان‌ترین» را می‌گیرد.
-    // در مدل قبلی این سکو گروه جداگانه‌ای ته جدول داشت.
-    expect(rowOf(html, "digikala")).toContain("ارزان‌ترین");
-    expect(html.indexOf('data-platform="digikala"')).toBeLessThan(
-      html.indexOf('data-platform="talasea"'),
-    );
-  });
-});
-
-describe("صفحه‌ی اصلی — چیپ‌های پنج سکوی ثابت نمودار", () => {
-  it("قیمت مرجع هر سکو در HTML سروری است (خزنده جاوااسکریپت لازم ندارد)", async () => {
+  it("کارت هشدار قیمت هم غیرفعال است", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain('data-platform-chip="milli"');
-    expect(html).toContain('data-platform-chip="wallgold"');
-    expect(html).toContain("۱۸٬۶۱۱٬۰۰۰ تومان"); // مرجع وال‌گلد از اسنپ‌شات
-    expect(html).toContain("۱۸٬۵۳۸٬۰۰۰ تومان"); // مرجع میلی
+    expect(html).toContain("هشدار قیمت");
   });
 
-  it("سکوی بی‌هیچ داده چیپ محو با برچسب «به‌زودی» می‌گیرد، نه عدد جعلی", async () => {
+  it("پوسته‌ی ماشین‌حساب سروررندر است (بند ۱۴)", async () => {
     const html = await renderHome(healthyStore());
-    // ملی‌گلد و طلاین در فهرست این استور نیستند و سری هم ندارند.
-    for (const slug of ["melligold", "tlyn"]) {
-      const chip = html.match(new RegExp(`data-platform-chip="${slug}"[\\s\\S]*?</div>`));
-      expect(chip?.[0]).toContain("به‌زودی");
-    }
-    expect(html).toContain("به‌زودی");
-  });
-
-  it("سکوی با کارمزد نامعلوم دیگر برچسب «اسمی» نمی‌گیرد — همه‌ی اعداد اسمی‌اند", async () => {
-    const store = storeWithUnknownFee();
-    const now = freshIso();
-    // ملی‌گلد یکی از پنج سکوی ثابت نمودار است؛ کارمزدش اعلام نشده.
-    store.listed = [...LISTED, { slug: "melligold", name_fa: "ملی‌گلد", data_policy: "ALLOWED" }];
-    store.snapshots["melligold"] = makeSnapshot({
-      slug: "melligold",
-      mid: 18490000,
-      feeSource: "UNKNOWN",
-      fetchedAt: now,
-    });
-    store.updatedAt["melligold"] = now;
-    const html = await renderHome(store);
-    const chip = html.match(/data-platform-chip="melligold"[\s\S]*?<\/div>\s*<\/div>/);
-    // تفکیک «اسمی/مؤثر» با حذف قیمت مؤثر موضوعش را از دست داد (سند تصمیم ۰۰۰۲).
-    expect(chip?.[0]).not.toContain("اسمی");
-    expect(chip?.[0]).toContain("۱۸٬۴۹۰٬۰۰۰");
+    expect(html).toContain("ماشین حساب طلای زینتی");
+    expect(html).toContain("اجرت ساخت (٪)");
   });
 });
 
-describe("صفحه‌ی اصلی — نمودار ۲۴ ساعته", () => {
-  it("بدون سری، پیام کهنگی رندر می‌شود نه خطا و نه جعبه‌ی خالی", async () => {
-    const html = await renderHome(healthyStore(), { history: [] });
-    expect(html).toContain("هنوز سابقه‌ی ۲۴ ساعته‌ای");
-    expect(html).toContain("مظنه‌ی مرجع هر گرم طلای ۱۸ عیار");
-  });
-
-  it("با سری موجود هم صفحه سالم رندر می‌شود (بوم بعد از hydration کشیده می‌شود)", async () => {
-    const history: PlatformHistory[] = [
-      {
-        platform_slug: "milli",
-        points: [
-          { hour: "2026-08-06T09:00:00.000Z", value: 18500000 },
-          { hour: "2026-08-06T10:00:00.000Z", value: 18538000 },
-        ],
-        latest: 18538000,
-        side_used: "PRICE",
-      },
-    ];
-    const html = await renderHome(healthyStore(), { history });
-    expect(html).not.toContain("هنوز سابقه‌ی ۲۴ ساعته‌ای");
-    expect(html).toContain('data-platform-chip="milli"');
-  });
-});
-
-describe("صفحه‌ی اصلی — برچسب «دفتر سفارش» (بند ۹.۲)", () => {
-  it("سکوی ORDER_BOOK برچسب می‌گیرد و سکوهای OTC نمی‌گیرند", async () => {
-    const store = healthyStore();
-    const now = freshIso();
-    store.listed = [
-      ...LISTED,
-      {
-        slug: "daric",
-        name_fa: "داریک",
-        data_policy: "ALLOWED",
-        market_model: "ORDER_BOOK",
-      },
-    ];
-    store.snapshots["daric"] = makeSnapshot({
-      slug: "daric",
-      mid: 18501633,
-      fetchedAt: now,
-    });
-    store.updatedAt["daric"] = now;
-
-    const html = await renderHome(store);
-
-    expect(rowOf(html, "daric")).toContain('data-badge="order-book"');
-    expect(rowOf(html, "daric")).toContain("دفتر سفارش");
-    // غیبت فیلد = OTC (payload پیش از مهاجرت ۰۰۴) — بدون برچسب.
-    expect(rowOf(html, "wallgold")).not.toContain('data-badge="order-book"');
-  });
-});
-
-/**
- * ⚠️ رگرسیون: این نشان‌ها در جدول اپ نکست قبلی بودند و در بازنویسی از جدول
- * صفحه‌ی اصلی افتادند (کامپوننتشان زنده ماند ولی صدا زده نمی‌شد). بند ۱۳
- * تصمیم ۱۹ صریح است: وضعیت باز/بسته‌ی خرید و فروش مزیت رقابتی است و روی
- * همین تک‌صفحه به‌صورت نشان می‌آید. بدون آنها عدد سکوی بسته خوانده می‌شود
- * انگار قابل معامله است.
- */
-describe("صفحه‌ی اصلی — نشان‌های «خرید بسته» / «فروش بسته» (بند ۹.۲)", () => {
-  it("سکوی خریدبسته نشانش را در همان ردیف جدول می‌گیرد و ردیفش حذف نمی‌شود", async () => {
-    const store = healthyStore();
-    const now = freshIso();
-    store.snapshots["talasea"] = makeSnapshot({
-      slug: "talasea",
-      mid: 18530000,
-      buyEnabled: false,
-      fetchedAt: now,
-    });
-    const html = await renderHome(store);
-    const talasea = rowOf(html, "talasea");
-    expect(talasea).toContain('data-badge="buy-closed"');
-    expect(talasea).toContain("خرید بسته است");
-    // قیمتش هم سر جایش می‌ماند — نشان است، نه حذف.
-    expect(cellsOf(talasea)[1]).toContain("۱۸٬۵۳۰٬۰۰۰");
-  });
-
-  it("سکوی فروش‌بسته نشان فروش می‌گیرد و سکوی باز هیچ نشانی نمی‌گیرد", async () => {
-    const store = healthyStore();
-    const now = freshIso();
-    store.snapshots["wallgold"] = makeSnapshot({
-      slug: "wallgold",
-      mid: 18611000,
-      sellEnabled: false,
-      fetchedAt: now,
-    });
-    const html = await renderHome(store);
-    expect(rowOf(html, "wallgold")).toContain('data-badge="sell-closed"');
-    expect(rowOf(html, "wallgold")).toContain("فروش بسته است");
-    expect(rowOf(html, "wallgold")).not.toContain('data-badge="buy-closed"');
-    // میلی هر دو سمتش باز است ⟸ هیچ نشان بسته‌ای.
-    expect(rowOf(html, "milli")).not.toContain("بسته است");
-  });
-
-  it("منبع قطع ⟸ هیچ نشانی ادعا نمی‌شود (قاعده‌ی ۵)", async () => {
+describe("صفحه‌ی اصلی — قطع منبع ⟸ کهنگی، نه خطا (قاعده‌ی سخت ۵)", () => {
+  it("با مردن یک منبع صفحه رندر می‌شود و بقیه سر جایشان می‌مانند", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
     store.updatedAt["talasea"] = staleIso();
-    const html = await renderHome(store);
-    expect(rowOf(html, "talasea")).not.toContain("بسته است");
-  });
-});
-
-describe("صفحه‌ی اصلی — قطع منبع ⟸ کهنگی، نه خطا (قاعده‌ی ۵)", () => {
-  it("با مردن یک منبع صفحه رندر می‌شود و همان ردیف برچسب کهنگی می‌گیرد", async () => {
-    const store = healthyStore();
-    store.snapshots["talasea"] = null; // TTL قیمت جاری گذشته
-    store.updatedAt["talasea"] = staleIso(); // ولی updated_at بدون TTL مانده
 
     const html = await renderHome(store);
-
-    // صفحه نمی‌شکند و بقیه‌ی سکوها سر جایشان هستند.
     expect(html).toContain("وال‌گلد");
     expect(html).toContain("میلی");
-    // ردیف طلاسی هست، بی‌قیمت، با برچسب کهنگی — حذف نمی‌شود.
-    expect(html).toContain("طلاسی");
-    expect(rowOf(html, "talasea")).toContain("قیمت در دسترس نیست");
-    expect(html).toContain("کهنه");
-    expect(html).toContain("دقیقه پیش");
+    expect(cardOf(html, "talasea")).toContain("قیمت در دسترس نیست");
   });
 
-  it("ردیف بی‌قیمت آخر جدول می‌ماند ولی حذف نمی‌شود", async () => {
-    const store = healthyStore();
-    store.snapshots["milli"] = null; // ارزان‌ترین بود
-    store.updatedAt["milli"] = staleIso();
-    const html = await renderHome(store);
-    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
-      html.indexOf('data-platform="milli"'),
-    );
-  });
-
-  it("منبع بدون هیچ سابقه‌ای هم صفحه را نمی‌شکند", async () => {
+  it("سکوی بی‌قیمت نشانگر محور نمی‌گیرد ولی کارتش می‌ماند", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
-    store.updatedAt["talasea"] = null;
-
     const html = await renderHome(store);
-    expect(html).toContain("طلاسی");
-    expect(html).toContain("هنوز داده‌ای ثبت نشده است");
+    expect(html).not.toContain('data-rail-marker="talasea"');
+    expect(() => cardOf(html, "talasea")).not.toThrow();
+  });
+
+  it("قطع کامل هر سه منبع ⟸ صفحه باز هم رندر می‌شود", async () => {
+    const html = await renderHome({ listed: [], snapshots: {}, updatedAt: {} });
+    expect(html).toContain("محور قیمت طلای ۱۸ عیار");
+    expect(html).toContain("قیمت در دسترس نیست");
+  });
+
+  /** بند ۱۱: با کم‌تر از دو منبعِ قیمت‌دار، محور معنا ندارد. */
+  it("با یک منبع قیمت‌دار محور رسم نمی‌شود ولی صفحه سالم است", async () => {
+    const store = healthyStore();
+    store.snapshots["talasea"] = null;
+    store.snapshots["wallgold"] = null;
+    store.snapshots["melligold"] = null;
+    store.snapshots["tlyn"] = null;
+    const html = await renderHome(store);
+    expect(html).toContain("برای رسم محور دست‌کم دو سکوی قیمت‌دار لازم است");
+  });
+
+  it("سکوی کارمزدنامعلوم عدد خودش را دارد و جدا نمی‌افتد", async () => {
+    const html = await renderHome(storeWithUnknownFee());
+    expect(html).toContain("ملی‌گلد");
   });
 
   /**
-   * فهرست سکوها فراداده‌ی ثابت است، نه قیمت (`lib/registry.ts`): در قطع
-   * کامل هم ردیف‌ها سر جایشان می‌مانند و فقط ستون قیمتشان «قیمت در دسترس
-   * نیست» می‌شود — همان چیزی که قاعده‌ی ۵ می‌خواهد. جدولِ کاملاً خالی
-   * («هنوز داده‌ای ثبت نشده») دیگر رخ نمی‌دهد.
+   * ⚠️ الزام بند ۶.۲ سند معماری: سن داده باید در خودِ HTML سروری باشد. پیش
+   * از بازطراحی، هر ردیف جدول برچسب خودش را داشت؛ حالا یک برچسب سطح-صفحه
+   * روی محور است. حذف جدول نباید این را با خودش می‌برد.
    */
-  it("قطع کامل هر سه منبع ⟸ صفحه باز هم رندر می‌شود، با ردیف‌های بی‌قیمت", async () => {
-    const html = await renderHome({ listed: [], snapshots: {}, updatedAt: {} });
-    expect(html).toContain("مقایسه‌ی سکوهای خرید و فروش طلا");
-    expect(html).toContain("قیمت در دسترس نیست");
-    for (const platform of REGISTRY_PLATFORMS) {
-      expect(html, platform.slug).toContain(`data-platform="${platform.slug}"`);
-    }
-  });
-
-  it("برچسب زمان هر ردیف با <time datetime> در خود HTML است", async () => {
+  it("برچسب «آخرین به‌روزرسانی» با <time datetime> در خود HTML است", async () => {
     const store = healthyStore();
-    const iso = store.updatedAt["wallgold"] as string;
     const html = await renderHome(store);
-    expect(html).toContain("به‌روزرسانی");
-    expect(html).toMatch(timeTagPattern(iso));
+    const latest = Object.values(store.updatedAt)
+      .filter((iso): iso is string => iso !== null)
+      .sort()
+      .at(-1) as string;
+    expect(html).toContain("آخرین به‌روزرسانی");
+    expect(html).toMatch(timeTagPattern(latest));
   });
 });
 
@@ -497,17 +424,76 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
   });
 });
 
-describe("پوسته‌ی ریشه — فارسی و راست‌به‌چپ (قاعده‌ی ۶)", () => {
+describe("پوسته‌ی ریشه — فارسی، راست‌به‌چپ، و تم بدون فلش", () => {
   /**
    * ⚠️ نگهبان سطح کد، نه رندر. `RootShell` از `HeadContent`/`Scripts` استفاده
    * می‌کند و بدون `RouterProvider` رندر نمی‌شود (تجربی سنجیده شد: «useRouter
    * must be used inside a RouterProvider»). رندر واقعیِ ‎<html lang="fa"
    * dir="rtl">‎ با سرور بیلدشده راستی‌آزمایی شد؛ این نگهبان جلوی حذف
    * بی‌سروصدای همان صفت‌ها را در بازنویسی بعدی می‌گیرد.
+   *
+   * ⚠️ الگو عمداً به ترتیب یا فاصله‌ی صفت‌ها حساس نیست: نسخه‌ی قبلی
+   * ‎/<html\s+lang="fa"\s+dir="rtl">/‎ بود و به‌محض اینکه صفت سوم اضافه شد و
+   * پرتیه‌کننده تگ را چندخطی کرد، شکست — بی‌آنکه چیزی واقعاً خراب شده باشد.
    */
+  function rootSource(): string {
+    return readFileSync(join(__dirname, "..", "src/routes/__root.tsx"), "utf8");
+  }
+
+  /**
+   * ⚠️ `<html\s` و نه `<html\b`: خودِ کامنت‌های همین فایل رشته‌ی «‎<html>‎» را
+   * دارند و الگوی آزادتر اول به آن‌ها می‌خورد و تست را با پیام گمراه‌کننده
+   * قرمز می‌کند. داشتن دست‌کم یک صفت، تگ واقعی JSX را از متن کامنت جدا می‌کند.
+   */
+  function htmlTag(): string {
+    const match = rootSource().match(/<html\s[^>]*>/);
+    if (match === null) throw new Error("تگ <html> صفت‌دار در پوسته‌ی ریشه نیست");
+    return match[0];
+  }
+
   it("پوسته‌ی ریشه lang=fa و dir=rtl دارد", () => {
-    const source = readFileSync(join(__dirname, "..", "src/routes/__root.tsx"), "utf8");
-    expect(source).toMatch(/<html\s+lang="fa"\s+dir="rtl">/);
+    expect(htmlTag()).toMatch(/lang="fa"/);
+    expect(htmlTag()).toMatch(/dir="rtl"/);
+  });
+
+  /**
+   * بند ۱۴ سند طراحی، مورد ۳. سرور همیشه یک تم ثابت می‌دهد و اسکریپت inline
+   * پیش از نقاشی اصلاحش می‌کند؛ بدون `suppressHydrationWarning` همان اصلاح
+   * به‌صورت خطای hydration گزارش می‌شود.
+   */
+  it("تم را سروری و ثابت می‌نویسد و هشدار hydration را روی همان عنصر خاموش می‌کند", () => {
+    expect(htmlTag()).toMatch(/data-theme=\{SERVER_THEME\}/);
+    expect(htmlTag()).toMatch(/suppressHydrationWarning/);
+  });
+
+  /**
+   * ⚠️ جای اسکریپت تعیین‌کننده است، نه صرفاً وجودش: باید **داخل `<head>`**
+   * باشد تا مرورگر همگام اجرایش کند و صفت پیش از اولین پیکسل بنشیند. اگر
+   * روزی به انتهای `<body>` منتقل شود، فلش سفید برمی‌گردد و هیچ تست دیگری
+   * نمی‌گیردش.
+   */
+  it("اسکریپت تشخیص تم درون <head> است، نه در بدنه", () => {
+    const head = rootSource().match(/<head>[\s\S]*?<\/head>/);
+    expect(head, "بلوک <head> در پوسته‌ی ریشه نیست").not.toBeNull();
+    expect(head?.[0]).toContain("THEME_INIT_SCRIPT");
+  });
+
+  /**
+   * نام صفت و کلید ذخیره در دو جا استفاده می‌شوند — اسکریپت inline و دکمه‌ی
+   * تعویض. اگر از هم واگرا شوند، دکمه کار می‌کند ولی انتخاب کاربر در
+   * بارگذاری بعدی خوانده نمی‌شود؛ نقصی که فقط با ریفرش دیده می‌شود.
+   */
+  it("اسکریپت inline همان صفت و کلیدی را می‌نویسد که lib/theme می‌خواند", () => {
+    expect(THEME_INIT_SCRIPT).toContain(JSON.stringify(THEME_ATTRIBUTE));
+    expect(THEME_INIT_SCRIPT).toContain(JSON.stringify(THEME_STORAGE_KEY));
+    expect(THEME_INIT_SCRIPT).toContain("prefers-color-scheme: dark");
+  });
+
+  /** سلکتور دارک در CSS باید همان صفتی باشد که اسکریپت می‌نشاند. */
+  it("سلکتور دارک در styles.css با همان صفت بسته شده", () => {
+    const css = readFileSync(join(__dirname, "..", "src/styles.css"), "utf8");
+    expect(css).toContain(`[${THEME_ATTRIBUTE}="dark"]`);
+    expect(css).toMatch(/@custom-variant\s+dark\s+\(&:is\(\[data-theme="dark"\]\s+\*\)\)/);
   });
 });
 

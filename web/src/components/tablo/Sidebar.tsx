@@ -18,10 +18,7 @@ export function Sidebar({ posts }: { posts: PublishedPost[] }) {
           // بلیت ۲۵: پستِ بدون عکس همان جعبه‌ی تزئینی امروز است — بدون جای خالی.
           const image = postImageAsset(post);
           return (
-            <li
-              key={post.slug}
-              className="border-b border-border/60 pb-5 last:border-0 last:pb-0"
-            >
+            <li key={post.slug} className="border-b border-border/60 pb-5 last:border-0 last:pb-0">
               <a
                 href={`/blog/${post.slug}`}
                 className={`transition-smooth group flex items-center gap-4 hover:text-primary ${
@@ -48,13 +45,9 @@ export function Sidebar({ posts }: { posts: PublishedPost[] }) {
                   />
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] leading-6 font-medium">
-                    {post.title_fa}
-                  </span>
+                  <span className="block text-[13px] leading-6 font-medium">{post.title_fa}</span>
                   <span className="mt-1.5 block text-[11px] text-muted-foreground">
-                    <time dateTime={post.published_at}>
-                      {formatDateFa(post.published_at)}
-                    </time>
+                    <time dateTime={post.published_at}>{formatDateFa(post.published_at)}</time>
                   </span>
                 </span>
               </a>

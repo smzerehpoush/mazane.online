@@ -18,6 +18,11 @@ import "@tanstack/react-start/server-only";
 
 import Redis from "ioredis";
 
+import {
+  getChartPlatforms as readChartPlatforms,
+  setDefaultChartConfigSource,
+  type ChartConfigSource,
+} from "../chart-config";
 import { parseChartConfigPayload, type ChartPlatformConfig } from "../site-content";
 
 const CHART_CONFIG_KEY = "tablo:chart_config";
@@ -34,11 +39,25 @@ function redisClient(): Redis {
   return client;
 }
 
+export function createRedisChartConfigSource(): ChartConfigSource {
+  return {
+    async getChartPlatforms(): Promise<readonly ChartPlatformConfig[] | undefined> {
+      return parseChartConfigPayload(await redisClient().get(CHART_CONFIG_KEY));
+    },
+  };
+}
+
+let registered = false;
+
+/** ثبت تنبل — همان الگو و همان دلیلِ `price-source.ts`. */
+function ensureDefaultSource(): void {
+  if (registered) return;
+  registered = true;
+  setDefaultChartConfigSource(createRedisChartConfigSource);
+}
+
+/** تنها درِ ورود کد سمت سرور به پیکربندی — نه مستقیم از `lib/chart-config.ts`. */
 export async function getChartPlatforms(): Promise<readonly ChartPlatformConfig[] | undefined> {
-  try {
-    const raw = await redisClient().get(CHART_CONFIG_KEY);
-    return parseChartConfigPayload(raw);
-  } catch {
-    return undefined;
-  }
+  ensureDefaultSource();
+  return readChartPlatforms();
 }

@@ -31,9 +31,43 @@ export interface LivePriceRow {
   updated_at: string | null;
 }
 
+/**
+ * وضعیت تازه‌ی یک منبع روی داشبورد — **همه‌چیز از قبل سمت سرور حساب و
+ * قالب‌بندی شده** (بند ۱۴).
+ *
+ * ⚠️ به‌ویژه `rail_percent`: موقعیت روی محور به کمینه/بیشینه‌ی کل مجموعه
+ * وابسته است، پس با هر نوبت عوض می‌شود. اگر کلاینت خودش حسابش می‌کرد، هم
+ * قاعده‌ی سخت ۱ می‌شکست و هم دو پیاده‌سازی از یک هندسه داشتیم که می‌توانند
+ * واگرا شوند. کلاینت فقط عدد را در `style.right` می‌نشاند.
+ */
+export interface LiveDashboardSource {
+  slug: string;
+  price_toman: number | null;
+  price_display: string | null;
+  rail_percent: number | null;
+  stem_long: boolean;
+}
+
+/** هندسه و پاورقی تازه‌ی محور — همان چیزی که `buildDashboard` ساخته. */
+export interface LiveDashboard {
+  sources: LiveDashboardSource[];
+  max_display: string | null;
+  min_display: string | null;
+  spread_display: string | null;
+  reference_percent: number | null;
+  /** تازه‌ترین زمان داده — مبنای ری‌ست فتیله (بند ۱۴). */
+  updated_at: string | null;
+}
+
 export interface LivePricesPayload {
   generated_at: string;
   rows: LivePriceRow[];
+  /**
+   * نمای داشبورد صفحه‌ی اصلی. اختیاری است تا مصرف‌کننده‌ی دیگر این اندپوینت
+   * (`PlatformRateCard` صفحه‌ی سکو، که فقط `rows` را می‌خواند) به تغییر شکل
+   * حساس نباشد.
+   */
+  dashboard?: LiveDashboard;
 }
 
 /** وضعیت متنی یک ردیف در DOM — ورودی و خروجی تابع خالص سوآپ. */

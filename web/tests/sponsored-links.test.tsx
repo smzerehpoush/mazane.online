@@ -197,8 +197,14 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
   it("صفحه‌ی اصلی از کاونده می‌گذرد و برای هر سکو یک لینک /go/ دارد", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(seededStore())} />);
     const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "صفحه‌ی اصلی");
-    // دکمه‌ی «رفتن به سایت» هر ردیف جدول — لینک درآمدزا و فقط از /go/.
-    expect(goLinks).toBe(PLATFORMS.length);
+    // ⚠️ شمار دقیق دیگر ادعا نمی‌شود: با بازطراحی، هر منبع **دو** نقطه‌ی
+    // خروج دارد (نشانگر محور و کارت منبع) و منبعِ بی‌قیمت فقط کارت می‌گیرد.
+    // چیزی که واقعاً مهم است این است که هر سکو دست‌کم یک راه خروج داشته
+    // باشد و **همه‌ی** لینک‌ها از کاونده‌ی سیاست رد شوند.
+    expect(goLinks).toBeGreaterThanOrEqual(PLATFORMS.length);
+    for (const platform of PLATFORMS) {
+      expect(html, platform.slug).toContain(`href="/go/${platform.slug}"`);
+    }
     // کد معرف هرگز در HTML عمومی نمی‌نشیند — فقط سمت ریدایرکت است.
     expect(html).not.toContain(REFERRAL_CODE);
   });
@@ -295,16 +301,20 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
       fetchedAt: now,
     });
     const html = renderToStaticMarkup(<HomePage data={await homeData(store)} />);
-    // ترتیب فقط از «قیمت»: طلاسی < وال‌گلد < میلی (با وجود کد معرفش).
-    expect(html.indexOf('data-platform="talasea"')).toBeLessThan(
-      html.indexOf('data-platform="wallgold"'),
-    );
-    expect(html.indexOf('data-platform="wallgold"')).toBeLessThan(
-      html.indexOf('data-platform="milli"'),
-    );
-    // نشان «ارزان‌ترین» هم به طلاسی می‌رسد، نه به سکوی کد-معرف‌دار.
-    expect(html).toContain('data-platform="talasea" data-cheapest="true"');
-    expect(html).not.toContain('data-platform="milli" data-cheapest="true"');
+
+    // ⚠️ «ترتیب» در طرح تازه یعنی **موقعیت روی محور** (بند ۱.۴: راست =
+    // ارزان‌تر، و `right` فاصله از لبه‌ی راست است). میلی کد معرف دارد و
+    // اینجا گران‌ترین است — باید چپ‌ترین بنشیند، یعنی **بیشترین** درصد.
+    // اگر روزی کمیسیون وارد هندسه شود، همین‌جا قرمز می‌شود.
+    const percentOf = (slug: string): number => {
+      const marker = html.match(
+        new RegExp(`data-rail-marker="${slug}"[^>]*style="right:\\s*([\\d.]+)%`),
+      );
+      if (marker === null) throw new Error(`نشانگر ${slug} در HTML نیست`);
+      return Number(marker[1]);
+    };
+    expect(percentOf("talasea")).toBeLessThan(percentOf("wallgold"));
+    expect(percentOf("wallgold")).toBeLessThan(percentOf("milli"));
   });
 
   it("صفحه‌ی دارایی هم همین ترتیب را دارد — کد معرف در گروه‌بندی اثر ندارد", async () => {
@@ -329,8 +339,12 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     // ⚠️ مسیرها با بازنویسی تنکستک به‌روز شدند؛ اگر فایلی جابه‌جا شد،
     // مسیر تازه‌اش را اینجا بگذارید — این فهرست حذف‌شدنی نیست.
     for (const file of [
-      "src/components/tablo/home-view.tsx",
-      "src/components/tablo/ComparisonTable.tsx",
+      // ⚠️ با بازطراحی داشبورد، `ComparisonTable`/`home-view` جای خود را به
+      // `lib/dashboard.ts` دادند — همان‌جا که حالا ترتیب و هندسه‌ی محور ساخته
+      // می‌شود. مسیر عوض شد، پوشش نه. این فهرست حذف‌شدنی نیست.
+      "src/lib/dashboard.ts",
+      "src/components/tablo/PriceRail.tsx",
+      "src/components/tablo/SourceCards.tsx",
       "src/components/content/AssetPage.tsx",
       "src/lib/rows.ts",
     ]) {

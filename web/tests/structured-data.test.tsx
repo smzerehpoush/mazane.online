@@ -377,14 +377,26 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     expect(assetRaw).toContain("AggregateOffer");
   });
 
-  it("عدد نشان‌دار صفحه‌ی اصلی همان lowPrice صفحه‌ی دارایی است", async () => {
-    const html = renderToStaticMarkup(<HomePage data={await home()} />);
+  /**
+   * ⚠️ این تست در بازطراحی ۲۰۲۶-۰۸-۱۱ **دامنه‌اش عوض شد، نه سخت‌گیری‌اش**.
+   *
+   * پیش‌تر ادعا می‌کرد ارزان‌ترین عدد هم‌زمان روی صفحه‌ی اصلی و صفحه‌ی دارایی
+   * است. آن ادعا دیگر درست نیست و **نباید** هم باشد: صفحه‌ی اصلی فقط منابع
+   * انتخابیِ پنل را نشان می‌دهد (بند ۱۵، تصمیم ۲)، پس ارزان‌ترین سکوی کل
+   * فهرست ممکن است اصلاً روی آن صفحه نباشد.
+   *
+   * چیزی که قاعده‌ی همخوانی گوگل واقعاً می‌خواهد، همخوانی **درون یک صفحه**
+   * است: `lowPrice` باید همان عددی باشد که در متنِ همان صفحه دیده می‌شود.
+   * تست حالا دقیقاً همان را می‌سنجد — و چون هر دو سرِ ادعا روی یک صفحه‌اند،
+   * از قبل هم قوی‌تر است.
+   */
+  it("lowPrice همان عددی است که در متن صفحه‌ی دارایی دیده می‌شود", async () => {
     seed(assetStore());
-    const product = findByType(jsonLdBlocks(slugHead(await pageOf("tala-18"))), "Product");
+    const data = await pageOf("tala-18");
+    const html = renderToStaticMarkup(<SlugPageView data={data} />);
+    const product = findByType(jsonLdBlocks(slugHead(data)), "Product");
     const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
-    // یک عدد، سه جا: ردیف «ارزان‌ترین» صفحه‌ی اصلی، جدول صفحه‌ی دارایی، و
-    // JSON-LD دارایی. (کارت‌های «بهترین» در ۲۰۲۶-۰۸-۱۰ حذف شدند.)
-    expect(html).toContain('data-platform="digikala" data-cheapest="true"');
+
     expect(html).toContain(formatToman(PRICE_MIN_TOMAN));
     expect(offers["lowPrice"]).toBe(PRICE_MIN_TOMAN * 10);
   });
