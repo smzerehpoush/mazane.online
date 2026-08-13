@@ -84,7 +84,7 @@ jobs:
       # import اشتباه هم برنگردد — نه فقط منبع.
       - name: No admin-auth secrets in the client bundle
         run: |
-          if grep -rIlE "scryptSync|TABLO_ADMIN_PASSWORD_HASH|TABLO_ADMIN_SESSION_SECRET|mazane_admin_session" .output/public; then
+          if grep -rIlE "scryptSync|TABLO_ADMIN_PASSWORD_HASH|TABLO_ADMIN_SESSION_SECRET|tablo_admin_session" .output/public; then
             echo "::error::ردی از منطق/env احراز هویت پنل در باندل کلاینت پیدا شد"
             exit 1
           fi
