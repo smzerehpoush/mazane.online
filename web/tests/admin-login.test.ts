@@ -1,16 +1,3 @@
-/**
- * مرز وب — ورود/خروج پنل مدیریت (بلیت ۲۰): env تزریق‌شده ⟸ پاسخ endpoint.
- *
- * همان مرز `post-view.ts`: منطق در `lib/server/admin-login.ts` و
- * `admin-logout.ts` مستقیم از تست صدا زده می‌شود، بدون بالا آوردن سرور.
- *
- * سنجیده می‌شود:
- *   ۱. رمز درست/غلط رفتار درست دارد.
- *   ۲. کوکی نشست هر سه پرچم `HttpOnly`/`Secure`/`SameSite=Strict` را دارد.
- *   ۳. چند تلاش ناموفق پیاپی قفل موقت می‌شود (۴۲۹).
- *   ۴. خروج کوکی را با `Max-Age=0` باطل می‌کند.
- *   ۵. همه‌ی پاسخ‌ها `Cache-Control: no-store` و `X-Robots-Tag: noindex, nofollow` دارند.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { hashPassword, MAX_LOGIN_ATTEMPTS, SESSION_TTL_MS } from "../src/lib/admin-auth";
@@ -23,7 +10,6 @@ import {
   resetLoginAttempts,
 } from "../src/lib/server/admin-session";
 
-/** استخراج مقدار خام کوکی از رشته‌ی هدر `Set-Cookie` — فقط برای تست. */
 function cookieValue(setCookieHeader: string): string {
   const match = setCookieHeader.match(new RegExp(`${ADMIN_SESSION_COOKIE}=([^;]*)`));
   if (match?.[1] === undefined) throw new Error("کوکی نشست در هدر نیست");
@@ -105,7 +91,6 @@ describe("POST /api/admin-login", () => {
     const success = await adminLoginResponse(loginRequest({ password: PASSWORD }));
     expect(success.status).toBe(204);
 
-    // بعد از موفقیت، شمارنده صفر است — یک تلاش ناموفق تازه نباید فوراً قفل کند.
     const afterSuccess = await adminLoginResponse(loginRequest({ password: "wrong" }));
     expect(afterSuccess.status).toBe(401);
   });
@@ -142,7 +127,6 @@ describe("POST /api/admin-logout", () => {
   });
 
   it("بدون هیچ نشست فعالی هم موفق است", () => {
-    // هیچ کوکی‌ای فرستاده نشده — منطق شرط ندارد، همیشه باطل می‌کند.
     const response = adminLogoutResponse();
     expect(response.status).toBe(204);
   });

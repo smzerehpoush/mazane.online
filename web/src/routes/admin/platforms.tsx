@@ -1,25 +1,5 @@
 /**
- * تنظیمات نمودار صفحه‌ی اصلی و نشانی معرف — ‎/admin/platforms‎ (بلیت ۲۱ + ۲۳).
- *
- * مالک اینجا تعیین می‌کند کدام سکوها در نمودار بالای صفحه‌ی اصلی باشند،
- * با چه رنگ و ترتیبی، و نشانی معرف هر سکو چیست. ذخیره فقط پستگرس است
- * (`POST /api/admin-platform-settings`) — پنل هرگز مستقیم به ردیس
- * نمی‌نویسد؛ گردآورنده خودش با تأخیر ~۲۰ ثانیه هم `tablo:chart_config` و
- * هم رجیستری زنده‌ی سکوها (override نشانی معرف) را همگام می‌کند، پس تغییر
- * «تا نیم دقیقه بعد» روی سایت زنده دیده می‌شود، بدون هیچ دیپلوی/انتشار
- * تازه‌ای.
- *
- * اعتبارسنجی واقعی سمت سرور است: عضویت نمودار (بین ۲ تا ۶ سکو، رنگ معتبر،
- * اسلاگ قابل نمایش — `validatePlatformSettings`) و نشانی معرف (فقط https،
- * هم‌دامنه یا زیردامنه‌ی وبسایت رسمی سکو — `validateReferralUrls`). این
- * صفحه فقط پیام خطای برگشتی را نشان می‌دهد و از سمت کلاینت هم دکمه‌ی ذخیره
- * را برای شمار نامعتبر غیرفعال می‌کند (تجربه‌ی سریع‌تر، نه دروازه‌ی امنیتی).
- *
- * نشانی معرف مستقل از عضویت نمودار است — سکوی خاموش هم می‌تواند override
- * داشته باشد (کلیک از صفحه‌ی خودِ سکو). خالی‌کردن فیلد و ذخیره یعنی حذف
- * override؛ ‎/go/<slug>‎ به website_url برمی‌گردد.
- *
- * ⚠️ قاعده‌ی سخت ۲: این صفحه هیچ ارتباطی با جدول قیمت ندارد — عضویت نمودار
+ * ⚠️ این صفحه هیچ ارتباطی با جدول قیمت ندارد — عضویت نمودار
  * روی ترتیب/فهرست‌شدن جدول قیمت اثر نمی‌گذارد.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -48,12 +28,10 @@ export const Route = createFileRoute("/admin/platforms")({
   component: AdminPlatformsPage,
 });
 
-/** پالت پیش‌فرض برای سکویی که تازه روشن می‌شود و هنوز رنگی ندارد. */
 const DEFAULT_PALETTE = ["#1d6fe0", "#0bb0d4", "#9b8ce8", "#12a06a", "#e0921d", "#d64545"];
 
 interface Row extends PlatformSettingEntry {
   name_fa: string;
-  /** برای اعتبارسنجی/راهنمای سمت کلاینت نشانی معرف (بلیت ۲۳). */
   website_url: string | null;
 }
 
@@ -62,16 +40,10 @@ function nextDefaultColor(rows: Row[]): string {
   return DEFAULT_PALETTE.find((c) => !used.has(c)) ?? DEFAULT_PALETTE[0]!;
 }
 
-/** ردیف‌های فعال، مرتب بر `chart_order` — همان چیزی که دکمه‌ی بالا/پایین جابه‌جا می‌کند. */
 function activeOrdered(rows: Row[]): Row[] {
   return rows.filter((r) => r.in_chart).sort((a, b) => (a.chart_order ?? 0) - (b.chart_order ?? 0));
 }
 
-/**
- * پیام خطای سمت کلاینت برای نشانی معرف — فقط راهنما (تجربه‌ی سریع‌تر)،
- * دروازه‌ی واقعی سرور است (`validateReferralUrls`، همین قاعده را دوباره
- * می‌سنجد). فیلد خالی همیشه معتبر است (یعنی بدون override).
- */
 function referralError(row: Row): string | null {
   const trimmed = row.referral_url?.trim() ?? "";
   if (trimmed.length === 0) return null;
@@ -202,8 +174,6 @@ function AdminPlatformsPage() {
     setSaveError(null);
     setSaved(false);
     try {
-      // پیش از ارسال، ترتیب را به رتبه‌ی صفرمبنای پیوسته می‌بریم — همان چیزی
-      // که سرور هم برای سکوهای فعال انتظار دارد.
       const ordered = activeOrdered(rows);
       const orderBySlug = new Map(ordered.map((r, i) => [r.slug, i]));
       const entries: PlatformSettingEntry[] = rows.map((r) => ({

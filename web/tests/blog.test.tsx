@@ -1,14 +1,3 @@
-/**
- * مرز وب — بلاگ (بلیت ۱۲): استور seed شده ⟸ HTML رندرشده.
- *
- * منبع داده با `setBlogSource` تزریق می‌شود؛ هیچ پستگرس/شبکه‌ای در کار نیست.
- * فیک عمداً «گنگ» است (هرچه seed شده را برمی‌گرداند، با هر وضعیتی) تا قاعده‌ی
- * نمایش — فقط published؛ draft/retracted ⟸ 404/غایب — واقعاً در لایه‌ی وب
- * سنجیده شود، نه در فیک.
- *
- * مسیرهای ‎/blog‎ و ‎/blog/<slug>‎ فقط سیم‌کشی‌اند؛ «۴۰۴» در این مرز یعنی
- * `getPublishedPost(...) === null` و مسیر همان را به `notFound()` ترجمه می‌کند.
- */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -77,12 +66,10 @@ const RETRACTED: BlogPost = {
 
 const ALL_POSTS: BlogPost[] = [PUBLISHED_OLD, PUBLISHED_NEW, DRAFT, RETRACTED];
 
-/** فهرست بلاگ همان‌طور که مسیر می‌سازدش: قاعده‌ی نمایش در `lib/blog.ts`. */
 async function renderIndex(): Promise<string> {
   return renderToStaticMarkup(<BlogIndexView posts={await listPublishedPosts()} />);
 }
 
-/** صفحه‌ی پست — `null` یعنی ۴۰۴ و مسیر همان‌جا `notFound()` می‌اندازد. */
 async function renderPost(slug: string): Promise<string> {
   const post = await getPublishedPost(slug);
   if (post === null) throw new Error(`پست ${slug} ۴۰۴ شد`);
@@ -104,7 +91,6 @@ describe("فهرست بلاگ — /blog", () => {
     expect(html).toContain(PUBLISHED_NEW.title_fa);
     expect(html).toContain('href="/blog/moghayese-karmozd-sakooha"');
     expect(html).toContain('href="/blog/hazine-raft-o-bargasht"');
-    // تاریخ انتشار فارسی + <time datetime> با ISO لاتین در خود HTML.
     expect(html).toContain(formatDateFa(PUBLISHED_OLD.published_at as string));
     expect(html).toContain(formatDateFa(PUBLISHED_NEW.published_at as string));
     expect(html).toMatch(/<time [^>]*datetime="2026-08-01T09:00:00.000Z"/i);
@@ -130,13 +116,13 @@ describe("فهرست بلاگ — /blog", () => {
     expect(html).toContain("هنوز پستی منتشر نشده است");
   });
 
-  it("سرصفحه‌اش canonical و BreadcrumbList دارد (بند ۶.۵)", () => {
+  it("سرصفحه‌اش canonical و BreadcrumbList دارد", () => {
     const head = blogIndexHead();
     expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/blog` });
     expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
   });
 
-  it("کارت پست با عکس شاخص: img با src/width/height/alt (بلیت ۲۵)", async () => {
+  it("کارت پست با عکس شاخص: img با src/width/height/alt", async () => {
     seedBlog([
       {
         ...PUBLISHED_NEW,
@@ -171,18 +157,16 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(html).toMatch(
       new RegExp(`<h1[^>]*>${PUBLISHED_OLD.title_fa.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}</h1>`),
     );
-    // مارک‌داون واقعاً رندر شده، نه متن خام:
     expect(html).toContain("<h2>چرا کارمزد مهم است</h2>");
     expect(html).toContain("<strong>کارمزد</strong>");
     expect(html).toContain("<li>وال‌گلد</li>");
     expect(html).toContain('<a href="/">صفحه‌ی اصلی</a>');
     expect(html).not.toContain("## چرا");
-    // تاریخ انتشار فارسی + datetime لاتین:
     expect(html).toContain(formatDateFa(PUBLISHED_OLD.published_at as string));
     expect(html).toMatch(/<time [^>]*datetime="2026-07-20T08:30:00.000Z"/i);
   });
 
-  it("عکس شاخص (بلیت ۲۴): src/width/height/alt/loading=eager بالای محتوا", async () => {
+  it("عکس شاخص: src/width/height/alt/loading=eager بالای محتوا", async () => {
     seedBlog([
       {
         ...PUBLISHED_NEW,
@@ -201,7 +185,6 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(html).toContain('height="900"');
     expect(html).toContain('alt="توضیح عکس"');
     expect(html).toContain('loading="eager"');
-    // بالای محتوا: پیش از بدنه‌ی مارک‌داونِ رندرشده می‌آید.
     expect(html.indexOf("<img")).toBeGreaterThan(-1);
     expect(html.indexOf("<img")).toBeLessThan(html.indexOf(PUBLISHED_NEW.body_md));
   });
@@ -223,7 +206,6 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(blogPosting?.["inLanguage"]).toBe("fa");
     expect(blogPosting?.["datePublished"]).toBe(PUBLISHED_OLD.published_at);
     expect(blogPosting?.["dateModified"]).toBe(PUBLISHED_OLD.updated_at);
-    // ارقام لاتین (\d فقط ASCII می‌گیرد):
     expect(blogPosting?.["datePublished"]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
     expect(blogPosting?.["dateModified"]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/);
     expect(blogPosting?.["mainEntityOfPage"]).toEqual({
@@ -309,7 +291,7 @@ describe("استور بلاگ از دسترس خارج (مثلاً build بیر�
   });
 });
 
-describe("سایت‌مپ بلاگ (بند ۶.۷)", () => {
+describe("سایت‌مپ بلاگ", () => {
   it("lastmod پست = updated_at خودش، نه now()؛ صفحات دیگر lastmod ندارند", async () => {
     seedBlog(ALL_POSTS);
     const entries = buildSitemapEntries({
@@ -326,7 +308,6 @@ describe("سایت‌مپ بلاگ (بند ۶.۷)", () => {
       entries.find((entry) => entry.path === `/blog/${PUBLISHED_OLD.slug}`)?.lastModified,
     ).toBe(PUBLISHED_OLD.updated_at);
 
-    // قیمت لحظه‌ای lastmod نیست: صفحه‌ی اصلی اصلاً lastModified ندارد.
     expect(entries.find((entry) => entry.path === "/")?.lastModified).toBeUndefined();
   });
 

@@ -1,26 +1,3 @@
-"""استخراج رجیستری گردآورنده به JSON — خوراک `tests/registry-parity.test.ts`.
-
-این اسکریپت گردآورنده را **import نمی‌کند**: فقط با `ast` کتابخانه‌ی
-استاندارد، فایل‌های پایتون را می‌خواند. پس نه pydantic لازم است، نه نصب
-پکیج، نه هیچ سرویس زنده‌ای — دقیقاً همان قید «تست‌ها بدون داکر سبز
-می‌شوند» در قراردادهای پیاده‌سازی.
-
-خروجی روی stdout:
-
-    {
-      "platforms":   [{slug, name_fa, data_policy, market_model, name_en,
-                       website_url, legal_entity, delivery_note_fa}, ...],
-      "instruments": [{slug, instrument, name_fa, unit_fa, purity, currency}, ...],
-      "adapters":    {"<platform slug>": ["GOLD_18K", ...], ...},
-      "publish_gate_min_platforms": 2,
-      "reserved_words": [...],
-      "static_page_slugs": [...]
-    }
-
-ترتیب `platforms` و `instruments` همان ترتیب تاپل در کد است — و آن ترتیب
-خودش قرارداد است (ترتیب فهرست عمومی).
-"""
-
 from __future__ import annotations
 
 import ast
@@ -44,11 +21,6 @@ INSTRUMENT_FIELDS = ("slug", "instrument", "name_fa", "unit_fa", "purity", "curr
 
 
 def literal(node: ast.expr) -> object:
-    """مقدار یک آرگومان — ثابت، یا عضو enum مثل ‎DataPolicy.ALLOWED‎.
-
-    رشته‌های چسبیده‌ی چندخطی را خود پارسر پایتون در همان ‎Constant‎ ادغام
-    می‌کند، پس نیازی به دست‌کاری ندارند.
-    """
     if isinstance(node, ast.Constant):
         return node.value
     if isinstance(node, ast.Attribute):
@@ -61,7 +33,6 @@ def module_of(path: pathlib.Path) -> ast.Module:
 
 
 def assigned_value(module: ast.Module, name: str) -> ast.expr:
-    """مقدار یک اسناد سطح ماژول (با یا بدون annotation)."""
     for node in module.body:
         targets = (
             [node.target]
@@ -90,7 +61,6 @@ def entries(call: ast.Call, fields: tuple[str, ...], defaults: dict[str, object]
 
 
 def adapter_instruments(adapters_dir: pathlib.Path) -> dict[str, list[str]]:
-    """‏`slug` و `instruments` هر آداپتر — از assign های سطح کلاس."""
     emitted: dict[str, list[str]] = {}
     for path in sorted(adapters_dir.glob("*.py")):
         module = module_of(path)
@@ -143,7 +113,6 @@ def main() -> None:
         "publish_gate_min_platforms": literal(
             assigned_value(instruments_module, "PUBLISH_GATE_MIN_PLATFORMS")
         ),
-        # ‎frozenset({...})‎ — آرگومان اولش همان مجموعه است.
         "reserved_words": sorted(
             str(literal(item))
             for item in (

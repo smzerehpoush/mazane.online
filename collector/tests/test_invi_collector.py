@@ -1,15 +1,3 @@
-"""مرز گردآورنده: فریم وب‌سوکت اینوی ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/invi_ws_price.json` **دست‌نویس** است: اینوی فقط
-`wss://invi.ir/ws` دارد و شکل پیامش «تأییدنشده» است (سند تحقیق ۰۱، بند
-۲.۲ + «نتوانستم تأیید کنم» ردیف ۱؛ تلاش اتصال ۲۰۲۶-۰۸-۰۶ از این شبکه ۴۰۳
-گرفت). شکل فرضی همین فیکسچر است و پارسر عمداً به آن سخت‌گیر است — هر چیز
-دیگری کهنگی می‌سازد، نه داده‌ی غلط.
-
-معیار پذیرش بلیت ۵: اینوی در جدول است (فهرست عمومی)؛ کارمزدش نامعلوم است
-⟸ فقط MID؛ و قطع وب‌سوکت در سطح خط لوله بیات‌شدگی است، نه خطا.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -57,13 +45,9 @@ async def test_fixture_frame_is_stored_mid_only_with_unknown_fee() -> None:
     assert stored is not None
     assert await store.get_updated_at("invi") == FETCHED_AT
 
-    # کارمزد نامعلوم ⟸ فقط MID و سطر MEAN که بازتاب همان تک‌عدد است
-    # (سکوی تک‌قیمتی: عددی که منتشر می‌کند قیمت مرجع اوست). قیمت مؤثر
-    # همچنان جعل نمی‌شود — نه BUY هست نه SELL.
     assert [q.side for q in stored.quotes] == [Side.PRICE]
     quote = stored.quotes[0]
     assert quote.instrument == Instrument.GOLD_18K
-    # ضریب فرضی این منبع: تومان بر گرم، ×۱ — ریاضی مقیاس قفل می‌شود.
     assert quote.raw_value == Decimal("18529000")
     assert quote.raw_scale == Decimal("1")
     assert quote.price_toman == 18529000
@@ -94,8 +78,6 @@ async def test_null_price_raises_and_stores_nothing() -> None:
 
 
 async def test_unexpected_frame_shape_raises_and_stores_nothing() -> None:
-    """شکل فریم فرضی است — هر شکل دیگری باید خطای آداپتر بدهد (⟸ در نوبت
-    کامل فقط کهنگی)، نه اینکه عددی حدسی ذخیره شود."""
     store = InMemoryStore()
 
     with pytest.raises(AdapterError):
@@ -107,8 +89,6 @@ async def test_unexpected_frame_shape_raises_and_stores_nothing() -> None:
 
 
 async def test_ws_disconnect_is_staleness_at_the_pipeline_level_not_a_crash() -> None:
-    """معیار پذیرش: قطع وب‌سوکت ⟸ بیات‌شدگی همان سکو؛ نوبت و سایر سکوها
-    سالم ادامه می‌دهند."""
     wallgold_payload = json.loads(
         (FIXTURES / "wallgold_markets.json").read_text(encoding="utf-8")
     )
@@ -132,10 +112,8 @@ async def test_ws_disconnect_is_staleness_at_the_pipeline_level_not_a_crash() ->
         now=FETCHED_AT,
     )
 
-    # اینوی کهنه ماند (نه اسنپ‌شات، نه updated_at)، وال‌گلد منتشر شد.
     assert {s.platform_slug for s in saved} == {"wallgold"}
     assert await store.get_snapshot("invi") is None
     assert await store.get_updated_at("invi") is None
     assert await store.get_snapshot("wallgold") is not None
-    # فهرست عمومی هم نوشته شد — صفحه ۲۰۰ می‌ماند و اینوی «آخرین به‌روزرسانی» می‌گیرد.
     assert "invi" in {p.slug for p in await store.get_listed_platforms()}

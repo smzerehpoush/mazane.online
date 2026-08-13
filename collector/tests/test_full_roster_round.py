@@ -1,15 +1,3 @@
-"""مرز گردآورنده — نوبت کامل ۱۴منبعی (بلیت‌های ۴ و ۵): همه‌ی سکوها از
-فیکسچرها می‌گذرند، با میانه سازگارند و در فهرست عمومی ظاهر می‌شوند؛
-سکوهای کارمزد-نامعلوم **بعد از** سکوهای دارای قیمت مؤثر می‌آیند.
-
-بلیت ۵ دو سکو اضافه کرد: داریک (REST + وب‌سوکت دفتر سفارش — در این نوبت
-از خوراک REST) و اینوی (فقط وب‌سوکت — payload فریمش با کلید همان آدرس
-wss در فچر فیکسچری می‌آید، مثل هر endpoint دیگر).
-
-payload ها فیکسچرهای واقعی ضبط‌شده‌ی ۲۰۲۶-۰۸-۰۶ هستند، جز فریم اینوی که
-دست‌نویس است (شکل تأییدنشده — docstring آداپترش). هیچ تماس شبکه‌ای نیست.
-"""
-
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,7 +59,6 @@ FIXTURE_BY_ENDPOINT = {
     INVI_WS_ENDPOINT: "invi_ws_price.json",
 }
 
-# سکوهایی که کارمزدشان معلوم است، به همان ترتیبی که در فهرست عمومی می‌آیند.
 KNOWN_FEE_LISTED = (
     "wallgold",
     "talasea",
@@ -83,10 +70,8 @@ KNOWN_FEE_LISTED = (
     "baazar",
     "daric",
 )
-# کارمزد نامعلوم — قیمتشان با بقیه هم‌جنس است، فقط ستون کارمزدشان تهی است.
 UNKNOWN_FEE_LISTED = ("melligold", "digikala", "hamrahgold", "invi")
 
-#: همه‌ی سکوهای فهرست عمومی، به ترتیب `PLATFORMS`.
 LISTED_SLUGS = KNOWN_FEE_LISTED + UNKNOWN_FEE_LISTED
 
 
@@ -99,9 +84,6 @@ def make_fetcher() -> Any:
 
 
 async def test_healthy_round_publishes_all_fourteen_sources() -> None:
-    """معیارهای پذیرش بلیت‌های ۴ و ۵: هر ۱۴ سکو — از جمله داریک (دفتر
-    سفارش) و اینوی (وب‌سوکت) — با داده‌ی فیکسچر منتشر می‌شوند و هیچ‌کدام
-    از چک میانه رد نمی‌شوند — یعنی قیمت همه با میانه‌ی سایر منابع سازگار است."""
     store = InMemoryStore()
 
     saved = await collect_round(
@@ -116,9 +98,6 @@ async def test_healthy_round_publishes_all_fourteen_sources() -> None:
 
 
 async def test_fee_columns_are_null_only_for_unknown_fee_platforms() -> None:
-    """قیمت **همه‌ی** سکوها یک شکل دارد (یک سطر PRICE)؛ تنها تفاوت
-    کارمزدنامعلوم‌ها این است که هر سه عدد کارمزدشان تهی است — نه صفر، و نه
-    یک شکل متفاوتِ قیمت (سند تصمیم ۰۰۰۲)."""
     store = InMemoryStore()
 
     await collect_round(ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT)
@@ -139,28 +118,16 @@ async def test_fee_columns_are_null_only_for_unknown_fee_platforms() -> None:
 
 
 async def test_listed_payload_keeps_platforms_registry_order() -> None:
-    """ترتیب فهرست همان ترتیب `PLATFORMS` است و استورها حفظش می‌کنند.
-
-    ⚠️ این ترتیب **ترتیب نمایش جدول نیست**: جدول را لایه‌ی وب بر اساس قیمت
-    مرتب می‌کند (`lib/rows.ts::compareByPrice`).
-    """
     store = InMemoryStore()
 
     await collect_round(ALL_ADAPTERS, make_fetcher(), store, platforms=PLATFORMS, now=FETCHED_AT)
 
     listed = await store.get_listed_platforms()
     assert tuple(p.slug for p in listed) == KNOWN_FEE_LISTED + UNKNOWN_FEE_LISTED
-    # گلدیکا PERMISSION_PENDING است و هرگز در فهرست عمومی نمی‌آید (تصمیم ۱۲).
     assert "goldika" not in {p.slug for p in listed}
 
 
 async def test_listed_payload_shape_carries_market_model() -> None:
-    """قرارداد با `web/lib/prices.ts` (ListedPlatform): بلیت ۵ فیلد
-    `market_model` را اضافه کرد (برچسب «دفتر سفارش» — بند ۹.۲ نکته‌ی ۵)،
-    بلیت ۷ فراداده‌ی صفحه‌ی سکو را: `name_en`، `website_url`،
-    `legal_entity`، `delivery_note_fa` (اختیاری — جای نامستند None) و
-    بلیت ۹ فیلدهای معرف را: `referral_url`، `referral_param` (تصمیم ۲۱).
-    داریک تنها ORDER_BOOK است؛ بقیه OTC."""
     store = InMemoryStore()
     await store.save_platforms(PLATFORMS)
 
@@ -182,11 +149,9 @@ async def test_listed_payload_shape_carries_market_model() -> None:
         assert payload["data_policy"] == "ALLOWED"
         expected = "ORDER_BOOK" if payload["slug"] == "daric" else "OTC"
         assert payload["market_model"] == expected
-        # نشانی وب‌سایت هر ۱۴ سکو در سند تحقیق ۰۱ مستند است.
         assert isinstance(payload["website_url"], str)
         assert payload["website_url"].startswith("https://")
     assert "daric" in {p.slug for p in listed}
-    # فراداده‌ی مستندشده در سند تحقیق ۰۱ سر جای خودش است؛ نامستند None است.
     by_slug = {p.slug: p for p in listed}
     assert by_slug["talasea"].legal_entity == "شرکت توسعه راهکار الوند ارسباران"
     assert by_slug["milli"].delivery_note_fa == "کارمزد تحویل فیزیکی ۳٪"

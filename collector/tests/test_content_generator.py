@@ -1,18 +1,3 @@
-"""مرز گردآورنده — مولد لپ‌تاپ + دروازه (بلیت ۱۴؛ بند ۱۳، تصمیم‌های ۱۶–۱۷).
-
-کل خط لوله با فیک‌ها اجرا می‌شود: `InMemoryStore` (اسنپ‌شات‌ها + rollup ها)،
-`FakeContentGateway` (جدول posts) و `FakeLlmClient` (جمینای) — هیچ تماس
-شبکه‌ای نیست و کلیدی لازم نیست.
-
-معیارهای پذیرش بلیت:
-- اجرای مولد چند پیش‌نویس معتبر به صف می‌فرستد (پنج موضوع لانچ).
-- هیچ عدد نمایشی از خروجی مدل نمی‌آید — هر رقمِ متنِ صف‌شده از مقدار
-  جای‌خالی (کوئری داده) است؛ نثرِ رقم‌دار مدل پشت دروازه رد می‌شود.
-- برای دوره‌ی دارای گپ داده اصلاً تولید نمی‌شود (LLM حتی صدا نمی‌خورد).
-- پرامپت‌ها دستور «هیچ رقمی ننویس» و جای‌خالی‌ها را حمل می‌کنند.
-- بدون GEMINI_API_KEY فرمان با پیام روشن می‌ایستد (بدون traceback).
-"""
-
 import re
 import sys
 from datetime import UTC, datetime, timedelta
@@ -48,7 +33,6 @@ from tablo_collector.store.memory import InMemoryStore
 
 from test_content_queue import FakeContentGateway
 
-# ظهرِ یک روز دلخواه — همه‌ی زمان‌ها تزریقی‌اند، ساعت سیستم بی‌اثر است.
 NOW = datetime(2026, 8, 6, 12, 30, 0, tzinfo=UTC)
 
 
@@ -134,8 +118,6 @@ def _coverage_hours() -> list[datetime]:
 
 
 async def make_store(*, gap_platform: str | None = None) -> InMemoryStore:
-    """استور کامل: سکوها + اسنپ‌شات‌ها + rollup پیوسته‌ی ۲۴ ساعته؛
-    `gap_platform` یک ساعت از پوشش آن سکو را حذف می‌کند (گپ عمدی)."""
     store = InMemoryStore()
     await store.save_platforms(PLATFORMS)
     for snapshot in SNAPSHOTS.values():
@@ -153,19 +135,13 @@ async def make_store(*, gap_platform: str | None = None) -> InMemoryStore:
 
 
 def _specs_by_slug() -> dict[str, dict[str, str]]:
-    """بازساخت نقشه‌ی جای‌خالی هر موضوع — سازنده‌ها توابع خالص‌اند."""
     return {
         spec.slug: spec.slots
         for spec in (builder(PLATFORMS, SNAPSHOTS, NOW) for _, builder in TOPIC_BUILDERS)
     }
 
 
-# ------------------------------------------------------------ خط لوله‌ی کامل
-
-
 async def test_generator_enqueues_five_gated_drafts() -> None:
-    """معیار پذیرش: اجرای مولد چند پیش‌نویس معتبر صف می‌کند — پنج موضوع لانچ،
-    همه از مسیر گیت‌شده، همه رندرشده و بی‌جای‌خالیِ باقی‌مانده."""
     store = await make_store()
     gateway = FakeContentGateway()
     llm = FakeLlmClient()
@@ -183,8 +159,6 @@ async def test_generator_enqueues_five_gated_drafts() -> None:
 
 
 async def test_every_digit_in_queued_drafts_comes_from_slots() -> None:
-    """معیار پذیرش: هیچ عدد نمایشی از خروجی مدل نمی‌آید — با حذف مقادیر
-    جای‌خالی‌ها از متنِ صف‌شده هیچ رقمی (به هر خط) باقی نمی‌ماند."""
     store = await make_store()
     gateway = FakeContentGateway()
 
@@ -206,8 +180,6 @@ async def test_every_digit_in_queued_drafts_comes_from_slots() -> None:
 
 
 async def test_prompts_instruct_no_digits_and_carry_placeholders() -> None:
-    """پرامپت نثر و متا هر دو دستور «هیچ رقمی ننویس» و جای‌خالی‌ها را دارند
-    و مدل‌ها همان دو مدل تصمیم ۱۷ اند (نثر اصلی، متا سبک)."""
     store = await make_store()
     llm = FakeLlmClient()
 
@@ -215,7 +187,7 @@ async def test_prompts_instruct_no_digits_and_carry_placeholders() -> None:
         store=store, retention=store, gateway=FakeContentGateway(), llm=llm, now=NOW
     )
 
-    assert len(llm.prompts) == 10  # ‏۵ موضوع × (نثر + متا)
+    assert len(llm.prompts) == 10
     models = [model for model, _ in llm.prompts]
     assert models == [PROSE_MODEL, MECHANICAL_MODEL] * 5
     for _, prompt in llm.prompts:
@@ -227,9 +199,6 @@ async def test_prompts_instruct_no_digits_and_carry_placeholders() -> None:
 
 
 async def test_data_gap_blocks_generation_before_llm() -> None:
-    """معیار پذیرش: دوره‌ی دارای گپ ⟸ پست تولید نمی‌شود. گپ در وال‌گلد همه‌ی
-    موضوع‌های ارجاع‌دهنده به آن را می‌بندد — LLM برایشان اصلاً صدا نمی‌خورد؛
-    تنها موضوعِ بی‌ارجاع به وال‌گلد (تحویل فیزیکی: طلاسی + میلی) می‌گذرد."""
     store = await make_store(gap_platform="wallgold")
     gateway = FakeContentGateway()
     llm = FakeLlmClient()
@@ -239,12 +208,10 @@ async def test_data_gap_blocks_generation_before_llm() -> None:
     )
 
     assert enqueued == (f"hazine-tahvil-fiziki-sakoha-{NOW:%Y%m%d}",)
-    assert len(llm.prompts) == 2  # فقط نثر + متای همان یک موضوع
+    assert len(llm.prompts) == 2
 
 
 async def test_model_prose_with_digits_is_rejected_at_the_gate() -> None:
-    """معیار پذیرش (نمایش خودکارشده): مدلی که رقم بنویسد پشت دروازه می‌ماند —
-    موضوع اول با نثر رقم‌دارِ اسکریپت‌شده رد می‌شود، بقیه صف می‌شوند."""
     store = await make_store()
     gateway = FakeContentGateway()
     llm = FakeLlmClient(scripted=["قیمت طلا امروز ۵ درصد بالا رفت و به 1200 رسید."])
@@ -260,8 +227,6 @@ async def test_model_prose_with_digits_is_rejected_at_the_gate() -> None:
 
 
 async def test_second_run_same_day_enqueues_nothing_new() -> None:
-    """اجرای دوباره در همان روز پست تکراری نمی‌سازد: برخورد اسلاگ/شباهت
-    پشت دروازه می‌ماند و اجرای اول دست‌نخورده است."""
     store = await make_store()
     gateway = FakeContentGateway()
     first = await generate_launch_drafts(
@@ -278,12 +243,10 @@ async def test_second_run_same_day_enqueues_nothing_new() -> None:
 
 
 async def test_without_any_data_nothing_is_generated() -> None:
-    """داده‌ی ناکافی ⟸ موضوع‌ها بی‌سروصدا رد می‌شوند؛ LLM هرگز صدا نمی‌خورد
-    («کهنگی، نه خطا» — پست جعلی ساخته نمی‌شود)."""
     store = InMemoryStore()
     await store.save_platforms(
         (_platform("wallgold", "وال‌گلد"), _platform("talasea", "طلاسی"))
-    )  # نه اسنپ‌شاتی، نه یادداشت تحویلی
+    )
     llm = FakeLlmClient()
 
     enqueued = await generate_launch_drafts(
@@ -294,12 +257,7 @@ async def test_without_any_data_nothing_is_generated() -> None:
     assert llm.prompts == []
 
 
-# --------------------------------------------------------- کلاینت جمینای
-
-
 async def test_gemini_client_keeps_key_out_of_url_and_parses_text() -> None:
-    """کلید فقط در هدر می‌رود (نشت در URL/لاگ خطا ممنوع) و پاسخ متنی
-    candidates پارس می‌شود؛ repr هم کلید را نقاب می‌زند."""
     seen: dict[str, str | None] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -321,14 +279,9 @@ async def test_gemini_client_keeps_key_out_of_url_and_parses_text() -> None:
     assert "raz" not in repr(client) and "****" in repr(client)
 
 
-# ------------------------------------------------------------- فرمان CLI
-
-
 def test_cli_without_api_key_fails_gracefully(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """معیار قرارداد: بدون GEMINI_API_KEY خطای فارسی روشن، خروج تمیز (کد ۲)،
-    بدون traceback — پیش از هر تماس پایگاه/شبکه."""
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setattr(sys, "argv", ["tablo-generate"])
 
@@ -338,7 +291,7 @@ def test_cli_without_api_key_fails_gracefully(
     assert excinfo.value.code == 2
     err = capsys.readouterr().err
     assert "GEMINI_API_KEY" in err
-    assert "--fake" in err  # راه تمرین آفلاین را هم نشان می‌دهد
+    assert "--fake" in err
 
 
 def test_cli_rejects_unknown_arguments(

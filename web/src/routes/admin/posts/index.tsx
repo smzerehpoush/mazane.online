@@ -1,13 +1,3 @@
-/**
- * فهرست پست‌های بلاگ در پنل — ‎/admin/posts‎ (بلیت ۲۲).
- *
- * همه‌ی وضعیت‌ها (پیش‌نویس/منتشرشده/پس‌گرفته) با فیلتر ساده‌ی کلاینتی؛
- * منطق واقعی فهرست در `GET /api/admin-posts` (`lib/server/admin-posts-requests.ts`)
- * است — این فایل فقط UI.
- *
- * خط لوله‌ی خودکار محتوای پایتونی دست‌نخورده می‌ماند — این صفحه فقط همان
- * جدول `posts` را کنارش می‌خواند/می‌نویسد.
- */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 

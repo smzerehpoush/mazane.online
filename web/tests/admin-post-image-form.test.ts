@@ -1,8 +1,3 @@
-/**
- * تابع خالص اعتبارسنجی سمت کلاینت فرم آپلود عکس شاخص (بلیت ۲۴ — تکمیل UI).
- * قرارداد واقعی/قطعی سمت سرور در `tests/admin-post-image.test.ts` سنجیده
- * می‌شود — این‌جا فقط منطق فعال/غیرفعال بودن دکمه‌ی آپلود در کلاینت است.
- */
 import { describe, expect, it } from "vitest";
 
 import { canUploadPostImage } from "../src/lib/admin-post-image-form";

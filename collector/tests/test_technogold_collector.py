@@ -1,10 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی تکنوگلد ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/technogold_only_price.json` پاسخ واقعی
-`GET https://api2.technogold.gold/customer/tradeables/only-price/1` است
-(ضبط‌شده ۲۰۲۶-۰۸-۰۶ با User-Agent صادق). تست‌ها هیچ تماس شبکه‌ای ندارند.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -45,27 +38,19 @@ async def test_fixture_payload_is_stored_with_user_view_side_mapping() -> None:
     assert stored.suppressed is False
 
     (price,) = stored.quotes
-    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
     assert price.side is Side.PRICE
 
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
-        # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
         assert quote.raw_scale == Decimal("1")
         assert quote.fetched_at == FETCHED_AT
 
-    # نام‌گذاری تکنوگلد «دید کاربر» است: buy_price بزرگ‌تر = آنچه کاربر
-    # می‌پردازد (سند تحقیق ۰۱، بند ۳.۲) ⟸ BUY مؤثر = buy_price خود API.
-    # mid = میانگین ask و bid؛ (18615615 + 18384078) / 2 = 18499846.5 → گرد.
     assert price.price_toman == 18499847
 
-    # مقدار خام هر سطر همان عدد منبع برای همان سمت است.
     assert price.raw_value == Decimal("18499846.5")
 
 
 async def test_terms_are_implied_from_dealer_spread_as_implied() -> None:
-    """کارمزد تکنوگلد در اسپرد خود API است (نه عدد جدا): کارمزد ضمنی هر سمت
-    = (ask−bid)/(ask+bid) و رفت‌وبرگشت = 1 − bid/ask ⟸ `fee_source = API`."""
     store = InMemoryStore()
 
     await collect_once(TechnogoldAdapter(), make_fetcher(load_fixture()), store, now=FETCHED_AT)
@@ -77,7 +62,6 @@ async def test_terms_are_implied_from_dealer_spread_as_implied() -> None:
     assert terms.fee_source == FeeSource.IMPLIED
     assert terms.buy_fee_percent == Decimal("0.6258")
     assert terms.sell_fee_percent == Decimal("0.6258")
-    # سند تحقیق ۰۱ (بند ۳.۸) رفت‌وبرگشت تکنوگلد را ~۱٫۲۴٪ اندازه گرفته بود.
     assert terms.round_trip_percent == Decimal("1.2438")
     assert terms.buy_enabled is True
     assert terms.sell_enabled is True
@@ -85,7 +69,6 @@ async def test_terms_are_implied_from_dealer_spread_as_implied() -> None:
 
 
 async def test_missing_prices_raise_and_store_nothing() -> None:
-    """قطع منبع ⟸ کهنگی، نه داده‌ی خراب: payload بی‌قیمت هیچ ردیفی نمی‌نویسد."""
     payload = load_fixture()
     payload["results"]["buy_price"] = None
     store = InMemoryStore()

@@ -1,10 +1,3 @@
-"""خط لوله‌ی گردآوری: fetch → parse → چک میانه → save.
-
-مرز تست گردآورنده همین‌جاست: payload (در تست، فیکسچر ضبط‌شده) وارد می‌شود و
-ردیف‌های ذخیره‌شده در استور بیرون می‌آید. شبکه با `fetch_json` تزریق می‌شود
-تا تست‌ها هیچ تماس شبکه‌ای نداشته باشند.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -23,17 +16,10 @@ log = logging.getLogger("mazane.collector.pipeline")
 
 
 class AdapterError(Exception):
-    """payload منبع قابل تبدیل به اسنپ‌شات نیست (فیلد غایب، قیمت تهی و…)."""
+    pass
 
 
 class Adapter(Protocol):
-    """هر آداپتر: یک endpoint و یک تبدیلِ payload به اسنپ‌شات نرمال‌شده.
-
-    `instruments` اعلام صریح دارایی‌هایی است که این آداپتر تولید می‌کند —
-    رجیستری زنده‌ی دروازه‌ی انتشار (بند ۱۳، تصمیم ۱۰) از همین فیلد شمار
-    سکوهای پشتیبان هر دارایی را می‌گیرد.
-    """
-
     slug: str
     endpoint: str
     instruments: tuple[Instrument, ...]
@@ -48,10 +34,6 @@ async def collect_once(
     *,
     now: datetime | None = None,
 ) -> PlatformSnapshot:
-    """یک نوبت گردآوری برای یک سکو. خطا را بالا می‌دهد؛ حلقه‌ی اصلی لاگ می‌کند.
-
-    شکست یعنی «هیچ‌چیز نوشته نشود» — قطع منبع کهنگی است، نه داده‌ی خراب.
-    """
     fetched_at = now if now is not None else datetime.now(UTC)
     payload = await fetch_json(adapter.endpoint)
     snapshot = adapter.parse(payload, fetched_at)
@@ -67,19 +49,6 @@ async def collect_round(
     platforms: Sequence[Platform],
     now: datetime | None = None,
 ) -> tuple[PlatformSnapshot, ...]:
-    """یک نوبت گردآوری برای همه‌ی سکوها + چک میانه‌ی تقاطعی + فهرست عمومی.
-
-    - قطع یک منبع کل نوبت را نمی‌کشد: فقط لاگ می‌شود و آن سکو کهنه می‌ماند.
-    - چک میانه (قاعده‌ی ۳ قراردادها): mid هر منبع تازه با میانه‌ی سایر منابع
-      تازه مقایسه می‌شود؛ انحراف بیش از آستانه ⟸ همان اسنپ‌شات با
-      `suppressed=True` ذخیره می‌شود (تاریخچه بله، قیمت جاری هرگز) + هشدار.
-      با کمتر از ۳ منبع تازه رأی‌گیری ممکن نیست و چک اجرا نمی‌شود.
-    - فهرست عمومی هر نوبت بازنویسی می‌شود تا استور جاری (ردیس) بعد از
-      ری‌استارت هم بدون دیپلوی درست باشد.
-    - payload دارایی‌ها (بلیت ۷) هم هر نوبت از رجیستری زنده بازنویسی
-      می‌شود: با فعال شدن سکوی دوم یک دارایی، `published` در همان نوبت
-      True می‌شود و صفحه‌ی وب خودکار ساخته می‌شود (بند ۱۳، تصمیم ۱۰).
-    """
     fetched_at = now if now is not None else datetime.now(UTC)
 
     fresh: list[PlatformSnapshot] = []
@@ -88,7 +57,6 @@ async def collect_round(
             payload = await fetch_json(adapter.endpoint)
             fresh.append(adapter.parse(payload, fetched_at))
         except Exception:
-            # کهنگی، نه خطا: updated_at قبلی این سکو می‌ماند و نوبت ادامه دارد.
             log.exception("گردآوری %s شکست خورد — سکو کهنه می‌ماند", adapter.slug)
 
     outliers = median_outliers(fresh)

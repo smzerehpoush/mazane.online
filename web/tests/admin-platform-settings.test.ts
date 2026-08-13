@@ -1,25 +1,3 @@
-/**
- * مرز وب — تنظیمات نمودار پنل مدیریت (بلیت ۲۱) + نشانی معرف (بلیت ۲۳):
- * منبع تزریق‌شده ⟸ پاسخ endpoint.
- *
- * همان مرز `post-view.ts`/`admin-login.ts`: منطق در
- * `lib/server/admin-platform-settings.ts` مستقیم از تست صدا زده می‌شود،
- * بدون بالا آوردن سرور یا اتصال واقعی به پستگرس/ردیس — منبع دامنه
- * (`lib/platform-settings.ts::setPlatformSettingsSource`) با فیک درون‌حافظه‌ای
- * seed می‌شود.
- *
- * سنجیده می‌شود:
- *   ۱. بدون نشست معتبر ⟸ ۴۰۱ (هم GET هم POST).
- *   ۲. GET فهرست سکوهای قابل نمایش را با تنظیمات ذخیره‌شده ادغام می‌کند —
- *      سکوی بی‌ردیف پیش‌فرض «هنوز تنظیم نشده» می‌گیرد.
- *   ۳. کمتر از ۲ یا بیش از ۶ سکوی in_chart=true ⟸ ۴۰۰، چیزی نوشته نمی‌شود.
- *   ۴. رنگ بدشکل ⟸ ۴۰۰.
- *   ۵. اسلاگ ناشناخته/غیرقابل‌نمایش ⟸ ۴۰۰.
- *   ۶. نوشتن معتبر ⟸ ۲۰۰، رنگ lower و غیرفعال‌ها رنگ/ترتیب null می‌شوند.
- *   ۷. همه‌ی پاسخ‌ها بی‌کش و بدون اجازه‌ی نمایه‌سازی‌اند.
- *   ۸. (بلیت ۲۳) طرح ناامن/دامنه‌ی نامرتبط نشانی معرف ⟸ ۴۰۰؛ زیردامنه‌ی
- *      همان سکو پذیرفته می‌شود؛ نشانی معرف هرگز در پاسخ چاپ نمی‌شود.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSessionToken } from "../src/lib/admin-auth";
@@ -145,7 +123,6 @@ describe("GET /api/admin-platform-settings", () => {
       referral_url: `https://wallgold.ir/r/${REFERRAL_CODE}`,
     });
 
-    // سکوی بی‌ردیف در platform_settings پیش‌فرض «هنوز تنظیم نشده» می‌گیرد.
     const talasea = body.settings.find((s) => s.slug === "talasea");
     expect(talasea).toEqual({
       slug: "talasea",
@@ -251,7 +228,7 @@ describe("POST /api/admin-platform-settings", () => {
     expect(fake.written).not.toBeNull();
 
     const wallgold = fake.written!.find((e) => e.slug === "wallgold")!;
-    expect(wallgold.chart_color).toBe("#e0921d"); // lower شد
+    expect(wallgold.chart_color).toBe("#e0921d");
 
     const milli = fake.written!.find((e) => e.slug === "milli")!;
     expect(milli.chart_color).toBeNull();
@@ -277,7 +254,7 @@ describe("POST /api/admin-platform-settings", () => {
     }
   });
 
-  describe("نشانی معرف (بلیت ۲۳)", () => {
+  describe("نشانی معرف", () => {
     it("طرح ناامن (http) را با پیام روشن رد می‌کند، چیزی نوشته نمی‌شود", async () => {
       const fake = seedSettings();
       const entries = VALID_ENTRIES.map((e) =>

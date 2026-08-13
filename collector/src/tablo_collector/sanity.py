@@ -1,18 +1,3 @@
-"""چک میانه‌ی تقاطعی — بند ۴ سند معماری، قاعده‌ی ۳ قراردادها.
-
-پراکندگی واقعی منابع زیر ۰٫۱٪ است؛ هر mid که بیش از ۰٫۵٪ از میانه‌ی *سایر*
-منابع تازه فاصله بگیرد تقریباً قطعاً خطای مقیاس یا endpoint خراب است، نه
-حرکت بازار ⟸ منتشر نمی‌شود. نتیجه‌ی این محاسبه یک ابزار داخلی تشخیص خطاست
-و هرگز به‌عنوان «میانگین بازار» منتشر نمی‌شود (بند ۷.۱).
-
-رأی با «قیمت» هر سکو گرفته می‌شود — تنها عددی که هر سکو دارد. از وقتی قیمت
-مؤثر حذف شد (سند تصمیم ۰۰۰۲) دیگر خطر شمردن یک منبع دو بار وجود ندارد:
-هر سکو دقیقاً یک رأی می‌دهد.
-
-سکویی که آن نوبت قیمت ندارد (دفتر سفارشِ یک‌سمته) اصلاً اسنپ‌شات نمی‌سازد و
-خودبه‌خود از رأی‌گیری بیرون است.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -20,8 +5,8 @@ from decimal import Decimal
 
 from .models import PlatformSnapshot, Side
 
-MEDIAN_DEVIATION_THRESHOLD = Decimal("0.005")  # ۰٫۵٪
-MIN_SOURCES_FOR_CHECK = 3  # با کمتر از ۳ منبع تازه رأی‌گیری ممکن نیست
+MEDIAN_DEVIATION_THRESHOLD = Decimal("0.005")
+MIN_SOURCES_FOR_CHECK = 3
 
 
 def _price_toman(snapshot: PlatformSnapshot) -> Decimal | None:
@@ -40,7 +25,6 @@ def _median(values: Sequence[Decimal]) -> Decimal:
 
 
 def median_outliers(snapshots: Sequence[PlatformSnapshot]) -> frozenset[str]:
-    """اسلاگ منابعی که از میانه‌ی سایر منابع تازه بیش از آستانه فاصله دارند."""
     prices = {
         snapshot.platform_slug: price
         for snapshot in snapshots

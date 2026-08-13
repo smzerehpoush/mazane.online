@@ -1,21 +1,4 @@
 /**
- * مرز وب — بلیت ۱۰: استور seed شده ⟸ داده‌ی ساخت‌یافته، نوار ماده ۵،
- * صفحه‌ی «مظنه چیست» و انضباط lastmod.
- *
- * حکم‌های بند ۶.۵ که اینجا قفل می‌شوند:
- *   - Organization + WebSite (با «تابلو گلد» در alternateName) فقط صفحه‌ی
- *     اصلی — بدون SearchAction؛
- *   - BreadcrumbList روی دارایی/سکو/بلاگ/ایستا، نه ریشه؛
- *   - Product + AggregateOffer **فقط** صفحه‌ی دارایی (نه صفحه‌ی اصلی)، با
- *     IRR = تومان×۱۰ از **همان داده‌ای که رندر شده** (هر دو از یک payload
- *     می‌آیند، بدون هیچ fetch جدا)؛
- *   - AggregateOffer فقط سکوهای **خریدباز** را می‌شمرد — همان مجموعه‌ای که
- *     کارت/جدول از آن انتخاب می‌کند؛
- *   - هیچ Offer فروشنده، FAQPage، HowTo، SearchAction یا AggregateRating
- *     خودی — هیچ‌جا؛
- *   - بدون ردیف معلوم، AggregateOffer جعل نمی‌شود.
- * و بند ۷.۲: نوار ماده ۵ روی هر صفحه‌ی دارای لینک ارجاع (/go/).
- *
  * ⚠️ در تنکستک استارت اسکریپت‌های JSON-LD از `head` مسیر می‌آیند، نه از بدنه‌ی
  * جزء. پس اینجا سازنده‌های سرصفحه سنجیده می‌شوند — همان‌هایی که مسیر عیناً
  * صدایشان می‌زند — و برای هم‌ارزی عدد، از **همان** payload رندر هم گرفته
@@ -49,15 +32,12 @@ import {
   type SeededStore,
 } from "./support/seed";
 
-/* ---------- ابزار خواندن JSON-LD از سرصفحه ---------- */
-
 interface HeadLike {
   scripts?: { type: string; children: string }[];
   links?: { rel: string; href: string }[];
   meta?: Record<string, string>[];
 }
 
-/** JSON.parse شکست بخورد یعنی JSON-LD معتبر نیست. */
 function jsonLdBlocks(head: HeadLike): Record<string, unknown>[] {
   return (head.scripts ?? []).map(
     (script) => JSON.parse(script.children) as Record<string, unknown>,
@@ -75,7 +55,6 @@ function findByType(
   return blocks.find((block) => block["@type"] === type);
 }
 
-/** همه‌ی مقادیر ‎@type‎ به‌صورت بازگشتی (داخل ‎@graph‎ و آبجکت‌های تو در تو). */
 function collectTypes(node: unknown, out: Set<string> = new Set()): Set<string> {
   if (Array.isArray(node)) {
     for (const item of node) collectTypes(item, out);
@@ -87,8 +66,6 @@ function collectTypes(node: unknown, out: Set<string> = new Set()): Set<string> 
   }
   return out;
 }
-
-/* ---------- seed — همان شکل JSON کانونی گردآورنده ---------- */
 
 const PLATFORMS: ListedPlatform[] = [
   {
@@ -127,14 +104,6 @@ const TALA18: InstrumentListing = makeListing({
   purity: "750",
 });
 
-/**
- * `lowPrice`/`highPrice` از **قیمت** می‌آیند، نه از قیمت مؤثر (سند تصمیم
- * ۰۰۰۲): داده‌ی ساخت‌یافته باید نماینده‌ی محتوای قابل مشاهده‌ی صفحه باشد، و
- * قیمت مؤثر دیگر هیچ‌جای صفحه نیست.
- *
- * سکوی کارمزدنامعلوم هم می‌شمرد: عددش با بقیه هم‌جنس است.
- * دیجی‌کالا ۱۸٬۴۰۰٬۰۰۰ (کمینه) … وال‌گلد ۱۸٬۶۱۱٬۰۰۰ (بیشینه).
- */
 const PRICE_MIN_TOMAN = 18400000;
 const PRICE_MAX_TOMAN = 18611000;
 
@@ -159,7 +128,6 @@ function assetStore(): SeededStore {
         mid: 18501633,
         fetchedAt: now,
       }),
-      // کارمزد نامعلوم — ولی قیمتش با بقیه هم‌جنس است و می‌شمرد.
       digikala: makeSnapshot({
         slug: "digikala",
         mid: 18400000,
@@ -180,7 +148,6 @@ const PUBLISHED_POST: BlogPost = {
   updated_at: "2026-07-22T10:00:00.000Z",
 };
 
-/** همان PUBLISHED_POST به‌همراه عکس شاخص کامل (بلیت ۲۵). */
 const PUBLISHED_POST_WITH_IMAGE: BlogPost = {
   ...PUBLISHED_POST,
   image_url: "https://s3.tablo.test/tablo-media/posts/moghayese-karmozd-sakooha/hash.webp",
@@ -192,7 +159,6 @@ const PUBLISHED_POST_WITH_IMAGE: BlogPost = {
 const MADDE5_TEXT =
   "معاملات طلای برخط صرفاً با پذیرش ریسک از سوی طرفین انجام می‌شود و مشمول ضمانت دولت و نظام بانکی نیست.";
 
-/** داده‌ی صفحه را می‌خواند و اگر ۴۰۴ باشد تست را می‌شکند. */
 async function pageOf(slug: string): Promise<SlugPageData> {
   const data = await slugPageData(slug);
   if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
@@ -203,9 +169,7 @@ async function home(): Promise<HomePageData> {
   return homeData(assetStore());
 }
 
-/* ---------- Organization + WebSite — فقط صفحه‌ی اصلی ---------- */
-
-describe("Organization + WebSite (بند ۶.۵ + بند ۱۱)", () => {
+describe("Organization + WebSite", () => {
   it("صفحه‌ی اصلی هر دو را با برند «تابلو» و alternateName «تابلو گلد» دارد", () => {
     const head = homeHead();
     const graphBlock = jsonLdBlocks(head).find((block) => "@graph" in block);
@@ -238,21 +202,15 @@ describe("Organization + WebSite (بند ۶.۵ + بند ۱۱)", () => {
     for (const slug of ["tala-18", "wallgold"]) {
       const raw = rawJsonLd(slugHead(await pageOf(slug)));
       expect(raw).not.toContain('"@type":"WebSite"');
-      // موجودیت سراسری («مضنه آنلاین» alternateName و @id ثابت سایت) هیچ‌جا
-      // جز خانه تکرار نمی‌شود — صفحه‌ی سکو یک Organization دیگر (تو در توی
-      // about، بدون @id) دارد که نباید با این یکی اشتباه شود (بلیت ۲۹).
       expect(raw).not.toContain(`${SITE_URL}/#organization`);
       expect(raw).not.toContain("تابلو گلد");
     }
-    // صفحه‌ی دارایی اصلاً Organization نمی‌گیرد (نه سراسری، نه تو در تو).
     const assetRaw = rawJsonLd(slugHead(await pageOf("tala-18")));
     expect(assetRaw).not.toContain('"@type":"Organization"');
   });
 });
 
-/* ---------- WebPage + about:Organization — فقط صفحه‌ی سکو (بلیت ۲۹) ---------- */
-
-describe("WebPage + about:Organization (بند ۶.۵ + بلیت ۲۹)", () => {
+describe("WebPage + about:Organization", () => {
   it("صفحه‌ی سکو WebPage با about از نوع Organization (نام سکو + website_url خودش) دارد", async () => {
     seed(assetStore());
     const webPage = findByType(
@@ -315,12 +273,9 @@ describe("WebPage + about:Organization (بند ۶.۵ + بلیت ۲۹)", () => {
   });
 });
 
-/* ---------- Product + AggregateOffer ---------- */
-
-describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
+describe("Product + AggregateOffer", () => {
   it("صفحه‌ی دارایی: IRR دقیقاً ×۱۰ همان عدد تومانی قابل‌مشاهده‌ی همان payload است", async () => {
     seed(assetStore());
-    // یک payload: هم HTML و هم JSON-LD از همین ساخته می‌شوند.
     const data = await pageOf("tala-18");
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
 
@@ -333,10 +288,8 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
     expect(offers["@type"]).toBe("AggregateOffer");
     expect(offers["priceCurrency"]).toBe("IRR");
-    // عدد JSON (نه رشته) — و دقیقاً ×۱۰ تومانِ گردآورنده.
     expect(offers["lowPrice"]).toBe(PRICE_MIN_TOMAN * 10);
     expect(offers["highPrice"]).toBe(PRICE_MAX_TOMAN * 10);
-    // هم‌ارزی با عدد قابل‌مشاهده‌ی همان رندر: ÷۱۰ همان قالب فارسی صفحه است.
     expect(html).toContain(formatToman((offers["lowPrice"] as number) / 10));
     expect(html).toContain(formatToman((offers["highPrice"] as number) / 10));
   });
@@ -345,12 +298,10 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     seed(assetStore());
     const product = findByType(jsonLdBlocks(slugHead(await pageOf("tala-18"))), "Product");
     const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
-    // چهار سکوی پشتیبان، هر چهار قیمت دارند ⟸ ۴. دیجی‌کالا دیگر کنار
-    // گذاشته نمی‌شود: عددش با بقیه هم‌جنس است (سند تصمیم ۰۰۰۲).
     expect(offers["offerCount"]).toBe(4);
   });
 
-  it("ارقام قیمت JSON-LD لاتین‌اند (بند ۶.۶ — متن فارسی مجاز، عدد فارسی نه)", async () => {
+  it("ارقام قیمت JSON-LD لاتین‌اند (متن فارسی مجاز، عدد فارسی نه)", async () => {
     seed(assetStore());
     const raw = rawJsonLd(slugHead(await pageOf("tala-18")));
     const offers = raw.match(/"offers":\{[^}]*\}/);
@@ -363,7 +314,7 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
   /**
    * ⚠️ رگرسیون: صفحه‌ی اصلی هم دقیقاً همان `Product` + `AggregateOffer`
    * ‎/tala-18‎ را منتشر می‌کرد (بایت‌به‌بایت جز `url`). یک موجودیت روی دو
-   * نشانی یعنی گوگل باید یکی را کانونی کند — کنیبالیزیشن بی‌دلیل. بند ۶.۵
+   * نشانی یعنی گوگل باید یکی را کانونی کند — کنیبالیزیشن بی‌دلیل.
    * هم `Product` را «فقط صفحات دارایی» می‌داند.
    */
   it("صفحه‌ی اصلی Product/AggregateOffer نمی‌گیرد — موجودیت فقط روی صفحه‌ی دارایی است", async () => {
@@ -371,25 +322,12 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const homeRaw = rawJsonLd(homeHead());
     expect(homeRaw).not.toContain('"@type":"Product"');
     expect(homeRaw).not.toContain("AggregateOffer");
-    // و همان موجودیت روی صفحه‌ی کانونی خودش هست — نه غایب، فقط یکتا.
     const assetRaw = rawJsonLd(slugHead(await pageOf("tala-18")));
     expect(assetRaw).toContain('"@type":"Product"');
     expect(assetRaw).toContain("AggregateOffer");
   });
 
-  /**
-   * ⚠️ این تست در بازطراحی ۲۰۲۶-۰۸-۱۱ **دامنه‌اش عوض شد، نه سخت‌گیری‌اش**.
-   *
-   * پیش‌تر ادعا می‌کرد ارزان‌ترین عدد هم‌زمان روی صفحه‌ی اصلی و صفحه‌ی دارایی
-   * است. آن ادعا دیگر درست نیست و **نباید** هم باشد: صفحه‌ی اصلی فقط منابع
-   * انتخابیِ پنل را نشان می‌دهد (بند ۱۵، تصمیم ۲)، پس ارزان‌ترین سکوی کل
-   * فهرست ممکن است اصلاً روی آن صفحه نباشد.
-   *
-   * چیزی که قاعده‌ی همخوانی گوگل واقعاً می‌خواهد، همخوانی **درون یک صفحه**
-   * است: `lowPrice` باید همان عددی باشد که در متنِ همان صفحه دیده می‌شود.
-   * تست حالا دقیقاً همان را می‌سنجد — و چون هر دو سرِ ادعا روی یک صفحه‌اند،
-   * از قبل هم قوی‌تر است.
-   */
+  /** ⚠️ این تست در بازطراحی ۲۰۲۶-۰۸-۱۱ **دامنه‌اش عوض شد، نه سخت‌گیری‌اش**. */
   it("lowPrice همان عددی است که در متن صفحه‌ی دارایی دیده می‌شود", async () => {
     seed(assetStore());
     const data = await pageOf("tala-18");
@@ -411,7 +349,6 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
   it("سکوی خریدبسته در AggregateOffer نمی‌آید ولی ردیفش با نشان سر جایش می‌ماند", async () => {
     const store = assetStore();
     const now = freshIso();
-    // دیجی‌کالا کمینه‌ی مطلق است؛ خریدش را می‌بندیم ⟸ lowPrice باید بالا برود.
     store.snapshots["digikala"] = makeSnapshot({
       slug: "digikala",
       mid: 18400000,
@@ -425,14 +362,11 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const offers = (findByType(jsonLdBlocks(slugHead(data)), "Product") as Record<string, unknown>)[
       "offers"
     ] as Record<string, unknown>;
-    // کمینه‌ی سکوهای **باز**: داریک ۱۸٬۵۰۱٬۶۳۳ — نه عدد دیجی‌کالای بسته.
     expect(offers["lowPrice"]).toBe(18501633 * 10);
     expect(offers["highPrice"]).toBe(PRICE_MAX_TOMAN * 10);
-    // چهار سکوی قیمت‌دار بودند؛ یکی بسته شد ⟸ ۳.
     expect(offers["offerCount"]).toBe(3);
     expect(rawJsonLd(slugHead(data))).not.toContain(String(PRICE_MIN_TOMAN * 10));
 
-    // ولی ردیف دیجی‌کالا حذف نمی‌شود — با نشان «خرید بسته است» می‌ماند.
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
     expect(rowOf(html, "digikala")).toContain('data-badge="buy-closed"');
     expect(rowOf(html, "digikala")).toContain("خرید بسته است");
@@ -441,8 +375,6 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
   it("بدون حتی یک ردیف قیمت‌دار، AggregateOffer جعل نمی‌شود (اسکریپت غایب است)", async () => {
     const now = freshIso();
     const store: SeededStore = {
-      // هر چهار منبع قطع‌اند ⟸ هیچ قیمتی نیست. معیار حالا «قیمت دارد یا نه»
-      // است، نه «کارمزدش معلوم است یا نه» (سند تصمیم ۰۰۰۲).
       listed: PLATFORMS,
       instruments: [TALA18],
       snapshots: { digikala: null, wallgold: null, talasea: null, daric: null },
@@ -453,7 +385,6 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
     const head = slugHead(await pageOf("tala-18"));
     expect(rawJsonLd(head)).not.toContain("AggregateOffer");
     expect(rawJsonLd(head)).not.toContain('"@type":"Product"');
-    // ولی BreadcrumbList سر جایش است.
     expect(findByType(jsonLdBlocks(head), "BreadcrumbList")).toBeDefined();
   });
 
@@ -465,9 +396,7 @@ describe("Product + AggregateOffer (بند ۶.۵ + تصمیم ۱۸)", () => {
   });
 });
 
-/* ---------- BreadcrumbList — همه‌جا جز ریشه ---------- */
-
-describe("BreadcrumbList (بند ۶.۵)", () => {
+describe("BreadcrumbList", () => {
   it("صفحه‌ی دارایی: خانه ⟵ دارایی، با URL مطلق و position لاتین", async () => {
     seed(assetStore());
     const breadcrumb = findByType(
@@ -528,9 +457,7 @@ describe("BreadcrumbList (بند ۶.۵)", () => {
   });
 });
 
-/* ---------- انواع ممنوع — هیچ‌جا (بند ۶.۵) ---------- */
-
-describe("انواع حذف‌شده‌ی بند ۶.۵ هیچ‌جا نیستند", () => {
+describe("انواع حذف‌شده‌ی هیچ‌جا نیستند", () => {
   it("FAQPage / HowTo / SearchAction / AggregateRating / Offer فروشنده — غایب مطلق", async () => {
     seed(assetStore());
     seedBlog([PUBLISHED_POST]);
@@ -549,13 +476,10 @@ describe("انواع حذف‌شده‌ی بند ۶.۵ هیچ‌جا نیستن�
       for (const forbidden of ["FAQPage", "HowTo", "SearchAction", "AggregateRating"]) {
         expect(raw).not.toContain(forbidden);
       }
-      // AggregateOffer مجاز است ولی Offer تکی (merchant listing) نه:
       expect(collectTypes(jsonLdBlocks(head)).has("Offer")).toBe(false);
     }
   });
 });
-
-/* ---------- نوار ماده ۵ (بند ۷.۲) ---------- */
 
 describe("نوار هشدار ماده ۵ روی صفحات ارجاع", () => {
   it("صفحه‌ی اصلی، صفحه‌ی دارایی و صفحه‌ی سکو — متن کامل در HTML سرور", async () => {
@@ -568,13 +492,10 @@ describe("نوار هشدار ماده ۵ روی صفحات ارجاع", () => {
     ];
     for (const html of pages) {
       expect(html).toContain(MADDE5_TEXT);
-      // جای ثابت و متمایز — نوار پایانی نشانه‌گذاری‌شده.
       expect(html).toContain('data-legal-notice="madde-5"');
     }
   });
 });
-
-/* ---------- صفحه‌ی «مظنه چیست» (بند ۱۱ + تصمیم ۱) ---------- */
 
 describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
   it("هر دو املا را پوشش می‌دهد و مفهوم (قیمت یک مثقال طلای آب‌شده) را می‌گوید", () => {
@@ -583,7 +504,6 @@ describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
     expect(html).toContain("مضنه");
     expect(html).toContain("مثقال");
     expect(html).toContain("آب‌شده");
-    // به جدول اصلی لینک می‌دهد:
     expect(html).toContain('href="/"');
   });
 
@@ -603,7 +523,7 @@ describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
     expect(await slugPageData("mazane-chist")).toBeNull();
   });
 
-  it("در سایت‌مپ هست — بدون lastmod (بند ۶.۷)", () => {
+  it("در سایت‌مپ هست — بدون lastmod", () => {
     const entry = buildSitemapEntries({
       posts: [],
       instruments: [],
@@ -614,9 +534,7 @@ describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
   });
 });
 
-/* ---------- متادیتا و انضباط lastmod ---------- */
-
-describe("متادیتا (بند ۶.۶) و lastmod (بند ۶.۷)", () => {
+describe("متادیتا و lastmod", () => {
   it("خانه canonical ریشه و og:locale=fa_IR دارد", () => {
     const head = homeHead();
     expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/` });
@@ -641,8 +559,6 @@ describe("متادیتا (بند ۶.۶) و lastmod (بند ۶.۷)", () => {
     }
   });
 });
-
-/* ---------- عکس شاخص در سرصفحه‌ی پست و BlogPosting (بلیت ۲۵) ---------- */
 
 describe("عکس شاخص پست — og:image/twitter و فیلد image در BlogPosting", () => {
   it("پست با عکس: og:image/og:image:width/og:image:height/twitter:image/twitter:card", async () => {

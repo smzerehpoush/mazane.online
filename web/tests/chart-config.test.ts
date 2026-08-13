@@ -1,11 +1,3 @@
-/**
- * مرز وب — پیکربندی نمودار صفحه‌ی اصلی از تنظیمات پنل (بلیت ۲۱).
- *
- * سنجیده می‌شود: `assembleHomeData` نتیجه‌ی `getChartPlatforms` تزریق‌شده را
- * از `chartSeriesConfig` عبور می‌دهد — override معتبر جایگزین می‌شود،
- * override غایب/نامعتبر به فهرست پیش‌فرض کد برمی‌گردد (قاعده‌ی ۵ قراردادها:
- * نبودِ تنظیمات، خطا نیست).
- */
 import { describe, expect, it } from "vitest";
 
 import { assembleHomeData } from "../src/lib/page-data";
@@ -41,7 +33,7 @@ describe("assembleHomeData — chartPlatforms از تنظیمات پنل", () =>
   /**
    * ⚠️ پرچم سکوی مرجع روی **هر** فهرستی می‌نشیند، نه فقط پیش‌فرض کد. اگر
    * فقط روی `CHART_PLATFORMS` بود، اولین باری که مالک فهرست را از پنل عوض
-   * می‌کرد، لنگر محور بی‌سروصدا ناپدید می‌شد (`docs/api-gaps.md` بند ۱).
+   * می‌کرد، لنگر محور بی‌سروصدا ناپدید می‌شد.
    */
   it("سکوی مرجع روی override پنل هم نشانده می‌شود", async () => {
     const data = await homeData(healthyStore(), { chartPlatforms: OVERRIDE });
@@ -61,9 +53,7 @@ describe("assembleHomeData — chartPlatforms از تنظیمات پنل", () =>
       listPublishedPosts: async () => [],
       getChartPlatforms: async () => OVERRIDE,
     });
-    // نخستین پرس‌وجو سری ۲۴ ساعته‌ی همه‌ی منابع نمایشی است…
     expect(captured[0]).toEqual(["wallgold", "talasea", "milli"]);
-    // …و سه پرس‌وجوی بعدی سه بازه‌ی خلاصه بازار، فقط برای سکوی مرجع (بند ۷).
     expect(captured.slice(1)).toEqual([["milli"], ["milli"], ["milli"]]);
   });
 });

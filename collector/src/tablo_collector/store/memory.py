@@ -1,15 +1,3 @@
-"""فیک درون‌حافظه‌ای استور — برای تست‌ها و اجرای بدون سرویس زنده.
-
-`history` همه‌ی اسنپ‌شات‌ها را (سرکوب‌شده یا نه) نگه می‌دارد — معادل تاریخچه‌ی
-پستگرس؛ تست‌ها پرچم `suppressed` را از همین‌جا می‌بینند. مراجع قیمت جدا از
-سکوها نگه داشته می‌شوند (`reference_history` + کلید جاری خودشان) و هرگز در
-فهرست عمومی نمی‌آیند — همان قرارداد ردیس/پستگرس.
-
-برای بلیت ۱۶ همان سطح تماس `RetentionStore` پستگرس را هم پیاده می‌کند:
-ردیف‌های خامِ ردیف‌به‌ردیف (با شناسه، مثل bigserial) و جدول تجمیع ساعتی —
-تا کارهای نگه‌داری بدون پستگرس زنده در مرز گردآورنده تست شوند.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -59,8 +47,6 @@ class InMemoryStore:
                 )
             )
         if snapshot.suppressed:
-            # رد چک میانه: در قیمت جاری منتشر نمی‌شود، updated_at هم جلو نمی‌رود
-            # — از دید وب مثل کهنگی است.
             return
         self._snapshots[snapshot.platform_slug] = snapshot
         self._updated_at[snapshot.platform_slug] = snapshot.fetched_at
@@ -109,8 +95,6 @@ class InMemoryStore:
 
     async def get_chart_config(self) -> tuple[ChartConfigEntry, ...]:
         return self._chart_config
-
-    # --- سطح تماس RetentionStore (بلیت ۱۶) — همان قرارداد پستگرس ---
 
     async def load_raw_rows(
         self, *, until: datetime, since: datetime | None = None

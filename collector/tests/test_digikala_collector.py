@@ -1,15 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی دیجی‌کالا ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/digikala_prices.json` پاسخ واقعی
-`GET https://api.digikala.com/non-inventory/v1/prices/` است (ضبط‌شده
-۲۰۲۶-۰۸-۰۶ با User-Agent صادق). تست‌ها هیچ تماس شبکه‌ای ندارند.
-
-دیجی‌کالا فقط یک قیمت می‌دهد و کارمزدش را **عمداً** منتشر نمی‌کند
-(سند تحقیق ۰۱، بند ۸.۱: «متغیر است و ممکن است تغییر کند») ⟸
-`fee_source = UNKNOWN`: فقط MID، بدون عدد حدسی — «یک ردیف صادقانه با
-نامشخص بهتر از یک عدد ساختگی است».
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -48,17 +36,12 @@ async def test_fixture_payload_stores_one_price_with_x100_scale() -> None:
     assert stored is not None
     assert stored.platform_slug == "digikala"
 
-    # کارمزد نامعلوم ⟸ فقط MID و سطر MEAN که بازتاب همان تک‌عدد است
-    # همچنان جعل نمی‌شود — نه BUY هست نه SELL.
     assert [quote.side for quote in stored.quotes] == [Side.PRICE]
 
     (price,) = stored.quotes
     assert price.instrument == Instrument.GOLD_18K
-    # ضریب صریح این منبع: ریال ÷۱۰۰۰، ×۱۰۰ به تومان بر گرم
-    # (سند تحقیق ۰۱، بند ۳.۳ — همان مقیاس میلی).
     assert price.raw_scale == Decimal("100")
     assert price.raw_value == Decimal("185946")
-    # ریاضی مقیاس: 185946 × 100 = 18,594,600 تومان بر گرم.
     assert price.price_toman == 18594600
 
 

@@ -1,11 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی بازر ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/baazar_price_daily.json` پاسخ واقعی
-`GET https://api.baazar.ir/landing/v1/price/DAILY/30` است (ضبط‌شده ۲۰۲۶-۰۸-۰۶
-با User-Agent صادق؛ آرایه‌ی `data.prices` تاریخچه‌ی ۳۰ روزه است و آداپتر
-از آن استفاده نمی‌کند). تست‌ها هیچ تماس شبکه‌ای ندارند.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -45,17 +37,12 @@ async def test_fixture_payload_is_stored_with_rial_div10_scale() -> None:
     assert stored.platform_slug == "baazar"
 
     (price,) = stored.quotes
-    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
     assert price.side is Side.PRICE
 
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
-        # ضریب صریح این منبع: **ریال** بر گرم، ÷۱۰ به تومان
-        # (سند تحقیق ۰۱، بند ۳.۳).
         assert quote.raw_scale == Decimal("0.1")
 
-    # نام‌گذاری بازر «دید کاربر» است: buyPrice بزرگ‌تر = آنچه کاربر می‌پردازد.
-    # ریاضی مقیاس: 186227358 ریال ÷ ۱۰ = 18,622,735.8 → گرد به 18,622,736.
     assert price.price_toman == 18518853
 
 
@@ -71,7 +58,6 @@ async def test_terms_are_implied_from_dealer_spread_as_implied() -> None:
     assert terms.fee_source == FeeSource.IMPLIED
     assert terms.buy_fee_percent == Decimal("0.5610")
     assert terms.sell_fee_percent == Decimal("0.5610")
-    # سند تحقیق ۰۱ (بند ۳.۸) رفت‌وبرگشت بازر را ~۱٫۱۳٪ اندازه گرفته بود.
     assert terms.round_trip_percent == Decimal("1.1157")
     assert terms.buy_enabled is True
     assert terms.sell_enabled is True

@@ -1,27 +1,3 @@
-"""مرجع طلا دات‌آی‌آر — `www.tala.ir/ajax/price/talair` (بند ۱۲.۲).
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۱، ۳.۵ و ۳.۶ + payload واقعی
-ضبط‌شده‌ی ۲۰۲۶-۰۸-۰۶):
-
-- خودش می‌گوید پایگاه خبری است و «قیمت‌ها لحظه‌ای نیست» ⟸ مرجع، نه سکو.
-- کوکی `_trc` لازم نیست (بند ۳.۵ تصحیح ۳)؛ `Referer` بی‌ضرر است و برای
-  احتیاط فرستاده می‌شود.
-- اعداد **رشته با جداکننده‌ی هزارگان** اند («18,559,700») و ارقام فارسی
-  در `v_fa` — ما فقط `v` را می‌خوانیم.
-- ⚠️ داده‌ی خراب دارد (بند ۳.۶): فیلدهایی مثل `gold_mesghal_usd.v = "0"`
-  عملاً صفر شده‌اند ⟸ **اعتبارسنجی فیلدبه‌فیلد الزامی است**: صفر/ناخوانا
-  یعنی «این فیلد امروز خراب است» و فقط همان فیلد کنار گذاشته می‌شود؛ اگر
-  هیچ فیلدی سالم نبود، کل نوبت شکست می‌خورد (کهنگی مرجع، نه سقوط).
-
-فیلد ذخیره‌شده — فقط یکی (سند تصمیم ۰۰۰۲):
-
-- `gold.gold_18k` ⟸ GOLD_18K_TOMAN (تومان بر گرم، ×۱)
-
-مظنه (`gold_bazaruser`) و انس (`gold_ounce`) حذف شدند: جمع‌آوری می‌شدند و
-هیچ‌جای سایت نمایش داده نمی‌شدند. تنها مصرف این مرجع نوار «نرخ اتحادیه»
-است (سند تصمیم ۰۰۰۱).
-"""
-
 from __future__ import annotations
 
 import json
@@ -43,7 +19,6 @@ _FIELD_TO_INSTRUMENT = {
 
 
 def _clean_value(raw: Any) -> Decimal | None:
-    """«18,559,700» ⟸ Decimal؛ صفر/تهی/ناخوانا ⟸ None (فیلد خراب — بند ۳.۶)."""
     if raw is None:
         return None
     text = str(raw).replace(",", "").strip()
@@ -62,7 +37,6 @@ class TalairReference:
     slug = "talair"
     name_fa = "طلا دات‌آی‌آر"
     source_url = "https://www.tala.ir/"
-    # ضریب صریح این منبع: واحدِ خودِ فیلد (تومان یا دلار)، ×۱.
     scale = Decimal("1")
 
     async def collect(
@@ -86,7 +60,7 @@ class TalairReference:
             raw = row.get("v") if isinstance(row, dict) else None
             value = _clean_value(raw)
             if value is None:
-                continue  # فیلد خراب/صفر — فقط همین فیلد کنار می‌رود
+                continue
             quotes.append(
                 ReferenceQuote(
                     reference_slug=self.slug,

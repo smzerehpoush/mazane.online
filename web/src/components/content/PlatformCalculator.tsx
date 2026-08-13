@@ -1,31 +1,3 @@
-/**
- * ماشین‌حساب صفحه‌ی سکو (بلیت ۳۵) — زیر بخش «قیمت امروز»
- * (`PlatformPage.tsx::TermsSection`).
- *
- * **یک حالت برای همه‌ی سکوها** (سند تصمیم ۰۰۰۲): دو ورودی دوسویه‌ی وزن
- * (گرم) و مبلغ (تومان) روی «قیمت» همان سکو — همان عدد آماده‌ی گردآورنده که
- * `TermsSection` هم نشان می‌دهد، نه محاسبه‌ی تازه.
- *
- * پیش‌تر دو حالت داشت: زبانه‌ی خرید/فروش روی دو قیمت مؤثر برای
- * کارمزدمعلوم‌ها، و یک ورودی ساده برای کارمزدنامعلوم‌ها. با حذف قیمت مؤثر
- * هر دو حالت به یکی رسیدند و زبانه بی‌موضوع شد — یک عدد بیشتر وجود ندارد.
- *
- * ⚠️ برچسب صریح می‌گوید کارمزد در این عدد **نیست**: ماشین‌حسابی که عدد
- * پیش-از-کارمزد بدهد و این را نگوید، از نبودنش بدتر است.
- *
- * تبدیل وزن⟸مبلغ خودش تابع خالص `lib/calculator.ts` است (ضرب/تقسیم ساده
- * روی یک قیمت واحدِ آماده — قاعده‌ی ۱ قراردادها؛ اینجا فقط قیمت درست را
- * انتخاب و اثر جانبی state را مدیریت می‌کند).
- *
- * قطع منبع (`row.snapshot === null`) یا نبودِ قیمت ⟸ چیزی برای حساب‌کردن
- * نیست، کامپوننت `null` برمی‌گرداند (قاعده‌ی ۵: نه throw، نه کارت خالی
- * گمراه‌کننده) — صفحه همچنان با «قیمت در دسترس نیست» بالای همین بخش صادق
- * می‌ماند.
- *
- * دکمه‌ی «شروع معامله» دقیقاً همان الگوی لینک وب‌سایت بالای صفحه است:
- * ‎/go/<slug>‎ با ‎rel="sponsored nofollow noopener"‎ و ‎target="_blank"‎
- * (بند ۶.۴) — و فقط وقتی `hasOutbound` است، وگرنه دکمه‌ی مرده می‌ساخت.
- */
 import { useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -33,7 +5,6 @@ import { amountFromWeight, parseCalculatorInput, weightFromAmount } from "@/lib/
 import { fa } from "@/lib/site-content";
 import { priceToman, type Row } from "@/lib/rows";
 
-/** صفحه‌ی سکو فقط طلای ۱۸ عیار را نشان می‌دهد (همان قرارداد TermsSection/PlatformRateCard). */
 const ASSET_INSTRUMENT = "GOLD_18K";
 
 const PRICE_NOTE =
@@ -62,12 +33,6 @@ function TradeButton({
   );
 }
 
-/**
- * یک فیلد عددی با واحد شناور در انتهای ورودی — رشته‌ی خام کاربر، بدون هیچ
- * گرد/پارس تا اینجا. قلاب `data-calc-weight`/`data-calc-amount` مثل الگوی
- * `PriceCard::side` در `PlatformPage.tsx` با ترنری روی نام ثابت است، نه
- * کلید پویا — سازگار با قاعده‌ی نام‌گذاری ‎data-*‎ در JSX.
- */
 function NumberField({
   label,
   unit,
@@ -106,11 +71,6 @@ function NumberField({
   );
 }
 
-/**
- * پوسته‌ی مشترک دو حالت (خرید/فروش دوسویه، فقط وزن) — یک `section` با تیتر
- * ثابت و دکمه‌ی «شروع معامله» در انتها؛ فقط تفاوت بین دو حالت (زبانه‌های
- * خرید/فروش کنار تیتر، و بدنه‌ی ورودی‌ها) از بیرون تزریق می‌شود.
- */
 function CalculatorSection({
   headerExtra,
   row,
@@ -146,12 +106,6 @@ function CalculatorSection({
   );
 }
 
-/**
- * دو ورودی دوسویه‌ی یک سمت (خرید یا فروش): وزن به گرم، مبلغ به تومان — روی
- * یک قیمت واحدِ ثابت (`unitPriceToman`). هرکدام تایپ شود آن‌یکی از تابع
- * خالص `lib/calculator.ts` دوباره حساب می‌شود؛ ورودی نامعتبر/خالی فیلد
- * مقابل را هم خالی می‌کند، نه صفر یا NaN.
- */
 function TwoWaySide({ unitPriceToman }: { unitPriceToman: number }) {
   const [weightRaw, setWeightRaw] = useState("");
   const [amountRaw, setAmountRaw] = useState("");

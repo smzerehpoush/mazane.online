@@ -1,17 +1,3 @@
-/**
- * مرز وب — بلیت ۷: استور seed شده ⟸ صفحه‌ی دارایی، صفحه‌ی سکو، حل‌کننده‌ی
- * اسلاگ تخت، دروازه‌ی انتشار و سایت‌مپ.
- *
- * همه‌ی اعداد از قبل در گردآورنده «مؤثر»/«مرجع» شده‌اند (تصمیم ۱۹) و پرچم
- * دروازه (`published`) هم آنجا محاسبه شده (تصمیم ۱۰) — این تست‌ها فقط
- * می‌سنجند که وب همان داده را درست رندر/رد می‌کند و هیچ عدد بین‌سکویی‌ای
- * نمی‌سازد.
- *
- * مسیر ‎src/routes/$slug.tsx‎ فقط سیم‌کشی است (لودر + ۴۰۴ + پوسته)؛ نما و
- * سرصفحه در `components/content/SlugPageView.tsx` اند و همین‌جا سنجیده
- * می‌شوند. «۴۰۴» در این مرز یعنی `slugPageData(...) === null` — مسیر همان را
- * به `notFound()` ترجمه می‌کند.
- */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -81,7 +67,6 @@ const TALA18: InstrumentListing = makeListing({
   purity: "750",
 });
 
-/** دارایی تک‌سکویی — گردآورنده دروازه را بسته اعلام کرده (تصمیم ۱۰). */
 const NOGHRE_SINGLE: InstrumentListing = makeListing({
   slug: "noghre",
   instrument: "SILVER_990",
@@ -97,7 +82,6 @@ function assetStore(): SeededStore {
     listed: PLATFORMS,
     instruments: [TALA18, NOGHRE_SINGLE],
     snapshots: {
-      // مرجع هر سکو = عدد آماده‌ی گردآورنده برای همان سکو (تصمیم ۱۹).
       wallgold: makeSnapshot({
         slug: "wallgold",
         mid: 18611000,
@@ -113,7 +97,6 @@ function assetStore(): SeededStore {
         mid: 18501633,
         fetchedAt: now,
       }),
-      // کارمزد نامعلوم: فقط MID و **بدون** قیمت مرجع (جعل نمی‌شود).
       digikala: makeSnapshot({
         slug: "digikala",
         mid: 18400000,
@@ -125,7 +108,6 @@ function assetStore(): SeededStore {
   };
 }
 
-/** داده‌ی صفحه را می‌خواند و اگر ۴۰۴ باشد تست را می‌شکند. */
 async function pageOf(slug: string): Promise<SlugPageData> {
   const data = await slugPageData(slug);
   if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
@@ -136,10 +118,9 @@ async function renderSlug(slug: string): Promise<string> {
   return renderToStaticMarkup(<SlugPageView data={await pageOf(slug)} />);
 }
 
-describe("حل‌کننده‌ی اسلاگ تخت (تصمیم ۱۱)", () => {
+describe("حل‌کننده‌ی اسلاگ تخت", () => {
   it("کلمات رزرو را رد می‌کند — حتی اگر payload آن اسلاگ را ادعا کند", async () => {
     const store = assetStore();
-    // payload آلوده‌ی فرضی: دارایی/سکویی که اسلاگ رزروشده برداشته است.
     store.instruments = [
       ...(store.instruments ?? []),
       makeListing({
@@ -156,7 +137,6 @@ describe("حل‌کننده‌ی اسلاگ تخت (تصمیم ۱۱)", () => {
       expect(await resolveSlug(word)).toBeNull();
       expect(await slugPageData(word)).toBeNull();
     }
-    // صفحه‌ی ایستای سطح ریشه هم هرگز از مسیر داینامیک حل نمی‌شود.
     expect(await slugPageData("darbare-pishnahad")).toBeNull();
   });
 
@@ -177,7 +157,7 @@ describe("حل‌کننده‌ی اسلاگ تخت (تصمیم ۱۱)", () => {
   });
 });
 
-describe("دروازه‌ی انتشار — دارایی تک‌سکویی صفحه نمی‌گیرد (تصمیم ۱۰)", () => {
+describe("دروازه‌ی انتشار — دارایی تک‌سکویی صفحه نمی‌گیرد", () => {
   it("دارایی با published=false ⟸ ۴۰۴", async () => {
     seed(assetStore());
     expect(await slugPageData("noghre")).toBeNull();
@@ -186,7 +166,6 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
   it("با فعال شدن سکوی دوم (پرچم گردآورنده) صفحه ساخته می‌شود — مرز وب", async () => {
     const store = assetStore();
     const now = freshIso();
-    // همان دارایی، حالا دوسکویی: گردآورنده published=true نوشته است.
     store.instruments = [
       TALA18,
       makeListing({
@@ -214,8 +193,8 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
 
     const html = await renderSlug("noghre");
     expect(html).toContain("قیمت نقره‌ی ۹۹۰");
-    expect(html).toContain("۲۱۰٬۰۰۰"); // قیمت وال‌گلد
-    expect(html).toContain("۲۰۹٬۰۰۰"); // قیمت طلاسی
+    expect(html).toContain("۲۱۰٬۰۰۰");
+    expect(html).toContain("۲۰۹٬۰۰۰");
   });
 
   it("سایت‌مپ فقط دارایی‌های دروازه‌گذشته + سکوها را دارد", () => {
@@ -225,25 +204,24 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
       platforms: PLATFORMS,
     }).map((entry) => entry.path);
     expect(paths).toContain("/tala-18");
-    expect(paths).not.toContain("/noghre"); // دروازه بسته
+    expect(paths).not.toContain("/noghre");
     expect(paths).toContain("/wallgold");
     expect(paths).toContain("/digikala");
   });
 });
 
-describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
+describe("صفحه‌ی دارایی — /tala-18", () => {
   it("h1 فارسی دارد و هر سکو «قیمت» و دو کارمزد خودش را نشان می‌دهد", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
 
     expect(html).toMatch(/<h1[^>]*>قیمت طلای ۱۸ عیار<\/h1>/);
     const wallgold = rowOf(html, "wallgold");
-    expect(wallgold).toContain("۱۸٬۶۱۱٬۰۰۰"); // قیمت، پیش از کارمزد
+    expect(wallgold).toContain("۱۸٬۶۱۱٬۰۰۰");
     expect(wallgold).toMatch(/data-fee[^>]*>۰٫۵٪/);
     const talasea = rowOf(html, "talasea");
     expect(talasea).toContain("۱۸٬۵۳۰٬۰۰۰");
     expect(talasea).toMatch(/data-fee[^>]*>۰٫۵٪/);
-    // قیمت مؤثر هیچ‌جای صفحه نیست (سند تصمیم ۰۰۰۲).
     expect(html).not.toContain("۱۸٬۷۰۴٬۰۵۵");
     expect(html).not.toContain("مؤثر");
   });
@@ -251,7 +229,6 @@ describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
   it("ردیف‌ها صعودی بر اساس «قیمت» مرتب‌اند", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
-    // دیجی‌کالا (۱۸٬۴۰۰٬۰۰۰) < داریک (۱۸٬۵۰۱٬۶۳۳) < طلاسی (۱۸٬۵۳۰٬۰۰۰) < وال‌گلد
     expect(html.indexOf('data-platform="daric"')).toBeLessThan(
       html.indexOf('data-platform="talasea"'),
     );
@@ -263,16 +240,13 @@ describe("صفحه‌ی دارایی — /tala-18 (تصمیم ۱۹)", () => {
   it("سکوی کارمزد-نامعلوم دیگر گروه جدا ندارد — فقط ستون کارمزدش تهی است", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
-    // گروه‌بندی دوطبقه منحل شد: قیمت همه پیش-از-کارمزد و هم‌جنس است.
     expect(html).not.toContain("کارمزد نامشخص — فقط قیمت میانی");
-    // دیجی‌کالا کمترین قیمت را دارد ⟸ حالا **بالای** بقیه می‌نشیند.
     expect(html.indexOf('data-platform="digikala"')).toBeLessThan(
       html.indexOf('data-platform="talasea"'),
     );
     const row = rowOf(html, "digikala");
     expect(row).toContain("۱۸٬۴۰۰٬۰۰۰");
     expect(row).not.toContain("قیمت میانی");
-    // تهی یعنی اعلام‌نشده — نه صفر.
     expect(row).toMatch(/data-fee[^>]*>—/);
     expect(row).not.toMatch(/data-fee[^>]*>۰٪/);
   });
@@ -319,24 +293,18 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     const html = await renderSlug("talasea");
 
     expect(html).toContain("طلاسی");
-    // بلیت ۹ (تصمیم ۲۱): لینک وب‌سایت از ‎/go/‎ می‌گذرد، با rel کامل بند ۶.۴؛
-    // لینک مستقیم دیگر هرگز در HTML نمی‌آید.
     expect(html).toContain('href="/go/talasea"');
     expect(html).not.toContain('href="https://talasea.ir"');
     expect(html).toContain('rel="sponsored nofollow noopener"');
-    // شرایط تجاری با منبع کارمزد:
     expect(html).toContain("کارمزد خرید");
     expect(html).toContain("۰٫۵٪");
     expect(html).toContain("رفت‌وبرگشت");
     expect(html).toContain("از API سکو");
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // «قیمت» طلاسی، پیش از کارمزد
-    // هویت حقوقی و تحویل فیزیکی مستندشده:
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
     expect(html).toContain("شرکت توسعه راهکار الوند ارسباران");
     expect(html).toContain("تحویل فیزیکی با اجرت ساخت");
-    // قیمت مؤثر هیچ‌جای صفحه نیست (سند تصمیم ۰۰۰۲).
     expect(html).not.toContain("۱۸٬۷۱۵٬۳۰۰");
     expect(html).not.toContain("۱۸٬۳۴۴٬۷۰۰");
-    // بلیت ۲۶: جدول «قیمت‌های این سکو» (QuotesSection، همه‌ی دارایی‌ها) حذف شده.
     expect(html).not.toContain("قیمت‌های این سکو");
   });
 
@@ -370,8 +338,6 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
       rel: "canonical",
       href: `${SITE_URL}/wallgold`,
     });
-    // ما فروشنده نیستیم: هیچ Product/AggregateOffer در هیچ اسکریپتی نیست —
-    // فقط BreadcrumbList و WebPage (بلیت ۲۹؛ جزئیاتش در structured-data.test.tsx).
     expect(head.scripts).toHaveLength(2);
     const raw = head.scripts?.map((script) => script.children).join("\n") ?? "";
     expect(raw).toContain("BreadcrumbList");
@@ -402,21 +368,18 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
   });
 });
 
-describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد معلوم/نامعلوم (بلیت ۳۲)", () => {
+describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد معلوم/نامعلوم", () => {
   it("کارت «قیمت» با تاریخ شمسی در تیتر و توضیح صریح اینکه کارمزد در آن نیست", async () => {
     const store = assetStore();
     seed(store);
     const html = await renderSlug("talasea");
 
-    // تیتر بخش با تاریخ شمسی همان به‌روزرسانی سکو (formatDateFa، نه ساخته‌ی تست).
     const expectedDate = formatDateFa(store.updatedAt["talasea"] as string);
     expect(html).toContain(expectedDate);
 
-    // یک کارت، یک عدد — انتخاب از اعداد آماده‌ی گردآورنده، نه محاسبه.
     expect(html).toContain("قیمت هر گرم (پیش از کارمزد)");
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
 
-    // برچسب باید صریح بگوید این عدد آنچه می‌پردازید نیست.
     expect(html).toContain("پیش از کارمزد");
     expect(html).not.toContain("دوقیمتی");
     expect(html).not.toContain("تک‌قیمتی");
@@ -427,13 +390,10 @@ describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد �
     const html = await renderSlug("digikala");
 
     expect(html).toContain("دیجی‌کالا");
-    // پیش‌تر کل بخش رندر نمی‌شد چون قیمت مؤثری وجود نداشت. حالا قیمت هست و
-    // فقط کارمزدها نامشخص‌اند (سند تصمیم ۰۰۰۲).
     expect(html).toContain("قیمت هر گرم (پیش از کارمزد)");
     expect(html).toContain("۱۸٬۴۰۰٬۰۰۰");
     expect(html).toContain("کارمزد خرید");
     expect(html).toContain("نامشخص");
-    // ولی صفرِ ساختگی جایش نمی‌نشیند.
     expect(html).toContain("سکو کارمزدش را اعلام نکرده است");
   });
 
@@ -466,7 +426,7 @@ describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳
 
     expect(html).toContain("data-union-rate");
     expect(html).toContain("نرخ اتحادیه");
-    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰"); // عدد آماده‌ی مرجع، بدون هیچ محاسبه‌ای
+    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰");
     expect(html).toContain(formatDateTimeFa("2026-08-07T10:00:00.000Z"));
   });
 
@@ -478,14 +438,12 @@ describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳
 
     expect(html).not.toContain("data-union-rate");
     expect(html).not.toContain("نرخ اتحادیه");
-    expect(html).toContain("طلاسی"); // صفحه همچنان کامل رندر می‌شود
+    expect(html).toContain("طلاسی");
   });
 
   it("عدد نوار به قیمت مرجع خودِ سکو نمی‌خورد — دو رشته‌ی جدا در HTML", async () => {
     seed(assetStore());
     seedHistory([]);
-    // مقداری عمداً متفاوت از قیمت مرجع طلاسی (۱۸٬۵۳۰٬۰۰۰) تا اثبات شود این
-    // عدد مستقل است و به‌جای قیمت هیچ سکویی نمی‌نشیند (قاعده‌ی ۴ قراردادها).
     seedReferencePrice({
       reference_slug: "talair",
       instrument: "GOLD_18K_TOMAN",
@@ -494,12 +452,12 @@ describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳
     });
     const html = await renderSlug("talasea");
 
-    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰"); // نرخ اتحادیه
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // قیمت مرجع خودِ طلاسی، همچنان جدا
+    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
   });
 });
 
-describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲۷)", () => {
+describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
   it("عدد درشت = «قیمت» سکو، با برچسبی که پیش-از-کارمزد بودنش را می‌گوید", async () => {
     seed(assetStore());
     seedHistory([]);
@@ -507,16 +465,12 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     expect(html).toContain("data-rate-price");
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
     expect(html).toContain("قیمت اعلامی این سکو — پیش از کارمزد");
-    // برچسب دیگر شرطی نیست: عدد همه‌ی سکوها یک چیز است.
     expect(html).not.toContain("میانگین خرید و فروش این سکو");
   });
 
   it("کارمزد نامعلوم ⟸ برچسب «قیمت اعلامی این سکو»، از hasUnknownFee نه فهرست دستی", async () => {
     const store = assetStore();
     const now = freshIso();
-    // سکوی کارمزد-نامعلوم که گردآورنده برایش قیمت مرجع (همان قیمت اسمی، تصمیم
-    // مالک ۲۰۲۶-۰۸-۰۶) نوشته — بر خلاف دیجی‌کالای assetStore که اصلاً مرجع
-    // ندارد و کارتش رندر نمی‌شود (آزموده در «سکوی بی‌قیمت مرجع» پایین‌تر).
     store.listed = [
       ...PLATFORMS,
       { slug: "melligold", name_fa: "ملی‌گلد", data_policy: "ALLOWED" },
@@ -552,11 +506,10 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     seedHistory(history);
     const html = await renderSlug("talasea");
     expect(html).not.toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰"); // بیشینه‌ی سری
-    expect(html).toContain("۱۸٬۳۰۰٬۰۰۰"); // کمینه‌ی سری
-    // تغییرات: (۱۸۵۳۰۰۰۰−۱۸۴۰۰۰۰۰)/۱۸۴۰۰۰۰۰ = +۰٫۷۱٪ (سند مادر: «با درصد و فلش»)
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
+    expect(html).toContain("۱۸٬۳۰۰٬۰۰۰");
     expect(html).toContain("+۰٫۷۱٪");
-    expect(html).toContain("text-positive"); // صعود — سبز
+    expect(html).toContain("text-positive");
   });
 
   it("تغییرات نزولی رنگ text-negative می‌گیرد", async () => {
@@ -576,15 +529,14 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
     ]);
     const html = await renderSlug("wallgold");
     expect(html).toContain("text-negative");
-    // تغییرات: (۱۸۶۱۱۰۰۰−۱۸۷۰۰۰۰۰)/۱۸۷۰۰۰۰۰ = −۰٫۴۸٪ (U+2212 MINUS SIGN، نه هایفن)
     expect(html).toContain("−۰٫۴۸٪");
-    expect(html).toContain("۱۸٬۸۲۰٬۰۰۰"); // بیشینه‌ی سری
-    expect(html).toContain("۱۸٬۵۹۰٬۰۰۰"); // کمینه‌ی سری
+    expect(html).toContain("۱۸٬۸۲۰٬۰۰۰");
+    expect(html).toContain("۱۸٬۵۹۰٬۰۰۰");
   });
 
-  it("سکوی بی‌تاریخچه: کارت بدون نمودار رندر می‌شود، صفحه ۲۰۰ می‌ماند (قاعده‌ی ۵)", async () => {
+  it("سکوی بی‌تاریخچه: کارت بدون نمودار رندر می‌شود، صفحه ۲۰۰ می‌ماند", async () => {
     seed(assetStore());
-    seedHistory([]); // منبع تاریخچه در دسترس ولی هیچ سکویی سابقه ندارد
+    seedHistory([]);
     const html = await renderSlug("talasea");
     expect(html).toContain("data-rate-price");
     expect(html).toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
@@ -602,20 +554,19 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard (بلیت ۲
   });
 });
 
-/** ناحیه‌ی خودِ کارت نرخ در HTML رندرشده — تا تست‌ها با بقیه‌ی صفحه قاطی نشوند. */
 function rateCardSection(html: string): string {
   const match = html.match(/<section[^>]*aria-labelledby="rate-card-heading"[\s\S]*?<\/section>/);
   if (!match) throw new Error("کارت نرخ در HTML نیست");
   return match[0];
 }
 
-describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت نرخ (بلیت ۳۱)", () => {
+describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت نرخ", () => {
   it("با داده‌ی تازه، برچسب «آخرین به‌روزرسانی» و شمارنده‌ی ۳۰ ثانیه هر دو رندر می‌شوند", async () => {
-    seed(assetStore()); // updatedAt همه‌ی سکوها freshIso است — تازه
+    seed(assetStore());
     seedHistory([]);
     const html = await renderSlug("talasea");
     const card = rateCardSection(html);
-    expect(card).toContain("به‌روزرسانی:"); // برچسب «آخرین به‌روزرسانی» — همیشه حاضر
+    expect(card).toContain("به‌روزرسانی:");
     expect(card).toContain("data-rate-countdown");
     expect(card).toContain("بروزرسانی بعدی در ۳۰ ثانیه");
     expect(card).not.toContain("کهنه");
@@ -623,12 +574,12 @@ describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت 
 
   it("با داده‌ی کهنه، شمارنده رندر نمی‌شود ولی برچسب کهنگی می‌ماند", async () => {
     const store = assetStore();
-    store.updatedAt["talasea"] = staleIso(); // اسنپ‌شات همچنان هست، فقط زمانش کهنه
+    store.updatedAt["talasea"] = staleIso();
     seed(store);
     seedHistory([]);
     const html = await renderSlug("talasea");
     const card = rateCardSection(html);
-    expect(card).toContain("به‌روزرسانی:"); // برچسب کهنگی هم زیرمجموعه‌ی همین متن است
+    expect(card).toContain("به‌روزرسانی:");
     expect(card).toContain("کهنه");
     expect(card).not.toContain("data-rate-countdown");
     expect(card).not.toContain("بروزرسانی بعدی در");
@@ -642,21 +593,20 @@ describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت 
     seedHistory([]);
     const html = await renderSlug("talasea");
     expect(html).not.toContain("data-rate-countdown");
-    expect(html).toContain("قیمت در دسترس نیست"); // صفحه ۲۰۰ می‌ماند، متن صادقانه (قاعده‌ی ۵)
+    expect(html).toContain("قیمت در دسترس نیست");
   });
 });
 
-/** برچسب یک زبانه در HTML رندرشده — روزانه/هفتگی/ماهانه یا «به‌زودی». */
 function tabButton(html: string, label: string): string {
   const match = html.match(new RegExp(`<button[^>]*>${label}</button>`));
   if (!match) throw new Error(`زبانه‌ی «${label}» در HTML نیست`);
   return match[0];
 }
 
-describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزانه/هفتگی/ماهانه (بلیت ۳۰)", () => {
+describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزانه/هفتگی/ماهانه", () => {
   it("نقش tablist دارد و روزانه پیش‌فرض زبانه‌ی فعال (aria-selected) است", async () => {
     seed(assetStore());
-    seedHistory([]); // هیچ بازه‌ای سابقه ندارد — روزانه با این حال زبانه‌ی فعال می‌ماند
+    seedHistory([]);
     const html = await renderSlug("talasea");
 
     expect(html).toContain('role="tablist"');
@@ -667,7 +617,6 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
 
   it("پوشش کافی هفتگی ⟸ زبانه‌ی هفتگی فعال و قابل‌کلیک؛ پوشش ناکافی ماهانه ⟸ «به‌زودی» و disabled", async () => {
     seed(assetStore());
-    // پرس‌وجوی هر بازه با stepHours خودش تشخیص داده می‌شود: هفتگی=۲، ماهانه=۸.
     seedHistoryByQuery((query) => {
       if (query.stepHours === 2) {
         return [
@@ -691,7 +640,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
           },
         ];
       }
-      return []; // روزانه — بی‌ربط به این سنجش
+      return [];
     });
     const html = await renderSlug("talasea");
 
@@ -702,7 +651,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
     const comingSoonTab = tabButton(html, "به‌زودی");
     expect(comingSoonTab).toContain('disabled=""');
     expect(comingSoonTab).toContain('aria-disabled="true"');
-    expect(html).not.toContain(">ماهانه<"); // برچسبش با «به‌زودی» عوض شده
+    expect(html).not.toContain(">ماهانه<");
   });
 
   it("ناحیه‌ی سه آمار aria-live دارد — تعویض زبانه عدد را برای صفحه‌خوان اعلام می‌کند", async () => {
@@ -720,7 +669,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
   });
 });
 
-describe("سایت‌مپ — فقط صفحات دروازه‌گذشته (بند ۶.۷ + تصمیم ۱۰)", () => {
+describe("سایت‌مپ — فقط صفحات دروازه‌گذشته", () => {
   it("دارایی منتشرشده و سکوها را دارد؛ دارایی تک‌سکویی غایب است؛ بدون lastmod", () => {
     const entries = buildSitemapEntries({
       posts: [],
@@ -730,11 +679,10 @@ describe("سایت‌مپ — فقط صفحات دروازه‌گذشته (بن�
     const paths = entries.map((entry) => entry.path);
 
     expect(paths).toContain("/tala-18");
-    expect(paths).not.toContain("/noghre"); // دروازه بسته ⟸ غایب
+    expect(paths).not.toContain("/noghre");
     expect(paths).toContain("/wallgold");
     expect(paths).toContain("/talasea");
 
-    // نوسان قیمت lastmod نیست: صفحات دارایی/سکو اصلاً lastModified ندارند.
     for (const path of ["/tala-18", "/wallgold"]) {
       expect(entries.find((entry) => entry.path === path)?.lastModified).toBeUndefined();
     }

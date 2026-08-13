@@ -1,17 +1,3 @@
-"""استور پستگرس — تاریخچه (درج؛ حذف فقط از مسیر نگه‌داری بلیت ۱۶ — بند ۷.۱).
-
-اسکیمای جدول‌ها: `collector/migrations/001_init.sql` تا `011_retention.sql`.
-اسنپ‌شات سرکوب‌شده (رد چک میانه) هم درج می‌شود — با `suppressed = true` —
-ولی خواندن‌های «جاری» فقط ردیف‌های منتشرشده را می‌بینند. مراجع قیمت
-(بند ۱۲.۲) جدول جدای خودشان را دارند و هر ردیفشان نشانی منبع را حمل
-می‌کند — عدد مرجع بدون ذکر منبع وجود ندارد (بند ۷.۱).
-
-سطح تماس `RetentionStore` (تجمیع ساعتی + فشرده‌سازی + هرس) هم اینجا پیاده
-شده؛ سیاست و دروازه‌هایش (هرس فقط بعد از تجمیع همان بازه، سرکوب‌شده‌ها
-هرگز) در `tablo_collector.retention` مستند و اعمال می‌شوند — این کلاس فقط
-عملیات ردیفی خام را فراهم می‌کند.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -81,14 +67,6 @@ from platforms where is_listed order by slug
 
 
 def platform_from_listed_row(row: Any) -> Platform:
-    """بازسازی سکو از ردیف دیتابیس، کامل‌شده از رجیستری کد.
-
-    جدول `platforms` ستون‌های فراداده (نشانی، هویت حقوقی، یادداشت تحویل،
-    فیلدهای معرف) را ندارد — مرجع حقیقتشان رجیستری کد است. اگر فقط از ردیف
-    بسازیم، این فیلدها بی‌صدا گم می‌شوند (باگ واقعی: مولد محتوا موضوع تحویل
-    فیزیکی را «بدون داده» می‌دید). اسلاگ ناشناخته (ردیف قدیمی از نسخه‌ای که
-    سکویش از رجیستری حذف شده) به بازسازی حداقلی برمی‌گردد.
-    """
     registry = PLATFORM_BY_SLUG.get(row["slug"])
     if registry is not None:
         return registry
@@ -185,7 +163,6 @@ order by hour_start, instrument, side
 
 class PostgresStore:
     def __init__(self, pool: Any) -> None:
-        """`pool` یک `asyncpg.Pool` است (تزریقی، برای تست‌پذیری)."""
         self._pool = pool
 
     async def save_snapshot(self, snapshot: PlatformSnapshot) -> None:
@@ -292,12 +269,9 @@ class PostgresStore:
         )
 
     async def save_instruments(self, listings: Sequence[InstrumentListing]) -> None:
-        """No-op عمدی: رجیستری دارایی‌ها کد است (tablo_collector.instruments)
-        و payload جاری‌اش را ردیس نگه می‌دارد — پستگرس فقط تاریخچه است و هیچ
-        شکل ماندگار تازه‌ای لازم ندارد (بلیت ۷: مهاجرت آگاهانه حذف شد)."""
+        pass
 
     async def get_instruments(self) -> tuple[InstrumentListing, ...]:
-        """خواندن از مقصد اول (ردیس) انجام می‌شود؛ اینجا چیزی ذخیره نیست."""
         return ()
 
     async def save_reference(self, snapshot: ReferenceSnapshot) -> None:
@@ -322,13 +296,9 @@ class PostgresStore:
                 )
 
     async def save_chart_config(self, entries: Sequence[ChartConfigEntry]) -> None:
-        """No-op عمدی: منبع حقیقت تنظیمات نمودار همین جدول `platform_settings`
-        پستگرس است (که پنل مستقیم می‌نویسد) — این استور چیز تازه‌ای برای
-        ذخیره ندارد، فقط ردیس (استور اول در MultiStore) کلید جاری را نگه
-        می‌دارد (همان دلیل `save_instruments`)."""
+        pass
 
     async def get_chart_config(self) -> tuple[ChartConfigEntry, ...]:
-        """خواندن از مقصد اول (ردیس) انجام می‌شود؛ اینجا چیزی ذخیره نیست."""
         return ()
 
     async def get_reference(self, reference_slug: str) -> ReferenceSnapshot | None:
@@ -359,7 +329,6 @@ class PostgresStore:
             fetched_at=fetched_at,
         )
 
-    # --- سطح تماس RetentionStore (بلیت ۱۶) — منطق در tablo_collector.retention ---
 
     async def load_raw_rows(
         self, *, until: datetime, since: datetime | None = None
@@ -460,7 +429,6 @@ class PostgresStore:
         since: datetime | None = None,
         until: datetime | None = None,
     ) -> tuple[HourlyRollup, ...]:
-        """کوئری تاریخچه — سری ساعتی از جدول تجمیع می‌خواند، نه از خام."""
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(
                 _SELECT_ROLLUPS, kind.value, source_slug, instrument, since, until

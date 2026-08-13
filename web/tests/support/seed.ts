@@ -1,14 +1,3 @@
-/**
- * seed مشترک مرز وب: منبع داده با ‎setPriceSource‎ / ‎setBlogSource‎ /
- * ‎setHistorySource‎ تزریق می‌شود؛ هیچ ردیس/پستگرس/شبکه‌ای در کار نیست و
- * `ioredis`/`pg` اصلاً به گراف تست نمی‌آیند (تست‌ها فقط اجزای خالص زیر
- * `src/components/` و توابع `src/lib/` را import می‌کنند، نه مسیرها).
- *
- * اعداد همان شکل JSON کانونی گردآورنده‌اند — قیمت‌های مؤثر و «قیمت مرجع سکو»
- * از قبل آنجا محاسبه شده‌اند (قاعده‌ی ۱ قراردادها).
- *
- * این فایل تست نیست (الگوی ‎*.test.*‎ را ندارد) — فقط کمک‌کار مرز وب است.
- */
 import type { SlugPageData } from "../../src/components/content/SlugPageView";
 import type { HomePageData } from "../../src/components/tablo/HomePage";
 import { listPublishedPosts, setBlogSource, type BlogPost } from "../../src/lib/blog";
@@ -63,7 +52,6 @@ export function quote(
 
 export function makeSnapshot(opts: {
   slug: string;
-  /** «قیمت» سکو، پیش از کارمزد — تنها عددی که گردآورنده می‌نویسد. */
   mid: number;
   feeSource?: FeeSource;
   feeObservedAt?: string;
@@ -71,7 +59,6 @@ export function makeSnapshot(opts: {
   buyFee?: string;
   sellFee?: string;
   roundTrip?: string;
-  /** پیش‌فرض GOLD_18K — صفحه‌ی دارایی (بلیت ۷) کد خودش را می‌دهد. */
   instrument?: string;
   buyEnabled?: boolean;
   sellEnabled?: boolean;
@@ -81,14 +68,12 @@ export function makeSnapshot(opts: {
   const feeSource = opts.feeSource ?? "API";
   const unknown = feeSource === "UNKNOWN";
   const instrument = opts.instrument ?? "GOLD_18K";
-  // یک سکو، یک سطر — همان چیزی که گردآورنده می‌نویسد (سند تصمیم ۰۰۰۲).
   const quotes: Quote[] = [quote(opts.slug, "PRICE", opts.mid, fetchedAt, instrument)];
   return {
     platform_slug: opts.slug,
     quotes,
     terms: {
       platform_slug: opts.slug,
-      // کارمزد UNKNOWN یعنی هر سه تهی — عدد نصفه‌نیمه در گردآورنده باگ است.
       buy_fee_percent: unknown ? null : (opts.buyFee ?? "0.5"),
       sell_fee_percent: unknown ? null : (opts.sellFee ?? "0.5"),
       round_trip_percent: unknown ? null : (opts.roundTrip ?? "0.9950"),
@@ -116,23 +101,18 @@ export const DIGIKALA: ListedPlatform = {
 };
 
 export function freshIso(): string {
-  return new Date(Date.now() - 30_000).toISOString(); // ۳۰ ثانیه پیش — تازه
+  return new Date(Date.now() - 30_000).toISOString();
 }
 
 export function staleIso(): string {
-  return new Date(Date.now() - 10 * 60_000).toISOString(); // ۱۰ دقیقه پیش — کهنه
+  return new Date(Date.now() - 10 * 60_000).toISOString();
 }
 
 export interface SeededStore {
   listed?: ListedPlatform[];
   snapshots: Record<string, PlatformSnapshot | null>;
   updatedAt: Record<string, string | null>;
-  /** payload ‏`tablo:instruments`‏ (بلیت ۷) — پرچم دروازه از گردآورنده. */
   instruments?: InstrumentListing[];
-  /**
-   * payload ‏`tablo:chart_config`‏ — منابع نمایشی صفحه‌ی اصلی. غیبتش یعنی
-   * «تنظیمی نیست» ⟸ فهرست پیش‌فرض کد (`chartSeriesConfig()`).
-   */
   chartPlatforms?: readonly ChartPlatformConfig[];
 }
 
@@ -149,10 +129,6 @@ export function seed(store: SeededStore): void {
   setChartConfigSource({ getChartPlatforms: async () => store.chartPlatforms });
 }
 
-/**
- * فیک بلاگ عمداً «گنگ» است: هرچه seed شده را با هر وضعیتی برمی‌گرداند، تا
- * قاعده‌ی نمایش (فقط published) در لایه‌ی وب سنجیده شود، نه در فیک.
- */
 export function seedBlog(posts: BlogPost[]): void {
   setBlogSource({
     listPosts: async () => posts,
@@ -164,47 +140,24 @@ export function seedHistory(entries: PlatformHistory[]): void {
   setHistorySource({ getPlatformHistory: async () => entries });
 }
 
-/**
- * فیک تاریخچه با تفکیک بر اساس پرس‌وجو (بلیت ۳۰) — برخلاف `seedHistory` که
- * یک نتیجه‌ی ثابت برای هر سه بازه برمی‌گرداند، اینجا تست خودش تصمیم می‌گیرد
- * بازه‌ی روزانه/هفتگی/ماهانه (تشخیص از `query.stepHours`) چه چیزی بگیرد —
- * لازم برای سنجیدن فعال/غیرفعال‌بودن هر زبانه جدا از بقیه.
- */
 export function seedHistoryByQuery(resolve: (query: HistoryQuery) => PlatformHistory[]): void {
   setHistorySource({ getPlatformHistory: async (query) => resolve(query) });
 }
 
-/**
- * فیک نوار «نرخ اتحادیه» (تیکت ۳۳) — `null` یعنی منبع قطع/بی‌سابقه، درست
- * مثل قطع پستگرس واقعی: نوار اصلاً رندر نمی‌شود، صفحه ۲۰۰ می‌ماند.
- */
 export function seedReferencePrice(value: ReferencePrice | null): void {
   setReferencePriceSource({ getReferencePrice: async () => value });
 }
 
-/** منبع قیمت خالی — برای تست‌هایی که فقط بلاگ را می‌سنجند. */
 export function seedEmptyPrices(): void {
   seed({ listed: [], snapshots: {}, updatedAt: {}, instruments: [] });
 }
 
-/**
- * `HomePageData` از استور seed شده — **همان** `assembleHomeData` ای که
- * `loadHomeData` روی سرور صدا می‌زند، فقط با خواننده‌های دامنه‌ی تزریق‌شده،
- * پس هیچ ماژول نودی وارد گراف تست نمی‌شود.
- */
 export async function homeData(
   store: SeededStore,
   extra: {
     history?: PlatformHistory[];
     posts?: BlogPost[];
     views?: ViewCounts;
-    /**
-     * پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱) — `undefined` یعنی خواننده
-     * اصلاً صدا زده نمی‌شود (همان مسیر پیش از این تیکت)؛ مقدار داده‌شده
-     * (حتی `undefined` صریح از سمت خودِ خواننده) یعنی خواننده هست ولی
-     * ممکن است چیزی نداشته باشد — فرود امن در `chartSeriesConfig` سنجیده
-     * می‌شود.
-     */
     chartPlatforms?: readonly ChartPlatformConfig[] | undefined;
   } = {},
 ): Promise<HomePageData> {
@@ -217,17 +170,11 @@ export async function homeData(
     fetchRows,
     getPlatformHistory,
     listPublishedPosts,
-    // نبودِ خواننده عمداً حالت معتبری است — همان مسیری که تا پیش از آمدن
-    // شمارنده اجرا می‌شد و باید همچنان کار کند.
     ...(views === undefined ? {} : { getViewCounts: async () => views }),
     ...(hasChartPlatformsReader ? { getChartPlatforms: async () => extra.chartPlatforms } : {}),
   });
 }
 
-/**
- * فیک شمارنده‌ی بازدید — یک شمارنده‌ی درون‌حافظه‌ای که هم می‌نویسد هم
- * می‌خواند، تا مرز «ثبت بازدید ⟸ عدد خوانده‌شده» واقعاً سنجیده شود.
- */
 export function seedViewCounter(initial: Record<string, number> = {}): {
   counts: Record<string, number>;
 } {
@@ -241,7 +188,6 @@ export function seedViewCounter(initial: Record<string, number> = {}): {
   return { counts };
 }
 
-/** شمارنده‌ای که همیشه می‌ترکد — برای سنجیدن «قطع منبع، خطا نیست». */
 export function seedBrokenViewCounter(): void {
   setViewCounter({
     recordView: async () => {
@@ -253,10 +199,6 @@ export function seedBrokenViewCounter(): void {
   });
 }
 
-/**
- * فیک انبار عکس (بلیت ۲۴) — درون‌حافظه‌ای، بدون S3/sharp واقعی. هر آپلود
- * را ثبت می‌کند تا تست بتواند اسلاگ/بایت رسیده به `upload` را هم بسنجد.
- */
 export function seedImageStore(
   result: Omit<UploadedImage, "objectKey"> = { width: 800, height: 600 },
 ): {
@@ -273,7 +215,6 @@ export function seedImageStore(
   return { uploads };
 }
 
-/** انباری که همیشه می‌ترکد — برای سنجیدن «قطع انبار عکس فقط آپلود را می‌شکند». */
 export function seedBrokenImageStore(): void {
   setImageStore({
     upload: async () => {
@@ -282,30 +223,18 @@ export function seedBrokenImageStore(): void {
   });
 }
 
-/**
- * `SlugPageData` از استور seed شده — همان `assembleSlugPage` مسیر ‎/<slug>‎.
- * `null` یعنی ۴۰۴.
- */
 export async function slugPageData(slug: string): Promise<SlugPageData | null> {
   return assembleSlugPage(slug, {
     resolveSlug,
     fetchRowsForPlatforms,
     getPlatformSnapshot,
     getUpdatedAt,
-    // همان خواننده‌ای که `content-data.ts` روی سرور می‌دهد: فهرست دارایی‌ها
-    // از کاتالوگ می‌آید (زنده مقدم، رجیستری بیلد کف) نه مستقیم از استور.
     getInstruments: listInstruments,
-    // بلیت ۲۷: تاریخچه‌ی سکو با seedHistory تزریق می‌شود، عین صفحه‌ی اصلی.
     getPlatformHistory,
-    // تیکت ۳۳: نوار «نرخ اتحادیه» با seedReferencePrice تزریق می‌شود.
     getReferencePrice,
   });
 }
 
-/**
- * یک سطر payload دارایی — همان شکلی که گردآورنده می‌نویسد؛ `published`
- * از قبل آنجا محاسبه شده (وب فقط می‌خواند).
- */
 export function makeListing(opts: {
   slug: string;
   instrument: string;
@@ -328,7 +257,6 @@ export function makeListing(opts: {
   };
 }
 
-/** استور سالم: هر سه سکوی فهرست‌شده تازه + گلدیکا هم در استور (ولی نه در فهرست). */
 export function healthyStore(): SeededStore {
   const now = freshIso();
   return {
@@ -358,13 +286,10 @@ export function healthyStore(): SeededStore {
   };
 }
 
-/** استور سالم + دیجی‌کالا با کارمزد UNKNOWN: فقط MID، بدون هیچ عدد کارمزد. */
 export function storeWithUnknownFee(): SeededStore {
   const store = healthyStore();
   const now = freshIso();
   store.listed = [...LISTED, DIGIKALA];
-  // mid دیجی‌کالا عمداً از همه‌ی مؤثرخریدها پایین‌تر است تا ثابت شود ستون
-  // «قیمت خرید» عدد اسمی را جدا نمی‌کند و کارت «بهترین» نامزدش نمی‌کند.
   store.snapshots["digikala"] = makeSnapshot({
     slug: "digikala",
     mid: 18520000,
@@ -375,7 +300,6 @@ export function storeWithUnknownFee(): SeededStore {
   return store;
 }
 
-/** ردیف اصلی یک سکو در HTML رندرشده (تا اولین ‎</tr>‎). */
 export function rowOf(html: string, slug: string): string {
   const match = html.match(new RegExp(`<tr[^>]*data-platform="${slug}"[\\s\\S]*?</tr>`));
   if (!match) throw new Error(`ردیف ${slug} در HTML نیست`);

@@ -1,18 +1,6 @@
 /**
- * سرهم‌کردن payload صفحه‌ها — منطق خالصی که توابع سروری
- * (`home-data.ts` / `content-data.ts`) فقط سیم‌کشی‌اش می‌کنند.
- *
- * چرا جدا: بدنه‌ی `createServerFn` از داخل تست قابل فراخوانی نیست، و اگر
- * منطقش آنجا بماند تنها راه تست، **بازنویسی همان منطق در فایل تست** است —
- * یعنی تستی که نسخه‌ی دوم کد را می‌سنجد، نه کد را. پس خواننده‌های منبع
- * تزریق می‌شوند: در اجرا نسخه‌های `lib/server/*` (که منبع پیش‌فرض ردیس/پستگرس
- * را ثبت می‌کنند) و در تست همان توابع دامنه با منبع seed شده. کد یکی است.
- *
- * این فایل هیچ وابستگی نودی و هیچ وابستگی فریم‌ورکی ندارد، پس هم از گراف
- * کلاینت و هم از سرور import شدنش بی‌خطر است (قاعده‌ی سخت باندل).
- *
- * ⚠️ قاعده‌ی ۱ قراردادها: هیچ فرمول قیمتی اینجا نیست — فقط خواندن و بستن
- * payload. ⚠️ قاعده‌ی ۵: قطع منبع ⟸ ردیف بی‌اسنپ‌شات و فهرست خالی، نه خطا.
+ * ⚠️ هیچ فرمول قیمتی اینجا نیست — فقط خواندن و بستن
+ * payload. ⚠️ قطع منبع ⟸ ردیف بی‌اسنپ‌شات و فهرست خالی، نه خطا.
  */
 import type { HomePageData } from "@/components/tablo/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";
@@ -33,37 +21,16 @@ import {
 import type { SlugResolution } from "./slugs";
 import type { ViewCounts } from "./views";
 
-/**
- * حذف نشانی معرف از payload کلاینت.
- *
- * خروجی تابع سروری داخل خودِ HTML صفحه serialize می‌شود، پس هر فیلدی که
- * اینجا بماند در source صفحه منتشر است. کلاینت هرگز به `referral_url` نیاز
- * ندارد: لینک درآمدزا همیشه به ‎/go/<slug>‎ می‌رود و مقصد واقعی فقط سمت سرور
- * حل می‌شود (تصمیم ۲۱). امروز این فیلدها null اند؛ همین حالا برداشته می‌شوند
- * تا روزی که کد معرف مالک آمد، بی‌سروصدا لو نروند.
- */
 export function withoutReferral(platform: ListedPlatform): ListedPlatform {
   const { referral_url: _url, referral_param: _param, ...publicFields } = platform;
   return publicFields;
 }
 
-/* ------------------------------------------------------------ صفحه‌ی اصلی */
-
 export interface HomeReaders {
   fetchRows(): Promise<Row[]>;
   getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;
   listPublishedPosts(): Promise<PublishedPost[]>;
-  /**
-   * اختیاری: شمارنده‌ی بازدید. نبودش یعنی ترتیب تاریخ می‌ماند — نه خطا.
-   * (فیک‌های قدیمی تست بدون این هم معتبرند.)
-   */
   getViewCounts?(): Promise<ViewCounts>;
-  /**
-   * اختیاری: پیکربندی نمودار از تنظیمات پنل (بلیت ۲۱، `tablo:chart_config`
-   * ردیس). `undefined` یا نبودِ این خواننده یعنی فهرست پیش‌فرض کد
-   * (`chartSeriesConfig()` بدون آرگومان) — نه خطا؛ فرود امن در
-   * `chartSeriesConfig` است.
-   */
   getChartPlatforms?(): Promise<readonly ChartPlatformConfig[] | undefined>;
 }
 
@@ -81,9 +48,6 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     }),
     read.listPublishedPosts(),
     read.getViewCounts?.() ?? Promise.resolve<ViewCounts>({}),
-    // خلاصه بازار (بند ۷): سه بازه‌ی **سکوی مرجع**، همان الگوی کارت نرخ
-    // صفحه‌ی سکو. هر سه با هم می‌آیند تا تعویض زبانه هیچ فچی نزند (بند ۱۴:
-    // کلاینت داده‌ی سرور را به‌عنوان مقدار اولیه می‌گیرد).
     referenceSlug === null
       ? Promise.resolve<PlatformHistory[][]>([])
       : Promise.all(
@@ -100,7 +64,6 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
 
   const referenceHistory: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
   RATE_CARD_RANGES.forEach((range, index) => {
-    // قطع منبع یا بازه‌ی بی‌سابقه ⟸ همان زبانه غیرفعال، نه throw (قاعده‌ی ۵).
     referenceHistory[range.key] = referenceRanges[index]?.[0] ?? null;
   });
 
@@ -115,25 +78,16 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
   };
 }
 
-/* ------------------------------------------------- دارایی / سکو (اسلاگ تخت) */
-
 export interface SlugReaders {
   resolveSlug(slug: string): Promise<SlugResolution | null>;
   fetchRowsForPlatforms(slugs: string[]): Promise<Row[]>;
   getPlatformSnapshot(platformSlug: string): Promise<PlatformSnapshot | null>;
   getUpdatedAt(platformSlug: string): Promise<string | null>;
   getInstruments(): Promise<InstrumentListing[]>;
-  /** تاریخچه‌ی قیمت مرجع — کارت نرخ صفحه‌ی سکو (بلیت ۲۷). فقط شاخه‌ی platform می‌خواندش. */
   getPlatformHistory(query: HistoryQuery): Promise<PlatformHistory[]>;
-  /** نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳). فقط شاخه‌ی platform می‌خواندش. */
   getReferencePrice(query: ReferencePriceQuery): Promise<ReferencePrice | null>;
 }
 
-/**
- * `null` یعنی ۴۰۴ (ناشناخته، رزروشده، یا دارایی با دروازه‌ی انتشار بسته؛
- * قاعده در `lib/slugs.ts`). قطع ردیس ⟸ کهنگی، نه خطا: ردیف بی‌اسنپ‌شات
- * برمی‌گردد و صفحه ۲۰۰ می‌ماند.
- */
 export async function assembleSlugPage(
   slug: string,
   read: SlugReaders,
@@ -157,9 +111,6 @@ export async function assembleSlugPage(
     read.getPlatformSnapshot(platform.slug),
     read.getUpdatedAt(platform.slug),
     read.getInstruments(),
-    // کارت نرخ (بلیت ۲۷، زبانه‌ی بازه بلیت ۳۰): همان الگوی نمودار صفحه‌ی
-    // اصلی، فقط برای یک سکو و همیشه طلای ۱۸ عیار — یک پرس‌وجوی جدا به ازای
-    // هر بازه (روزانه بدون گام، هفتگی/ماهانه گام‌دار).
     Promise.all(
       RATE_CARD_RANGES.map((range) =>
         read.getPlatformHistory({
@@ -170,8 +121,6 @@ export async function assembleSlugPage(
         }),
       ),
     ),
-    // نوار «نرخ اتحادیه» (تیکت ۳۳) — مرجع قیمت مستقل، نه قیمت این سکو؛
-    // قطع منبع ⟸ null، نوار رندر نمی‌شود (قاعده‌ی ۵).
     read.getReferencePrice({
       referenceSlug: UNION_RATE_REFERENCE_SLUG,
       instrument: UNION_RATE_INSTRUMENT,
@@ -179,8 +128,6 @@ export async function assembleSlugPage(
   ]);
   const history: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
   RATE_CARD_RANGES.forEach((range, index) => {
-    // قطع منبع یا سکوی بی‌سابقه ⟸ نتیجه‌ی همان بازه خالی است ⟸ null، نه
-    // throw (قاعده‌ی ۵) — آن زبانه بدون نمودار/غیرفعال رندر می‌شود.
     history[range.key] = historyByRange[index]?.[0] ?? null;
   });
   return {

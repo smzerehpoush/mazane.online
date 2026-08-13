@@ -1,18 +1,10 @@
 /**
- * کارت‌های منبع قیمت (بند ۶ سند طراحی).
- *
- * ⚠️ **بج درصد اختلاف ندارد** (بند ۱۵، تصمیم ۳). طرح اولیه روی هر کارت
+ * ⚠️ **بج درصد اختلاف ندارد**. طرح اولیه روی هر کارت
  * غیرمرجع `−۱٫۲۳٪` می‌گذاشت؛ آن عدد حذف شد و نه اینجا محاسبه می‌شود نه جای
  * دیگر. تنها بج باقی‌مانده «قیمت مرجع» است که یک **برچسب** است نه عدد.
- *
- * ⚠️ قاعده‌ی سخت ۷: هر کارت به ‎/go/<slug>‎ می‌رود با
+ * ⚠️ هر کارت به ‎/go/<slug>‎ می‌رود با
  * ‎rel="sponsored nofollow noopener"‎ و ‎target="_blank"‎ — هرگز مستقیم به
  * دامنه‌ی سکو. مقصد در `dashboard.ts` ساخته می‌شود و نگهبان CI دارد.
- *
- * اسپارک‌لاین SVG دستی است و مسیرش **سمت سرور** تولید شده
- * (`lib/spline.ts::seriesPaths`)، پس در همان HTML اولیه است و با جاوااسکریپت
- * خاموش هم دیده می‌شود. `aria-hidden` است چون همان اطلاعات به‌صورت متنی
- * (قیمت کنارش) موجود است — بند ۱۲.
  */
 import { Staleness } from "@/components/content/RowParts";
 import type { RailSource } from "@/lib/dashboard";
@@ -25,11 +17,6 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
         <p className="mt-0.5 text-[12.5px] text-muted-foreground">روند ۲۴ ساعت گذشته‌ی هر سکو</p>
       </div>
 
-      {/*
-        گرید با `auto-fit` و کمینه‌ی ۱۳۰px بسته شده، نه `repeat(5, …)` ثابت:
-        شمار منابع را پنل تعیین می‌کند و بین ۲ تا ۶ است (بند ۱۵، تصمیم ۲)،
-        پس ستون ثابت یا شکاف می‌داد یا سرریز.
-      */}
       <div className="mt-3.5 grid grid-cols-2 gap-[11px] sm:grid-cols-[repeat(auto-fit,minmax(130px,1fr))]">
         {sources.map((source) => (
           <a
@@ -58,7 +45,6 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
               )}
             </div>
 
-            {/* جای بج همیشه اشغال است تا ارتفاع کارت‌ها یکی بماند (بند ۶). */}
             <span className="my-1.5 mb-2.5 flex h-[18px] items-center">
               {source.isReference && (
                 <span className="rounded-[20px] bg-acbg px-[7px] py-px text-[10.5px] text-actx">
@@ -68,19 +54,18 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
             </span>
 
             {/*
-              ⚠️ برچسب کهنگیِ **هر سکو** — نه سطح صفحه. برچسب بالای محور
-              بیشینه‌ی زمان همه‌ی سکوهاست، پس یک سکوی مرده پشت تازگیِ بقیه
-              پنهان می‌ماند؛ جدول قدیمی این را به‌ازای هر ردیف داشت و با
-              حذفش گم شده بود (قاعده‌ی سخت ۵، بند ۶.۲ سند معماری).
-              `nowMs` از `generated_at` سرور می‌آید نه `Date.now()`، پس
-              هیدریشن واگرا نمی‌شود.
-            */}
+             * ⚠️ برچسب کهنگیِ **هر سکو** — نه سطح صفحه. برچسب بالای محور
+             * بیشینه‌ی زمان همه‌ی سکوهاست، پس یک سکوی مرده پشت تازگیِ بقیه
+             * پنهان می‌ماند؛ جدول قدیمی این را به‌ازای هر ردیف داشت و با
+             * حذفش گم شده بود.
+             * `nowMs` از `generated_at` سرور می‌آید نه `Date.now`، پس
+             * هیدریشن واگرا نمی‌شود.
+             */}
             <div className="mb-1.5 text-[10px]">
               <Staleness updatedAt={source.updatedAt} nowMs={nowMs} />
             </div>
 
             {source.sparkline.line === null ? (
-              /* بند ۱۱: بدون تاریخچه، جای خالی حفظ می‌شود و خطی رسم نمی‌شود. */
               <div aria-hidden className="h-7 w-full" />
             ) : (
               <svg

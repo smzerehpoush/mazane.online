@@ -1,29 +1,6 @@
 /**
- * منطق ‎GET/POST /api/admin-platform-settings‎ — تنظیمات نمودار پنل (بلیت ۲۱)
- * + نشانی معرف (بلیت ۲۳).
- *
- * جدا از مسیر، تا مرز تست وب بتواند رفتار را با منبع تزریق‌شده بسنجد —
- * همان الگوی `post-view.ts`/`admin-login.ts`.
- *
- * قرارداد:
- *     GET /api/admin-platform-settings
- *     ← 200  {"platforms":[...], "settings":[...]}   نشست معتبر
- *     ← 401  {"error": "..."}                          نشست معتبر نیست
- *
- *     POST /api/admin-platform-settings
- *          {"entries": [{slug, in_chart, chart_color, chart_order, referral_url}, ...]}
- *     ← 200  {"ok": true}                               ذخیره شد
- *     ← 400  {"error": "..."}                           بدنه/اعتبارسنجی نامعتبر
- *     ← 401  {"error": "..."}                           نشست معتبر نیست
- *     ← 405                                              متد دیگر
- *
- * این مسیر زیر `/admin/*` نیست (بند ۹ قراردادها فقط دو مسیر عمومی/مدیریتی
- * را می‌شناسد)، پس هدرهای `no-store`/`noindex` را خودش مستقیم می‌گذارد —
- * همان دلیل `admin-login.ts` (میان‌افزار سراسری `adminSecurityMiddleware`
- * فقط `isAdminPath` یعنی مسیرهای زیر `/admin` را می‌پوشاند).
- *
- * ⚠️ قاعده‌ی سخت ۱: این مسیر هیچ عدد قیمتی نمی‌سازد یا تغییر نمی‌دهد —
- * فقط اسلاگ/رنگ/ترتیب/لینک. ⚠️ قاعده‌ی سخت ۲: عضویت نمودار هرگز روی جدول
+ * ⚠️ این مسیر هیچ عدد قیمتی نمی‌سازد یا تغییر نمی‌دهد —
+ * فقط اسلاگ/رنگ/ترتیب/لینک. ⚠️ عضویت نمودار هرگز روی جدول
  * قیمت اثر نمی‌گذارد — این مسیر اصلاً به جدول قیمت دسترسی ندارد. اعتبارسنجی
  * واقعی نشانی معرف (https + هم‌دامنه) در `savePlatformSettings` است، نه اینجا.
  */
@@ -34,7 +11,6 @@ import { hasValidSession } from "./admin-session";
 import { loadPlatformSettingsView, savePlatformSettings } from "./platform-settings-admin";
 import type { PlatformSettingEntry } from "../platform-settings";
 
-/** بدنه‌ی معتبر چند صد بایت است (حداکثر ۶ ردیف)؛ بقیه‌اش سوءاستفاده است. */
 const MAX_BODY_BYTES = 8192;
 
 function requireSession(request: Request): boolean {

@@ -1,11 +1,3 @@
-/**
- * تکه‌های مشترک ردیف صفحات محتوا — برچسب کهنگی، نشان دفتر سفارش، نشان‌های
- * باز/بسته و برچسب منبع کارمزد.
- *
- * منتقل‌شده از ‎app/row-parts.tsx‎ اپ نکست قبلی، با همان رفتار و همان قلاب‌های
- * ‎data-*‎؛ فقط استایل به توکن‌های طراحی تازه (Tailwind) رسیده است. هیچ فرمول
- * قیمتی اینجا نیست (قاعده‌ی ۱ قراردادها).
- */
 import {
   formatDateFa,
   formatMinutesAgoFa,
@@ -15,15 +7,6 @@ import {
 import { STALE_SUFFIX_FA } from "@/lib/live-update";
 import type { ListedPlatform, PlatformTerms } from "@/lib/prices";
 
-/**
- * برچسب زمان داخل خود HTML (الزام بند ۶.۲) با قلاب‌های ‎data-live‎ برای
- * به‌روزرسان زنده (بلیت ۸). گره‌ی کهنگی همیشه هست (وقتی تازه است تهی) تا سوآپ
- * کلاینت فقط متن عوض کند، نه ساختار DOM. در صفحات دارایی/سکو به‌روزرسان
- * mount نمی‌شود و این قلاب‌ها ایستا می‌مانند.
- *
- * `nowMs` از `generated_at` همان payload سرور می‌آید، نه `Date.now()` کلاینت —
- * پس متن سرور و کلاینت یکی است و هیدریشن واگرا نمی‌شود.
- */
 export function Staleness({
   updatedAt,
   nowMs,
@@ -32,7 +15,6 @@ export function Staleness({
   nowMs: number;
 }) {
   if (updatedAt === null) {
-    // سکوی بی‌سابقه قلاب زنده ندارد — با آمدن اولین داده، رندر بعدی نشانش می‌دهد.
     return <span>هنوز داده‌ای ثبت نشده است</span>;
   }
   const minutes = minutesSince(updatedAt, nowMs);
@@ -55,7 +37,6 @@ export function Staleness({
 
 export function FeeSourceLabel({ terms }: { terms: PlatformTerms }) {
   if (terms.fee_source === "MANUAL") {
-    // کارمزد دستی باید برچسب و تاریخ مشاهده داشته باشد (بند ۲.۲ سند معماری).
     return (
       <span>
         دستی — مشاهده‌شده در{" "}
@@ -69,11 +50,6 @@ export function FeeSourceLabel({ terms }: { terms: PlatformTerms }) {
   return <span>از API سکو</span>;
 }
 
-/**
- * برچسب صریح دفتر سفارش (بند ۹.۲، شکاف ۵ رقبا): قیمت داریک از سفارش‌های
- * کاربران است، نه قیمت‌گذاری فروشنده — بدون این برچسب، اسپرد ناهم‌جنس
- * به‌عنوان قیمت رقیب خوانده می‌شود.
- */
 export function MarketModelBadge({ platform }: { platform: ListedPlatform }) {
   if (platform.market_model !== "ORDER_BOOK") return null;
   return (
@@ -87,7 +63,6 @@ export function MarketModelBadge({ platform }: { platform: ListedPlatform }) {
   );
 }
 
-/** نشان باز/بسته — از buy_enabled/sell_enabled داده‌ی زنده (بند ۹.۲). */
 export function ClosedBadges({ terms }: { terms: PlatformTerms }) {
   return (
     <>

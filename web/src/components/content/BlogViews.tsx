@@ -1,16 +1,3 @@
-/**
- * نمای فهرست بلاگ و نمای پست بلاگ، به‌همراه سرصفحه‌های‌شان — **بدون وابستگی
- * به روتر** (همان دلیل `SlugPageView.tsx`): مرز تست وب «استور seed شده ⟸
- * خروجی رندرشده» است و مسیر تنکستک بدون بستر روتر رندر نمی‌شود.
- *
- * بدنه‌ی پست مارک‌داون است و با `lib/markdown.tsx` به درخت ری‌اکت رندر می‌شود —
- * هیچ `dangerouslySetInnerHTML` روی متن پست نیست، پس HTML داخل بدنه همیشه
- * escape می‌شود.
- *
- * `BlogPosting` در همان رندر سرور ساخته می‌شود (بند ۶.۵) — متن فارسی،
- * تاریخ‌ها ISO با ارقام لاتین، URL بوم لاتینِ تخت زیر ‎/blog/‎. ترتیب
- * اسکریپت‌ها عمدی است: BlogPosting اول، BreadcrumbList بعد.
- */
 import { Breadcrumbs } from "@/components/content/PageShell";
 import { ViewBeacon } from "@/components/content/ViewBeacon";
 import type { PublishedPost } from "@/lib/blog";
@@ -19,8 +6,6 @@ import { postImageAsset } from "@/lib/images";
 import { excerptFa, renderMarkdown } from "@/lib/markdown";
 import { SITE_URL } from "@/lib/site";
 import { breadcrumbJsonLd, jsonLdString } from "@/lib/structured-data";
-
-/* ------------------------------------------------------------ فهرست بلاگ */
 
 export const BLOG_INDEX_TITLE = "بلاگ تابلو";
 export const BLOG_INDEX_DESCRIPTION =
@@ -36,7 +21,6 @@ export function blogIndexHead() {
       { property: "og:type", content: "website" },
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/blog` }],
-    // بند ۶.۵: BreadcrumbList همه‌جا جز ریشه.
     scripts: [
       {
         type: "application/ld+json",
@@ -49,7 +33,6 @@ export function blogIndexHead() {
   };
 }
 
-/** قطع پستگرس ⟸ فهرست خالی و ۲۰۰، نه خطا (قاعده‌ی ۵ قراردادها). */
 export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
   return (
     <>
@@ -69,7 +52,6 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
       ) : (
         <ul className="space-y-3">
           {posts.map((post) => {
-            // بلیت ۲۵: پستِ بدون عکس همان چیدمان امروز است — بدون هیچ جای خالی.
             const image = postImageAsset(post);
             const text = (
               <>
@@ -121,13 +103,9 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
   );
 }
 
-/* --------------------------------------------------------------- یک پست */
-
 function blogPostingJsonLd(post: PublishedPost): string {
   const url = `${SITE_URL}/blog/${post.slug}`;
-  // بلیت ۲۵: image فقط وقتی عکس شاخص هست — فیلد غایب، نه تهی.
   const image = postImageAsset(post);
-  // سریال‌سازی و escape در lib/structured-data.ts (بلیت ۱۰) — همان رسم قبلی.
   return jsonLdString({
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -143,18 +121,12 @@ function blogPostingJsonLd(post: PublishedPost): string {
   });
 }
 
-/**
- * پیش‌نویس/پس‌گرفته/ناموجود ⟸ ۴۰۴ با متای `noindex` (قاعده‌ی نمایش در
- * `lib/blog.ts`؛ پس‌گیری در `collector/.../content/retract.py`).
- */
 export function blogPostHead(post: PublishedPost | undefined) {
   if (post === undefined) {
     return { meta: [{ title: "پست یافت نشد" }, { name: "robots", content: "noindex" }] };
   }
   const url = `${SITE_URL}/blog/${post.slug}`;
   const description = excerptFa(post.body_md);
-  // بلیت ۲۵: og:image/twitter:image فقط وقتی عکس شاخص هست — تگ‌ها اصلاً
-  // نمی‌آیند، نه با مقدار خالی (همان قید postImageAsset: چهار فیلد یا هیچ‌کدام).
   const image = postImageAsset(post);
   return {
     meta: [
@@ -188,10 +160,6 @@ export function blogPostHead(post: PublishedPost | undefined) {
   };
 }
 
-/**
- * قالب‌بندی بدنه‌ی مارک‌داون. `renderMarkdown` عناصر برهنه می‌دهد؛ استایل با
- * واریانت‌های فرزند اعمال می‌شود تا شیوه‌نامه‌ی سراسری دست‌نخورده بماند.
- */
 const PROSE =
   "space-y-4 text-[15px] leading-8 text-foreground/90 " +
   "[&_h2]:mt-9 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-foreground " +
@@ -202,7 +170,6 @@ const PROSE =
   "[&_strong]:font-semibold [&_strong]:text-foreground";
 
 export function BlogPostView({ post }: { post: PublishedPost }) {
-  // پستِ بدون عکس دقیقاً همان رندر امروز است — بدون هیچ جای خالی (بلیت ۲۴).
   const image = postImageAsset(post);
 
   return (
@@ -229,8 +196,6 @@ export function BlogPostView({ post }: { post: PublishedPost }) {
           ) : null}
         </p>
         {image !== null ? (
-          // width/height رزرو جا می‌کنند تا متن زیر پای خواننده نپرد؛
-          // loading="eager" چون این عکس همیشه بالای تاشدگی است.
           <img
             src={image.url}
             width={image.width}

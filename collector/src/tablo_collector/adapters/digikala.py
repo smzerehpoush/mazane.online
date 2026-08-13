@@ -1,17 +1,3 @@
-"""آداپتر دیجی‌کالا (طلای دیجیتال) — `api.digikala.com/non-inventory/v1/prices/`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۳ و ۸.۱):
-
-- `gold18.price` ریال ÷۱۰۰۰ ⟸ ضریب صریح ×۱۰۰ به تومان بر گرم (همان
-  مقیاس میلی). `silver999` هم هست؛ فعلاً استفاده نمی‌شود.
-- فقط یک قیمت (mid) — نه buy نه sell — و کارمزد **عمداً منتشر نمی‌شود**
-  («متغیر است و ممکن است تغییر کند») ⟸ `fee_source = UNKNOWN`: نه از متن و
-  نه از اسپرد نمی‌شود هزینه‌ی مؤثر را حساب کرد؛ «یک ردیف صادقانه با نامشخص
-  بهتر از یک عدد ساختگی است».
-- `ttl: 60` — خود API می‌گوید هر ۶۰ ثانیه؛ با بازه‌ی ۳۰ ثانیه‌ی ما سازگار.
-- API فیلد وضعیت باز/بسته ندارد ⟸ هر دو سمت باز فرض می‌شود.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -29,8 +15,6 @@ class DigikalaAdapter:
     slug = "digikala"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = DIGIKALA_ENDPOINT
-    # ضریب صریح این منبع: ریال ÷۱۰۰۰، ×۱۰۰ به تومان بر گرم
-    # (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("100")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

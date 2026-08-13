@@ -1,14 +1,3 @@
-/**
- * کارت‌های نوشته در انتهای صفحه.
- *
- * عنوان **تابع داده** است، نه ثابت: تا وقتی هیچ بازدیدی ثبت نشده،
- * «بیشتر بخوانید» می‌ماند و ترتیب تاریخ است — چون «پرخواننده‌ترین» بدون
- * داده، ادعای جعلی است. با آمدن نخستین بازدید، عنوان و ترتیب هر دو عوض
- * می‌شوند (`byPopularity` در `lib/views.ts`).
- *
- * عدد بازدید هرگز نمایش داده نمی‌شود — تخمینی است (فیلتر مکث و نشست تب) و
- * انتشار یک تخمین به‌عنوان آمار دقیق، همان جعل عدد است.
- */
 import type { PublishedPost } from "@/lib/blog";
 import { postExcerpt } from "./home-view";
 import { formatDateFa } from "@/lib/format";
@@ -28,7 +17,6 @@ export function PopularPosts({
       </h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {posts.map((post) => {
-          // بلیت ۲۵: پستِ بدون عکس همان کارت امروز است — بدون هیچ جای خالی.
           const image = postImageAsset(post);
           return (
             <article key={post.slug} className="glass-surface lift-hover flex flex-col p-5">

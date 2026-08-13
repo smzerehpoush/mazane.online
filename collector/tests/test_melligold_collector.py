@@ -1,15 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی ملی‌گلد ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/melligold_buy_sell_price.json` پاسخ واقعی
-`GET https://melligold.com/api/v1/exchange/buy-sell-price/?format=json` است
-(ضبط‌شده ۲۰۲۶-۰۸-۰۶ با User-Agent صادق و cookie jar — دست‌دهی ArvanCloud،
-نه احراز هویت؛ سند تحقیق ۰۱، بند ۸.۲). تست‌ها هیچ تماس شبکه‌ای ندارند.
-
-ملی‌گلد اسپرد صفر می‌دهد (`price_buy == price_sell`) و کارمزدش را جدا
-می‌گیرد ولی هیچ‌جا منتشر نکرده ⟸ `fee_source = UNKNOWN`: فقط MID ذخیره
-می‌شود و قیمت مؤثر جعل نمی‌شود.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -48,15 +36,11 @@ async def test_fixture_payload_stores_one_price_with_x1_scale() -> None:
     assert stored is not None
     assert stored.platform_slug == "melligold"
 
-    # کارمزد نامعلوم ⟸ فقط MID و سطر MEAN که بازتاب همان تک‌عدد است
-    # همچنان جعل نمی‌شود — نه BUY هست نه SELL.
     assert [quote.side for quote in stored.quotes] == [Side.PRICE]
 
     (price,) = stored.quotes
     assert price.instrument == Instrument.GOLD_18K
-    # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     assert price.raw_scale == Decimal("1")
-    # اسپرد صفر: mid = میانگین price_buy و price_sell (هر دو 18506373).
     assert price.raw_value == Decimal("18506373")
     assert price.price_toman == 18506373
     assert price.fetched_at == FETCHED_AT

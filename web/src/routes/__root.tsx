@@ -35,11 +35,8 @@ function NotFoundComponent() {
 }
 
 /**
- * مرز خطای ریشه. فقط در لاگ سرور می‌نویسد — هیچ گزارش‌دهی به سرویس بیرونی
- * نیست (سایت به هیچ سرویس خارج از مرز وابسته نمی‌شود).
- *
  * ⚠️ این صفحه هرگز نباید جای «قیمت کهنه» را بگیرد: قطع منبع داده کهنگی است
- * نه خطا (قاعده‌ی ۵ قراردادها) و در لایه‌ی داده به «داده‌ای نیست» ترجمه شده.
+ * نه خطا و در لایه‌ی داده به «داده‌ای نیست» ترجمه شده.
  */
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
@@ -94,10 +91,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      // وزیرمتن خودمیزبان است (‎@font-face‎ در src/styles.css، فایل در
-      // public/fonts). هیچ درخواستی به fonts.googleapis.com نمی‌رود — از
-      // ایران کند یا مسدود است. preload چون فونت را مرورگر تازه بعد از
-      // parse شدن CSS کشف می‌کند و این یک رفت‌وبرگشت به متن اضافه می‌کند.
       {
         rel: "preload",
         as: "font",
@@ -115,14 +108,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 /**
- * پوسته‌ی HTML.
- *
  * ⚠️ `suppressHydrationWarning` روی `<html>` اجباری است و بی‌ربط به سهل‌انگاری:
  * سرور همیشه `data-theme="light"` می‌نویسد و اسکریپت inline زیر، پیش از
  * رسیدن ری‌اکت، ممکن است `dark` کرده باشد. بدون این پرچم، ری‌اکت همان اختلاف
  * را خطای hydration گزارش می‌کند — درحالی‌که دقیقاً رفتار طراحی‌شده است
- * (بند ۱۴، مورد ۳).
- *
+ * .
  * ⚠️ اسکریپت تم **باید** آخرین چیز داخل `<head>` و پیش از `<body>` باشد:
  * مرورگر آن را همان‌جا همگام اجرا می‌کند، پس صفت پیش از نقاشی اولین پیکسل
  * نشسته و فلش سفید رخ نمی‌دهد. جابه‌جا کردنش به انتهای بدنه یعنی برگشت فلش.
@@ -149,7 +139,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
   );

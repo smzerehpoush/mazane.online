@@ -1,17 +1,3 @@
-"""آداپتر میلی — `milli.gold/api/v1/public/milli-price/external`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۳ و ۳.۴):
-
-- `data.price18` قیمت هر میلی‌گرم به ریال است ⟸ ضریب صریح ×۱۰۰ به
-  تومان بر گرم (بند ۴ سند معماری).
-- API عمومی میلی کارمزد نمی‌دهد ⟸ کارمزد **دستی** از صفحه‌ی کارمزد میلی
-  (`milli.gold/main/commision/`) خوانده شده: ۰٫۵٪ خرید و ۰٫۵٪ فروش.
-  عدد دستی باید تاریخ مشاهده داشته باشد و در UI برچسب «دستی» بخورد
-  (بند ۲.۲ سند معماری) — از همین‌رو `fee_source = MANUAL` و
-  `observed_at = MILLI_FEE_OBSERVED_AT` (نه زمان کرال).
-- API فیلد وضعیت باز/بسته ندارد ⟸ هر دو سمت باز فرض می‌شود.
-"""
-
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -24,10 +10,6 @@ from .common import known_fee_snapshot
 
 MILLI_ENDPOINT = "https://milli.gold/api/v1/public/milli-price/external"
 
-# کارمزد دستی میلی — مشاهده‌شده در سند تحقیق ۰۱ (اسنپ‌شات ۲۰۲۶-۰۸-۰۵،
-# صفحه‌ی milli.gold/main/commision/): ۰٫۵٪ هر سمت. اگر میلی کارمزدش را عوض
-# کند این ثابت‌ها باید دستی به‌روز شوند؛ برچسب «دستی» در UI همین ریسک را
-# شفاف می‌کند.
 MILLI_MANUAL_BUY_FEE = Decimal("0.005")
 MILLI_MANUAL_SELL_FEE = Decimal("0.005")
 MILLI_FEE_OBSERVED_AT = datetime(2026, 8, 5, tzinfo=UTC)
@@ -37,8 +19,6 @@ class MilliAdapter:
     slug = "milli"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = MILLI_ENDPOINT
-    # ضریب صریح این منبع: ریال بر میلی‌گرم، ×۱۰۰ به تومان بر گرم
-    # (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("100")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

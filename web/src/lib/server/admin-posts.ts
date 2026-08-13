@@ -1,11 +1,4 @@
 /**
- * پست‌های پنل روی پستگرس — همان جدول `posts` که مهاجرت
- * `collector/migrations/010_blog.sql` می‌سازد (بلیت ۲۲).
- *
- * **فقط سمت سرور** (همان دلیل `blog-source.ts`/`view-counter.ts`: `pg`
- * هرگز به باندل مرورگر نمی‌رود). از همان استخر مشترک استفاده می‌کند تا
- * سرور تک‌هسته‌ای استخر تازه باز نکند.
- *
  * ⚠️ خط لوله‌ی خودکار محتوای پایتونی (`collector/src/tablo_collector/content/`)
  * همین جدول را می‌خواند/می‌نویسد — این فایل کاملاً کنارش می‌نشیند، جایگزینش
  * نمی‌شود.
@@ -62,7 +55,6 @@ const COLUMNS =
   "slug, title_fa, body_md, status, published_at, updated_at, " +
   "image_url, image_alt, image_width, image_height";
 
-/** کد خطای پستگرس برای نقض یکتایی (PK اسلاگ) — رقابت هم‌زمان روی یک اسلاگ. */
 const UNIQUE_VIOLATION = "23505";
 
 function isUniqueViolation(error: unknown): boolean {
@@ -121,9 +113,6 @@ export function createPgAdminPostsSource(): AdminPostsSource {
       );
     },
 
-    // مسیر کاملاً جدا از updatePost/setStatus — updated_at را دست نمی‌زند
-    // (بلیت ۲۴، بند طراحی: عوض‌شدنش قاعده‌ی «تیک ویرایش معنادار» است که
-    // برای عکس موضوعیت ندارد).
     async setImage(slug: string, patch: PostImagePatch): Promise<void> {
       await pool.query(
         `update posts set image_url = $2, image_alt = $3, image_width = $4, image_height = $5
@@ -136,14 +125,12 @@ export function createPgAdminPostsSource(): AdminPostsSource {
 
 let registered = false;
 
-/** ثبت تنبل — همان الگو و همان دلیلِ `view-counter.ts`. */
 function ensureDefaultSource(): void {
   if (registered) return;
   registered = true;
   setDefaultAdminPostsSource(createPgAdminPostsSource);
 }
 
-/** تنها درِ ورود کد سروری به پست‌های پنل — نه مستقیم از `lib/admin-posts.ts`. */
 export async function listAllPosts(): Promise<BlogPost[]> {
   ensureDefaultSource();
   return domainList();
@@ -159,9 +146,6 @@ export async function createPost(input: CreatePostInput, now: string): Promise<W
   try {
     return await domainCreate(input, now);
   } catch (error) {
-    // دفاع دوم: چک پیش از insert در `lib/admin-posts.ts` شرط مسابقه‌ی
-    // هم‌زمان روی یک اسلاگ را نمی‌گیرد؛ محدودیت PK جدول posts می‌گیرد و
-    // اینجا به همان پیام خطای روشن (نه خطای خام دیتابیس) ترجمه می‌شود.
     if (isUniqueViolation(error)) {
       return { ok: false, kind: "invalid", error: "این اسلاگ قبلاً استفاده شده است" };
     }

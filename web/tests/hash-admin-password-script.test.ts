@@ -1,11 +1,3 @@
-/**
- * نگهبان هم‌خوانی `scripts/hash-admin-password.mjs` با `lib/admin-auth.ts`.
- *
- * اسکریپت عمداً الگوریتم را **کپی** می‌کند (نه import، چون `.mjs` ساده بدون
- * مرحله‌ی بیلد نمی‌تواند `.ts` را اجرا کند — شرح در خود اسکریپت). این تست
- * تنها نگهبانِ درز کردن آن دو نسخه از هم است: هش تولیدشده توسط اسکریپت باید
- * با `verifyPassword` واقعی تأیید شود.
- */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -37,7 +29,6 @@ describe("scripts/hash-admin-password.mjs", () => {
 
   it("بدون آرگومان با پیام راهنما و کد خروج غیرصفر می‌ایستد", () => {
     const { status } = runScript("");
-    // execFileSync با آرگومان خالی هم رشته‌ی خالی پاس می‌دهد — یعنی رمز غایب.
     expect(status).not.toBe(0);
   });
 });

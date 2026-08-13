@@ -1,18 +1,3 @@
-/**
- * تست وجودی CI بند ۶.۴ — الزام غیرقابل‌مذاکره‌ی لینک‌های درآمدزا (بلیت ۹).
- *
- * «یک تست خودکار در CI بنویسید که اگر لینک خروجی بدون sponsored پیدا شد
- * شکست بخورد» — و دقیقاً از آن چیزهایی است که در بازنویسی‌ها بی‌سروصدا از
- * بین می‌رود. برای همین این تست لینک‌ها را **برنمی‌شمارد**: HTML رندرشده‌ی
- * صفحه‌ی اصلی، صفحات سکو و صفحه‌ی دارایی را عمومی برای الگوی ‎href="http‎
- * می‌کاود؛ هر لینک خروجی به میزبان یک سکو (دور زدن ‎/go/‎) یا هر لینک خروجی
- * بدون rel کامل، شکست است. لینک ارجاع غیر درآمدزا به مراجع قیمت (tala.ir /
- * تلا — بند ۱۲.۲) تنها استثناست: ساده ولی حتماً nofollow.
- *
- * همین‌جا قاعده‌ی مکمل بند ۶.۴ هم تست می‌شود: مرتب‌سازی هیچ ورودی‌ای از
- * فیلدهای معرف (referral_url / referral_param) نمی‌گیرد، و آن فیلدها اصلاً
- * به payload کلاینت نمی‌رسند.
- */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -33,12 +18,6 @@ import {
   type SeededStore,
 } from "./support/seed";
 
-/* ---------- کاونده‌ی عمومی سیاست لینک خروجی (بند ۶.۴) ---------- */
-
-/**
- * میزبان‌های مراجع قیمت (بند ۱۲.۲) — ارجاع تحریری غیر درآمدزا؛ لینکشان
- * ساده می‌ماند ولی حداقل nofollow می‌خواهد. هیچ سکویی اینجا نمی‌آید.
- */
 const NON_REVENUE_REFERENCE_HOSTS: ReadonlySet<string> = new Set(["tala.ir", "www.tala.ir"]);
 
 function attrOf(tag: string, name: string): string | null {
@@ -50,16 +29,6 @@ function relTokens(tag: string): Set<string> {
   return new Set((attrOf(tag, "rel") ?? "").split(/\s+/).filter(Boolean));
 }
 
-/**
- * سیاست لینک خروجی روی HTML رندرشده — throw یعنی شکست CI:
- *  - ‎href="http…"‎ به میزبان یک سکو ⟸ ممنوع مطلق (باید از ‎/go/‎ بگذرد)؛
- *  - هر ‎href="http…"‎ دیگر ⟸ دست‌کم nofollow و noopener؛ و جز مراجع
- *    قیمت، sponsored هم الزامی است؛
- *  - هر ‎href="/go/…"‎ ⟸ ‎rel="sponsored nofollow noopener"‎ کامل +
- *    ‎target="_blank"‎.
- * خروجی: شمار لینک‌های ‎/go/‎ تا فراخوان بتواند «اصلاً لینکی بود؟» را هم
- * بسنجد (تست وجودی که هیچ‌چیز نکاود، تست نیست).
- */
 function assertOutboundLinkPolicy(
   html: string,
   platformHosts: ReadonlySet<string>,
@@ -105,8 +74,6 @@ function assertOutboundLinkPolicy(
   return goLinks;
 }
 
-/* ---------- داده‌ی seed — همان شکل JSON کانونی گردآورنده ---------- */
-
 const REFERRAL_CODE = "MZN-OWNER-CODE";
 
 const PLATFORMS: ListedPlatform[] = [
@@ -126,7 +93,6 @@ const PLATFORMS: ListedPlatform[] = [
     referral_url: null,
     referral_param: "r",
   },
-  // تنها سکوی با کد معرفِ رسیده — مقصد /go/ خودش referral_url می‌شود.
   {
     slug: "milli",
     name_fa: "میلی",
@@ -186,9 +152,7 @@ async function renderSlug(slug: string): Promise<string> {
   return renderToStaticMarkup(<SlugPageView data={data as SlugPageData} />);
 }
 
-/* ---------- تست وجودی بند ۶.۴ ---------- */
-
-describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدون sponsored یا بیرون /go/ نیست", () => {
+describe("هیچ لینک خروجی درآمدزایی بدون sponsored یا بیرون /go/ نیست", () => {
   it("صفحه‌ی اصلی از کاونده می‌گذرد و برای هر سکو یک لینک /go/ دارد", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(seededStore())} />);
     const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "صفحه‌ی اصلی");
@@ -200,7 +164,6 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
     for (const platform of PLATFORMS) {
       expect(html, platform.slug).toContain(`href="/go/${platform.slug}"`);
     }
-    // کد معرف هرگز در HTML عمومی نمی‌نشیند — فقط سمت ریدایرکت است.
     expect(html).not.toContain(REFERRAL_CODE);
   });
 
@@ -233,15 +196,11 @@ describe("بند ۶.۴ — هیچ لینک خروجی درآمدزایی بدو�
     expect(platformPage?.kind).toBe("platform");
     if (platformPage?.kind === "platform") {
       expect(platformPage.platform).not.toHaveProperty("referral_url");
-      // ولی «مقصدی هست» روی سرور حساب شده تا لینک مرده نماند.
       expect(platformPage.hasOutbound).toBe(true);
     }
-    // payload سریال‌شده هم هیچ ردی از کد معرف ندارد.
     expect(JSON.stringify(data)).not.toContain(REFERRAL_CODE);
   });
 });
-
-/* ---------- خود کاونده باید نقض را قرمز کند (وگرنه تست وجودی نیست) ---------- */
 
 describe("کاونده‌ی سیاست لینک — نقض‌ها واقعاً شکست می‌خورند", () => {
   it("لینک مستقیم به میزبان سکو (دور زدن /go/) ⟸ شکست", () => {
@@ -269,13 +228,10 @@ describe("کاونده‌ی سیاست لینک — نقض‌ها واقعاً �
   });
 });
 
-/* ---------- قاعده‌ی مکمل بند ۶.۴: کمیسیون هیچ ورودی‌ای به ترتیب ندارد ---------- */
-
-describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای معرف نمی‌گیرد (بند ۶.۴)", () => {
+describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای معرف نمی‌گیرد", () => {
   it("سکوی گران‌ترِ دارای کد معرف با داشتن referral_url بالا نمی‌آید", async () => {
     const store = seededStore();
     const now = freshIso();
-    // میلی (تنها سکوی referral_url دار) را گران‌ترین کن — باید آخر بماند.
     store.snapshots["milli"] = makeSnapshot({
       slug: "milli",
       mid: 18800000,
@@ -283,7 +239,7 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     });
     const html = renderToStaticMarkup(<HomePage data={await homeData(store)} />);
 
-    // ⚠️ «ترتیب» در طرح تازه یعنی **موقعیت روی محور** (بند ۱.۴: راست =
+    // ⚠️ «ترتیب» در طرح تازه یعنی **موقعیت روی محور** (: راست =
     // ارزان‌تر، و `right` فاصله از لبه‌ی راست است). میلی کد معرف دارد و
     // اینجا گران‌ترین است — باید چپ‌ترین بنشیند، یعنی **بیشترین** درصد.
     // اگر روزی کمیسیون وارد هندسه شود، همین‌جا قرمز می‌شود.
@@ -314,7 +270,7 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
   });
 
   it("توابع مرتب‌سازی حتی نام فیلدهای معرف را نمی‌شناسند (نگهبان سطح کد)", () => {
-    // بند ۶.۴: «referral_url نباید هیچ ورودی‌ای به منطق مرتب‌سازی داشته
+    // «referral_url نباید هیچ ورودی‌ای به منطق مرتب‌سازی داشته
     // باشد.» این نگهبان وجودی است: اگر روزی کسی referral را وارد
     // tableView/bestView/groupRows یا لایه‌ی ردیف کند، همین‌جا قرمز می‌شود.
     // ⚠️ مسیرها با بازنویسی تنکستک به‌روز شدند؛ اگر فایلی جابه‌جا شد،

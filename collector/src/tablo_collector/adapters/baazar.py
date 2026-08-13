@@ -1,17 +1,3 @@
-"""آداپتر بازر — `api.baazar.ir/landing/v1/price/DAILY/30`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۱ تا ۳.۳ و ۳.۶):
-
-- `data.buyPrice` / `data.sellPrice` **ریال** بر گرم ⟸ ضریب صریح ÷۱۰.
-- نام‌گذاری «دید کاربر» (بند ۳.۲): `buyPrice` بزرگ‌تر = آنچه کاربر
-  می‌پردازد؛ نگاشت با قاعده‌ی ثابت `ask_bid`.
-- کارمزد در خود اسپرد API است (بند ۳.۸: رفت‌وبرگشت ~۱٫۱۳٪) ⟸
-  `fee_source = API`.
-- `data.prices[]` تاریخچه‌ی ۳۰ روزه است (بند ۳.۶) — این آداپتر استفاده‌اش
-  نمی‌کند.
-- API فیلد وضعیت باز/بسته ندارد ⟸ هر دو سمت باز فرض می‌شود.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -29,7 +15,6 @@ class BaazarAdapter:
     slug = "baazar"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = BAAZAR_ENDPOINT
-    # ضریب صریح این منبع: ریال بر گرم، ÷۱۰ به تومان (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("0.1")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

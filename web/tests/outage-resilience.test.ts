@@ -1,17 +1,3 @@
-/**
- * مرز وب — رفتار در **قطعی منبع** (قاعده‌ی ۵ قراردادها: «قطع منبع ⟸ کهنگی،
- * نه خطا»).
- *
- * قطعی ردیس اینجا با همان چیزی مدل می‌شود که منبع واقعی در قطعی برمی‌گرداند:
- * `createRedisPriceSource` هر خطای اتصال را به «داده‌ای نیست» ترجمه می‌کند،
- * یعنی فهرست تهی و اسنپ‌شات `null`. پس فیک زیر دقیقاً همان است — هیچ
- * ردیس/شبکه‌ای لازم نیست.
- *
- * سه چیز سنجیده می‌شود، چون هر سه بازدارنده‌ی انتشار بودند:
- *   ۱. اسلاگ معتبرِ بی‌داده باید حل شود (۲۰۰ با حالت کهنگی)، نه ۴۰۴.
- *   ۲. اسلاگ ناشناخته باید همچنان ۴۰۴ بماند.
- *   ۳. سایت‌مپ باید کامل بماند، نه فقط صفحات ایستا.
- */
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -35,7 +21,6 @@ import { fetchRowsForPlatforms } from "../src/lib/rows";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { resolveSlug } from "../src/lib/slugs";
 
-/** آنچه منبع ردیس در قطعی برمی‌گرداند: همه‌چیز تهی، هیچ خطایی بالا نمی‌رود. */
 function seedOutage(): void {
   setPriceSource({
     getListedPlatforms: async () => [],
@@ -61,9 +46,6 @@ async function slugPage(slug: string) {
     getPlatformSnapshot,
     getUpdatedAt,
     getInstruments: listInstruments,
-    // این فایل هیچ setHistorySource/setReferencePriceSource ای صدا نمی‌زند —
-    // دقیقاً همان قطعی که می‌سنجد: خواننده‌ی دامنه بی‌منبع، خودش کهنگی
-    // برمی‌گرداند (فهرست/نوار خالی)، نه خطا.
     getPlatformHistory,
     getReferencePrice,
   });
@@ -91,10 +73,8 @@ describe("قطع ردیس: اسلاگ معتبر ۲۰۰ می‌ماند، ناش
     expect(page?.kind).toBe("platform");
     if (page?.kind !== "platform") return;
     expect(page.platform.name_fa).toBe("وال‌گلد");
-    // هیچ قیمتی نیست، ولی صفحه هست: نما «قیمت در دسترس نیست» رندر می‌کند.
     expect(page.snapshot).toBeNull();
     expect(page.updatedAt).toBeNull();
-    // لینک درآمدزا هم زنده می‌ماند: مقصدش فراداده‌ی ثابت است، نه قیمت.
     expect(page.hasOutbound).toBe(true);
   });
 
@@ -103,7 +83,6 @@ describe("قطع ردیس: اسلاگ معتبر ۲۰۰ می‌ماند، ناش
     expect(page?.kind).toBe("instrument");
     if (page?.kind !== "instrument") return;
     expect(page.listing.name_fa).toBe("طلای ۱۸ عیار");
-    // جدول خالی نمی‌شود: هر سکوی پشتیبان ردیف «قیمت در دسترس نیست» می‌گیرد.
     expect(page.rows.map((row) => row.platform.slug)).toEqual(
       page.listing.supporting_platform_slugs,
     );
@@ -115,8 +94,8 @@ describe("قطع ردیس: اسلاگ معتبر ۲۰۰ می‌ماند، ناش
       expect(await slugPage(listing.slug), listing.slug).toBeNull();
     }
     expect(await slugPage("no-such-thing")).toBeNull();
-    expect(await slugPage("goldika")).toBeNull(); // PERMISSION_PENDING — تصمیم ۲۰
-    expect(await slugPage("blog")).toBeNull(); // کلمه‌ی رزرو
+    expect(await slugPage("goldika")).toBeNull();
+    expect(await slugPage("blog")).toBeNull();
   });
 });
 
@@ -137,20 +116,11 @@ describe("قطع ردیس: سایت‌مپ کامل می‌ماند", () => {
     }
     expect(paths.has("/")).toBe(true);
     expect(paths.has(`/blog/${POST.slug}`)).toBe(true);
-    // نگهبان عددی: سایت‌مپِ فقط-صفحات-ایستا (۴ نشانی) دوباره تکرار نشود.
     expect(entries.length).toBeGreaterThan(REGISTRY_PLATFORMS.length);
   });
 });
 
 describe("قطع پستگرس: سایت‌مپ ناقص منتشر نمی‌شود", () => {
-  /**
-   * صفحه‌ی HTML بلاگ می‌تواند با فهرست تهی ۲۰۰ بماند (بازدیدکننده متن صفحه
-   * را می‌بیند)، ولی سایت‌مپ نمی‌تواند: یک ۲۰۰ که بی‌صدا همه‌ی ‎/blog/…‎ را
-   * انداخته، به گوگل می‌گوید «این صفحه‌ها رفته‌اند» — و کش هم می‌شود. پس
-   * مسیر سایت‌مپ از نسخه‌ی سخت‌گیر می‌خواند و در خطا ۵۰۳ با ‎no-store‎ می‌دهد
-   * تا لبه با ‎stale-if-error‎ نسخه‌ی سالم قبلی را سرو کند (RFC 5861 دقیقاً
-   * همین ۵xx را پوشش می‌دهد).
-   */
   it("نسخه‌ی سخت‌گیر خطای استور را قورت نمی‌دهد، ولی نسخه‌ی معمولی می‌دهد", async () => {
     const boom = new Error("postgres down");
     setBlogSource({
@@ -175,7 +145,6 @@ describe("payload زنده همیشه مقدم بر رجیستری ایستاس�
       getInstruments: async () => [],
     });
     expect((await resolveSlug("sekoye-taze"))?.kind).toBe("platform");
-    // و فهرست ایستا جایگزینش نمی‌شود — زنده که هست، کف خوانده نمی‌شود.
     expect((await listPlatforms()).map((p) => p.slug)).toEqual(["sekoye-taze"]);
     expect(await resolveSlug("wallgold")).toBeNull();
   });
@@ -198,7 +167,6 @@ describe("payload زنده همیشه مقدم بر رجیستری ایستاس�
         },
       ],
     });
-    // رجیستری ایستا published=false دارد؛ payload زنده بازش کرده.
     expect((await resolveSlug("noghre"))?.kind).toBe("instrument");
   });
 });

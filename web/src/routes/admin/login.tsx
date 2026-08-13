@@ -1,10 +1,3 @@
-/**
- * فرم ورود پنل مدیریت — ‎/admin/login‎ (بلیت ۲۰).
- *
- * فقط یک رمز عبور (بدون کاربر/نقش — تصمیم صریح مالک). موفقیت یعنی
- * `POST /api/admin-login` یک `Set-Cookie` نشست می‌دهد؛ این فایل فقط UI و
- * ناوبری بعد از آن است — منطق واقعی در `lib/server/admin-login.ts`.
- */
 import { useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 

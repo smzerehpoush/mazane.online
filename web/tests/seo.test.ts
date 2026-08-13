@@ -1,11 +1,3 @@
-/**
- * مرز وب — سطح سئوی سروری: ‎robots.txt‎، ‎sitemap.xml‎ و سیاست کش لبه.
- *
- * این سه قاعده مستقیماً روی اولویت شماره‌ی یک کسب‌وکار (ایندکس گوگل) می‌نشینند
- * و همه خالص‌اند: ورودی داده‌ی seed شده، خروجی رشته یا هدر. مسیرهای
- * ‎src/routes/robots[.]txt.ts‎ و ‎src/routes/sitemap[.]xml.ts‎ فقط پوسته‌ی
- * نازک همین توابع‌اند و خودشان منطقی ندارند.
- */
 import { describe, expect, it } from "vitest";
 
 import type { PublishedPost } from "../src/lib/blog";
@@ -43,8 +35,6 @@ const INSTRUMENTS: InstrumentListing[] = [
     published: true,
   },
   {
-    // دارایی تک‌سکویی — دروازه‌ی انتشار بسته (تصمیم ۱۰): ۴۰۴ است، پس در
-    // سایت‌مپ هم نباید باشد.
     slug: "noghre-990",
     instrument: "SILVER_990",
     name_fa: "نقره‌ی ۹۹۰",
@@ -69,7 +59,7 @@ function entries() {
   });
 }
 
-describe("robots.txt (بند ۶.۴)", () => {
+describe("robots.txt", () => {
   it("‎/go/‎ برای همه‌ی خزنده‌ها بسته است و بقیه باز", () => {
     const text = renderRobotsTxt();
     expect(text).toContain("User-agent: *");
@@ -77,7 +67,7 @@ describe("robots.txt (بند ۶.۴)", () => {
     expect(text).toContain("Disallow: /go/");
   });
 
-  it("‎/admin‎ برای همه‌ی خزنده‌ها بسته است (بلیت ۲۰، بند ۹ قراردادها)", () => {
+  it("‎/admin‎ برای همه‌ی خزنده‌ها بسته است", () => {
     expect(renderRobotsTxt()).toContain("Disallow: /admin");
   });
 
@@ -101,15 +91,15 @@ describe("sitemap.xml", () => {
     ]);
   });
 
-  it("دارایی با دروازه‌ی انتشار بسته نمی‌آید (تصمیم ۱۰)", () => {
+  it("دارایی با دروازه‌ی انتشار بسته نمی‌آید", () => {
     expect(entries().map((entry) => entry.path)).not.toContain("/noghre-990");
   });
 
-  it("‎/go/‎ هرگز در سایت‌مپ نمی‌آید — در robots بسته است (بند ۶.۴)", () => {
+  it("‎/go/‎ هرگز در سایت‌مپ نمی‌آید — در robots بسته است", () => {
     expect(renderSitemapXml(entries())).not.toContain("/go/");
   });
 
-  it("lastmod فقط برای پست بلاگ و از updated_at خودش (بند ۶.۷)", () => {
+  it("lastmod فقط برای پست بلاگ و از updated_at خودش", () => {
     const withLastmod = entries().filter((entry) => entry.lastModified !== undefined);
     expect(withLastmod).toEqual([
       { path: "/blog/maliyat-tala-1405", lastModified: "2026-08-03T11:30:00.000Z" },
@@ -127,7 +117,6 @@ describe("sitemap.xml", () => {
     expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
     expect(xml).toContain(`<loc>${SITE_URL}/tala-18</loc>`);
     expect(xml.trimEnd().endsWith("</urlset>")).toBe(true);
-    // به‌ازای هر ورودی دقیقاً یک <url>.
     expect(xml.match(/<url>/g)?.length).toBe(entries().length);
   });
 
@@ -137,7 +126,7 @@ describe("sitemap.xml", () => {
   });
 });
 
-describe("سیاست کش لبه (بند ۱۰ — قطعی مبدأ)", () => {
+describe("سیاست کش لبه (قطعی مبدأ)", () => {
   const base = {
     pathname: "/",
     status: 200,
@@ -156,13 +145,6 @@ describe("سیاست کش لبه (بند ۱۰ — قطعی مبدأ)", () => {
     expect(edgeCacheControlFor({ ...base, status: 503 })).toBe(NO_STORE);
   });
 
-  /**
-   * رگرسیون: پیش از این ۴۰۴ سیاست کش HTML می‌گرفت. با `s-maxage=60` و
-   * `stale-while-revalidate=600`، یک ۴۰۴ گذرا (مثلاً در قطعی ردیس) تا ده
-   * دقیقه پس از سالم شدن مبدأ هم از لبه سرو می‌شد و به گوگل‌بات می‌گفت
-   * «این صفحه رفته». `stale-if-error` هم نجات نمی‌داد: RFC 5861 فقط ۵xx
-   * را پوشش می‌دهد. «صفحه‌ی نبوده» هرگز کش‌شدنی نیست.
-   */
   it("۴۰۴ هرگز s-maxage نمی‌گیرد — no-store می‌گیرد", () => {
     const value = edgeCacheControlFor({ ...base, status: 404 });
     expect(value).toBe(NO_STORE);
@@ -178,10 +160,6 @@ describe("سیاست کش لبه (بند ۱۰ — قطعی مبدأ)", () => {
     }
   });
 
-  /**
-   * ۳۰۴ تنها استثناست: بدنه ندارد و هدرهایش روی نسخه‌ی ذخیره‌شده‌ی لبه
-   * می‌نشیند، پس `no-store` روی آن یعنی دور انداختن دارایی سالمِ کش‌شده.
-   */
   it("۳۰۴ دست‌نخورده می‌ماند", () => {
     expect(edgeCacheControlFor({ ...base, status: 304 })).toBeNull();
   });
@@ -207,7 +185,7 @@ describe("سیاست کش لبه (بند ۱۰ — قطعی مبدأ)", () => {
   });
 });
 
-describe("هدرهای پنل مدیریت (بلیت ۲۰، بند ۹ قراردادها)", () => {
+describe("هدرهای پنل مدیریت", () => {
   it("‎/admin‎ و هر زیرمسیرش هدر بی‌کش و بدون‌نمایه می‌گیرند", () => {
     for (const pathname of ["/admin", "/admin/", "/admin/login", "/admin/foo/bar"]) {
       const headers = adminHeadersFor(pathname);

@@ -1,23 +1,3 @@
-/**
- * مرز وب — آپلود عکس شاخص پست در پنل (بلیت ۲۴): ‎ImageStore‎ فِیک
- * درون‌حافظه‌ای ⟸ پاسخ endpoint.
- *
- * همان مرز `admin-posts-requests.test.ts`/`post-views.test.tsx`: منطق در
- * `lib/server/admin-post-image.ts` مستقیم از تست صدا زده می‌شود، بدون بالا
- * آوردن سرور یا اتصال واقعی به S3 — منبع تصویر با `seedImageStore`/
- * `seedBrokenImageStore` (فِیک درون‌حافظه‌ای) seed می‌شود؛ `sharp` و
- * `@aws-sdk/client-s3` در این تست هرگز صدا زده نمی‌شوند.
- *
- * سنجیده می‌شود:
- *   ۱. بدون نشست معتبر ⟸ ۴۰۱؛ اسلاگ بدشکل/ناموجود ⟸ ۴۰۴.
- *   ۲. متن جایگزین غایب/خالی ⟸ ۴۰۰، آپلود واقعی صدا زده نمی‌شود.
- *   ۳. فایل غایب ⟸ ۴۰۰.
- *   ۴. فایل بزرگ‌تر از سقف ⟸ ۴۱۳ — هم با Content-Length زودهنگام، هم پس از
- *      خواندن بافر.
- *   ۵. موفق ⟸ ۲۰۰، image_url/alt/width/height روی رکورد پست می‌نشیند.
- *   ۶. قطع انبار عکس ⟸ ۵۰۲، ولی متن پست دست‌نخورده می‌ماند (مسیر مجزا).
- *   ۷. متد دیگر ⟸ ۴۰۵؛ همه‌ی پاسخ‌ها بی‌کش و بدون اجازه‌ی نمایه‌سازی‌اند.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSessionToken } from "../src/lib/admin-auth";
@@ -267,7 +247,6 @@ describe("آپلود موفق", () => {
     expect(body.post.image_alt).toBe("نمودار قیمت طلا روی موبایل");
     expect(body.post.image_width).toBe(1600);
     expect(body.post.image_height).toBe(900);
-    // updated_at دست‌نخورده — عکس تیک «ویرایش معنادار» ندارد.
     expect(body.post.updated_at).toBe("2026-08-01T00:00:00.000Z");
     expect(fake.imageChanges).toHaveLength(1);
   });

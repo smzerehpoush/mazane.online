@@ -1,15 +1,3 @@
-"""آداپتر تکنوگلد — `api2.technogold.gold/customer/tradeables/only-price/1`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۱ تا ۳.۳ و ۸.۲):
-
-- هاست عمومی `api2` است (نه `app` که امضا می‌خواهد): بدون auth و `CORS: *`.
-- `results.buy_price` / `results.sell_price` تومان بر گرم ⟸ ضریب صریح ×۱.
-- نام‌گذاری «دید کاربر» (بند ۳.۲): `buy_price` بزرگ‌تر = آنچه کاربر
-  می‌پردازد؛ نگاشت نهایی با قاعده‌ی ثابت `ask_bid` انجام می‌شود.
-- کارمزد در خود اسپرد API است (بند ۳.۸: ~۰٫۶۲٪ هر سمت) ⟸ `fee_source = API`.
-- API فیلد وضعیت باز/بسته ندارد ⟸ هر دو سمت باز فرض می‌شود.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -27,7 +15,6 @@ class TechnogoldAdapter:
     slug = "technogold"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = TECHNOGOLD_ENDPOINT
-    # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

@@ -1,19 +1,3 @@
-"""مرز گردآورنده‌ی مرجع قیمت: فیکسچر ⟸ ردیف‌های مرجع در استور (بند ۱۲.۲).
-
-فیکسچر واقعی ضبط‌شده‌ی ۲۰۲۶-۰۸-۰۶ (بدون هیچ تماس شبکه‌ای در تست):
-
-- `talair_price.json` — پاسخ `GET www.tala.ir/ajax/price/talair`؛ همین
-  payload زنده فیلد خراب هم دارد (`gold_mesghal_usd.v = "0"`، بازار بسته).
-
-قواعد قفل‌شده: مرجع سکو نیست (هرگز در فهرست عمومی نمی‌آید)، عددش همیشه با
-ذکر منبع ذخیره می‌شود، و مراجع به‌کلی بیرون از رأی چک میانه‌اند (docstring
-ماژول references.pipeline).
-
-⚠️ بن‌بست حذف شد و از تلا فقط ۱۸ عیار می‌ماند (سند تصمیم ۰۰۰۲): هر دو
-جمع‌آوری می‌شدند و هیچ‌جای سایت دیده نمی‌شدند. تنها مصرف این لایه نوار
-«نرخ اتحادیه» است.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -39,8 +23,6 @@ def talair_payload() -> Any:
 
 
 class FakeTransport:
-    """فیک قرارداد ReferenceTransport — پاسخ‌ها از فیکسچر، با ثبت درخواست‌ها."""
-
     def __init__(self, get_responses: dict[str, Any], post_responses: dict[str, Any]) -> None:
         self._get = get_responses
         self._post = post_responses
@@ -67,9 +49,6 @@ def full_transport() -> FakeTransport:
     )
 
 
-# ― طلا دات‌آی‌آر ―
-
-
 async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
     store = InMemoryStore()
 
@@ -79,15 +58,12 @@ async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
 
     stored = await store.get_reference("talair")
     assert stored is not None
-    # ذکر منبع داخل خود داده — قید مطلق بند ۱۲.۲/۷.۱.
     assert stored.name_fa == "طلا دات‌آی‌آر"
     assert stored.source_url == "https://www.tala.ir/"
     assert stored.fetched_at == FETCHED_AT
 
-    # فقط ۱۸ عیار — مظنه و انس دیگر خوانده نمی‌شوند.
     assert [q.instrument for q in stored.quotes] == [ReferenceInstrument.GOLD_18K_TOMAN]
     quote = stored.quotes[0]
-    # رشته‌ی هزارگان‌دار «18,559,700» ⟸ عدد، با ضریب صریح ×۱.
     assert quote.value == Decimal("18559700")
     assert quote.side is Side.PRICE
     assert quote.raw_scale == Decimal("1")
@@ -95,13 +71,8 @@ async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
 
 
 async def test_talair_broken_gold_18k_means_stale_reference_not_bad_data() -> None:
-    """tala.ir داده‌ی خراب دارد (بند ۳.۶ سند تحقیق): فیلد صفرشده کنار می‌رود.
-
-    حالا که تنها همین یک فیلد خوانده می‌شود، خرابی‌اش یعنی کل نوبت مرجع
-    کهنه می‌ماند — نه ردیف تهی، نه صفر (قاعده‌ی سخت ۵).
-    """
     payload = talair_payload()
-    payload["gold"]["gold_18k"]["v"] = "0"  # همان الگوی خرابی زنده‌ی arz_dolar
+    payload["gold"]["gold_18k"]["v"] = "0"
     store = InMemoryStore()
 
     with pytest.raises(AdapterError):
@@ -117,12 +88,7 @@ async def test_talair_broken_gold_18k_means_stale_reference_not_bad_data() -> No
     assert await store.get_reference("talair") is None
 
 
-# ― قواعد سراسری مراجع ―
-
-
 async def test_references_are_stored_but_never_platforms_nor_listed() -> None:
-    """معیار پذیرش بلیت ۵: داده‌ی مرجع ذخیره می‌شود ولی در جدول مقایسه
-    (فهرست عمومی سکوها) نمی‌آید — نه ردیف، نه لینک معرف."""
     store = InMemoryStore()
     await store.save_platforms(PLATFORMS)
 
@@ -131,12 +97,9 @@ async def test_references_are_stored_but_never_platforms_nor_listed() -> None:
     )
     assert {s.reference_slug for s in saved} == {"talair"}
 
-    # در استور مرجع هست…
     assert await store.get_reference("talair") is not None
-    # …و در تاریخچه (آرشیو الزام حقوقی — بند ۷.۱).
     assert {s.reference_slug for s in store.reference_history} == {"talair"}
 
-    # …ولی هرگز سکو نیست: نه در فهرست عمومی، نه در PLATFORMS، نه در کلید سکوها.
     listed_slugs = {p.slug for p in await store.get_listed_platforms()}
     assert "talair" not in listed_slugs
     assert "talair" not in {p.slug for p in PLATFORMS}
@@ -144,7 +107,6 @@ async def test_references_are_stored_but_never_platforms_nor_listed() -> None:
 
 
 async def test_dead_reference_does_not_break_the_round() -> None:
-    """قطع مرجع ⟸ کهنگی همان مرجع؛ نوبت سالم تمام می‌شود (قاعده‌ی سخت ۵)."""
     transport = FakeTransport(
         get_responses={TALAIR_ENDPOINT: ConnectionError("connection refused")},
         post_responses={},
@@ -160,6 +122,4 @@ async def test_dead_reference_does_not_break_the_round() -> None:
 
 
 async def test_bonbast_is_gone_from_the_reference_roster() -> None:
-    """سند تصمیم ۰۰۰۲: تنها مرجع فعال تلاست. اگر روزی مرجع تازه‌ای اضافه شد،
-    اول باید معلوم باشد کجای سایت دیده می‌شود."""
     assert [source.slug for source in REFERENCE_SOURCES] == ["talair"]

@@ -1,18 +1,3 @@
-"""مرز گردآورنده — نگه‌داری داده (بلیت ۱۶): تجمیع ساعتی، فشرده‌سازی، هرس.
-
-ردیف‌های خام مصنوعی در چند ساعت وارد استور (فیک درون‌حافظه‌ای) می‌شوند و
-رفتار بیرونی سه کار نگه‌داری بررسی می‌شود:
-
-- تجمیع ساعتی: کمینه/بیشینه/باز/بسته + شمار نمونه، فقط ساعت‌های کامل‌شده،
-  بازاجرا بدون تکرار (upsert).
-- هرس: فقط ردیف‌های قدیمی‌تر از ۹۰ روز که ساعتشان تجمیع موفق دارد
-  (معیار پذیرش: «هرس فقط بعد از تجمیع موفق همان بازه»).
-- فشرده‌سازی تکراری‌های متوالی: از هر دنباله‌ی مقدار یکسان، اولین و آخرین
-  ردیف می‌مانند (قرارداد دفاع‌پذیری مستند در `retention.py`).
-
-هیچ تماس شبکه‌ای و هیچ سرویس زنده‌ای در کار نیست.
-"""
-
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -39,15 +24,9 @@ from tablo_collector.retention import (
 )
 from tablo_collector.store.memory import InMemoryStore
 
-# ساعت ۱۰:۰۰ یک روز دلخواه — همه‌ی زمان‌ها تزریقی‌اند، ساعت سیستم بی‌اثر است.
 BASE = datetime(2026, 1, 15, 10, 0, 0, tzinfo=UTC)
 FAR = BASE + timedelta(days=365)
 
-# قیمت مؤثر دو سمت از یک mid مصنوعی ساخته می‌شود تا هر سری قابل تشخیص باشد.
-# هر اسنپ‌شات **سه** سطر خام می‌نویسد، نه دو: مدل سطر MEAN (قیمت مرجع خود
-# سکو) را هم می‌سازد و اینجا چون دو دلتا قرینه‌اند مقدارش دقیقاً همان mid است.
-# همین سری MEAN است که نمودار ۲۴ ساعته از تجمیع ساعتی‌اش می‌خواند.
-# یک سکو، یک سطر (سند تصمیم ۰۰۰۲) — پیش‌تر سه سمت بود.
 SIDES_PER_SNAPSHOT = 1
 
 
@@ -113,14 +92,11 @@ async def test_rollup_builds_min_max_open_close_per_completed_hour() -> None:
     await seed(
         store,
         [
-            # ساعت ۱۰ — چهار نوبت با نوسان
             (100_000, BASE),
             (100_500, BASE + timedelta(minutes=10)),
             (99_800, BASE + timedelta(minutes=20)),
             (100_200, BASE + timedelta(minutes=30)),
-            # ساعت ۱۱ — یک نوبت
             (101_000, BASE + timedelta(hours=1, minutes=5)),
-            # ساعت ۱۲ (جاری، ناقص) — نباید تجمیع شود
             (102_000, BASE + timedelta(hours=2, minutes=1)),
         ],
     )
@@ -134,7 +110,6 @@ async def test_rollup_builds_min_max_open_close_per_completed_hour() -> None:
     assert hour_10.min_value == 99_800
     assert hour_10.max_value == 100_500
     assert hour_10.sample_count == 4
-    # ساعت ۱۱ تجمیع شده، ساعت جاری نه.
     assert ("PRICE", BASE + timedelta(hours=1)) in by_key
     assert all(r.hour_start < BASE + timedelta(hours=2) for r in rollups)
 
@@ -150,15 +125,12 @@ async def test_rollup_rerun_is_idempotent() -> None:
     second = await store.get_hourly_rollups(SourceKind.PLATFORM, "wallgold")
 
     assert first == second
-    # یک سمت، یک ساعت — بدون ردیف تکراری.
     assert len(second) == SIDES_PER_SNAPSHOT
 
 
 async def test_rollup_excludes_suppressed_rows() -> None:
-    """ردیف سرکوب‌شده (رد چک میانه) هرگز نمایش داده نشده ⟸ وارد تجمیع نمی‌شود."""
     store = InMemoryStore()
     await seed(store, [(100_000, BASE), (100_200, BASE + timedelta(minutes=20))])
-    # مقدار پرت سرکوب‌شده — نباید بیشینه را آلوده کند.
     await store.save_snapshot(
         make_snapshot(1_000_000, BASE + timedelta(minutes=10), suppressed=True)
     )
@@ -171,7 +143,6 @@ async def test_rollup_excludes_suppressed_rows() -> None:
 
 
 async def test_reference_quotes_are_rolled_up() -> None:
-    """مرجع قیمت هم جزو آرشیو حقوقی است (بند ۷.۱) — تجمیع می‌شود، با kind جدا."""
     store = InMemoryStore()
     await store.save_reference(make_reference(9_000_000, BASE))
     await store.save_reference(make_reference(9_100_000, BASE + timedelta(minutes=30)))
@@ -188,29 +159,24 @@ async def test_reference_quotes_are_rolled_up() -> None:
 
 
 async def test_prune_only_after_rollup_of_same_interval() -> None:
-    """معیار پذیرش: هرس فقط بعد از تجمیع موفق همان بازه — ساعت تجمیع‌نشده
-    هر قدر هم کهنه باشد می‌ماند تا تجمیعش برسد."""
     store = InMemoryStore()
     await seed(
         store,
         [
-            (100_000, BASE),  # ساعت ۱۰
-            (101_000, BASE + timedelta(hours=1, minutes=5)),  # ساعت ۱۱
+            (100_000, BASE),
+            (101_000, BASE + timedelta(hours=1, minutes=5)),
         ],
     )
-    # تجمیع فقط تا پیش از ساعت ۱۱ — ساعت ۱۱ هنوز «جاری» است و تجمیع نمی‌شود.
     await rollup_completed_hours(store, now=BASE + timedelta(hours=1, minutes=30))
 
     later = BASE + timedelta(days=91)
     pruned = await prune_expired_raw(store, now=later)
 
     remaining = await store.load_raw_rows(until=FAR)
-    assert pruned == SIDES_PER_SNAPSHOT  # سطرِ ساعتِ تجمیع‌شده‌ی ۱۰
+    assert pruned == SIDES_PER_SNAPSHOT
     assert all(hour_floor(r.fetched_at) != BASE for r in remaining)
-    # ساعت ۱۱ با اینکه ۹۱ روز کهنه است، بدون تجمیع هرس نشده.
     assert any(hour_floor(r.fetched_at) == BASE + timedelta(hours=1) for r in remaining)
 
-    # جبران: تجمیعِ جامانده ⟸ حالا هرس مجاز است.
     await rollup_completed_hours(store, now=later)
     await prune_expired_raw(store, now=later)
     assert await store.load_raw_rows(until=FAR) == ()
@@ -221,18 +187,16 @@ async def test_prune_keeps_rows_inside_retention_window() -> None:
     fresh_at = BASE + timedelta(days=89)
     await seed(store, [(100_000, BASE), (105_000, fresh_at)])
     now = BASE + timedelta(days=90, hours=1)
-    await rollup_completed_hours(store, now=now)  # هر دو ساعت تجمیع می‌شوند
+    await rollup_completed_hours(store, now=now)
 
     pruned = await prune_expired_raw(store, now=now)
 
     remaining = await store.load_raw_rows(until=FAR)
-    assert pruned == SIDES_PER_SNAPSHOT  # فقط ردیف‌های ساعتِ ۹۰ روز پیش
+    assert pruned == SIDES_PER_SNAPSHOT
     assert {r.fetched_at for r in remaining} == {fresh_at}
 
 
 async def test_prune_never_touches_suppressed_rows() -> None:
-    """ردیف سرکوب‌شده سندِ کارکردِ چک میانه است — هرگز هرس نمی‌شود
-    (در تجمیع هم نیست، پس «تجمیع همان بازه» درباره‌اش معنا ندارد)."""
     store = InMemoryStore()
     await seed(store, [(100_000, BASE)])
     await store.save_snapshot(
@@ -249,36 +213,29 @@ async def test_prune_never_touches_suppressed_rows() -> None:
 
 
 async def test_compression_keeps_first_and_last_of_each_run() -> None:
-    """قرارداد فشرده‌سازی: از دنباله‌ی بی‌وقفه‌ی مقدار یکسان، اول و آخر
-    می‌مانند — «چه قیمتی کی نمایش داده می‌شد» همچنان اثبات‌پذیر است."""
     store = InMemoryStore()
     run_times = [BASE + timedelta(minutes=m) for m in (0, 10, 20, 30)]
-    await seed(store, [(100_000, at) for at in run_times])  # دنباله‌ی ثابت
-    await seed(store, [(100_500, BASE + timedelta(minutes=40))])  # شکستن دنباله
+    await seed(store, [(100_000, at) for at in run_times])
+    await seed(store, [(100_500, BASE + timedelta(minutes=40))])
     now = BASE + timedelta(hours=1, minutes=30)
     await rollup_completed_hours(store, now=now)
 
     removed = await compress_duplicate_runs(store, now=now)
 
-    assert removed == 2 * SIDES_PER_SNAPSHOT  # دو ردیف میانی × یک سمت
+    assert removed == 2 * SIDES_PER_SNAPSHOT
     remaining = await store.load_raw_rows(until=FAR)
     buy_times = sorted(r.fetched_at for r in remaining if r.side == "PRICE")
     assert buy_times == [run_times[0], run_times[-1], BASE + timedelta(minutes=40)]
-    # بازاجرا دیگر چیزی برای حذف ندارد.
     assert await compress_duplicate_runs(store, now=now) == 0
 
 
 async def test_compression_requires_rollup_of_the_hour() -> None:
-    """فشرده‌سازی هم حذفِ خام است ⟸ همان دروازه‌ی هرس: بدون تجمیعِ موفقِ
-    همان بازه هیچ ردیفی حذف نمی‌شود؛ ساعت جاریِ ناقص هم دست‌نخورده است."""
     store = InMemoryStore()
     await seed(store, [(100_000, BASE + timedelta(minutes=m)) for m in (0, 10, 20)])
     now = BASE + timedelta(hours=1, minutes=30)
 
-    # بدون هیچ تجمیعی — هیچ حذفی مجاز نیست.
     assert await compress_duplicate_runs(store, now=now) == 0
 
-    # تکراری‌های ساعتِ جاری حتی بعد از تجمیعِ ساعت‌های قبلی حذف نمی‌شوند.
     await rollup_completed_hours(store, now=now)
     await seed(
         store,
@@ -289,12 +246,10 @@ async def test_compression_requires_rollup_of_the_hour() -> None:
     current_hour_rows = [
         r for r in remaining if hour_floor(r.fetched_at) == BASE + timedelta(hours=1)
     ]
-    assert len(current_hour_rows) == 3 * SIDES_PER_SNAPSHOT  # سه نوبت × یک سمت
+    assert len(current_hour_rows) == 3 * SIDES_PER_SNAPSHOT
 
 
 async def test_retention_pass_preserves_hourly_history_after_prune() -> None:
-    """زنجیره‌ی دفاع حقوقی (بند ۷.۱): بعد از هرسِ خامِ کهنه، تاریخچه‌ی ساعتی
-    کامل و منتسب باقی است و کوئری تاریخچه از همان می‌خواند."""
     store = InMemoryStore()
     await seed(
         store,
@@ -310,7 +265,6 @@ async def test_retention_pass_preserves_hourly_history_after_prune() -> None:
 
     report = await retention_pass(store, now=later)
 
-    # هر دو ساعتِ سکو + یک ساعتِ مرجع در همان گذر تجمیع و سپس هرس شدند.
     assert report.rollups_written == 2 * SIDES_PER_SNAPSHOT + 1
     assert report.rows_pruned == 4 * SIDES_PER_SNAPSHOT + 1
     assert await store.load_raw_rows(until=FAR) == ()

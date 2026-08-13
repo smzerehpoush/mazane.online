@@ -1,10 +1,3 @@
-/**
- * ستون کناری — تازه‌ترین نوشته‌های بلاگ از پستگرس (نو به کهنه).
- *
- * پستی نیست ⟸ این جزء اصلاً رندر نمی‌شود (تصمیم مالک: جعبه‌ی خالی نه)؛
- * تصمیمش در `routes/index.tsx` گرفته می‌شود تا جدول تمام‌عرض شود.
- * لینک‌ها داخلی‌اند (‎/blog/<slug>‎) — نه درآمدزا، پس rel نمی‌گیرند.
- */
 import type { PublishedPost } from "@/lib/blog";
 import { formatDateFa } from "@/lib/format";
 import { postImageAsset } from "@/lib/images";
@@ -15,7 +8,6 @@ export function Sidebar({ posts }: { posts: PublishedPost[] }) {
       <h2 className="text-sm font-semibold">تازه‌ترین نوشته‌ها</h2>
       <ul className="mt-5 space-y-5">
         {posts.map((post, index) => {
-          // بلیت ۲۵: پستِ بدون عکس همان جعبه‌ی تزئینی امروز است — بدون جای خالی.
           const image = postImageAsset(post);
           return (
             <li key={post.slug} className="border-b border-border/60 pb-5 last:border-0 last:pb-0">

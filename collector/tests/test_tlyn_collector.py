@@ -1,13 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی طلاین ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/tlyn_price.json` پاسخ واقعی
-`GET https://price.tlyn.ir/api/v1/price` است (ضبط‌شده ۲۰۲۶-۰۸-۰۶ با
-User-Agent صادق). تست‌ها هیچ تماس شبکه‌ای ندارند.
-
-⚠️ نام‌گذاری طلاین «دید فروشنده» است (سند تحقیق ۰۱، بند ۳.۲): فیلد `sell`
-بزرگ‌تر است و همان است که کاربر **می‌پردازد**. تست وارونگی سمت‌ها را قفل می‌کند.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -51,17 +41,12 @@ async def test_fixture_payload_is_stored_with_x1000_scale_and_inverted_sides() -
     assert stored.platform_slug == "tlyn"
 
     (price,) = stored.quotes
-    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
     assert price.side is Side.PRICE
 
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
-        # ضریب صریح این منبع: تومان ÷۱۰۰۰، ×۱۰۰۰ به تومان بر گرم
-        # (سند تحقیق ۰۱، بند ۳.۳).
         assert quote.raw_scale == Decimal("1000")
 
-    # وارونگی سمت‌ها: در فیکسچر `price.sell = 18599` و `price.buy = 18451`؛
-    # BUY مؤثر (آنچه کاربر می‌پردازد) باید از فیلد **sell** منبع بیاید.
     fixture_price = gold18(load_fixture())["price"]
     assert price.price_toman == 18525000
     assert price.raw_value == Decimal("18525")
@@ -79,9 +64,7 @@ async def test_terms_are_implied_from_spread_with_status_flag() -> None:
     assert terms.fee_source == FeeSource.IMPLIED
     assert terms.buy_fee_percent == Decimal("0.3995")
     assert terms.sell_fee_percent == Decimal("0.3995")
-    # سند تحقیق ۰۱ (بند ۳.۸) رفت‌وبرگشت طلاین را ~۰٫۸۰٪ اندازه گرفته بود.
     assert terms.round_trip_percent == Decimal("0.7957")
-    # status نماد GOLD18 در فیکسچر "enabled" است ⟸ هر دو سمت باز.
     assert terms.buy_enabled is True
     assert terms.sell_enabled is True
 

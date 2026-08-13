@@ -1,17 +1,3 @@
-"""آداپتر زرافزا — `api.zarafza.com/wallets/v1/prices`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۱ تا ۳.۳ و ۳.۶):
-
-- `data.G18.sell.price` / `data.G18.buy.price` تومان بر گرم ⟸ ضریب صریح ×۱.
-- ⚠️ نام‌گذاری «دید فروشنده» (بند ۳.۲): `sell` **بزرگ‌تر** است و همان است
-  که کاربر می‌پردازد. نگاشت با قاعده‌ی ثابت `ask_bid`.
-- ⚠️ دو سطح قیمت (بند ۳.۶): `price` و `instant` (اسپرد پهن‌تر، ~۱٫۵٪ در
-  برابر ~۰٫۵٪). مبنای مقایسه سطح **`price`** است — باید مشخص باشد کدام را
-  مقایسه می‌کنیم.
-- کارمزد در خود اسپرد API است ⟸ `fee_source = API`.
-- API فیلد وضعیت باز/بسته ندارد ⟸ هر دو سمت باز فرض می‌شود.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -29,7 +15,6 @@ class ZarafzaAdapter:
     slug = "zarafza"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = ZARAFZA_ENDPOINT
-    # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
@@ -38,7 +23,6 @@ class ZarafzaAdapter:
         if not isinstance(g18, dict):
             raise AdapterError("زرافزا: بدنه‌ی data.G18 در payload پیدا نشد")
 
-        # سطح `price` (نه `instant` با اسپرد پهن‌تر) — بند ۳.۶ سند تحقیق ۰۱.
         sell_price = (g18.get("sell") or {}).get("price")
         buy_price = (g18.get("buy") or {}).get("price")
         if sell_price is None or buy_price is None:

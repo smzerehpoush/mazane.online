@@ -1,10 +1,4 @@
 /**
- * معیارهای پیشنهاد سردبیر — ‎/darbare-pishnahad‎ (بلیت ۶؛ بند ۱۳، تصمیم ۹).
- *
- * پیشنهادِ بدون معیار علنی، تحریریه نیست. قاعده‌ی این صفحه همان است که کد
- * انتخاب پیشنهاد سردبیر اجرا می‌کند: اگر یکی عوض شد، دیگری هم باید. طبق
- * تصمیم ۹ این صفحه حذف نمی‌شود. اسلاگ لاتین تخت (تصمیم ۱۱).
- *
  * ⚠️ متن تحریریه است و منتقل‌شده‌ی عین‌به‌عین از ‎app/darbare-pishnahad/page.tsx‎
  * اپ نکست قبلی؛ بازنویسی نشود.
  */
@@ -18,10 +12,6 @@ const TITLE = "معیارهای پیشنهاد سردبیر — تابلو";
 const DESCRIPTION =
   "پیشنهاد سردبیر تابلو چگونه انتخاب می‌شود؟ معیار علنی: کمترین هزینه‌ی رفت‌وبرگشت میان سکوهایی با کارمزد اعلام‌شده در API و خرید و فروش باز.";
 
-/**
- * سرصفحه — جدا و صادرشده تا مرز تست وب بدون بستر روتر بسنجدش (همان رسم
- * `components/content/BlogViews.tsx`).
- */
 export function darbarePishnahadHead() {
   return {
     meta: [
@@ -32,7 +22,6 @@ export function darbarePishnahadHead() {
       { property: "og:type", content: "article" },
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/darbare-pishnahad` }],
-    // بند ۶.۵: BreadcrumbList همه‌جا جز ریشه.
     scripts: [
       {
         type: "application/ld+json",

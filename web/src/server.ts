@@ -18,8 +18,6 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-// h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
@@ -33,10 +31,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 }
 
 /**
- * ‎no-store‎ الزامی است: این پاسخ‌ها بیرون از زنجیره‌ی میان‌افزار ساخته
- * می‌شوند و `edgeCacheMiddleware` نمی‌بیندشان. اگر لبه‌ی آروان یک ۵۰۰ را کش
- * کند، در قطعی مبدأ همان خطا را تکرار می‌کند به‌جای نسخه‌ی سالم قبلی —
- * دقیقاً همان چیزی که بند ۱۰ سند معماری ممنوع کرده است.
+ * ⚠️ ‎no-store‎ الزامی است: این پاسخ‌ها بیرون از زنجیره‌ی میان‌افزار ساخته
+ * می‌شوند و اگر لبه یک ۵۰۰ را کش کند، در قطعی مبدأ همان خطا را به‌جای
+ * نسخه‌ی سالم قبلی تکرار می‌کند.
  */
 function errorResponse(): Response {
   return new Response(renderErrorPage(), {

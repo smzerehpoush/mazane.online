@@ -1,11 +1,3 @@
-"""ترابرد مراجع — دو فعل کوچک؛ در تست‌ها فیک فیکسچری همین قرارداد می‌آید.
-
-مراجع برخلاف سکوها فقط «GET یک JSON» نیستند: بن‌بست اول HTML می‌گیرد و بعد
-فرم POST می‌کند (با همان کوکی‌ها). پس قرارداد دو متد متنی است و پیاده‌سازی
-واقعی همان `httpx.AsyncClient` مشترک گردآورنده را (با User-Agent صادق و
-cookie jar خودش) قرض می‌گیرد — کرال مؤدب، قاعده‌ی ۶ قراردادها.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -25,8 +17,6 @@ class ReferenceTransport(Protocol):
 
 
 class HttpxReferenceTransport:
-    """پیاده‌سازی واقعی روی `httpx.AsyncClient` تزریقی (برای main)."""
-
     def __init__(self, client: Any) -> None:
         self._client = client
 
@@ -44,13 +34,6 @@ class HttpxReferenceTransport:
 
 
 class RobotsCheckedTransport:
-    """ترابرد مرجع پشت داوری `robots.txt` — مسیر ممنوع ⟸ کهنگی همان مرجع.
-
-    هم GET و هم POST داوری می‌شوند: گردش بن‌بست (`GET /` سپس `POST /json`)
-    تماماً کرال است و بسته شدن هر مرحله در robots یعنی همان مرحله ممنوع؛
-    داوری پیش از ارسال است تا درخواست ممنوع هرگز بیرون نرود.
-    """
-
     def __init__(self, gate: RobotsGate, inner: ReferenceTransport) -> None:
         self._gate = gate
         self._inner = inner

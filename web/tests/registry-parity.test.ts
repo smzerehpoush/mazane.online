@@ -1,24 +1,3 @@
-/**
- * نگهبان همگامی رجیستری ایستای وب با رجیستری کد گردآورنده.
- *
- * `src/lib/registry.ts` دستی نگهداری می‌شود و کارش این است که در قطعی ردیس
- * هویت صفحه‌ها را زنده نگه دارد. اگر از گردآورنده عقب بیفتد، بدترین حالت
- * ممکن پیش می‌آید: در **همان** قطعی‌ای که این رجیستری برایش ساخته شده،
- * سکوی تازه ۴۰۴ می‌شود یا سکوی حذف‌شده ۲۰۰ می‌گیرد. پس این تست فایل‌های
- * پایتون را می‌خواند و هر واگرایی را قرمز می‌کند.
- *
- * خواندن با `ast` کتابخانه‌ی استاندارد است (`tests/support/dump-collector-registry.py`)
- * — گردآورنده import نمی‌شود، پس نه pydantic لازم است نه هیچ سرویس زنده‌ای.
- *
- * چه چیزی سنجیده می‌شود:
- *   ۱. مجموعه و **ترتیب** سکوهای قابل نمایش (`is_listed` = ALLOWED) و همه‌ی
- *      فراداده‌ای که صفحه‌ی سکو رندر می‌کند.
- *   ۲. مجموعه، ترتیب و فراداده‌ی دارایی‌ها.
- *   ۳. `published` و `supporting_platform_slugs` — بازساخته از رجیستری
- *      آداپترها با همان آستانه‌ی گردآورنده، چون همین دو، ۲۰۰/۴۰۴ و عضویت
- *      سایت‌مپ را تعیین می‌کنند.
- *   ۴. کلمات رزرو و صفحات ایستا (آینه‌ی `lib/slugs.ts`).
- */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -60,10 +39,6 @@ interface CollectorRegistry {
 const SCRIPT = fileURLToPath(new URL("./support/dump-collector-registry.py", import.meta.url));
 const COLLECTOR = fileURLToPath(new URL("../../collector/src/tablo_collector", import.meta.url));
 
-/**
- * نبود `python3` را عمداً **پنهان نمی‌کنیم**: نگهبانی که در سکوت رد شود
- * نگهبان نیست. مخزن دوزبانه است و گردآورنده‌اش پایتون؛ python3 هست.
- */
 function collectorRegistry(): CollectorRegistry {
   const stdout = execFileSync("python3", [SCRIPT, COLLECTOR], {
     encoding: "utf8",
@@ -74,7 +49,6 @@ function collectorRegistry(): CollectorRegistry {
 
 const registry = collectorRegistry();
 
-/** فهرست عمومی = فقط ALLOWED (بند ۱۳، تصمیم ۲۰) — گلدیکا هرگز. */
 const listed = registry.platforms.filter((p) => p.data_policy === "ALLOWED");
 
 function asListedPlatform(platform: CollectorPlatform): ListedPlatform {
@@ -90,7 +64,6 @@ function asListedPlatform(platform: CollectorPlatform): ListedPlatform {
   };
 }
 
-/** بازسازی `build_listings` گردآورنده — همان آستانه، همان ترتیب. */
 function asInstrumentListing(info: CollectorInstrument): InstrumentListing {
   const supporting = listed
     .filter((platform) => (registry.adapters[platform.slug] ?? []).includes(info.instrument))
@@ -118,7 +91,7 @@ describe("رجیستری ایستای وب با رجیستری کد گردآور
     expect(REGISTRY_PLATFORMS).toEqual(listed.map(asListedPlatform));
   });
 
-  it("گلدیکا (PERMISSION_PENDING) در فهرست عمومی وب نیست — تصمیم ۲۰", () => {
+  it("گلدیکا (PERMISSION_PENDING) در فهرست عمومی وب نیست", () => {
     const pending = registry.platforms
       .filter((p) => p.data_policy !== "ALLOWED")
       .map((p) => p.slug);
@@ -136,9 +109,6 @@ describe("رجیستری ایستای وب با رجیستری کد گردآور
     for (const word of registry.reserved_words) {
       expect(RESERVED_WORDS.has(word)).toBe(true);
     }
-    // یک‌طرفه: وب می‌تواند صفحه‌ی ایستای بیشتری داشته باشد (مثلاً
-    // ‎/mazane-chist‎ که هنوز در جدول اسلاگ گردآورنده ثبت نشده)، ولی هرگز
-    // نباید صفحه‌ی ایستای گردآورنده را نداشته باشد.
     for (const slug of registry.static_page_slugs) {
       expect(STATIC_PAGE_SLUGS.has(slug)).toBe(true);
     }

@@ -1,22 +1,9 @@
-/**
- * کارت «مقاله ویژه» — انتهای ستون اصلی (بند ۳ و ۸ سند طراحی).
- *
- * ⚠️ **«ویژه» اینجا ادعای سردبیری نیست.** بک‌اند هیچ پرچم `is_featured` ای
- * ندارد (`docs/api-gaps.md` بند ۴)، پس تازه‌ترین پست منتشرشده انتخاب می‌شود.
- * برچسب کارت یک عنوان بخش است و متنش چیزی جز عنوان و چکیده‌ی خود پست ادعا
- * نمی‌کند — هیچ‌جا نمی‌گوید «بهترین» یا «پربازدیدترین».
- *
- * ⚠️ همین پست از فهرست ستون کناری کنار گذاشته می‌شود (`HomePage`)، وگرنه یک
- * نوشته دو بار در یک صفحه می‌آمد — هم بدمنظر است و هم محتوای تکراری در یک
- * سند.
- */
 import type { PublishedPost } from "@/lib/blog";
 import { formatDateFa } from "@/lib/format";
 import { postImageAsset } from "@/lib/images";
 import { postExcerpt } from "./home-view";
 
 export function FeaturedPost({ post }: { post: PublishedPost }) {
-  // بلیت ۲۵: پستِ بدون عکس همان کارت است، بدون جای خالی.
   const image = postImageAsset(post);
   return (
     <section className="card-surface overflow-hidden" aria-labelledby="featured-post-heading">

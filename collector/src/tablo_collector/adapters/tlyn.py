@@ -1,17 +1,3 @@
-"""آداپتر طلاین — `price.tlyn.ir/api/v1/price`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۱ تا ۳.۳ و ۳.۶):
-
-- `prices[]` چند نماد دارد (GOLD18، GOLD_MITHQAL17، سکه‌ها و…)؛ مبنای ما
-  نماد `GOLD18` است.
-- `price.buy` / `price.sell` تومان ÷۱۰۰۰ ⟸ ضریب صریح ×۱۰۰۰.
-- ⚠️ نام‌گذاری «دید فروشنده» (بند ۳.۲): `sell` **بزرگ‌تر** است و همان است
-  که کاربر می‌پردازد — وارونه‌ی شهود. نگاشت با قاعده‌ی ثابت `ask_bid` انجام
-  می‌شود، نه با اعتماد به نام فیلد.
-- کارمزد در خود اسپرد API است (بند ۳.۸: رفت‌وبرگشت ~۰٫۸٪) ⟸ `fee_source = API`.
-- `status` نماد («enabled») به‌عنوان وضعیت باز بودن هر دو سمت خوانده می‌شود.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -30,8 +16,6 @@ class TlynAdapter:
     slug = "tlyn"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = TLYN_ENDPOINT
-    # ضریب صریح این منبع: تومان ÷۱۰۰۰، ×۱۰۰۰ به تومان بر گرم
-    # (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1000")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

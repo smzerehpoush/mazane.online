@@ -1,12 +1,3 @@
-"""مرز گردآورنده — بلیت ۹ (بند ۱۳، تصمیم ۲۱): فیلدهای معرف سکو.
-
-قرارداد: `referral_url` امروز برای همه None است (کدهای معرف را صاحب
-کسب‌وکار بعداً می‌دهد ⟸ ‎/go/‎ فعلاً به website_url می‌رود) و
-`referral_param` فقط الگوی مستند سند تحقیق ۰۱ بند ۶.۲ را ثبت می‌کند —
-پارامترِ بی‌کد. هر دو باید در payload فهرست عمومی (`tablo:listed`، همان
-که وب می‌خواند) سریال شوند.
-"""
-
 import json
 
 from tablo_collector.models import DataPolicy, Platform
@@ -14,7 +5,6 @@ from tablo_collector.platforms import PLATFORMS
 from tablo_collector.store.memory import InMemoryStore
 from tablo_collector.store.redis_store import LISTED_KEY, RedisStore
 
-# سند تحقیق ۰۱، بند ۶.۲ — تنها الگوهای مستند؛ بقیه None (حدس ممنوع).
 DOCUMENTED_PARAMS = {
     "milli": "referralCode",
     "talasea": "r",
@@ -23,8 +13,6 @@ DOCUMENTED_PARAMS = {
 
 
 class FakeRedis:
-    """کمینه‌ی ‎redis.asyncio.Redis‎ که RedisStore لازم دارد — فقط set/get."""
-
     def __init__(self) -> None:
         self.data: dict[str, str] = {}
 
@@ -42,13 +30,10 @@ def test_platform_model_defaults_referral_fields_to_none() -> None:
 
 
 def test_registry_has_no_referral_url_yet() -> None:
-    """کد معرف هنوز از صاحب کسب‌وکار نیامده — همه None؛ لینک مستقیم می‌رود."""
     assert all(platform.referral_url is None for platform in PLATFORMS)
 
 
 def test_registry_records_only_documented_referral_params() -> None:
-    """الگوی پارامتر فقط جایی که سند تحقیق ۰۱ (بند ۶.۲) مستندش کرده؛ گلدیکا
-    اصلاً پارامتر ندارد و بقیه نامستندند ⟸ None."""
     by_slug = {platform.slug: platform for platform in PLATFORMS}
     for slug, param in DOCUMENTED_PARAMS.items():
         assert by_slug[slug].referral_param == param
@@ -58,8 +43,6 @@ def test_registry_records_only_documented_referral_params() -> None:
 
 
 async def test_listed_payload_carries_referral_fields_in_redis() -> None:
-    """payload ‏`tablo:listed`‏ (همان JSON ای که ‎web/lib/redis-source.ts‎
-    می‌خواند) هر دو کلید معرف را برای هر سکو دارد."""
     client = FakeRedis()
     store = RedisStore(client)
 
@@ -88,11 +71,6 @@ async def test_memory_store_round_trips_referral_fields() -> None:
 
 
 def test_platform_from_listed_row_merges_registry_metadata() -> None:
-    """بازسازی از ردیف دیتابیس نباید فراداده‌ی رجیستری را گم کند.
-
-    باگ واقعی: مولد محتوا از مسیر پستگرس سکوها را بدون `delivery_note_fa`
-    می‌دید و موضوع «تحویل فیزیکی» را «بدون داده» رد می‌کرد.
-    """
     from tablo_collector.store.postgres_store import platform_from_listed_row
 
     row = {"slug": "milli", "name_fa": "میلی", "data_policy": "ALLOWED", "market_model": "OTC"}

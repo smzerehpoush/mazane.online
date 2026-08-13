@@ -1,11 +1,8 @@
 /**
- * نشاندن داده‌ی زنده روی داشبورد — جانشین `live-prices-updater` صفحه‌ی اصلی.
- *
  * ⚠️ **چرا DOM مستقیم و نه state ری‌اکت**: نشانگر محور باید با ترنزیشن ۸۰۰
- * میلی‌ثانیه‌ای بلغزد (بند ۵). اگر موقعیت از state بیاید، هر آپدیت یک رندر
+ * میلی‌ثانیه‌ای بلغزد. اگر موقعیت از state بیاید، هر آپدیت یک رندر
  * تازه‌ی درخت است و کوچک‌ترین تغییر در `key` یا ترتیب، گره را re-mount می‌کند و
  * ترنزیشن می‌میرد — دقیقاً همان خرابی‌ای که «کد سالم به نظر می‌رسد».
- *
  * ⚠️ **این یعنی re-render رخ نمی‌دهد؟ نه.** `useLiveDashboard` با `useState`
  * کار می‌کند، پس هر دریافت موفق کل درخت صفحه را دوباره رندر می‌کند. چیزی که
  * نوشته‌های زیر را حفظ می‌کند این است که `rail.sources` از داده‌ی لودر ساخته
@@ -13,15 +10,13 @@
  * نمی‌بیند و دست به گره نمی‌زند. قرارداد شکننده‌ای است و باید صریح بماند: اگر
  * روزی موقعیت نشانگر از props بیاید، ری‌اکت هر رندر آن را به مقدار سرور
  * برمی‌گرداند و نشانگرها می‌پرند.
- *
- * ⚠️ **هیچ محاسبه یا قالب‌بندی‌ای اینجا نیست** (قاعده‌ی سخت ۱ و بند ۱۴):
+ * ⚠️ **هیچ محاسبه یا قالب‌بندی‌ای اینجا نیست** :
  * `rail_percent` و `price_display` از قبل سمت سرور ساخته شده‌اند
  * (`lib/dashboard.ts`، همان تابعی که رندر اولیه را ساخت). این جزء فقط
  * می‌نشاندشان.
- *
- * ⚠️ **فلش آپدیت** (بند ۶): جهت رنگ از تغییر قیمت **خودِ همان منبع** نسبت به
+ * ⚠️ **فلش آپدیت** : جهت رنگ از تغییر قیمت **خودِ همان منبع** نسبت به
  * مقدار قبلی‌اش می‌آید — نه مقایسه با منبع دیگر. هیچ عددی منتشر نمی‌شود، پس
- * با تصمیم ۳ (حذف درصد اختلاف) تناقضی ندارد.
+ * با (حذف درصد اختلاف) تناقضی ندارد.
  */
 import { useEffect, useRef } from "react";
 
@@ -36,16 +31,13 @@ function setText(root: ParentNode, selector: string, value: string | null): void
 }
 
 export function DashboardLive({ data }: { data: LiveDashboard | null }) {
-  /** آخرین قیمت هر سکو — مبنای جهت فلش. */
   const previousPrices = useRef(new Map<string, number>());
 
   useEffect(() => {
     if (data === null) return;
-    // یک مبنای زمانی برای کل این نوبت، تا کارت‌ها با هم پیر شوند.
     const nowMs = Date.now();
 
     for (const source of data.sources) {
-      // ── نشانگر محور: فقط مقدار CSS، بدون هیچ دست‌کاری ساختار ──────────
       const marker = document.querySelector<HTMLElement>(
         `[data-rail-marker="${CSS.escape(source.slug)}"]`,
       );
@@ -56,7 +48,6 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
         setText(marker, "[data-rail-price]", source.price_display);
       }
 
-      // ── کارت منبع: قیمت + فلش ─────────────────────────────────────────
       const card = document.querySelector<HTMLElement>(
         `[data-source-card="${CSS.escape(source.slug)}"]`,
       );
@@ -65,7 +56,7 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
 
       // ⚠️ برچسب کهنگیِ همین کارت باید با گذر زمان **پیر شود**، وگرنه سکویی
       // که از کار افتاده عددش را نگه می‌دارد و هیچ‌وقت «کهنه» نمی‌شود
-      // (قاعده‌ی سخت ۵). همان تابع خالصی که جدول قدیمی استفاده می‌کرد.
+      // . همان تابع خالصی که جدول قدیمی استفاده می‌کرد.
       const timeEl = card.querySelector<HTMLElement>('[data-live="updated-at"]');
       const staleEl = card.querySelector<HTMLElement>('[data-live="stale"]');
       if (timeEl !== null) {
@@ -97,8 +88,6 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       const previous = previousPrices.current.get(source.slug);
       if (source.price_toman !== null) {
         if (previous !== undefined && previous !== source.price_toman) {
-          // گران‌تر شد ⟸ قرمز، ارزان‌تر شد ⟸ سبز. برعکسِ شهود بازار سهام،
-          // چون اینجا کاربر **خریدار** است: قیمت پایین‌تر خبر خوب اوست.
           card.style.backgroundColor =
             source.price_toman > previous ? "var(--rdbg)" : "var(--gnbg)";
           window.setTimeout(() => {
@@ -109,7 +98,6 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       }
     }
 
-    // ── پاورقی محور ────────────────────────────────────────────────────
     const max = document.querySelector<HTMLElement>("[data-rail-max]");
     if (max !== null && data.max_display !== null) {
       max.textContent = `گران‌تر · ${data.max_display}`;
@@ -123,7 +111,6 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       spread.textContent = `بازه اختلاف ${data.spread_display} تومان`;
     }
 
-    // ── لنگر مرجع ──────────────────────────────────────────────────────
     if (data.reference_percent !== null) {
       for (const anchor of document.querySelectorAll<HTMLElement>(".rail-anchor")) {
         anchor.style.right = `${data.reference_percent}%`;
@@ -134,12 +121,6 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
     // props ری‌اکت می‌رود (`HomePage` ⟸ `PriceRail`)، چون همان تغییر باید
     // فاز فتیله را هم ری‌ست کند. دو نویسنده برای یک گره یعنی یکی از آن دو
     // روزی بی‌صدا برنده می‌شود.
-
-    // ── برق طلایی محور (بند ۵) ─────────────────────────────────────────
-    // «داده آپدیت می‌شود، محور یک لحظه طلایی برق می‌زند، فتیله ری‌ست می‌شود.»
-    // کلاس بعد از پایان انیمیشن پاک نمی‌شود؛ به‌جایش هر نوبت پیش از افزودن
-    // برداشته و با یک reflow اجباری از نو راه می‌افتد — همان الگوی ری‌ست
-    // فتیله. مدت و خاموشیِ `prefers-reduced-motion` هر دو در CSS اند.
     const rail = document.querySelector<HTMLElement>("[data-rail]");
     if (rail !== null) {
       rail.classList.remove("rail-flash");

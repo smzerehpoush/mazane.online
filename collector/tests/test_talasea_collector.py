@@ -1,10 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی طلاسی ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/talasea_gold_price.json` پاسخ واقعی
-`GET https://api.talasea.ir/api/market/getGoldPrice` است (ضبط‌شده ۲۰۲۶-۰۸-۰۶
-با User-Agent صادق). تست‌ها هیچ تماس شبکه‌ای ندارند.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -45,18 +38,14 @@ async def test_fixture_payload_is_stored_with_explicit_x1000_scale() -> None:
     assert stored.suppressed is False
 
     (price,) = stored.quotes
-    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
     assert price.side is Side.PRICE
 
-    # مقدار خام و ضریب صریح آداپتر — طلاسی تومان بر میلی‌گرم، ×۱۰۰۰
-    # (سند تحقیق ۰۱، بند ۳.۳).
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
         assert quote.raw_value == Decimal("18530")
         assert quote.raw_scale == Decimal("1000")
         assert quote.fetched_at == FETCHED_AT
 
-    # ریاضی مقیاس: 18530 × 1000 = 18,530,000 تومان بر گرم.
     assert price.price_toman == 18530000
 
 
@@ -69,13 +58,12 @@ async def test_terms_fee_comes_from_api_with_status_flags() -> None:
     assert stored is not None
     terms = stored.terms
 
-    assert terms.buy_fee_percent == Decimal("1")  # fee: 0.01 → درصد
+    assert terms.buy_fee_percent == Decimal("1")
     assert terms.sell_fee_percent == Decimal("1")
     assert terms.fee_source == FeeSource.API
-    # disableBuy / disableSell در فیکسچر false هستند ⟸ هر دو سمت باز.
     assert terms.buy_enabled is True
     assert terms.sell_enabled is True
-    assert terms.round_trip_percent == Decimal("1.9802")  # 1 − 0.99/1.01
+    assert terms.round_trip_percent == Decimal("1.9802")
 
 
 async def test_disable_flags_map_to_enabled_false() -> None:

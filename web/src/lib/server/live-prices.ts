@@ -1,18 +1,3 @@
-/**
- * payload ‎GET /api/prices‎ (بند ۶.۲ و تصمیم ۱۳) — جدا از مسیر، تا مرز وب
- * بتواند shape را با استور seed شده بسنجد.
- *
- * فقط برای مصرف به‌روزرسان کلاینت‌ساید ۳۰ ثانیه‌ای است — API عمومی نیست؛
- * shape آن قرارداد داخلی با `lib/live-update.ts` است.
- *
- * دقیقاً همان لایه‌ی دسترسی صفحه (`fetchRows`) و همان عدد (`priceToman`:
- * «قیمت» سکو، پیش از کارمزد — یکی برای همه‌ی سکوها) — هیچ فرمولی اینجا
- * نیست (قاعده‌ی ۱ قراردادها) و `price_display` عین رشته‌ی fa-IR سلول قیمت
- * صفحه است، تا سوآپ کلاینت هیچ قالب‌بندی مستقلی نسازد.
- *
- * قطع منبع ⟸ کهنگی، نه خطا (قاعده‌ی ۵): ردیف با قیمت تهی و `updated_at`
- * قدیمی برمی‌گردد و پاسخ همیشه ۲۰۰ است.
- */
 import "@tanstack/react-start/server-only";
 
 import { buildDashboard } from "../dashboard";
@@ -31,9 +16,6 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
   // ⚠️ هندسه‌ی محور با **همان تابعی** ساخته می‌شود که رندر سرور صفحه از آن
   // استفاده می‌کند. اگر اینجا نسخه‌ی دومی نوشته می‌شد، نشانگرها بعد از اولین
   // polling به موقعیتی می‌پریدند که با رندر اولیه نمی‌خواند.
-  //
-  // تاریخچه عمداً خالی است: این اندپوینت فقط قیمت جاری را تازه می‌کند و
-  // اسپارک‌لاین/خلاصه بازار در همان رندر سرور می‌مانند تا پاسخ سبک بماند.
   const dashboard = buildDashboard({
     rows,
     platforms,
@@ -71,10 +53,6 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
   };
 }
 
-/**
- * ‎Cache-Control: no-store‎ الزامی است: صفحه پشت کش ۶۰ ثانیه‌ای لبه است و
- * polling سی‌ثانیه‌ای؛ هر کشی بین این دو، این endpoint را بی‌معنا می‌کند.
- */
 export async function livePricesResponse(): Promise<Response> {
   return new Response(JSON.stringify(await livePricesPayload()), {
     status: 200,
@@ -85,7 +63,6 @@ export async function livePricesResponse(): Promise<Response> {
   });
 }
 
-/** فقط خواندنی — هیچ متد دیگری نباید پوسته‌ی صفحه بگیرد. */
 export function livePricesMethodNotAllowed(): Response {
   return new Response(null, {
     status: 405,

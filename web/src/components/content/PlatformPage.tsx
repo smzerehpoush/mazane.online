@@ -1,23 +1,3 @@
-/**
- * صفحه‌ی سکو (بلیت ۷؛ بند ۱۳، تصمیم ۴ — بازچینش بلیت ۳۲): «قیمت امروز» (دو
- * کارت مؤثر خرید/فروش + کارمزد، فقط برای سکوی کارمزدمعلوم)، تحویل فیزیکی،
- * هویت حقوقی و لینک وب‌سایت.
- *
- * فراداده (website_url، legal_entity، delivery_note_fa، min_order_toman) همان
- * است که گردآورنده از سند تحقیق ۰۱ پر کرده؛ جای نامستند صادقانه «ثبت نشده
- * است» می‌گوید — **هیچ مقداری حدس زده نمی‌شود**. اعداد همه آماده‌ی
- * گردآورنده‌اند (قاعده‌ی ۱).
- *
- * قطع منبع ⟸ صفحه ۲۰۰ می‌ماند و فقط «قیمت در دسترس نیست» می‌گوید (قاعده‌ی ۵).
- *
- * بلیت ۲۶: صفحه فقط طلای ۱۸ عیار را نشان می‌دهد — جدول «قیمت‌های این سکو»ی
- * قبلی (همه‌ی دارایی‌ها) حذف شده؛ آن عدد در کارت قهرمان (بلیت ۲۷) از قبل
- * هست.
- *
- * بلیت ۳۵: زیر «قیمت امروز» یک ماشین‌حساب دوحالته می‌آید
- * (`PlatformCalculator.tsx`) — کارمزدمعلوم دو ورودی دوسویه‌ی خرید/فروش،
- * کارمزد نامعلوم فقط یک ورودی وزن روی قیمت اسمی. جزئیاتش همان‌جاست.
- */
 import type { ReactNode } from "react";
 
 import { Madde5Bar } from "@/components/content/LegalNotice";
@@ -38,11 +18,6 @@ import { priceToman, type Row } from "@/lib/rows";
 const NOT_RECORDED = "ثبت نشده است";
 const UNKNOWN = "نامشخص";
 
-/**
- * توضیح ستون قیمت (سند تصمیم ۰۰۰۲): عدد درشت **آنچه می‌پردازید نیست** —
- * کارمزد جدا زیرش می‌آید و در قیمت ضرب نشده. بدون این جمله، کاربر عدد
- * پیش-از-کارمزد را هزینه‌ی خرید می‌خواند.
- */
 const PRICE_EXPLANATION_FA =
   "این عدد قیمت اعلامی همین سکوست، پیش از کارمزد. آنچه می‌پردازید یا می‌گیرید، به کارمزد خرید و فروش زیر بستگی دارد.";
 
@@ -55,7 +30,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** کارت «قیمت» — عدد آماده‌ی گردآورنده، بدون هیچ محاسبه‌ای. */
 function PriceCard({ toman }: { toman: number | null }) {
   return (
     <div className="rounded-2xl bg-surface px-4 py-4">
@@ -67,17 +41,7 @@ function PriceCard({ toman }: { toman: number | null }) {
   );
 }
 
-/**
- * نوار «نرخ اتحادیه» (تیکت ۳۳) — عدد ۱۸ عیارِ مرجع قیمت، مستقل از این سکو.
- *
- * برچسب «اتحادیه» روی عددی که واقعاً از تلا خوانده می‌شود، تصمیم ثبت‌شده‌ی
- * مالک است — سند `docs/adr/0001-etehadieh-label-on-talair-number.md`. این
- * عدد در هیچ محاسبه‌ای شرکت نمی‌کند و هرگز به‌عنوان قیمت این یا هیچ سکوی
- * دیگری نمایش داده نمی‌شود (قاعده‌ی ۴ قراردادها: بدون میانگین بین‌سکویی).
- *
- * قطع منبع مرجع ⟸ `referencePrice` تهی است و نوار اصلاً رندر نمی‌شود؛ صفحه
- * همچنان ۲۰۰ می‌ماند (قاعده‌ی ۵).
- */
+/** ⚠️ این عدد مرجع در هیچ محاسبه‌ای وارد نمی‌شود و هرگز به‌عنوان قیمت یک سکو نمایش داده نمی‌شود. */
 function UnionRateBar({ referencePrice }: { referencePrice: ReferencePrice | null }) {
   if (referencePrice === null) return null;
   return (
@@ -96,13 +60,6 @@ function UnionRateBar({ referencePrice }: { referencePrice: ReferencePrice | nul
   );
 }
 
-/**
- * «قیمت امروز» — حالا برای **همه‌ی** سکوها رندر می‌شود، از جمله
- * کارمزدنامعلوم‌ها (سند تصمیم ۰۰۰۲). پیش‌تر آن چهار سکو این بخش را اصلاً
- * نمی‌گرفتند چون قیمت مؤثر برایشان وجود نداشت؛ حالا قیمتشان با بقیه
- * هم‌جنس است و فقط ردیف‌های کارمزد «نامشخص» می‌مانند — و «نامشخص» یعنی
- * اعلام‌نشده، نه صفر.
- */
 function TermsSection({
   row,
   snapshot,
@@ -173,22 +130,14 @@ export function PlatformPage({
   updatedAt: string | null;
   hasOutbound: boolean;
   instrumentNames: Record<string, string>;
-  /** تاریخچه‌ی همین سکو، هر سه بازه — کارت نرخ بالای صفحه (بلیت ۲۷ + ۳۰). */
   history: PlatformHistoryByRange;
-  /** نوار «نرخ اتحادیه» (تیکت ۳۳) — مرجع قیمت مستقل، نه قیمت این سکو. */
   referencePrice: ReferencePrice | null;
   nowMs: number;
 }) {
-  // ردیف دامنه‌ی همین سکو — تنها مصرفش انتخاب «قیمت مرجع سکو» است.
   const row: Row = { platform, snapshot, updatedAt };
 
   return (
     <>
-      {/* قهرمان (سند مادر #26، بند ۲): دو ستونه در دسکتاپ — راست متن،
-          چپ کارت نرخ؛ در موبایل روی هم، **اول کارت نمودار، بعد متن**.
-          ترتیب DOM همان ترتیب دیده‌شده‌ی دسکتاپ است (راست‌به‌چپ با
-          dir="rtl" یعنی اولین فرزند DOM ستون راست می‌شود)؛ کلاس‌های
-          order فقط زیر lg این ترتیب را برای موبایل برعکس می‌کنند. */}
       <div className="grid gap-6 mb-6 lg:mb-0 lg:grid-cols-2 lg:items-start">
         <header className="order-2 lg:order-none">
           <h1 className="flex flex-wrap items-center gap-2 text-xl font-bold sm:text-2xl">
@@ -206,9 +155,6 @@ export function PlatformPage({
           </p>
           {!hasOutbound ? null : (
             <p className="mt-4">
-              {/* بلیت ۹ (تصمیم ۲۱): هر کلیک خروجی درآمدزا از ‎/go/<slug>‎ می‌گذرد —
-                  کد معرف فقط سمت ریدایرکت است و هرگز در HTML نمی‌نشیند. rel کامل
-                  الزام بند ۶.۴ است و تست CI دارد. */}
               <a
                 href={`/go/${platform.slug}`}
                 rel="sponsored nofollow noopener"
@@ -216,20 +162,12 @@ export function PlatformPage({
                 data-outbound="website"
                 className="transition-smooth inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90"
               >
-                {/* متن دکمه‌ی اصلی: عیناً تصمیم مالک (سند مادر #26، سؤال «متن
-                    دکمه‌ی اصلی چه باشد؟») — «ورود و شروع معامله»، بدون نام سکو؛
-                    نوار ماده ۵ زیرِ صفحه و نشانه‌ی خروج (target=_blank) صراحت
-                    می‌دهند که کاربر از سایت خارج می‌شود. دکمه‌ی جداگانه‌ی
-                    ماشین‌حساب (بلیت ۳۵) نام سکو را دارد چون به یک معامله‌ی
-                    مشخص‌شده ارجاع می‌دهد، نه این دکمه‌ی عمومی بالای صفحه. */}
                 ورود و شروع معامله
               </a>
             </p>
           )}
         </header>
 
-        {/* بلیت ۲۷: عدد درشت خودش وقتی قیمت مرجع نداریم (کارت null برمی‌گرداند)
-            چیزی نمی‌گذارد؛ پیام «قیمت در دسترس نیست» زیرش همچنان می‌آید. */}
         <div className="order-1 lg:order-none">
           <PlatformRateCard row={row} history={history} nowMs={nowMs} />
         </div>
@@ -238,19 +176,13 @@ export function PlatformPage({
       <UnionRateBar referencePrice={referencePrice} />
 
       {snapshot === null ? (
-        // قطع منبع ⟸ کهنگی، نه خطا: صفحه ۲۰۰ می‌ماند (قاعده‌ی ۵ قراردادها).
         <p className="glass-surface px-5 py-8 text-center text-sm text-muted-foreground">
           قیمت در دسترس نیست
         </p>
       ) : (
-        // بلیت ۳۲: «قیمت امروز» فقط برای کارمزدمعلوم می‌آید — کارمزد نامعلوم
-        // یعنی TermsSection خودش null برمی‌گرداند، نه حدسی از اینجا.
         <TermsSection row={row} snapshot={snapshot} updatedAt={updatedAt} />
       )}
 
-      {/* بلیت ۳۵: ماشین‌حساب زیر «قیمت امروز» — خودش هم قطع منبع (snapshot
-          null) و هم کارمزد نامعلوم را از روی همان row تشخیص می‌دهد، حدسی از
-          اینجا لازم نیست. */}
       <PlatformCalculator row={row} hasOutbound={hasOutbound} />
 
       <section aria-labelledby="identity-heading" className="glass-surface mt-6 px-5 py-5 sm:px-6">
@@ -273,7 +205,6 @@ export function PlatformPage({
         </a>
       </p>
 
-      {/* بند ۷.۲: صفحه‌ی ارجاع است (لینک /go/ بالای صفحه) ⟸ نوار ماده ۵. */}
       <Madde5Bar />
     </>
   );

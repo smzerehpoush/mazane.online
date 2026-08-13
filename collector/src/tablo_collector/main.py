@@ -1,47 +1,3 @@
-"""نقطه‌ی ورود گردآورنده: حلقه‌ی polling سکوها + خوراک‌های وب‌سوکت + مراجع.
-
-کرال مؤدب (قاعده‌ی ۶ قراردادها): User-Agent صادق با URL تماس، بازه‌ی ثابت،
-داوری `robots.txt` در زمان اجرا (ماژول `robots` — کش ۲۴ ساعته، باز-به-شکست
-مستند)، و در شکست فقط لاگ — قطع منبع (و قطع وب‌سوکت) کهنگی است، نه خطا؛
-هیچ حلقه‌ای هرگز نمی‌میرد.
-
-هفت تسک موازی:
-- حلقه‌ی سکوها (۳۰ ثانیه): همه‌ی آداپترها + چک میانه + فهرست عمومی.
-  fetch با `compose_fetch` ساخته می‌شود: داریک «دو خوراک، یک سکو» است —
-  فریم تازه‌ی وب‌سوکت اگر بود، وگرنه REST؛ اینوی فقط وب‌سوکت است و سکوت
-  خوراکش ⟸ FeedStale ⟸ کهنگی همان سکو.
-- حلقه‌ی مراجع (۱۲۰ ثانیه — مؤدبانه‌تر، چون بن‌بست HTML کامل می‌گیرد):
-  طلا دات‌آی‌آر و بن‌بست؛ فقط تاریخچه + کلید tablo:reference:{slug}.
-- حلقه‌ی نگه‌داری (ساعتی، بلیت ۱۶ — فقط روی پستگرس): تجمیع ساعتی +
-  فشرده‌سازی تکراری‌های متوالی + هرس خام کهنه‌تر از ۹۰ روز. نخستین اجرا
-  در بوت، جاماندگی (ساعت‌های تجمیع‌نشده) را جبران می‌کند؛ سیاست و
-  دروازه‌ها در `tablo_collector.retention` مستندند.
-- حلقه‌ی انتشار محتوا (هر ۱۵ دقیقه، بلیت ۱۳ — فقط روی پستگرس): صف
-  پیش‌نویس بلاگ را با سقف روزانه‌ی سمت سرور خالی می‌کند — مستقل از شمار
-  پیش‌نویس‌ها — و عمق صف را می‌سنجد (هشدار زیر ۵ روز). سیاست‌ها در
-  `tablo_collector.content` مستندند.
-- حلقه‌ی تنظیمات سکو (۲۰ ثانیه، بلیت ۲۱ + بلیت ۲۳ — فقط روی پستگرس + ردیس):
-  جدول `platform_settings` را می‌خواند (پنل نوشته)، عضویت/رنگ/ترتیب نمودار
-  را می‌سازد و به `tablo:chart_config` ردیس می‌نویسد، و override نشانی
-  معرف را روی رجیستری زنده‌ی سکوها می‌نشاند (`_PlatformRegistry.current`) —
-  حلقه‌ی سکوها همان مقدار جاری را می‌خواند و با `save_platforms` به
-  `tablo:listed` می‌رساند، پس `/go/<slug>` هم بدون انتشار تازه‌ی وب و
-  بدون کلید ردیس جدید به‌روز می‌شود. تغییر پنل تا نیم دقیقه بعد روی سایت
-  زنده دیده می‌شود. سیاست در `tablo_collector.settings` مستند است.
-- دو کلاینت وب‌سوکت reconnect دار (داریک SignalR، اینوی) که فقط کش فریم
-  را پر می‌کنند.
-
-پیکربندی با متغیر محیطی:
-    TABLO_REDIS_URL          (پیش‌فرض redis://127.0.0.1:6379/0)
-    TABLO_DATABASE_URL       (پیش‌فرض postgresql://mazane:mazane@127.0.0.1:5432/mazane)
-    TABLO_DAILY_PUBLISH_CAP  (پیش‌فرض ۲ — سقف انتشار روزانه‌ی بلاگ)
-    TABLO_REVALIDATE_URL     (پیش‌فرض http://127.0.0.1:3000/api/revalidate-blog)
-    TABLO_REVALIDATE_TOKEN   (بدون پیش‌فرض — ست نباشد بازتولید وب فقط WARNING می‌دهد)
-
-اجرای محلی: `docker compose -f docker-compose.dev.yml up -d` سپس
-`tablo-collector` (یا `python -m tablo_collector.main`).
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -99,19 +55,9 @@ from .store.redis_store import RedisStore
 from .ws import FeedCache, ReconnectingFeedClient, compose_fetch
 
 POLL_INTERVAL_SECONDS = 30
-# مراجع قیمت لحظه‌ای نیستند (tala.ir خودش می‌گوید) و بن‌بست HTML کامل
-# می‌دهد ⟸ آهنگ کندتر، مؤدبانه‌تر.
 REFERENCE_POLL_INTERVAL_SECONDS = 120
-# نگه‌داری بازه‌های «ساعتی» را تجمیع می‌کند ⟸ آهنگ ساعتی کافی است؛ هر گذر
-# خودش جاماندگی را جبران می‌کند، پس دیر شدن یک نوبت بی‌هزینه است.
 RETENTION_INTERVAL_SECONDS = 3600
-# آهنگ ثابت خالی کردن صف محتوا (بلیت ۱۳): هر گذر فقط چک می‌کند «سهم امروز
-# مانده؟» — سقف روزانه داخل publish_due است، پس گذر زودهنگام/جامانده بی‌ضرر
-# است و ۱۵ دقیقه تأخیر بدترین حالت انتشار سررسید است.
 CONTENT_DRAIN_INTERVAL_SECONDS = 900
-# تنظیمات پنل (بلیت ۲۱): فقط یک کپی‌کردن جدول کوچک به ردیس است، نه گردآوری
-# شبکه‌ای — ۲۰ ثانیه یعنی تغییر پنل «تا نیم دقیقه بعد» روی سایت زنده دیده
-# می‌شود (معیار پذیرش تیکت)، بدون فشار محسوس روی پستگرس.
 SETTINGS_SYNC_INTERVAL_SECONDS = 20
 USER_AGENT = "TabloBot/0.1 (+https://tablo.gold/about)"
 HTTP_TIMEOUT_SECONDS = 15
@@ -122,13 +68,6 @@ log = logging.getLogger("mazane.collector")
 
 
 def _daric_connector(client: httpx.AsyncClient) -> Any:
-    """اتصال SignalR داریک: negotiate ⟸ وب‌سوکت با توکن ⟸ handshake پروتکل JSON.
-
-    (transport «WebSockets/JSON» با endpoint ‏negotiate راستی‌آزمایی شده؛
-    خود فریم‌ها هنوز نه — هر شکل غیرمنتظره در decode نادیده می‌رود و REST
-    خوراک اصلی می‌ماند.)
-    """
-
     @asynccontextmanager
     async def connect() -> AsyncIterator[AsyncIterator[str]]:
         response = await client.post(DARIC_NEGOTIATE_URL)
@@ -162,16 +101,6 @@ async def _text_messages(connection: Any) -> AsyncIterator[str]:
 
 
 class _PlatformRegistry:
-    """رجیستری زنده‌ی سکوها (بلیت ۲۳): `PLATFORMS` ثابت + override نشانی
-    معرف پنل — یک شیء mutable مشترک بین دو حلقه.
-
-    `settings_sync_loop` هر ~۲۰ ثانیه با ردیف‌های تازه‌ی `platform_settings`
-    مقدار `current` را عوض می‌کند؛ `platform_loop` هر نوبت گردآوری مقدار
-    جاری‌اش را می‌خواند و به `store.save_platforms` می‌دهد. بدون این واسطه،
-    `platform_loop` مستقیم به ثابت `PLATFORMS` وصل می‌ماند و override هرگز
-    به `tablo:listed` نمی‌رسد.
-    """
-
     def __init__(self, platforms: Sequence[Platform]) -> None:
         self.current: tuple[Platform, ...] = tuple(platforms)
 
@@ -201,20 +130,13 @@ async def run() -> None:
     redis_client = aioredis.from_url(redis_url, decode_responses=True)
     pool = await asyncpg.create_pool(database_url)
     assert pool is not None
-    # نگه‌داری (بلیت ۱۶) فقط با تاریخچه‌ی پستگرس کار دارد — ردیس تاریخچه ندارد.
     history_store = PostgresStore(pool)
     store = MultiStore(RedisStore(redis_client), history_store)
-    # صف محتوا (بلیت ۱۳) هم فقط پستگرسی است — همان pool، دروازه‌ی جدای posts.
     content_gateway = PostgresContentGateway(pool)
     daily_publish_cap = daily_publish_cap_from_env()
-    # تنظیمات پنل (بلیت ۲۱) هم همان pool مشترک — جدول جدای platform_settings.
     settings_gateway = PostgresSettingsGateway(pool)
-    # رجیستری زنده (بلیت ۲۳): platform_loop از این می‌خواند، settings_sync_loop
-    # این را با override نشانی معرف تازه می‌کند — نه ثابت PLATFORMS مستقیم.
     platform_registry = _PlatformRegistry(PLATFORMS)
 
-    # follow_redirects + cookie jar خود کلاینت: دست‌دهی ArvanCloud ملی‌گلد
-    # (۳۰۷ + کوکی — auth نیست؛ سند تحقیق ۰۱، بند ۸.۲) و توکن /json بن‌بست.
     async with httpx.AsyncClient(
         headers={"User-Agent": USER_AGENT},
         timeout=HTTP_TIMEOUT_SECONDS,
@@ -226,13 +148,9 @@ async def run() -> None:
             response.raise_for_status()
             return response.json()
 
-        # داوری robots.txt با همان کلاینت مشترک (UA صادق)، پیش از هر fetch
-        # سکو و مرجع؛ فریم‌های وب‌سوکت کش‌شده fetch ندارند و داوری نمی‌شوند.
         robots = RobotsGate(client, user_agent=USER_AGENT)
 
         cache = FeedCache()
-        # «دو خوراک، یک سکو»: قطع وب‌سوکت داریک حتی کهنگی هم نمی‌سازد —
-        # REST جایش را می‌گیرد (بند ۱۲.۳).
         fetch_json = compose_fetch(
             robots_checked_fetch(robots, http_fetch_json),
             cache,
@@ -266,7 +184,6 @@ async def run() -> None:
                         },
                     )
                 except Exception:
-                    # کهنگی، نه سقوط: updated_at قبلی می‌ماند و حلقه ادامه می‌دهد.
                     log.exception("نوبت گردآوری شکست خورد")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, POLL_INTERVAL_SECONDS - elapsed))
@@ -299,12 +216,10 @@ async def run() -> None:
                         report.rows_pruned,
                     )
                 except Exception:
-                    # مثل بقیه‌ی حلقه‌ها: شکست فقط لاگ می‌شود؛ گذر بعدی جبران می‌کند.
                     log.exception("نوبت نگه‌داری شکست خورد")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, RETENTION_INTERVAL_SECONDS - elapsed))
 
-        # بازتولید ISR وب با همان کلاینت مشترک — بی‌توکن فقط WARNING می‌دهد.
         revalidate_blog = revalidator_from_env(client)
 
         async def content_loop() -> None:
@@ -322,28 +237,11 @@ async def run() -> None:
                         depth.daily_cap,
                     )
                 except Exception:
-                    # مثل بقیه‌ی حلقه‌ها: شکست فقط لاگ می‌شود؛ گذر بعدی جبران می‌کند.
                     log.exception("نوبت انتشار محتوا شکست خورد")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, CONTENT_DRAIN_INTERVAL_SECONDS - elapsed))
 
         async def settings_sync_loop() -> None:
-            """پنل ⟸ پستگرس (`platform_settings`) ⟸ (این حلقه) ⟸ دو مقصد —
-            بدون انتشار تازه (بلیت ۲۱ + بلیت ۲۳):
-
-            ۱. ردیس (`tablo:chart_config`) ⟸ نمودار زنده.
-            ۲. `platform_registry.current` ⟸ override نشانی معرف؛ نوبت بعدی
-               `platform_loop` همین را با `save_platforms` به `tablo:listed`
-               می‌رساند (بدون کوئری دوباره‌ی `platform_settings`، بدون کلید
-               ردیس تازه).
-
-            `listed_platforms` (برای چارت) عمداً از رجیستری کد است، نه از
-            استور: ثابت و بی‌نیاز به ردیس گرم‌شده، و همان تعریف «قابل نمایش»
-            (data_policy=ALLOWED) که بقیه‌ی گردآورنده استفاده می‌کند. override
-            نشانی معرف برخلاف آن روی **کل** `PLATFORMS` اجرا می‌شود (نه فقط
-            `listed_platforms`) — فیلتر نمایش کار `save_platforms` است، نه
-            اینجا.
-            """
             listed_platforms = tuple(p for p in PLATFORMS if p.is_listed)
             while True:
                 started = time.monotonic()
@@ -356,7 +254,6 @@ async def run() -> None:
                     )
                     log.info("نوبت تنظیمات سکو: %s سری در نمودار", len(config))
                 except Exception:
-                    # مثل بقیه‌ی حلقه‌ها: شکست فقط لاگ می‌شود؛ کلید/رجیستری قبلی می‌ماند.
                     log.exception("نوبت تنظیمات سکو شکست خورد")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, SETTINGS_SYNC_INTERVAL_SECONDS - elapsed))

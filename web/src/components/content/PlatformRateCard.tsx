@@ -1,53 +1,3 @@
-/**
- * کارت نرخ صفحه‌ی سکو (بلیت ۲۷ + نوار زبانه‌ی بازه، بلیت ۳۰): عدد درشت
- * «قیمت» سکو + نمودار ناحیه‌ای روند، با سه بازه‌ی قابل‌انتخاب —
- * روزانه/هفتگی/ماهانه.
- *
- * ⚠️ قاعده‌ی ۱ قراردادها: عدد درشت مستقیماً `priceToman` است — یک انتخاب از
- * اعداد آماده‌ی گردآورنده، نه محاسبه؛ همیشه «الان» است و با تعویض زبانه عوض
- * نمی‌شود (فقط نمودار و سه آمار زیرش تاریخی‌اند). برچسب زیرش دیگر شرطی نیست:
- * از وقتی قیمت مؤثر حذف شد (سند تصمیم ۰۰۰۲) عدد همه‌ی سکوها یک چیز است —
- * قیمت اعلامی خودشان، پیش از کارمزد. نمودار هر زبانه سری تاریخچه‌ی
- * همان بازه‌ی همین سکو را می‌کشد (`lib/history.ts`، الگوی نمودار چندسکویی
- * صفحه‌ی اصلی — `home-view.tsx::chartView`، فقط تک‌سکو و سه‌بازه). سه آمار
- * پایین کارت هم فقط از همان سری بیرون کشیده می‌شوند: کمینه/بیشینه‌ی خالص و
- * تفاضل سر و ته همان سری، دقیقاً الگوی مجاز قاعده‌ی ۱ («آخرین نمونه،
- * کمینه/بیشینه‌ی یک سری»)، نه یک فرمول قیمتی تازه و نه میانگین بین‌سکویی
- * (قاعده‌ی ۴) — سری فقط مال همین یک سکوست. گام نمونه‌برداری هفتگی/ماهانه
- * (بدون میانگین) سمت سرور است (`lib/server/history-source.ts`).
- *
- * **دروازه‌ی «به‌زودی»**: زبانه‌ی هفتگی/ماهانه از `history[range].has_enough_coverage`
- * می‌خواند — سمت سرور محاسبه شده (نیمی از سطل‌های پنجره نمونه‌ی واقعی
- * داشته‌اند یا نه). پوشش کم یا منبع قطع، هر دو یک نتیجه دارند: زبانه
- * غیرفعال با برچسب «به‌زودی»، بدون throw (قاعده‌ی ۵). زبانه‌ی روزانه همیشه
- * فعال است.
- *
- * قطع منبع تاریخچه یا سکوی بی‌سابقه ⟸ کارت بدون نمودار رندر می‌شود، صفحه
- * ۲۰۰ می‌ماند (قاعده‌ی ۵). سکوی بی‌قیمت مرجع (بی‌اسنپ‌شات یا فقط یک سمت باز)
- * اصلاً قیمت مرجع ندارد ⟸ کل کارت رندر نمی‌شود.
- *
- * جزء مستقل است: نمودار چندسکویی صفحه‌ی اصلی (`PriceChart.tsx`) دست‌نخورده
- * می‌ماند و این کارت هیچ چیزی از آن import نمی‌کند.
- *
- * **شمارنده‌ی زنده + برچسب کهنگی (بلیت ۳۱)**: پایین کارت «بروزرسانی بعدی در
- * N ثانیه» را نشان می‌دهد — شمارش معکوس همان ۳۰ ثانیه‌ی
- * `live-prices-updater.tsx`، ولی مکانیزم مستقل خودش را دارد چون
- * `LivePricesUpdater` فقط در صفحه‌ی اصلی mount می‌شود و روی
- * ‎tr[data-platform]‎ کار می‌کند، نه این کارت. منطق تیک شمارنده تابع خالص
- * `nextRateCardCountdown` (کنار `nextRowDomState` در `lib/live-update.ts`)
- * است؛ اثر جانبی‌اش (setInterval + fetch) فقط همین‌جاست.
- *
- * ⚠️ عدد درشت کارت هرگز با این شمارنده عوض نمی‌شود — همچنان همان
- * `referencePriceFor` سروررندر می‌ماند (بند بالا). دریافت زنده فقط
- * `updated_at` همین سکو را از ‎/api/prices‎ می‌گیرد تا برچسب «آخرین
- * به‌روزرسانی»/کهنگی با گذر زمان واقعی پیش برود — نه قیمتی تازه، چون
- * ‎/api/prices‎ عدد «مؤثر خرید» را می‌دهد که تعریفش با «قیمت مرجع سکو» فرق
- * دارد؛ سوآپش اینجا برچسب کارت را روی عدد غلط می‌گذاشت.
- *
- * کهنگی شمارنده را خاموش می‌کند (`isStale` از `lib/format.ts`): فقط برچسب
- * Staleness می‌ماند، بدون هیچ شمارش. قطع شبکه/endpoint ⟸ زمان قبلی می‌ماند
- * (کهنگی، نه خطا، قاعده‌ی ۵) — دقیقاً همان قرارداد `nextRowDomState`.
- */
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 
@@ -72,7 +22,6 @@ import { fa, RATE_CARD_RANGES, type RateCardRangeConfig } from "@/lib/site-conte
 const PRICE_LABEL = "قیمت اعلامی این سکو — پیش از کارمزد";
 const COMING_SOON_LABEL = "به‌زودی";
 
-/** پیام «سابقه ندارد» — روزانه دقیقاً متن قبل از بلیت ۳۰ می‌ماند. */
 const EMPTY_HISTORY_MESSAGE: Record<HistoryRange, string> = {
   DAILY: "هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.",
   WEEKLY: "هنوز سابقه‌ی روند هفتگی برای این سکو ثبت نشده است.",
@@ -80,18 +29,11 @@ const EMPTY_HISTORY_MESSAGE: Record<HistoryRange, string> = {
 };
 
 interface RateStats {
-  /** کسر تغییر سر و ته سری (مثلاً ۰٫۰۰۷۱ یعنی +۰٫۷۱٪) — سند مادر: «تغییرات با درصد و فلش». */
   changeFraction: number;
   high: number;
   low: number;
 }
 
-/**
- * فقط انتخاب و یک تقسیم روی همان سری: کمینه/بیشینه‌ی خالص + کسر تفاضل سر و ته
- * نسبت به نقطه‌ی اول (نه فرمول قیمتی تازه‌ای — تعریف «درصد تغییر» یک سری است،
- * نه کارمزد یا قیمت مؤثر؛ همان دسته‌ی مجاز کمینه/بیشینه‌ی بند بالای فایل).
- * نقطه‌ی اول صفر (عملاً هرگز برای قیمت طلا) ⟸ صفر، نه تقسیم بر صفر.
- */
 function computeStats(points: HistoryPoint[]): RateStats | null {
   if (points.length === 0) return null;
   const values = points.map((p) => p.value);
@@ -104,7 +46,6 @@ function computeStats(points: HistoryPoint[]): RateStats | null {
   };
 }
 
-/** روزانه همیشه فعال است؛ هفتگی/ماهانه فقط با پوشش کافی (سمت سرور محاسبه‌شده). */
 function computeEnabledRanges(history: PlatformHistoryByRange): Record<HistoryRange, boolean> {
   const enabled = {} as Record<HistoryRange, boolean>;
   for (const range of RATE_CARD_RANGES) {
@@ -114,7 +55,6 @@ function computeEnabledRanges(history: PlatformHistoryByRange): Record<HistoryRa
   return enabled;
 }
 
-/** اولین زبانه‌ی فعال در جهت داده‌شده، با چرخش — زبانه‌های «به‌زودی» رد می‌شوند. */
 function nextEnabledIndex(start: number, direction: 1 | -1, enabled: readonly boolean[]): number {
   const n = enabled.length;
   for (let step = 1; step <= n; step++) {
@@ -152,10 +92,6 @@ function ChangeStat({ changeFraction }: { changeFraction: number }) {
   );
 }
 
-/**
- * یک زبانه‌ی نوار بازه. فعال: قرص توپر تیره متن سفید. غیرفعال («به‌زودی»):
- * کم‌رنگ، بی‌کلیک، خارج از پیمایش Tab (`disabled` بومی همین کار را می‌کند).
- */
 function RangeTab({
   range,
   active,
@@ -201,9 +137,7 @@ export function PlatformRateCard({
   nowMs,
 }: {
   row: Row;
-  /** تاریخچه‌ی هر سه بازه‌ی همین سکو — هرکدام `null` یعنی منبع قطع بود یا سابقه‌ای نیست. */
   history: PlatformHistoryByRange;
-  /** مبنای «آخرین به‌روزرسانی» پیش از mount — از generated_at سرور (همان الگوی PlatformPage). */
   nowMs: number;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -212,9 +146,6 @@ export function PlatformRateCard({
   const [activeRange, setActiveRange] = useState<HistoryRange>("DAILY");
   const tabRefs = useRef<Partial<Record<HistoryRange, HTMLButtonElement | null>>>({});
 
-  // بلیت ۳۱: شمارنده + برچسب کهنگی — مقدار اولیه دقیقاً همان چیزی که سرور
-  // با نوشتن دستی محاسبه می‌کرد، تا هیدریشن واگرا نشود؛ فقط بعد از mount
-  // تیک می‌خورد (پایین‌تر).
   const [live, setLive] = useState(() => ({
     updatedAtIso: row.updatedAt,
     nowMs,
@@ -226,9 +157,8 @@ export function PlatformRateCard({
     let updatedAtIso = row.updatedAt;
     let secondsRemaining = RATE_CARD_POLL_SECONDS;
 
-    // دریافت واقعی در صفر — فقط زمان همین سکو را تازه می‌کند، نه عدد درشت
-    // کارت (بند بالای فایل): ‎/api/prices‎ «مؤثر خرید» می‌دهد که تعریفش با
-    // «قیمت مرجع سکو» فرق دارد.
+    // ⚠️ این دریافت فقط updated_at را تازه می‌کند؛ عدد درشت کارت هرگز با آن
+    // عوض نمی‌شود — ‎/api/prices‎ «مؤثر خرید» می‌دهد، نه «قیمت مرجع سکو».
     async function refreshUpdatedAt(): Promise<void> {
       try {
         const response = await fetch("/api/prices", { cache: "no-store" });
@@ -239,7 +169,7 @@ export function PlatformRateCard({
           updatedAtIso = match.updated_at;
         }
       } catch {
-        // قطع شبکه ⟸ زمان قبلی می‌ماند، کهنگی نه خطا (قاعده‌ی ۵)
+        // قطع شبکه ⟸ زمان قبلی می‌ماند، کهنگی نه خطا
       }
     }
 
@@ -263,14 +193,9 @@ export function PlatformRateCard({
   const price = priceToman(row, "GOLD_18K");
   const enabledRanges = useMemo(() => computeEnabledRanges(history), [history]);
   const activeHistory = history[activeRange];
-  // useMemo هم اینجا: بی‌آن، فالبک `?? []` هر رندر یک آرایه‌ی تازه می‌سازد و
-  // useMemo زیرِ stats را با هر رندر (نه فقط با عوض‌شدن واقعی داده) دوباره
-  // حساب می‌کند.
   const points = useMemo(() => activeHistory?.points ?? [], [activeHistory]);
   const hasSeries = points.length > 0;
   const stats = useMemo(() => computeStats(points), [points]);
-  // مسیر SVG سمت سرور ساخته می‌شود — همان ماژول مشترکی که اسپارک‌لاین
-  // کارت‌های منبع و نمودار خلاصه بازار هم از آن استفاده می‌کنند.
   const shape = useMemo(
     () =>
       seriesPaths(
@@ -281,17 +206,15 @@ export function PlatformRateCard({
   );
   const [hovered, setHovered] = useState<HistoryPoint | null>(null);
 
-  // سکوی بی‌قیمت (بی‌اسنپ‌شات، یا دفتر سفارشِ یک‌سمته) ⟸ کل کارت رندر نمی‌شود.
   if (price === null) return null;
 
-  // کهنگی شمارنده را خاموش می‌کند — فقط برچسب Staleness زیر کارت می‌ماند.
   const staleNow =
     live.updatedAtIso === null || isStale(minutesSince(live.updatedAtIso, live.nowMs));
 
   const label = PRICE_LABEL;
 
   function selectRange(range: HistoryRange): void {
-    if (enabledRanges[range] !== true) return; // زبانه‌ی «به‌زودی» بی‌کلیک است
+    if (enabledRanges[range] !== true) return;
     setActiveRange(range);
   }
 
@@ -356,15 +279,6 @@ export function PlatformRateCard({
 
         {hasSeries ? (
           <div key={activeRange} dir="ltr" className="relative h-20 w-full sm:h-24">
-            {/*
-              ⚠️ SVG دستی، نه ریچارتس. سه سود مستقیم دارد:
-                ۱. **سروررندر می‌شود** — پیش از این پشت `mounted` بود و تا
-                   hydration جعبه‌ی خالی می‌ماند (ResponsiveContainer ابعاد
-                   واقعی می‌خواهد). حالا در همان HTML اولیه است.
-                ۲. کل وابستگی `recharts` از پروژه حذف شد — ۳۵۵KB خام که
-                   **هر صفحه** دانلودش می‌کرد، چون در چانک مشترک نشسته بود.
-                ۳. یک پیاده‌سازی نمودار در کل سایت (`lib/spline.ts`)، نه دو تا.
-            */}
             <svg
               aria-hidden
               viewBox="0 0 320 96"
@@ -389,11 +303,6 @@ export function PlatformRateCard({
               />
             </svg>
 
-            {/*
-              خواندنِ نقطه‌ی زیر نشانگر — جانشین Tooltip ریچارتس. فقط بعد از
-              mount فعال است و روی موبایل (بدون hover) هم چیزی را از بین
-              نمی‌برد: سه آمار زیر کارت همان اطلاعات را متنی می‌دهند (بند ۱۲).
-            */}
             {mounted && (
               <div
                 className="absolute inset-0"
@@ -429,8 +338,6 @@ export function PlatformRateCard({
       </div>
 
       {stats !== null && (
-        // aria-live: تعویض زبانه همین سه عدد را عوض می‌کند؛ صفحه‌خوان باید
-        // بی‌آنکه دوباره کل کارت را بخواند، مقدار تازه را اعلام کند.
         <div
           key={activeRange}
           aria-live="polite"
@@ -445,8 +352,6 @@ export function PlatformRateCard({
         </div>
       )}
 
-      {/* بلیت ۳۱: برچسب «آخرین به‌روزرسانی» همیشه حاضر است؛ شمارنده فقط
-          وقتی سالمیم کنارش می‌آید — کهنگی خاموشش می‌کند. */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <Staleness updatedAt={live.updatedAtIso} nowMs={live.nowMs} />
         {staleNow ? null : (

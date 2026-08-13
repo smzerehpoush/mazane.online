@@ -1,8 +1,3 @@
-/**
- * منطق خالص احراز هویت پنل (`lib/admin-auth.ts`) — هش/تأیید رمز، امضا/اعتبار
- * نشست، و تصمیم قفل‌شدن موقت. بدون env، بدون کوکی، بدون Request — همه‌چیز
- * پارامتر صریح است (شرح کامل در `admin-auth.ts`).
- */
 import { describe, expect, it } from "vitest";
 
 import {
@@ -50,8 +45,6 @@ describe("hashPassword / verifyPassword", () => {
     expect(verifyPassword("x", "")).toBe(false);
     expect(verifyPassword("x", "salthex:")).toBe(false);
     expect(verifyPassword("x", ":hashhex")).toBe(false);
-    // طول hash کوتاه‌تر از SCRYPT_KEYLEN — نباید timingSafeEqual را با طول
-    // نابرابر صدا بزند و استثنا بگیرد.
     expect(verifyPassword("x", "aabbcc:aabbcc")).toBe(false);
   });
 });
@@ -131,7 +124,6 @@ describe("قفل‌شدن موقت پس از تلاش‌های ناموفق", ()
   it("بعد از انقضای قفل، شمارش تلاش‌های بعدی از نو شروع می‌شود", () => {
     let state: AttemptState = INITIAL_ATTEMPT_STATE;
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS; i++) state = recordFailedAttempt(state, 0);
-    // یک تلاش تازه بعد از پایان قفل — نباید بلافاصله دوباره قفل کند.
     state = recordFailedAttempt(state, LOCKOUT_MS);
     expect(state.failures).toBe(1);
     expect(isLockedOut(state, LOCKOUT_MS)).toBe(false);

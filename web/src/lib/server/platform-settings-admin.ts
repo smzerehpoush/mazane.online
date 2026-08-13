@@ -1,17 +1,4 @@
 /**
- * تنظیمات سکو روی پستگرس — جدول `platform_settings` که مهاجرت
- * `collector/migrations/015_platform_settings.sql` می‌سازد (بلیت ۲۱ + نشانی
- * معرف بلیت ۲۳؛ ستون `referral_url` را مهاجرت #۲۱ از قبل ساخته).
- *
- * **فقط سمت سرور** (همان دلیل `blog-source.ts`/`view-counter.ts`: `pg`
- * هرگز به باندل مرورگر نمی‌رود). از همان استخر مشترک استفاده می‌کند تا
- * سرور تک‌هسته‌ای استخر تازه باز نکند. فهرست سکوهای قابل نمایش از
- * `price-source.ts` می‌آید (زنده‌ی ردیس مقدم، رجیستری بیلد کف — بند ۵
- * طراحی تیکت ۲۱: «اسلاگ باید در فهرست سکوهای واقعاً قابل نمایش باشد»)؛
- * همان منبع `website_url` هر سکو را هم می‌دهد — اعتبارسنجی نشانی معرف
- * (`lib/platform-settings.ts::validateReferralUrls`) دقیقاً همین را
- * می‌خواهد.
- *
  * ⚠️ این فایل هرگز به ردیس نمی‌نویسد — نوشتن پنل فقط پستگرس است؛ گردآورنده
  * خودش با تأخیر ~۲۰ ثانیه `tablo:chart_config` را همگام می‌کند و override
  * نشانی معرف را روی رجیستری زنده می‌نشاند (`tablo_collector.settings`).
@@ -101,14 +88,12 @@ export function createPgPlatformSettingsSource(): PlatformSettingsSource {
 
 let registered = false;
 
-/** ثبت تنبل — همان الگو و همان دلیلِ `view-counter.ts`. */
 function ensureDefaultSource(): void {
   if (registered) return;
   registered = true;
   setDefaultPlatformSettingsSource(createPgPlatformSettingsSource);
 }
 
-/** تنها درِ ورود کد سروری به تنظیمات — نه مستقیم از `lib/platform-settings.ts`. */
 export async function loadPlatformSettingsView(): ReturnType<typeof domainLoad> {
   ensureDefaultSource();
   return domainLoad();

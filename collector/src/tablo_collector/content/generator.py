@@ -1,30 +1,3 @@
-"""مولد محتوای لپ‌تاپ — `tablo-generate` (بلیت ۱۴؛ بند ۱۳، تصمیم‌های ۶، ۷، ۱۶، ۱۷).
-
-روی ماشین محلی صاحب کسب‌وکار اجرا می‌شود: کلید جمینای **هرگز از لپ‌تاپ خارج
-نمی‌شود** — نه در لاگ، نه در پایگاه، نه در URL (در هدر درخواست می‌رود تا در
-پیام خطا/آدرس هم نشت نکند). مولد صف پیش‌نویس سرور را پر می‌کند و سرور با
-آهنگ ثابت خالی می‌کند (publisher — «لپ‌تاپ شاید خاموش باشد»).
-
-خط لوله‌ی هر موضوع (تصمیم ۷: ۱۰۰٪ داده‌محور، مقطعی):
-
-    کوئری داده ⟸ نقشه‌ی جای‌خالی ⟸ نثر LLM (جای‌خالی‌ها دست‌نخورده،
-    دستور صریح «هیچ رقمی ننویس») ⟸ توضیح متا با مدل سبک ⟸ دروازه‌ی
-    اعتبارسنجی ⟸ صف (مسیر گیت‌شده‌ی `enqueue_draft` — میان‌بر ندارد)
-
-مدل‌ها (تصمیم ۱۷): نثر با `gemini-3.6-flash`، کار مکانیکی (توضیح متا) با
-`gemini-3.5-flash-lite`. توضیح متا هم از همان دروازه می‌گذرد: چون جدول
-posts ستون متا ندارد، به‌صورت بند نخستِ (لید) بدنه ذخیره می‌شود و همراه
-بدنه گیت می‌شود — لایه‌ی وب توضیح متا را از همان بند اول می‌سازد.
-
-هر ادعا با کوئری ساخته می‌شود نه با ادعای مدل (تصمیم ۱۶): پرامپت فقط
-واقعیت‌های ازپیش‌ساخته (با جای‌خالی، بدون رقم) را می‌دهد و مدل حق ادعای
-تازه ندارد. برای دوره‌ای که سکوی ارجاع‌شده گپ داده دارد اصلاً تولید
-نمی‌شود — LLM حتی صدا زده نمی‌شود (`has_data_gap` روی rollup های ساعتی).
-
-موضوع‌های لانچ (تصمیم ۴/۷ + بلیت ۱۵): مقایسه‌ی کارمزد، حداقل سفارش،
-هزینه‌ی رفت‌وبرگشت، هزینه‌ی تحویل فیزیکی، «الان کجا باز است».
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -48,20 +21,12 @@ from .queue import enqueue_draft
 
 log = logging.getLogger("mazane.collector.content")
 
-#: مدل نثر فارسی (بند ۱۳، تصمیم ۱۷) — کیفیت نثر فاکتور انتخاب است، نه هزینه.
 PROSE_MODEL = "gemini-3.6-flash"
-#: مدل کارهای مکانیکی (توضیح متا، واریانت عنوان، پیش‌غربال) — تصمیم ۱۷.
-# ⚠️ تصمیم ۱۷ مدل ۲.۵ لایت را می‌گفت؛ آن مدل برای کلیدهای تازه بسته شده
-# (۴۰۴ — «no longer available to new users»، سنجیده‌شده ۲۰۲۶-۰۸-۰۶).
-# جایگزین هم‌رده و در دسترس: ۳.۵ لایت.
 MECHANICAL_MODEL = "gemini-3.5-flash-lite"
 
-#: پنجره‌ی چک گپ داده‌ی پست مقطعی: شبانه‌روزِ منتهی به اکنون (تصمیم ۱۶).
 GAP_LOOKBACK = timedelta(hours=24)
-#: سری مبنای چک گپ نسخه‌ی ۱ — پست‌های لانچ همه حول طلای ۱۸ عیارند.
 GAP_INSTRUMENT = Instrument.GOLD_18K.value
 
-#: دستور سخت پرامپت — تستِ مرزی وجودش را در هر پرامپت نثر/متا چک می‌کند.
 NO_DIGITS_INSTRUCTION = (
     "هیچ رقمی ننویس — نه فارسی (۰-۹) نه لاتین (0-9) نه هیچ رقم دیگری؛ "
     "هر عدد فقط از راه همین جای‌خالی‌ها بیاید و هر جای‌خالی را عیناً و "
@@ -75,27 +40,16 @@ _GEMINI_ENDPOINT = (
 
 
 class LlmClient(Protocol):
-    """سطح تماس تزریقی مدل زبانی — جمینای واقعی یا فیک قطعی تست/`--fake`."""
-
     async def generate(self, prompt: str, *, model: str) -> str:
-        """یک پرامپت ⟸ متن خروجی مدل. مدل از ثابت‌های این ماژول می‌آید."""
         ...
 
 
 class GeminiClient:
-    """REST خام جمینای با httpx — عمداً بدون SDK سنگین google-generativeai.
-
-    کلید فقط در هدر `x-goog-api-key` می‌رود (نه در URL ⟸ در استثناها و
-    لاگ‌های httpx که آدرس را چاپ می‌کنند هم ظاهر نمی‌شود) و این کلاس هیچ
-    مسیر لاگ/ذخیره‌ای برای آن ندارد — `repr` هم نقاب می‌زند.
-    """
-
     def __init__(self, api_key: str, *, http: httpx.AsyncClient | None = None) -> None:
-        """`http` تزریقی برای بازاستفاده‌ی اتصال؛ None ⟸ کلاینت موقت هر تماس."""
         self._api_key = api_key
         self._http = http
 
-    def __repr__(self) -> str:  # کلید هرگز — حتی در repr و پیام خطا.
+    def __repr__(self) -> str:
         return "GeminiClient(api_key=****)"
 
     async def generate(self, prompt: str, *, model: str) -> str:
@@ -120,27 +74,12 @@ class GeminiClient:
 
 
 class FakeLlmClient:
-    """فیک قطعی `LlmClient` — برای تست‌ها و اجرای آفلاین `tablo-generate --fake`.
-
-    بدون شبکه و بدون کلید، نثری ساختگی می‌سازد که (الف) هیچ رقمی ندارد و
-    (ب) همه‌ی جای‌خالی‌های پرامپت را عیناً نگه می‌دارد — یعنی رفتار همان
-    مدلی که دستور پرامپت را کامل اجرا کرده. با `scripted` می‌شود پاسخ‌های
-    ازپیش‌نوشته تزریق کرد (مثلاً پاسخ رقم‌دار، برای دیدن رد شدن در دروازه).
-    پرامپت‌ها در `prompts` ضبط می‌شوند تا تست مرزی دستور «هیچ رقمی ننویس»
-    را راستی‌آزمایی کند.
-    """
-
     def __init__(self, scripted: Sequence[str] | None = None) -> None:
-        self.prompts: list[tuple[str, str]] = []  # زوج‌های (model, prompt)
+        self.prompts: list[tuple[str, str]] = []
         self._scripted: list[str] = list(scripted) if scripted is not None else []
 
     @staticmethod
     def _topic_of(prompt: str) -> str:
-        """موضوع را از خط اول پرامپت درمی‌آورد — برای نثر ساختگیِ موضوع‌محور.
-
-        نثر فیک باید بین موضوع‌ها متمایز باشد وگرنه دروازه‌ی شباهت (که در
-        تست‌ها واقعی است) پست‌های موضوع‌های مختلف را «تکراری» می‌گیرد.
-        """
         for line in prompt.splitlines():
             start = line.find("درباره‌ی ")
             if start == -1:
@@ -167,19 +106,10 @@ class FakeLlmClient:
 
 
 class InsufficientDataError(LookupError):
-    """داده‌ی کافی برای این موضوع نیست — موضوع بی‌سروصدا (با لاگ) رد می‌شود.
-
-    خویشاوند «کهنگی، نه خطا»: نبودِ داده پست جعلی نمی‌سازد، پست نمی‌سازد.
-    """
+    pass
 
 
 class DraftSpec(NamedTuple):
-    """خروجی کوئری داده‌ی یک موضوع — هرچه دروازه و صف لازم دارند.
-
-    `facts` همان ادعاهای کوئری‌ساخته‌اند (با جای‌خالی، بدون رقم) — ورودی
-    مشترک پرامپت نثر و پرامپت متا؛ مدل حق ادعای بیرون از این‌ها را ندارد.
-    """
-
     slug: str
     title_template: str
     prompt: str
@@ -188,18 +118,14 @@ class DraftSpec(NamedTuple):
     facts: tuple[str, ...]
 
 
-# ------------------------------------------------------- قالب‌بندی فارسی اعداد
-
 _FA_DIGITS = str.maketrans("0123456789.", "۰۱۲۳۴۵۶۷۸۹٫")
 
 
 def fa_int(value: int) -> str:
-    """عدد صحیح با ارقام فارسی و جداکننده‌ی هزارگان (٬) — مقدار جای‌خالی."""
     return f"{value:,}".replace(",", "٬").translate(_FA_DIGITS)
 
 
 def fa_decimal(value: Decimal) -> str:
-    """اعشاری با ارقام فارسی و ممیز ٫ — صفرهای انتهایی حذف می‌شوند."""
     text = format(value, "f")
     if "." in text:
         text = text.rstrip("0").rstrip(".")
@@ -210,11 +136,7 @@ def _fa_date(moment: datetime) -> str:
     return f"{moment:%Y/%m/%d}".translate(_FA_DIGITS)
 
 
-# ------------------------------------------------------------ ساخت پرامپت‌ها
-
-
 def _prose_prompt(topic: str, slots: Mapping[str, str], facts: Sequence[str]) -> str:
-    """پرامپت نثر: فقط واقعیت‌های ازپیش‌ساخته (ادعا با کوئری، نه با مدل)."""
     placeholders = "، ".join(f"{{{{{name}}}}}" for name in slots)
     facts_text = "\n".join(f"- {fact}" for fact in facts)
     return (
@@ -229,7 +151,6 @@ def _prose_prompt(topic: str, slots: Mapping[str, str], facts: Sequence[str]) ->
 
 
 def _meta_prompt(topic: str, slots: Mapping[str, str], facts: Sequence[str]) -> str:
-    """پرامپت مدل سبک: توضیح متا/لید یک‌بندی — همان قیدهای سخت نثر."""
     placeholders = "، ".join(f"{{{{{name}}}}}" for name in slots)
     facts_text = "\n".join(f"- {fact}" for fact in facts)
     return (
@@ -243,15 +164,11 @@ def _meta_prompt(topic: str, slots: Mapping[str, str], facts: Sequence[str]) -> 
     )
 
 
-# ------------------------------------------------- کوئری‌های داده‌ی پنج موضوع
-
-
 def fee_comparison_spec(
     platforms: Sequence[Platform],
     snapshots: Mapping[str, PlatformSnapshot],
     now: datetime,
 ) -> DraftSpec:
-    """مقایسه‌ی کارمزد خرید/فروش — از `terms` اسنپ‌شات جاری هر سکو."""
     rows: list[tuple[Platform, Decimal, Decimal]] = []
     for platform in platforms:
         snapshot = snapshots.get(platform.slug)
@@ -292,8 +209,6 @@ def minimum_order_spec(
     snapshots: Mapping[str, PlatformSnapshot],
     now: datetime,
 ) -> DraftSpec:
-    """حداقل سفارش — فقط سکوهایی که خود منبع حداقل را منتشر می‌کند
-    (`terms.min_order_toman`؛ نامستند جعل نمی‌شود — سرِ فیلد در models)."""
     rows: list[tuple[Platform, int]] = []
     for platform in platforms:
         snapshot = snapshots.get(platform.slug)
@@ -328,7 +243,6 @@ def round_trip_spec(
     snapshots: Mapping[str, PlatformSnapshot],
     now: datetime,
 ) -> DraftSpec:
-    """هزینه‌ی رفت‌وبرگشت — `terms.round_trip_percent` (فرمول فقط در گردآورنده)."""
     rows: list[tuple[Platform, Decimal]] = []
     for platform in platforms:
         snapshot = snapshots.get(platform.slug)
@@ -371,8 +285,6 @@ def physical_delivery_spec(
     snapshots: Mapping[str, PlatformSnapshot],
     now: datetime,
 ) -> DraftSpec:
-    """هزینه‌ی تحویل فیزیکی — از `delivery_note_fa` سکوها (فراداده‌ی مستند
-    سند تحقیق ۰۱؛ رقم داخل یادداشت از داده می‌آید، نه از مدل)."""
     noted = [platform for platform in platforms if platform.delivery_note_fa is not None]
     if not noted:
         raise InsufficientDataError("هیچ سکویی شرایط تحویل فیزیکی مستند ندارد")
@@ -382,7 +294,7 @@ def physical_delivery_spec(
     facts: list[str] = ["وضعیت تحویل در {{tarikh}} ثبت شده است."]
     for platform in noted:
         note = platform.delivery_note_fa
-        assert note is not None  # فیلترشده در بالا
+        assert note is not None
         slots[f"tahvil_{platform.slug}"] = note
         facts.append(f"شرایط تحویل فیزیکی {platform.name_fa}: {{{{tahvil_{platform.slug}}}}}.")
     if silent:
@@ -405,8 +317,6 @@ def open_now_spec(
     snapshots: Mapping[str, PlatformSnapshot],
     now: datetime,
 ) -> DraftSpec:
-    """«الان کجا باز است» — پرچم‌های `buy_enabled`/`sell_enabled` اسنپ‌شات جاری
-    (مزیت رقابتی تصمیم ۱۹: وضعیت باز/بسته‌ی خرید و فروش)."""
     present = [platform for platform in platforms if platform.slug in snapshots]
     if len(present) < 2:
         raise InsufficientDataError("اسنپ‌شات جاری برای کمتر از دو سکو")
@@ -451,7 +361,6 @@ TopicBuilder = Callable[
     [Sequence[Platform], Mapping[str, PlatformSnapshot], datetime], DraftSpec
 ]
 
-#: پنج موضوع لانچ (تصمیم ۷ + بلیت ۱۵) — ترتیبْ ترتیب صف شدن است.
 TOPIC_BUILDERS: tuple[tuple[str, TopicBuilder], ...] = (
     ("مقایسه‌ی کارمزد", fee_comparison_spec),
     ("حداقل سفارش", minimum_order_spec),
@@ -459,9 +368,6 @@ TOPIC_BUILDERS: tuple[tuple[str, TopicBuilder], ...] = (
     ("هزینه‌ی تحویل فیزیکی", physical_delivery_spec),
     ("الان کجا باز است", open_now_spec),
 )
-
-
-# ------------------------------------------------------------------ خط لوله
 
 
 async def generate_launch_drafts(
@@ -472,12 +378,6 @@ async def generate_launch_drafts(
     llm: LlmClient,
     now: datetime | None = None,
 ) -> tuple[str, ...]:
-    """یک اجرای کامل مولد: پنج موضوع ⟸ صفِ گیت‌شده. خروجی: اسلاگ‌های صف‌شده.
-
-    هر موضوع مستقل شکست می‌خورد (داده‌ی ناکافی، گپ، رد دروازه، برخورد
-    اسلاگ) و بقیه ادامه می‌دهند — اجرای دوباره در همان روز به برخورد اسلاگ
-    یا شباهت می‌خورد و همین رفتار درست است (نه پست تکراری، نه سقوط).
-    """
     moment = now if now is not None else datetime.now(UTC)
     platforms = await store.get_listed_platforms()
     snapshots: dict[str, PlatformSnapshot] = {}
@@ -501,7 +401,6 @@ async def generate_launch_drafts(
             until=moment,
         )
         if not data_ok:
-            # تصمیم ۱۶: دوره‌ی دارای گپ اصلاً پست نمی‌گیرد — LLM صدا نمی‌خورد.
             log.warning("موضوع «%s» تولید نشد — گپ داده در دوره‌ی ارجاع", label)
             continue
         prose = await llm.generate(spec.prompt, model=PROSE_MODEL)
@@ -527,11 +426,8 @@ async def generate_launch_drafts(
     return tuple(enqueued)
 
 
-# ------------------------------------------------------------------ فرمان CLI
-
-
 async def _run_generate(*, fake: bool) -> tuple[str, ...]:
-    import asyncpg  # فقط مسیر CLI — تست‌ها این پایین نمی‌آیند
+    import asyncpg
 
     from ..store.postgres_store import PostgresStore
     from .gateway import PostgresContentGateway
@@ -542,7 +438,7 @@ async def _run_generate(*, fake: bool) -> tuple[str, ...]:
     pool = await asyncpg.create_pool(database_url, min_size=1, max_size=1)
     assert pool is not None
     try:
-        store = PostgresStore(pool)  # هم Store هم RetentionStore را پیاده می‌کند
+        store = PostgresStore(pool)
         gateway = PostgresContentGateway(pool)
         if fake:
             return await generate_launch_drafts(
@@ -558,12 +454,6 @@ async def _run_generate(*, fake: bool) -> tuple[str, ...]:
 
 
 def main() -> None:
-    """نقطه‌ی ورود `tablo-generate [--fake]` — زمان‌بندی‌شده روی لپ‌تاپ.
-
-    بدون `GEMINI_API_KEY` با پیام روشن فارسی می‌ایستد (بدون traceback) —
-    کلید فقط روی همین ماشین است و هرگز جایی نمی‌رود (تصمیم ۱۷). `--fake`
-    برای تمرین آفلاین خط لوله بدون کلید و شبکه است (LLM ساختگی).
-    """
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
     args = sys.argv[1:]
     fake = "--fake" in args

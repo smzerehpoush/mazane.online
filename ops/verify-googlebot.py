@@ -1,27 +1,4 @@
 #!/usr/bin/env python3
-"""تأیید آفلاین بازدیدهای گوگل‌بات از روی لاگ JSON کدی (بلیت ۱۱).
-
-«بیمه‌ی Crawl Stats خودمیزبان» — بند ۱۰ و بند ۱۳ تصمیم ۱۴ سند معماری: مستقل
-از دسترسی به Search Console، از لاگ مبدأ می‌فهمیم گوگل واقعاً می‌خزد یا نه.
-
-روش (رویه‌ی رسمی خود گوگل برای تأیید Googlebot):
-  1. خط‌های لاگ JSON کدی را می‌خواند (فایل‌ها یا stdin؛ ‎.gz‎ هم پشتیبانی می‌شود).
-  2. درخواست‌هایی که User-Agent شان شامل «Googlebot» است جدا می‌شوند.
-  3. IP واقعی کلاینت استخراج می‌شود — پشت آروان، remote_ip لبه‌ی آروان است؛
-     ترتیب ترجیح: هدر Ar-Real-Ip، سپس اولین عضو X-Forwarded-For، سپس
-     client_ip/remote_ip خود کدی.
-  4. برای هر IP یکتا: reverse-DNS (PTR) باید به ‎*.googlebot.com‎ یا
-     ‎*.google.com‎ ختم شود، و forward-confirm همان نام باید به همان IP برگردد.
-  5. گزارش: هیت‌های اصیل در برابر جعلی، به تفکیک IP و مسیر.
-
-فقط کتابخانه‌ی استاندارد. اجرا (روی سرور یا هر جای دیگری که فایل لاگ هست):
-
-    python3 ops/verify-googlebot.py /var/log/caddy/mazane-access.log
-    zcat access.log.1.gz | python3 ops/verify-googlebot.py
-
-«آفلاین» یعنی خارج از مسیر درخواست — خودِ lookup ها به DNS نیاز دارند.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -52,7 +29,6 @@ def iter_lines(paths: list[str]) -> Iterator[str]:
 
 
 def header_value(headers: dict[str, Any], name: str) -> str | None:
-    """جست‌وجوی هدر بدون حساسیت به بزرگی حروف؛ مقدار کدی list[str] است."""
     lowered = name.lower()
     for key, value in headers.items():
         if key.lower() == lowered:
@@ -81,7 +57,6 @@ def client_ip(request: dict[str, Any]) -> str | None:
 
 
 def verify_ip(ip: str, cache: dict[str, tuple[bool, str]]) -> tuple[bool, str]:
-    """reverse-DNS + forward-confirm طبق رویه‌ی مستند گوگل."""
     if ip in cache:
         return cache[ip]
     try:
@@ -138,7 +113,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     first_ts: datetime | None = None
     last_ts: datetime | None = None
 
-    records: list[tuple[str, str, int, datetime | None]] = []  # (ip, uri, status, ts)
+    records: list[tuple[str, str, int, datetime | None]] = []
 
     for line in iter_lines(args.logs):
         line = line.strip()
@@ -202,8 +177,6 @@ def main(argv: Iterable[str] | None = None) -> int:
             print(f"  {ip}  — {hits_by_ip[ip]} هیت — {why}")
     if status_genuine:
         print("\nکد وضعیت هیت‌های اصیل:", dict(sorted(status_genuine.items())))
-        # هشدار صریح: طبق بند ۱۰ سند معماری، ۵xx دیدنِ گوگل‌بات همان سناریوی
-        # حذف از ایندکس «within days» است.
         errors = sum(n for code, n in status_genuine.items() if code >= 500)
         if errors:
             print(f"  ⚠️ {errors} پاسخ ۵xx به گوگل‌بات اصیل — فوراً پیگیری شود (بند ۱۰.۲)")

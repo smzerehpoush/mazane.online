@@ -1,16 +1,3 @@
-"""مرز گردآورنده — صف پیش‌نویس، سقف انتشار روزانه و پس‌گیری (بلیت ۱۳).
-
-منطق محتوا روی اینترفیس کوچک `ContentGateway` سوار است (الگوی retention)؛
-اینجا فیک درون‌حافظه‌ای همان اینترفیس + ضبط‌کننده‌ی فراخوانی بازتولید وب
-جای پستگرس و HTTP واقعی می‌نشینند — هیچ تماس شبکه‌ای و سرویس زنده‌ای نیست.
-
-معیارهای پذیرش بلیت:
-- با ۲۰ پیش‌نویس و سقف ۲، در روز فقط ۲ پست منتشر می‌شود (روز بعد ۲ تای بعدی).
-- عمق صف زیر آستانه (۵ روز) هشدار WARNING تولید می‌کند.
-- پس‌گیری وضعیت را retracted می‌کند و بازتولید وب (فهرست + پست + سایت‌مپ)
-  را صدا می‌زند — noindex از راه 404 + حذف از سایت‌مپ (مستند در retract.py).
-"""
-
 from datetime import UTC, datetime, timedelta
 import logging
 
@@ -30,21 +17,18 @@ from tablo_collector.slugs import (
     SlugCollisionError,
 )
 
-# ساعت ۰۹:۳۰ یک روز دلخواه — همه‌ی زمان‌ها تزریقی‌اند، ساعت سیستم بی‌اثر است.
 BASE = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
 NEXT_DAY = BASE + timedelta(days=1)
 
 
 class FakeContentGateway:
-    """فیک درون‌حافظه‌ای `ContentGateway` — همان قراردادهای جدول posts."""
-
     def __init__(self) -> None:
         self.posts: dict[str, PostRow] = {}
 
     async def insert_draft(
         self, slug: str, title_fa: str, body_md: str, *, now: datetime
     ) -> None:
-        assert slug not in self.posts  # قید کلید اصلی جدول
+        assert slug not in self.posts
         self.posts[slug] = PostRow(
             slug=slug,
             title_fa=title_fa,
@@ -93,17 +77,14 @@ class FakeContentGateway:
 
     async def set_retracted(self, slug: str, *, now: datetime) -> None:
         post = self.posts[slug]
-        assert post.status == "published"  # قید check جدول: پس‌گرفته published_at دارد
+        assert post.status == "published"
         self.posts[slug] = post.model_copy(update={"status": "retracted", "updated_at": now})
 
 
-# تایید ایستا: فیک همان اینترفیس تزریقی است.
 _GATEWAY_CONFORMANCE: ContentGateway = FakeContentGateway()
 
 
 class RecordingRevalidator:
-    """ضبط‌کننده‌ی فراخوانی‌های بازتولید وب — جای POST واقعی به /api/revalidate-blog."""
-
     def __init__(self, *, result: bool = True, exc: Exception | None = None) -> None:
         self.calls: list[str | None] = []
         self._result = result
@@ -116,9 +97,6 @@ class RecordingRevalidator:
         return self._result
 
 
-# حروف پایه‌ی بدنه‌های متمایز — هر بدنه فقط از یک حرف ساخته می‌شود تا
-# ۳-گرم‌های دو بدنه‌ی متفاوت هیچ اشتراکی نداشته باشند و دروازه‌ی شباهت
-# (بلیت ۱۴) در تست‌های صف/انتشار درگیر نشود؛ رقم هم ندارد (دروازه‌ی رقم).
 _LETTERS = "ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی"
 
 
@@ -128,11 +106,6 @@ def unique_body(index: int) -> str:
 
 
 async def seed_drafts(gateway: FakeContentGateway, count: int) -> list[str]:
-    """پیش‌نویس‌ها به ترتیب زمانی (یک دقیقه فاصله) — «قدیمی‌ترین» تعریف‌پذیر است.
-
-    از مسیر واقعی `enqueue_draft` (با دروازه) می‌گذرند: عنوانْ قالب است و
-    شماره‌اش از جای‌خالی می‌آید (رقم بیرون از جای‌خالی رد می‌شود).
-    """
     slugs = []
     for i in range(count):
         slug = f"post-{i:02d}"
@@ -148,11 +121,7 @@ async def seed_drafts(gateway: FakeContentGateway, count: int) -> list[str]:
     return slugs
 
 
-# ------------------------------------------------------------------ سقف روزانه
-
-
 async def test_cap_limits_publishes_to_two_per_day_with_twenty_drafts() -> None:
-    """معیار پذیرش: ۲۰ پیش‌نویس، سقف ۲ ⟸ امروز فقط ۲؛ فردا ۲ تای بعدی."""
     gateway = FakeContentGateway()
     revalidate = RecordingRevalidator()
     await seed_drafts(gateway, 20)
@@ -160,11 +129,9 @@ async def test_cap_limits_publishes_to_two_per_day_with_twenty_drafts() -> None:
     published = await publish_due(gateway, revalidate, now=BASE, daily_cap=2)
     assert published == ("post-00", "post-01")
 
-    # گذرهای بعدیِ همان روز — مستقل از اینکه ۱۸ پیش‌نویس منتظرند — هیچ.
     assert await publish_due(gateway, revalidate, now=BASE + timedelta(minutes=15), daily_cap=2) == ()
     assert await publish_due(gateway, revalidate, now=BASE + timedelta(hours=10), daily_cap=2) == ()
 
-    # روز بعد: دو تای بعدیِ صف، به همان ترتیب.
     assert await publish_due(gateway, revalidate, now=NEXT_DAY, daily_cap=2) == (
         "post-02",
         "post-03",
@@ -174,7 +141,6 @@ async def test_cap_limits_publishes_to_two_per_day_with_twenty_drafts() -> None:
 
 async def test_publish_picks_oldest_drafts_first() -> None:
     gateway = FakeContentGateway()
-    # عمداً با ترتیب درج به‌هم‌ریخته — ملاک updated_at (زمان صف شدن) است.
     for index, (slug, minutes) in enumerate((("newest", 30), ("oldest", 0), ("middle", 10))):
         await enqueue_draft(
             gateway,
@@ -190,20 +156,16 @@ async def test_publish_picks_oldest_drafts_first() -> None:
 
 
 async def test_already_published_today_counts_against_cap() -> None:
-    """سقف سمت سرور روی «انتشارهای امروز» است، نه روی هر گذر جدا."""
     gateway = FakeContentGateway()
     await seed_drafts(gateway, 5)
-    # یک پست صبحِ امروز (پیش از این گذر) منتشر شده است.
     await gateway.set_published("post-00", published_at=BASE - timedelta(hours=2))
 
     published = await publish_due(gateway, RecordingRevalidator(), now=BASE, daily_cap=2)
 
-    assert published == ("post-01",)  # فقط ۱ = ۲ − ۱
+    assert published == ("post-01",)
 
 
 async def test_retraction_does_not_refund_todays_budget() -> None:
-    """پس‌گیریِ انتشارِ امروز، سهم امروز را آزاد نمی‌کند — سقف نرخ خروجی
-    سرور است («چند پست امروز بیرون رفت»)، نه شمار پست‌های زنده."""
     gateway = FakeContentGateway()
     revalidate = RecordingRevalidator()
     await seed_drafts(gateway, 5)
@@ -227,10 +189,7 @@ async def test_published_at_is_publish_moment_not_enqueue_moment() -> None:
     assert post is not None
     assert post.status == "published"
     assert post.published_at == BASE
-    assert post.updated_at == BASE  # انتشار تغییر معنادار است — منبع lastmod سایت‌مپ
-
-
-# ------------------------------------------------------------- بازتولید وب
+    assert post.updated_at == BASE
 
 
 async def test_publish_fires_revalidation_per_published_slug() -> None:
@@ -246,8 +205,6 @@ async def test_publish_fires_revalidation_per_published_slug() -> None:
 async def test_revalidation_failure_does_not_roll_back_publish(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """بازتولید بهینه‌سازی تازگی است، نه شرط انتشار: شکستش فقط WARNING است
-    و ISR وب در بازتولید بعدی جبران می‌کند (مستند در publisher.py)."""
     gateway = FakeContentGateway()
     revalidate = RecordingRevalidator(exc=RuntimeError("وب در دسترس نیست"))
     await seed_drafts(gateway, 2)
@@ -262,18 +219,11 @@ async def test_revalidation_failure_does_not_roll_back_publish(
     assert any("بازتولید" in record.message for record in caplog.records)
 
 
-# ------------------------------------------------------------------ عمق صف
-
-
 async def test_queue_depth_below_five_days_logs_warning(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """معیار پذیرش: عمق صف زیر آستانه هشدار تولید می‌کند.
-
-    قلاب هشدار فعلاً همین لاگ WARNING است (مستند در queue.py) — پایش لاگ
-    سرور آن را می‌بیند."""
     gateway = FakeContentGateway()
-    await seed_drafts(gateway, 8)  # ‏۸ ÷ ۲ = ۴ روز < ۵
+    await seed_drafts(gateway, 8)
 
     with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
         depth = await check_queue_depth(gateway, daily_cap=2)
@@ -287,7 +237,7 @@ async def test_queue_depth_at_or_above_threshold_is_quiet(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     gateway = FakeContentGateway()
-    await seed_drafts(gateway, 10)  # ‏۱۰ ÷ ۲ = ۵ روز — «زیر ۵» نیست
+    await seed_drafts(gateway, 10)
 
     with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
         depth = await check_queue_depth(gateway, daily_cap=2)
@@ -297,7 +247,6 @@ async def test_queue_depth_at_or_above_threshold_is_quiet(
 
 
 async def test_drain_pass_publishes_then_reports_depth() -> None:
-    """گذر حلقه‌ی سرور: انتشارِ سررسید + سنجش عمق در یک گذر."""
     gateway = FakeContentGateway()
     revalidate = RecordingRevalidator()
     await seed_drafts(gateway, 6)
@@ -305,17 +254,11 @@ async def test_drain_pass_publishes_then_reports_depth() -> None:
     published, depth = await drain_pass(gateway, revalidate, now=BASE, daily_cap=2)
 
     assert published == ("post-00", "post-01")
-    assert depth.drafts == 4  # پس از انتشار سنجیده می‌شود — عمقِ واقعیِ باقی‌مانده
+    assert depth.drafts == 4
     assert depth.days == 2.0
 
 
-# ------------------------------------------------------------------ پس‌گیری
-
-
 async def test_retract_flips_status_and_fires_revalidation() -> None:
-    """معیار پذیرش: فرمان پس‌گیری پست را noindex می‌کند و از سایت‌مپ درمی‌آورد —
-    وضعیت retracted ⟸ وب 404 می‌دهد و از فهرست/سایت‌مپ حذف می‌کند؛ فراخوانی
-    بازتولید با اسلاگ، ‎/blog‎ و ‎/blog/<slug>‎ و ‎/sitemap.xml‎ را می‌سازد."""
     gateway = FakeContentGateway()
     revalidate = RecordingRevalidator()
     await seed_drafts(gateway, 1)
@@ -328,8 +271,8 @@ async def test_retract_flips_status_and_fires_revalidation() -> None:
     post = await gateway.get_post("post-00")
     assert post is not None
     assert post.status == "retracted"
-    assert post.published_at == BASE - timedelta(days=3)  # سند تاریخ انتشار می‌ماند
-    assert post.updated_at == retract_at  # تغییر معنادار ⟸ lastmod سایت‌مپ
+    assert post.published_at == BASE - timedelta(days=3)
+    assert post.updated_at == retract_at
     assert revalidate.calls == ["post-00"]
 
 
@@ -344,8 +287,6 @@ async def test_retract_unknown_slug_reports_not_found() -> None:
 
 
 async def test_retract_draft_is_refused() -> None:
-    """پیش‌نویس منتشر نشده که پس گرفته شود — نامرئی است؛ وضعیتش دست نمی‌خورد
-    (قید جدول هم پس‌گرفته‌ی بدون published_at را نمی‌پذیرد)."""
     gateway = FakeContentGateway()
     revalidate = RecordingRevalidator()
     await seed_drafts(gateway, 1)
@@ -359,8 +300,6 @@ async def test_retract_draft_is_refused() -> None:
 
 
 async def test_retract_is_idempotent_and_refires_revalidation() -> None:
-    """اجرای دوباره خطا نیست: وضعیت همان می‌ماند ولی بازتولید دوباره شلیک
-    می‌شود — اگر بار اول بازتولید شکسته باشد، اجرای دوم جبرانش می‌کند."""
     gateway = FakeContentGateway()
     revalidate = RecordingRevalidator()
     await seed_drafts(gateway, 1)
@@ -372,11 +311,8 @@ async def test_retract_is_idempotent_and_refires_revalidation() -> None:
     assert outcome is RetractOutcome.ALREADY_RETRACTED
     post = await gateway.get_post("post-00")
     assert post is not None
-    assert post.updated_at == BASE + timedelta(hours=1)  # اجرای دوم updated_at را نمی‌جنباند
+    assert post.updated_at == BASE + timedelta(hours=1)
     assert revalidate.calls == ["post-00", "post-00"]
-
-
-# ------------------------------------------------------- دروازه‌ی اسلاگ صف
 
 
 async def test_enqueue_rejects_reserved_slug() -> None:
@@ -390,7 +326,6 @@ async def test_enqueue_rejects_reserved_slug() -> None:
 
 
 async def test_enqueue_rejects_collision_with_central_registry() -> None:
-    """اسلاگ سکو/دارایی/صفحه‌ی ایستا در طرح URL تخت پست را می‌خورد — رد."""
     gateway = FakeContentGateway()
 
     with pytest.raises(SlugCollisionError):
@@ -424,8 +359,6 @@ async def test_enqueue_rejects_slug_already_in_posts_table() -> None:
 
 
 async def test_enqueue_accepts_valid_new_slug() -> None:
-    """عدد فقط از جای‌خالی وارد متن می‌شود (بلیت ۱۴): «۱۸» عنوان از slots
-    می‌آید و رندرشده ذخیره می‌شود — قالبِ خودش هیچ رقمی ندارد."""
     gateway = FakeContentGateway()
 
     await enqueue_draft(

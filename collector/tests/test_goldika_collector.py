@@ -1,13 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی گلدیکا ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/goldika_v2_price.json` پاسخ واقعی
-`GET https://goldika.ir/api/v2/public/price` است (ضبط‌شده ۲۰۲۶-۰۸-۰۶ با
-User-Agent صادق). تست‌ها هیچ تماس شبکه‌ای ندارند.
-
-گلدیکا کرال و ذخیره می‌شود ولی `PERMISSION_PENDING` است — نمایش عمومی‌اش در
-`test_multi_source_round.py` پوشش داده شده است.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -47,20 +37,14 @@ async def test_fixture_payload_is_stored_with_explicit_div10_scale() -> None:
     assert stored.platform_slug == "goldika"
 
     (price,) = stored.quotes
-    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
     assert price.side is Side.PRICE
 
-    # مقدار خام و ضریب صریح آداپتر — گلدیکا ریال بر گرم، ÷۱۰
-    # (سند تحقیق ۰۱، بند ۳.۳).
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
         assert quote.raw_value == Decimal("185142350")
         assert quote.raw_scale == Decimal("0.1")
 
-    # ریاضی مقیاس: 185142350 ریال ÷ 10 = 18,514,235 تومان بر گرم.
     assert price.price_toman == 18514235
-    # کارمزد ۱٫۲٪ از خود API؛ تحقیق تأیید کرد buy = mid × 1.012 دقیقاً —
-    # پس این اعداد با old_price.buy/sell خود گلدیکا هم‌خوان‌اند.
 
 
 async def test_terms_commission_comes_from_api() -> None:
@@ -75,7 +59,7 @@ async def test_terms_commission_comes_from_api() -> None:
     assert terms.buy_fee_percent == Decimal("1.2")
     assert terms.sell_fee_percent == Decimal("1.2")
     assert terms.fee_source == FeeSource.API
-    assert terms.round_trip_percent == Decimal("2.3715")  # 1 − 0.988/1.012
+    assert terms.round_trip_percent == Decimal("2.3715")
 
 
 async def test_missing_mid_price_raises_and_stores_nothing() -> None:

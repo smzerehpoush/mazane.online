@@ -1,24 +1,3 @@
-"""موجودیت کامل دارایی + دروازه‌ی انتشار (بند ۱۳، تصمیم ۱۰ — بلیت ۷).
-
-`Instrument` در models.py فقط کد است؛ اینجا هر کد یک موجودیت کامل می‌شود:
-اسلاگ لاتین تخت (بند ۱۳، تصمیم ۱۱)، نام فارسی، واحد، عیار و ارز.
-
-**دروازه‌ی انتشار:** دارایی‌ای که کمتر از دو سکوی پشتیبان دارد صفحه‌ی
-مقایسه‌ی اختصاصی نمی‌گیرد — کرال و ذخیره می‌شود ولی `published=False`
-می‌ماند و لایه‌ی وب برایش 404 می‌دهد و در سایت‌مپ نمی‌آورد. شمار سکوهای
-پشتیبان از **رجیستری زنده** می‌آید: کدام آداپترها (فیلد `instruments`
-هر آداپتر) این دارایی را تولید می‌کنند، به شرط این‌که سکویشان قابل نمایش
-عمومی باشد (`is_listed` — گلدیکای PERMISSION_PENDING هرگز پشتیبان حساب
-نمی‌شود چون داده‌اش به سطح عمومی نمی‌رسد).
-
-payload سریال‌شده (`tablo:instruments`) قرارداد لایه‌ی وب است: وب فقط
-پرچم `published` را می‌خواند — آستانه و شمارش همین‌جا، در گردآورنده است
-(قاعده‌ی ۱ قراردادها: هیچ منطق مشتقی در وب نیست).
-
-عیار فقط جایی پر شده که قطعی است (طلای ۱۸ عیار = ۷۵۰، نقره = ۹۹۰)؛
-برای بقیه None است — حدس نمی‌زنیم.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -28,23 +7,17 @@ from pydantic import BaseModel, ConfigDict
 
 from .models import Instrument, Platform
 
-#: آستانه‌ی دروازه‌ی انتشار — «دست‌کم دو سکوی پشتیبان» (بند ۱۳، تصمیم ۱۰).
 PUBLISH_GATE_MIN_PLATFORMS = 2
 
 
 class InstrumentInfo(BaseModel):
-    """موجودیت دارایی — ثابت، دستی نگهداری می‌شود (مثل Platform)."""
-
     model_config = ConfigDict(frozen=True)
 
     instrument: Instrument
-    #: اسلاگ لاتین تخت — عضو جدول مرکزی اسلاگ (tablo_collector.slugs).
     slug: str
     name_fa: str
     unit_fa: str
-    #: عیار به رقم لاتین («750»، «990») یا None اگر مستند/قطعی نیست.
     purity: str | None
-    #: ارز قیمت‌گذاری — «TOMAN» برای سکوهای داخلی، «USD» برای انس جهانی.
     currency: str
 
 
@@ -62,7 +35,7 @@ INSTRUMENTS: tuple[InstrumentInfo, ...] = (
         slug="abshode",
         name_fa="طلای آب‌شده (مظنه)",
         unit_fa="مثقال",
-        purity=None,  # عیار مظنه در منابع فعلی مستند نشده — حدس نمی‌زنیم.
+        purity=None,
         currency="TOMAN",
     ),
     InstrumentInfo(
@@ -85,13 +58,6 @@ INSTRUMENTS: tuple[InstrumentInfo, ...] = (
 
 
 class InstrumentListing(BaseModel):
-    """یک سطر payload ‏`tablo:instruments` — قرارداد با لایه‌ی وب.
-
-    `published` همان دروازه‌ی انتشار محاسبه‌شده است؛ وب آن را فقط
-    می‌خواند. `supporting_platform_slugs` برای صفحه‌ی دارایی است: کدام
-    سکوها این دارایی را عرضه می‌کنند (فقط سکوهای قابل نمایش عمومی).
-    """
-
     model_config = ConfigDict(frozen=True)
 
     slug: str
@@ -105,8 +71,6 @@ class InstrumentListing(BaseModel):
 
 
 class _EmitsInstruments(Protocol):
-    """حداقلِ لازم از یک آداپتر برای شمارش پشتیبان‌ها."""
-
     slug: str
     instruments: tuple[Instrument, ...]
 
@@ -114,13 +78,6 @@ class _EmitsInstruments(Protocol):
 def build_listings(
     adapters: Sequence[_EmitsInstruments], platforms: Sequence[Platform]
 ) -> tuple[InstrumentListing, ...]:
-    """رجیستری زنده ⟸ فهرست دارایی‌ها با وضعیت دروازه.
-
-    پشتیبان = سکوی `is_listed` که آداپترش این دارایی را تولید می‌کند؛
-    ترتیب پشتیبان‌ها همان ترتیب `platforms` (ترتیب فهرست عمومی) است.
-    با آمدن آداپتر/سکوی دوم برای یک دارایی، `published` در همان نوبتِ
-    گردآوری True می‌شود — صفحه‌ی وب خودکار ساخته می‌شود، بدون دیپلوی.
-    """
     emitted_by = {adapter.slug: tuple(adapter.instruments) for adapter in adapters}
     listings = []
     for info in INSTRUMENTS:

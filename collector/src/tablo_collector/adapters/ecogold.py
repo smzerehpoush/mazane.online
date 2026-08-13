@@ -1,19 +1,3 @@
-"""آداپتر اکوگلد — `backend.ecogold.ir/api/prices/otc`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۱ تا ۳.۳ و ۳.۶):
-
-- `data[]` چند نماد دارد (`GOLD18-IRT`، `SILVER999-IRT`)؛ مبنای ما
-  `GOLD18-IRT` است. قیمت‌ها رشته‌ی اعشاری‌اند.
-- پسوند `-IRT` یعنی تومان بر گرم ⟸ ضریب صریح ×۱.
-- نام‌گذاری «دید کاربر» (بند ۳.۲): `buy_price` بزرگ‌تر = آنچه کاربر
-  می‌پردازد؛ نگاشت با قاعده‌ی ثابت `ask_bid`.
-- کارمزد در خود اسپرد API است — ارزان‌ترین رفت‌وبرگشت بازار (~۰٫۲۱٪،
-  بند ۳.۸) ⟸ `fee_source = API`.
-- هر سطر `signature` (JWT) و `valid_at` دارد — برای اثبات منشأ قیمت؛ فعلاً
-  استفاده نمی‌شود.
-- API فیلد وضعیت باز/بسته ندارد ⟸ هر دو سمت باز فرض می‌شود.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -32,7 +16,6 @@ class EcogoldAdapter:
     slug = "ecogold"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = ECOGOLD_ENDPOINT
-    # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

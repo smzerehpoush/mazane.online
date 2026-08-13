@@ -1,15 +1,3 @@
-/**
- * ماشین‌حساب دوحالته‌ی صفحه‌ی سکو (بلیت ۳۵).
- *
- * دو لایه‌ی جدا:
- *  ۱. تابع خالص `lib/calculator.ts` — پارس ورودی فارسی/لاتین و تبدیل
- *     وزن⟸مبلغ، بدون هیچ React/DOM.
- *  ۲. رندر SSR `PlatformCalculator` — چون محیط تست `node` است (بدون jsdom)،
- *     رفتار «تایپ کن، آن‌یکی زنده حساب شود» را همان تابع خالص بالا می‌سنجد؛
- *     اینجا فقط علامت‌گذاری اولیه‌ی DOM (زبانه‌ها، ورودی‌ها، برچسب‌ها، دکمه‌ی
- *     شروع معامله) را می‌سنجیم — دقیقاً همان مرزی که بقیه‌ی تست‌های وب این
- *     مخزن دارند (`renderToStaticMarkup`).
- */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -25,10 +13,6 @@ import type { Row } from "../src/lib/rows";
 import { SlugPageView } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
 import { freshIso, makeSnapshot, seed, slugPageData, type SeededStore } from "./support/seed";
-
-/* ------------------------------------------------------------------------ */
-/* لایه‌ی ۱ — تابع خالص                                                     */
-/* ------------------------------------------------------------------------ */
 
 describe("parseCalculatorInput — ورودی رشته‌ای کاربر ⟸ عدد یا null", () => {
   it("رقم لاتین ساده را می‌پذیرد", () => {
@@ -67,7 +51,7 @@ describe("parseCalculatorInput — ورودی رشته‌ای کاربر ⟸ ع�
 describe("amountFromWeight / weightFromAmount — تبدیل دوسویه روی یک قیمت واحد", () => {
   it("وزن ⟸ مبلغ، گرد به نزدیک‌ترین تومان", () => {
     expect(amountFromWeight(1, 18704055)).toBe(18704055);
-    expect(amountFromWeight(0.5, 18704055)).toBe(9352028); // 9352027.5 گرد به بالا
+    expect(amountFromWeight(0.5, 18704055)).toBe(9352028);
   });
 
   it("مبلغ ⟸ وزن، تا چهار رقم اعشار", () => {
@@ -87,10 +71,6 @@ describe("amountFromWeight / weightFromAmount — تبدیل دوسویه روی
     expect(weightFromAmount(1000, -5)).toBeNull();
   });
 });
-
-/* ------------------------------------------------------------------------ */
-/* لایه‌ی ۲ — رندر SSR                                                       */
-/* ------------------------------------------------------------------------ */
 
 const PLATFORM: ListedPlatform = {
   slug: "talasea",
@@ -131,12 +111,9 @@ describe("PlatformCalculator — یک حالت برای همه‌ی سکوها",
       <PlatformCalculator row={knownFeeRow()} hasOutbound={true} />,
     );
     expect(html).toContain("ماشین‌حساب معامله");
-    // زبانه‌ی خرید/فروش با حذف قیمت مؤثر بی‌موضوع شد: یک عدد بیشتر نیست
-    // (سند تصمیم ۰۰۰۲).
     expect(html).not.toContain('role="tablist"');
     expect(html).toContain("data-calc-weight");
     expect(html).toContain("data-calc-amount");
-    // برچسب صریح می‌گوید کارمزد در این عدد نیست.
     expect(html).toContain("بدون احتساب کارمزد");
   });
 
@@ -177,7 +154,6 @@ describe("PlatformCalculator — سکوی کارمزد نامعلوم (همان 
     expect(html).toContain("data-calc-weight");
     expect(html).toContain("data-calc-amount");
     expect(html).toContain("بدون احتساب کارمزد");
-    // ورودی مبلغ خالی می‌ماند — صفر/NaN جعلی جایش نمی‌نشیند.
     expect(html).toMatch(/data-calc-amount[^>]*value=""/);
   });
 
@@ -191,16 +167,12 @@ describe("PlatformCalculator — سکوی کارمزد نامعلوم (همان 
 });
 
 describe("PlatformCalculator — قطع منبع", () => {
-  it("بدون اسنپ‌شات چیزی رندر نمی‌کند (قاعده‌ی ۵)", () => {
+  it("بدون اسنپ‌شات چیزی رندر نمی‌کند", () => {
     const row: Row = { platform: PLATFORM, snapshot: null, updatedAt: null };
     const html = renderToStaticMarkup(<PlatformCalculator row={row} hasOutbound={true} />);
     expect(html).toBe("");
   });
 });
-
-/* ------------------------------------------------------------------------ */
-/* مرز وب کامل — مونت‌شده زیر «قیمت امروز» در PlatformPage                  */
-/* ------------------------------------------------------------------------ */
 
 describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» مونت شده", () => {
   function store(): SeededStore {
@@ -255,8 +227,6 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
   it("سکوی کارمزد نامعلوم هم «قیمت امروز» می‌گیرد و هم ماشین‌حساب", async () => {
     seed(store());
     const html = await renderSlug("digikala");
-    // پیش‌تر این بخش برای چنین سکویی اصلاً رندر نمی‌شد چون قیمت مؤثر نداشت؛
-    // حالا قیمتش با بقیه هم‌جنس است (سند تصمیم ۰۰۰۲) و فقط کارمزدش نامشخص.
     expect(html).toContain('aria-labelledby="terms-heading"');
     expect(html).toContain("data-platform-calculator");
     expect(html).toContain("بدون احتساب کارمزد");
@@ -264,8 +234,6 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
 });
 
 /**
- * ماشین‌حساب طلای زینتی (بند ۸ سند طراحی) — فرمول خالص.
- *
  * ⚠️ این تابع اول داخل `JewelryCalculator.tsx` نوشته شده بود و بی‌تست ماند.
  * جایش `lib/calculator.ts` است، کنار `amountFromWeight` — همان‌جایی که فایل
  * خودش را «تنها دروازه» می‌نامد.
@@ -298,9 +266,7 @@ describe("jewelryTotal — مبلغ طلای زینتی", () => {
       profitPercent: 7,
       vatPercent: 10,
     });
-    // ۱٬۰۰۰٬۰۰۰ × ۱٫۱ = ۱٬۱۰۰٬۰۰۰ → × ۱٫۰۷ = ۱٬۱۷۷٬۰۰۰ → × ۱٫۱ = ۱٬۲۹۴٬۷۰۰
     expect(total).toBe(1_294_700);
-    // جمعِ ساده‌ی درصدها (۱٫۲۷) عدد دیگری می‌دهد — نگهبان ترتیب.
     expect(total).not.toBe(Math.round(1_000_000 * 1.27));
   });
 

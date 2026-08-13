@@ -1,19 +1,3 @@
-/**
- * منبع واقعی پیکربندی نمودار: ردیس، کلید `tablo:chart_config` —
- * گردآورنده هر ~۲۰ ثانیه از تنظیمات پنل (`platform_settings` پستگرس)
- * همگام می‌کند (`collector/src/tablo_collector/settings.py` +
- * `main.py::settings_sync_loop`).
- *
- * **فقط سمت سرور** — همان دلیل `price-source.ts`: `ioredis` نباید به
- * باندل مرورگر برود.
- *
- * فرود امن (بند ۵ طراحی بلیت ۲۱): کلید نبود، JSON بدشکل، یا کمتر از ۲/بیش
- * از ۶ ورودی معتبر ⟸ `undefined` — `page-data.ts::assembleHomeData` این را
- * به `chartSeriesConfig()` می‌دهد که در این حالت فهرست پیش‌فرض کد را
- * برمی‌گرداند. پارس/اعتبارسنجی خودش در `parseChartConfigPayload`
- * (`../site-content`) است — خالص و بی‌وابستگی به ردیس، تا بدون سرویس زنده
- * تست شود؛ این فایل فقط اتصال ردیس را فراهم می‌کند.
- */
 import "@tanstack/react-start/server-only";
 
 import Redis from "ioredis";
@@ -32,7 +16,6 @@ let client: Redis | null = null;
 function redisClient(): Redis {
   if (client === null) {
     client = new Redis(process.env["TABLO_REDIS_URL"] ?? "redis://127.0.0.1:6379/0", {
-      // فرمان معطل نماند: یک تلاش اتصال، بعد رد — لایه‌ی بالا فهرست پیش‌فرض می‌دهد.
       maxRetriesPerRequest: 1,
     });
   }
@@ -49,14 +32,12 @@ export function createRedisChartConfigSource(): ChartConfigSource {
 
 let registered = false;
 
-/** ثبت تنبل — همان الگو و همان دلیلِ `price-source.ts`. */
 function ensureDefaultSource(): void {
   if (registered) return;
   registered = true;
   setDefaultChartConfigSource(createRedisChartConfigSource);
 }
 
-/** تنها درِ ورود کد سمت سرور به پیکربندی — نه مستقیم از `lib/chart-config.ts`. */
 export async function getChartPlatforms(): Promise<readonly ChartPlatformConfig[] | undefined> {
   ensureDefaultSource();
   return readChartPlatforms();

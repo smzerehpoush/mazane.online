@@ -1,12 +1,3 @@
-/**
- * صفحه‌ی پست بلاگ — ‎/blog/<slug>‎ (بلیت ۱۲).
- *
- * پیش‌نویس/پس‌گرفته/ناموجود ⟸ ۴۰۴ با متای `noindex` (قاعده‌ی نمایش در
- * `lib/blog.ts`؛ پس‌گیری در `collector/.../content/retract.py`).
- *
- * این فایل فقط سیم‌کشی است؛ نما، `BlogPosting` و `BreadcrumbList` در
- * `components/content/BlogViews.tsx` اند تا بدون بستر روتر تست شوند.
- */
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
 import { BlogPostView, blogPostHead } from "@/components/content/BlogViews";

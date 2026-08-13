@@ -1,20 +1,3 @@
-/**
- * مرز وب — نوشتن پست در پنل (بلیت ۲۲): منبع تزریق‌شده ⟸ پاسخ endpoint.
- *
- * همان مرز `post-view.ts`/`admin-platform-settings.ts`: منطق در
- * `lib/server/admin-posts-requests.ts` مستقیم از تست صدا زده می‌شود، بدون
- * بالا آوردن سرور یا اتصال واقعی به پستگرس — منبع دامنه
- * (`lib/admin-posts.ts::setAdminPostsSource`) با فیک درون‌حافظه‌ای seed می‌شود.
- *
- * سنجیده می‌شود:
- *   ۱. بدون نشست معتبر ⟸ ۴۰۱ روی همه‌ی endpointها.
- *   ۲. فهرست همه‌ی وضعیت‌ها را می‌دهد.
- *   ۳. ساخت: اسلاگ بدشکل/تکراری ⟸ ۴۰۰، چیزی insert نمی‌شود.
- *   ۴. ویرایش: پیش‌نویس هرگز updated_at را جلو نمی‌برد؛ منتشرشده فقط با
- *      meaningfulEdit===true جلو می‌رود.
- *   ۵. انتشار/پس‌گیری: گذار وضعیت درست، پست ناموجود ⟸ ۴۰۴.
- *   ۶. همه‌ی پاسخ‌ها بی‌کش و بدون اجازه‌ی نمایه‌سازی‌اند.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSessionToken } from "../src/lib/admin-auth";

@@ -1,16 +1,3 @@
-/**
- * رندر مارک‌داون محدود — قالب بدنه‌ی پست بلاگ (بلیت ۱۲).
- *
- * زیرمجموعه‌ی پشتیبانی‌شده (مستند و عمدی):
- *   بلوک:  پاراگراف، `## `، `### `، فهرست `- `
- *   درون‌خطی:  **درشت**، `کد`، [پیوند](url)
- * هر نحو دیگری متنِ ساده رندر می‌شود.
- *
- * ایمنی از ساختار است، نه از فیلتر: خروجی عنصر React است و هیچ
- * dangerouslySetInnerHTML روی متن پست نیست، پس HTML خام داخل بدنه همیشه
- * escape می‌شود. لینک بیرونی `rel="nofollow noopener"` می‌گیرد؛ لینک درآمدزا
- * طبق تصمیم ۲۱ همیشه داخلی (‎/go/…‎) است و از این قاعده اثر نمی‌پذیرد.
- */
 import type { ReactNode } from "react";
 
 const INLINE_PATTERN = /\*\*(.+?)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)/g;
@@ -46,7 +33,6 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
   return nodes;
 }
 
-/** بدنه‌ی مارک‌داون ⟸ درخت React (برای رندر داخل <article>). */
 export function renderMarkdown(markdown: string): ReactNode[] {
   const blocks = markdown.replace(/\r\n/g, "\n").trim().split(/\n{2,}/);
   return blocks
@@ -75,7 +61,6 @@ export function renderMarkdown(markdown: string): ReactNode[] {
     });
 }
 
-/** خلاصه‌ی متنی برای متادیتا — اولین بلوک غیرعنوان، بدون نشانه‌گذاری. */
 export function excerptFa(markdown: string, maxLength = 160): string {
   const block = markdown
     .replace(/\r\n/g, "\n")

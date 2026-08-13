@@ -1,16 +1,3 @@
-/**
- * مرز وب — شمارنده‌ی بازدید پست‌ها: منبع seed شده ⟸ پاسخ endpoint و HTML رندرشده.
- *
- * سه چیز اینجا قفل می‌شود:
- *
- * ۱. **فقط پست منتشرشده شمرده می‌شود.** پیش‌نویس، پس‌گرفته و اسلاگ ناموجود
- *    ردیف نمی‌سازند — وگرنه هر کسی می‌توانست با اسلاگ دلخواه شمارنده بسازد.
- * ۲. **قطع شمارنده هرگز به کاربر نمی‌رسد** (قاعده‌ی ۵): پاسخ همچنان ۲۰۴ و
- *    صفحه‌ی اصلی همچنان رندر می‌شود، فقط با ترتیب تاریخ.
- * ۳. **بدون داده، ادعای «پرخواننده» گفته نمی‌شود** و عدد بازدید **هرگز**
- *    در HTML منتشر نمی‌شود — عدد تخمینی است (فیلتر مکث و نشست تب) و انتشار
- *    تخمین به‌عنوان آمار، همان جعل عدد است.
- */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -147,7 +134,6 @@ describe("ترتیب بر اساس بازدید", () => {
   it("با بازدید، نزولی بر اساس عدد؛ تساوی با تاریخ شکسته می‌شود", () => {
     const counts: ViewCounts = { alef: 90, be: 5, pe: 90 };
     expect(hasViewData(posts, counts)).toBe(true);
-    // alef و pe هر دو ۹۰ اند ⟸ تازه‌تر (pe) اول.
     expect(byPopularity(posts, counts).map((p) => p.slug)).toEqual(["pe", "alef", "be"]);
   });
 
@@ -159,8 +145,6 @@ describe("ترتیب بر اساس بازدید", () => {
 
 describe("صفحه‌ی اصلی — کارت‌های انتهای صفحه", () => {
   async function render(views?: ViewCounts): Promise<string> {
-    // `exactOptionalPropertyTypes` روشن است: کلید را نباید با مقدار
-    // undefined پاس داد — یا هست یا اصلاً نیست (که همان «بدون شمارنده» است).
     const data = await homeData(healthyStore(), {
       posts: [NEW, MID, OLD],
       ...(views === undefined ? {} : { views }),
@@ -168,11 +152,6 @@ describe("صفحه‌ی اصلی — کارت‌های انتهای صفحه", (
     return renderToStaticMarkup(<HomePage data={data} />);
   }
 
-  /**
-   * فقط بخش انتهای صفحه. لازم است چون ستون کناری هم همین پست‌ها را (به
-   * ترتیب تاریخ) رندر می‌کند و `indexOf` روی کل صفحه نسخه‌ی سایدبار را
-   * پیدا می‌کند، نه کارت‌ها.
-   */
   function bottomSection(html: string): string {
     const start = html.indexOf('aria-labelledby="more-posts-heading"');
     expect(start).toBeGreaterThan(-1);
@@ -190,7 +169,6 @@ describe("صفحه‌ی اصلی — کارت‌های انتهای صفحه", (
     const section = bottomSection(await render({ alef: 120, be: 4, pe: 9 }));
     expect(section).toContain("پرخواننده‌ترین نوشته‌ها");
     expect(section).not.toContain("بیشتر بخوانید");
-    // alef پرخواننده‌ترین است و باید پیش از pe بیاید، هرچند قدیمی‌تر است.
     expect(section.indexOf("عنوان alef")).toBeLessThan(section.indexOf("عنوان pe"));
   });
 

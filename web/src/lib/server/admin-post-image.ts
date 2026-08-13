@@ -1,25 +1,4 @@
 /**
- * منطق ‎POST /api/admin-posts/$slug/image‎ — آپلود عکس شاخص یک پست در پنل
- * مدیریت (بلیت ۲۴).
- *
- * جدا از `admin-posts-requests.ts` نگه‌داشته شده (نه اضافه به آن فایل)
- * چون این مسیر یک نگرانی کاملاً متفاوت دارد: بدنه‌ی چندبخشی/باینری،
- * سقف اندازه، پردازش تصویر و انبار ابری — نه فقط JSON روی جدول `posts`.
- * همان دلیلی که `post-view.ts` از `admin-posts-requests.ts` جداست.
- *
- * قرارداد:
- *     POST /api/admin-posts/$slug/image   multipart/form-data:
- *                                          فیلد «image» (فایل)، فیلد «alt» (متن)
- *          ← 200 {post}   موفق — image_url/alt/width/height روی پست نشست
- *          ← 400 {error}  بدنه نامعتبر، فایل غایب، یا متن جایگزین خالی
- *          ← 404 {error}  پست ناموجود
- *          ← 413 {error}  حجم فایل بیش از سقف
- *          ← 401 {error}  بدون نشست معتبر
- *          ← 502 {error}  انبار عکس در دسترس نیست (قطع منبع — نه خطای کاربر)
- *
- * هر پاسخ: `Cache-Control: no-store` و `X-Robots-Tag: noindex, nofollow`
- * (بند ۹ قراردادها).
- *
  * ⚠️ **مسیر مجزا از ذخیره‌ی متن پست** (`adminPostUpdateResponse`): قطع انبار
  * عکس فقط همین مسیر را می‌شکند، نه ویرایش عنوان/متن — دو route کاملاً جدا،
  * دو تابع کاملاً جدا، هیچ وابستگی مشترکی جز خواندنِ خودِ پست ندارند.
@@ -32,7 +11,6 @@ import { getAdminPost, setPostImage } from "./admin-posts";
 import { hasValidSession } from "./admin-session";
 import { publicImageUrl, uploadImage } from "./image-store";
 
-/** سقف اندازه‌ی ورودی — بلیت ۲۴، بند طراحی: پیش از پردازش کامل رد شود. */
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
 function tooLarge(): Response {
@@ -58,7 +36,6 @@ export async function adminPostImageUploadResponse(
   if (!requireSession(request)) return unauthorized();
   if (!isValidSlug(slug)) return notFound();
 
-  // دفاع اول: اگر Content-Length در دسترس است، پیش از خواندنِ حتی یک بایت رد کن.
   const declaredLength = Number(request.headers.get("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > MAX_IMAGE_BYTES) {
     return tooLarge();
@@ -82,10 +59,8 @@ export async function adminPostImageUploadResponse(
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  // دفاع دوم: بلافاصله بعد از خواندن بافر، پیش از فراخوان sharp.
   if (bytes.byteLength > MAX_IMAGE_BYTES) return tooLarge();
 
-  // پیش از هزینه‌ی پردازش/آپلود مطمئن شویم پست وجود دارد.
   const existing = await getAdminPost(slug);
   if (existing === null) return notFound();
 

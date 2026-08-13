@@ -1,7 +1,3 @@
-/**
- * `lib/platform-settings.ts` — منطق خالص اعتبارسنجی/نرمال‌سازی تنظیمات نمودار
- * پنل (بلیت ۲۱)، بی‌نیاز از پستگرس/منبع تزریق‌شده.
- */
 import { describe, expect, it } from "vitest";
 
 import {
@@ -111,7 +107,7 @@ describe("normalizePlatformSettings", () => {
     expect(result!.referral_url).toBe("https://wallgold.ir/r/mzn");
   });
 
-  it("نشانی معرف خالی (بعد از trim) را null می‌کند — یعنی حذف override (بلیت ۲۳)", () => {
+  it("نشانی معرف خالی (بعد از trim) را null می‌کند — یعنی حذف override", () => {
     const [result] = normalizePlatformSettings([entry("wallgold", true, "#e0921d", 0, "   ")]);
     expect(result!.referral_url).toBeNull();
   });
@@ -124,7 +120,7 @@ describe("normalizePlatformSettings", () => {
   });
 });
 
-describe("isValidReferralUrl (بلیت ۲۳)", () => {
+describe("isValidReferralUrl", () => {
   const WEBSITE = "https://wallgold.ir";
 
   it("همان دامنه‌ی وبسایت رسمی با https را می‌پذیرد", () => {
@@ -144,7 +140,6 @@ describe("isValidReferralUrl (بلیت ۲۳)", () => {
   });
 
   it("دامنه‌ای که فقط با نام سکو تمام می‌شود (بدون نقطه) را رد می‌کند", () => {
-    // «evilwallgold.ir» نباید زیردامنه‌ی «wallgold.ir» حساب شود.
     expect(isValidReferralUrl("https://evilwallgold.ir/r/mzn", WEBSITE)).toBe(false);
   });
 
@@ -157,7 +152,7 @@ describe("isValidReferralUrl (بلیت ۲۳)", () => {
   });
 });
 
-describe("validateReferralUrls (بلیت ۲۳)", () => {
+describe("validateReferralUrls", () => {
   const PLATFORMS: PlatformOption[] = [
     { slug: "wallgold", name_fa: "وال‌گلد", website_url: "https://wallgold.ir" },
     { slug: "talasea", name_fa: "طلاسی", website_url: "https://talasea.ir" },

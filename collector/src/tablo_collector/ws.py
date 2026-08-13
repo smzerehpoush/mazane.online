@@ -1,25 +1,3 @@
-"""زیرساخت خوراک وب‌سوکت — کش فریم، fetch ترکیبی، کلاینت reconnect دار.
-
-قاعده‌ی حاکم (قاعده‌ی ۵ قراردادها + معیار پذیرش بلیت ۵): **قطع وب‌سوکت
-به بیات‌شدگی می‌انجامد نه خطا.** هیچ‌چیز این ماژول استثنایی بیرون نمی‌دهد
-که نوبت گردآوری یا فرایند را بکشد؛ تنها سیگنالش `FeedStale` است که در
-`collect_round` مثل هر خطای منبع دیگری فقط لاگ می‌شود و آن سکو کهنه می‌ماند.
-
-سه قطعه:
-
-- `FeedCache` — آخرین payload رمزگشایی‌شده‌ی هر خوراک + زمان دریافت.
-  فریم کهنه‌تر از `max_age_seconds` هرگز برنمی‌گردد (`FeedStale`).
-- `compose_fetch` — یک `FetchJson` می‌سازد که «دو خوراک، یک سکو»ی داریک را
-  پیاده می‌کند: برای REST ای که جفت وب‌سوکتی دارد اول فریم تازه‌ی کش، وگرنه
-  خود REST؛ برای آدرس `wss://` فقط کش (کهنگی ⟸ `FeedStale`).
-- `ReconnectingFeedClient` — حلقه‌ی همیشه‌زنده‌ی اتصال: هر قطع/خطا ⟸ لاگ +
-  انتظار با backoff نمایی (سقف‌دار)؛ هر فریم معتبر backoff را صفر می‌کند.
-
-اتصال واقعی (`websockets` + مذاکره‌ی SignalR داریک) در `main.py` تزریق
-می‌شود؛ اینجا فقط قرارداد `connector` را می‌شناسیم تا تست‌ها بدون شبکه با
-connector قلابی سبز شوند (قاعده‌ی ۶: در تست‌ها هیچ تماس شبکه‌ای نیست).
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -35,18 +13,16 @@ from .pipeline import FetchJson
 log = logging.getLogger("mazane.collector.ws")
 
 Clock = Callable[[], datetime]
-# یک اتصال: context manager ای که iterator پیام‌های متنی می‌دهد.
 Connector = Callable[[], AbstractAsyncContextManager[AsyncIterator[str]]]
-# رمزگشای فریم: پیام خام ⟸ payload یا None (فریم نامربوط — نادیده).
 Decoder = Callable[[str], Any | None]
 
-DEFAULT_FRAME_MAX_AGE_SECONDS = 90.0  # سه نوبتِ ۳۰ ثانیه‌ای بدون فریم = کهنه
+DEFAULT_FRAME_MAX_AGE_SECONDS = 90.0
 DEFAULT_INITIAL_BACKOFF_SECONDS = 1.0
 DEFAULT_MAX_BACKOFF_SECONDS = 60.0
 
 
 class FeedStale(Exception):
-    """خوراک وب‌سوکت فریم تازه ندارد (قطع/سکوت) — کهنگی است، نه خطا."""
+    pass
 
 
 def _utc_now() -> datetime:
@@ -74,7 +50,6 @@ class FeedCache:
         self._frames[url] = _CachedFrame(payload=payload, received_at=self._now())
 
     def latest(self, url: str) -> Any:
-        """آخرین payload تازه‌ی خوراک؛ نبود یا کهنگی ⟸ `FeedStale`."""
         frame = self._frames.get(url)
         if frame is None:
             raise FeedStale(f"خوراک {url} هنوز فریمی نداده است")
@@ -89,15 +64,6 @@ def compose_fetch(
     *,
     ws_primary: Mapping[str, str] | None = None,
 ) -> FetchJson:
-    """fetch ترکیبی دو-خوراکه برای `collect_round`.
-
-    - `ws_primary` جفت‌های «آدرس REST ⟸ آدرس وب‌سوکت» است (داریک): وقتی
-      وب‌سوکت وصل است و فریم تازه دارد، همان برمی‌گردد (دفتر سفارش زنده)؛
-      قطع/سکوت وب‌سوکت ⟸ بی‌سروصدا به خود REST برمی‌گردیم — «دو خوراک،
-      یک سکو» و قطع خوراک دوم حتی کهنگی هم نمی‌سازد.
-    - آدرس `wss://` بدون جفت REST (اینوی): فقط کش؛ کهنگی ⟸ `FeedStale`
-      که در نوبت گردآوری مثل هر شکست منبع دیگری کهنگی است، نه خطا.
-    """
     primary = dict(ws_primary or {})
 
     async def fetch(url: str) -> Any:
@@ -106,7 +72,7 @@ def compose_fetch(
             try:
                 return cache.latest(ws_url)
             except FeedStale:
-                pass  # خوراک اصلی REST است — وب‌سوکت فقط تازه‌ترش می‌کند.
+                pass
         if url.startswith("wss://"):
             return cache.latest(url)
         return await http_fetch(url)
@@ -115,12 +81,6 @@ def compose_fetch(
 
 
 class ReconnectingFeedClient:
-    """حلقه‌ی اتصال همیشه‌زنده‌ی یک خوراک وب‌سوکت.
-
-    هر پایان اتصال — خطا یا بسته‌شدن تمیز — فقط لاگ می‌شود و پس از backoff
-    دوباره وصل می‌شویم؛ backoff با هر شکست دو برابر (تا سقف) و با هر فریمِ
-    رمزگشایی‌شده به مقدار اولیه برمی‌گردد. تنها راه خروج، cancel شدن تسک است.
-    """
 
     def __init__(
         self,
@@ -150,9 +110,9 @@ class ReconnectingFeedClient:
                     async for raw in messages:
                         payload = self._decode(raw)
                         if payload is None:
-                            continue  # handshake/پینگ/فریم نامربوط
+                            continue
                         self._cache.put(self._url, payload)
-                        backoff = self._initial_backoff  # اتصال سالم
+                        backoff = self._initial_backoff
                 log.warning("خوراک %s بسته شد — کهنگی، نه خطا؛ اتصال دوباره", self._url)
             except asyncio.CancelledError:
                 raise

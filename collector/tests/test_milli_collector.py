@@ -1,10 +1,3 @@
-"""مرز گردآورنده: payload ضبط‌شده‌ی میلی ⟸ ردیف‌های ذخیره‌شده در استور.
-
-فیکسچر `fixtures/milli_price_external.json` پاسخ واقعی
-`GET https://milli.gold/api/v1/public/milli-price/external` است (ضبط‌شده
-۲۰۲۶-۰۸-۰۶ با User-Agent صادق). تست‌ها هیچ تماس شبکه‌ای ندارند.
-"""
-
 import json
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -48,24 +41,17 @@ async def test_fixture_payload_is_stored_with_explicit_x100_scale() -> None:
     assert stored.platform_slug == "milli"
 
     (price,) = stored.quotes
-    # یک سکو، یک سطر — «قیمت»، پیش از کارمزد (سند تصمیم ۰۰۰۲).
     assert price.side is Side.PRICE
 
-    # مقدار خام و ضریب صریح آداپتر — میلی ریال بر میلی‌گرم، ×۱۰۰
-    # (سند تحقیق ۰۱، بند ۳.۳).
     for quote in stored.quotes:
         assert quote.instrument == Instrument.GOLD_18K
         assert quote.raw_value == Decimal("185380")
         assert quote.raw_scale == Decimal("100")
 
-    # ریاضی مقیاس: 185380 × 100 = 18,538,000 تومان بر گرم.
     assert price.price_toman == 18538000
-    # کارمزد دستی ۰٫۵٪ هر سمت (سند تحقیق ۰۱، بند ۳.۴).
 
 
 async def test_manual_fee_is_labeled_with_observation_date() -> None:
-    """کارمزد میلی از API نمی‌آید: باید MANUAL با تاریخ مشاهده ثبت شود تا UI
-    برچسب «دستی» بزند (بند ۲.۲ سند معماری)."""
     store = InMemoryStore()
 
     await collect_once(MilliAdapter(), make_fetcher(load_fixture()), store, now=FETCHED_AT)
@@ -78,7 +64,6 @@ async def test_manual_fee_is_labeled_with_observation_date() -> None:
     assert terms.buy_fee_percent == Decimal("0.5")
     assert terms.sell_fee_percent == Decimal("0.5")
     assert terms.round_trip_percent == Decimal("0.9950")
-    # تاریخ مشاهده‌ی عدد دستی — نه زمان کرال.
     assert terms.observed_at == MILLI_FEE_OBSERVED_AT
     assert terms.observed_at != FETCHED_AT
 

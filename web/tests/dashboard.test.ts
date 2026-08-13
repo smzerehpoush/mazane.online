@@ -1,9 +1,3 @@
-/**
- * لایه‌ی تطبیق داشبورد — موجودیت دامنه ⟸ نمای بند ۹ سند طراحی.
- *
- * مرز تست: ورودی خالص، خروجی خالص. این همان کدی است که سرور اجرا می‌کند —
- * نه نسخه‌ی دومش.
- */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -111,7 +105,7 @@ describe("هندسه‌ی محور", () => {
   });
 
   /**
-   * ⚠️ بند ۵، «مورد لبه‌ای که حتماً باید حل شود». بدون کف، این دو سکو که فقط
+   * ⚠️، «مورد لبه‌ای که حتماً باید حل شود». بدون کف، این دو سکو که فقط
    * ۲٬۰۰۰ تومان فاصله دارند، دو سرِ محور را می‌گرفتند و اختلاف ناچیز عظیم
    * دیده می‌شد.
    */
@@ -179,15 +173,15 @@ describe("سکوی مرجع", () => {
     expect(rail.sources.filter((s) => s.isReference)).toHaveLength(1);
   });
 
-  it("خلاصه بازار نام سکوی مرجع را می‌برد (قاعده‌ی سخت ۴)", () => {
+  it("خلاصه بازار نام سکوی مرجع را می‌برد", () => {
     const { summary } = buildDashboard(input());
     expect(summary.referenceName).toBe("نام milli");
   });
 });
 
-describe("قاعده‌ی سخت ۴ — هیچ عدد بین‌سکویی", () => {
+describe("هیچ عدد بین‌سکویی", () => {
   /**
-   * ⚠️ نگهبان خط قرمز حقوقی (بند ۷.۱ سند معماری). اگر روزی کسی میانگین یا
+   * ⚠️ نگهبان خط قرمز حقوقی. اگر روزی کسی میانگین یا
    * درصد اختلاف را برگرداند، این تست باید قرمز شود.
    */
   it("هیچ عددی برابر میانگین قیمت‌ها منتشر نمی‌شود", () => {
@@ -214,7 +208,7 @@ describe("قاعده‌ی سخت ۴ — هیچ عدد بین‌سکویی", () =
     expect(published).not.toContain(average);
   });
 
-  it("هیچ منبعی فیلد درصد اختلاف ندارد (بند ۱۵، تصمیم ۳)", () => {
+  it("هیچ منبعی فیلد درصد اختلاف ندارد", () => {
     const { rail } = buildDashboard(input());
     for (const source of rail.sources) {
       expect(Object.keys(source)).not.toContain("diffPercent");
@@ -244,13 +238,13 @@ describe("خلاصه بازار — آمار همان سری تک‌سکویی",
     expect(daily?.changeFraction).toBeCloseTo(0.2, 10);
   });
 
-  it("کنار بیشینه و کمینه ساعت وقوع می‌آید (بند ۷)", () => {
+  it("کنار بیشینه و کمینه ساعت وقوع می‌آید", () => {
     const { summary } = buildDashboard(input({ referenceHistory: ranges }));
     const daily = summary.ranges.find((r) => r.key === "DAILY");
     expect(daily?.high?.atDisplay).toMatch(/^[۰-۹]{2}:[۰-۹]{2}$/);
   });
 
-  it("بازه‌ی بی‌داده غیرفعال است، نه عددِ جعلی (بند ۱۱)", () => {
+  it("بازه‌ی بی‌داده غیرفعال است، نه عددِ جعلی", () => {
     const { summary } = buildDashboard(input({ referenceHistory: ranges }));
     const weekly = summary.ranges.find((r) => r.key === "WEEKLY");
     expect(weekly?.enabled).toBe(false);
@@ -264,7 +258,7 @@ describe("خلاصه بازار — آمار همان سری تک‌سکویی",
   });
 });
 
-describe("کهنگی و حالت‌های خالی — قاعده‌ی سخت ۵", () => {
+describe("کهنگی و حالت‌های خالی", () => {
   it("سکوی بی‌قیمت حذف نمی‌شود؛ فقط نشانگر محور نمی‌گیرد", () => {
     const { rail } = buildDashboard(
       input({
@@ -301,7 +295,6 @@ describe("کهنگی و حالت‌های خالی — قاعده‌ی سخت ۵
     expect(rail.sources).toHaveLength(2);
   });
 
-  /** بند ۱۱: «یک منبع ⟸ محور معنا ندارد؛ فقط کارت آن منبع». */
   it("با یک منبعِ قیمت‌دار محور رسم نمی‌شود", () => {
     const { rail } = buildDashboard(
       input({
@@ -343,7 +336,7 @@ describe("updatedAt سطح صفحه — مبنای فتیله", () => {
   });
 });
 
-describe("لینک خروجی — قاعده‌ی سخت ۷", () => {
+describe("لینک خروجی", () => {
   it("هر منبع به ‎/go/<slug>‎ می‌رود، نه به دامنه‌ی سکو", () => {
     const { rail } = buildDashboard(input());
     for (const source of rail.sources) {
@@ -352,7 +345,7 @@ describe("لینک خروجی — قاعده‌ی سخت ۷", () => {
   });
 });
 
-describe("دسترس‌پذیری — بند ۱۲", () => {
+describe("دسترس‌پذیری", () => {
   it("هر نشانگر برچسب متنی با نام و قیمت دارد", () => {
     const { rail } = buildDashboard(input());
     expect(rail.sources[0]?.ariaLabel).toBe("نام milli — ۱۸٬۶۰۰٬۰۰۰ تومان");
@@ -366,7 +359,7 @@ describe("دسترس‌پذیری — بند ۱۲", () => {
   });
 });
 
-describe("قالب‌بندی سمت سرور — بند ۱۴", () => {
+describe("قالب‌بندی سمت سرور", () => {
   it("همه‌ی اعداد نمایشی فارسی و آماده‌اند (کلاینت قالب نمی‌زند)", () => {
     const { rail } = buildDashboard(
       input({ referenceHistory: { ...EMPTY_RANGES, DAILY: history("milli", [1, 2]) } }),
@@ -383,20 +376,7 @@ describe("قالب‌بندی سمت سرور — بند ۱۴", () => {
   });
 });
 
-/**
- * نگهبان سطح کد. `buildDashboard` در بدنه‌ی رندر `HomePage` صدا زده می‌شود،
- * پس روی سرور **و** موقع hydration اجرا می‌شود؛ هر رشته‌ای که تولید می‌کند
- * باید قطعی باشد. `Intl` قطعی نیست (به نسخه‌ی ICU محیط وابسته است) و یک بار
- * از در تاریخ برگشته بود — `formatHour` با `Intl.DateTimeFormat` نوشته شده
- * بود و سه رشته‌ی رندرشده را می‌ساخت. تست رفتاری این را نمی‌گیرد چون در یک
- * محیط اجرا می‌شود و هر دو سمت همان ICU را دارند.
- */
 describe("قطعیت — هیچ Intl در مسیر رندر داشبورد", () => {
-  /**
-   * کامنت‌ها اول برداشته می‌شوند: خودِ این فایل‌ها در توضیحشان می‌گویند چرا
-   * `Intl` را کنار گذاشته‌اند، و نگهبانی که به متن توضیح گیر بدهد، نویسنده را
-   * از **مستندکردن دلیل** منصرف می‌کند.
-   */
   function codeWithoutComments(relative: string): string {
     return readFileSync(join(__dirname, "..", relative), "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -416,9 +396,9 @@ describe("قطعیت — هیچ Intl در مسیر رندر داشبورد", () 
  * داشت و **فرود به تاریخچه نداشت**: سکوی مرده «قیمت در دسترس نیست» می‌گرفت.
  * نسخه‌ی اول داشبورد هر دو را از دست داد — عددِ آخرین نقطه‌ی تجمیع ساعتی را
  * بی‌هیچ نشانه‌ای به‌جای «قیمت الان» می‌نشاند. این دقیقاً چیزی است که
- * قاعده‌ی سخت ۵ ممنوع می‌کند: عدد قدیمی مجاز است، عدد قدیمیِ **بی‌زمان** نه.
+ * ممنوع می‌کند: عدد قدیمی مجاز است، عدد قدیمیِ **بی‌زمان** نه.
  */
-describe("کهنگی به‌ازای هر سکو — قاعده‌ی سخت ۵", () => {
+describe("کهنگی به‌ازای هر سکو", () => {
   it("زمان هر سکو جدا حمل می‌شود، نه فقط زمان صفحه", () => {
     const { rail, updatedAt } = buildDashboard(
       input({
@@ -431,7 +411,6 @@ describe("کهنگی به‌ازای هر سکو — قاعده‌ی سخت ۵",
     expect(rail.sources.find((s) => s.slug === "milli")?.updatedAt).toBe(
       "2026-08-11T09:00:00.000Z",
     );
-    // سکوی کهنه زمان **خودش** را نگه می‌دارد و پشت بیشینه‌ی صفحه پنهان نمی‌شود.
     expect(rail.sources.find((s) => s.slug === "wallgold")?.updatedAt).toBe(
       "2026-08-11T06:00:00.000Z",
     );
@@ -448,7 +427,6 @@ describe("کهنگی به‌ازای هر سکو — قاعده‌ی سخت ۵",
     const fromHistory = rail.sources.find((s) => s.slug === "wallgold");
     expect(fromHistory?.priceDisplay).toBe("۱۸٬۴۵۰٬۰۰۰");
     expect(fromHistory?.priceFromHistory).toBe(true);
-    // سکوی زنده علامت نمی‌گیرد.
     expect(rail.sources.find((s) => s.slug === "milli")?.priceFromHistory).toBe(false);
   });
 

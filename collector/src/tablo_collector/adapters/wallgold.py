@@ -1,14 +1,3 @@
-"""آداپتر وال‌گلد — `api.wallgold.ir/api/v1/markets`.
-
-لنگر نسخه‌ی ۱: تنها سکو با پورتال رسمی توسعه‌دهنده و robots.txt کاملاً باز
-(سند تحقیق ۰۱، بند ۵). نکات تأییدشده:
-
-- قیمت `marketCap.lastPrice` تومان بر گرم است ⟸ ضریب صریح ×۱.
-- اسپرد صفر است (`lastBuyPrice == lastSellPrice`)؛ کارمزد جدا در
-  `otcFeeCoefficient` می‌آید ⟸ `fee_source = API`.
-- `buyStatus` / `sellStatus` وضعیت باز بودن سمت خرید/فروش است.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -27,7 +16,6 @@ class WallgoldAdapter:
     slug = "wallgold"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = WALLGOLD_ENDPOINT
-    # ضریب صریح این منبع: تومان بر گرم، ×۱ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

@@ -1,15 +1,3 @@
-/**
- * مرز وب — ریدایرکت ‎/go/<slug>‎ (بند ۱۳، تصمیم ۲۱).
- *
- * قرارداد: سکوی دارای referral_url ⟸ همان؛ وگرنه website_url (لینک مستقیم —
- * کد معرف هنوز از صاحب کسب‌وکار نرسیده)؛ نه این نه آن، یا اسلاگ ناشناخته ⟸
- * ۴۰۴. ریدایرکت **۳۰۲** است نه ۳۰۱ (مقصد با رسیدن کدها عوض می‌شود) و پاسخ
- * همیشه ‎X-Robots-Tag: noindex‎ دارد (بند ۶.۴ — ‎/go/‎ در روبوتس هم بسته
- * است). کد معرف هرگز در لاگ نمی‌آید.
- *
- * تست به `lib/server/go-redirect.ts` می‌زند؛ ‎src/routes/go/$slug.ts‎ عمداً
- * پوسته‌ی نازکی است که همین تابع را با `params.slug` صدا می‌زند.
- */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ListedPlatform } from "../src/lib/prices";
@@ -33,7 +21,6 @@ const PLATFORMS: ListedPlatform[] = [
     data_policy: "ALLOWED",
     website_url: "https://wallgold.ir",
   },
-  // سکوی بدون هیچ نشانی مستند — ‎/go/‎ چیزی برای رفتن ندارد.
   { slug: "bihich", name_fa: "بی‌هیچ", data_policy: "ALLOWED" },
 ];
 
@@ -50,7 +37,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("GET /go/<slug> — ریدایرکت معرف (تصمیم ۲۱)", () => {
+describe("GET /go/<slug> — ریدایرکت معرف", () => {
   it("سکوی دارای referral_url ⟸ ۳۰۲ به همان، با X-Robots-Tag: noindex", async () => {
     seedPlatforms();
     const response = await goRedirectResponse("milli");

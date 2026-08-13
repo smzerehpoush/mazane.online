@@ -1,14 +1,3 @@
-/**
- * `lib/admin-posts.ts` — منطق خالص ساخت/ویرایش/انتشار/پس‌گیری پست پنل
- * (بلیت ۲۲)، با منبع فیک درون‌حافظه‌ای، بی‌نیاز از پستگرس.
- *
- * سنجیده می‌شود:
- *   ۱. `nextUpdatedAt` — تابع خالصِ قاعده‌ی بند ۵ قراردادها.
- *   ۲. `createPost` — اسلاگ بدشکل/تکراری رد می‌شود؛ موفق ⟸ `draft`.
- *   ۳. `updatePost` — پیش‌نویس هرگز `updated_at` را جلو نمی‌برد (حتی با
- *      `meaningfulEdit=true` از کلاینت)؛ منتشرشده فقط با تیک صریح جلو می‌رود.
- *   ۴. `publishPost`/`retractPost` — گذار وضعیت درست، `updated_at` طبق قاعده.
- */
 import { afterEach, describe, expect, it } from "vitest";
 
 import {

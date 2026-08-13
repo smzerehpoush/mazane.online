@@ -1,72 +1,19 @@
-/**
- * ماژول دسترسی به داده — تنها راه لایه‌ی وب برای خواندن قیمت.
- *
- * وب هیچ فرمولی ندارد: هرچه اینجا برمی‌گردد همان است که گردآورنده ذخیره
- * کرده (قیمت‌های مؤثر از قبل محاسبه‌شده‌اند). شکل داده آینه‌ی JSON کانونی
- * `PlatformSnapshot` در گردآورنده است (Decimal ها رشته‌اند).
- *
- * مرز تست وب همین‌جاست: تست‌ها با `setPriceSource` منبع seed شده تزریق
- * می‌کنند؛ در اجرا، منبع پیش‌فرض ردیس است — ولی این ماژول **هرگز** خودش
- * `ioredis` را import نمی‌کند (نه ایستا نه پویا). ماژول سمت‌سروری
- * `server/price-source.ts` کارخانه‌ی خودش را با `setDefaultPriceSource`
- * ثبت می‌کند. علتش باندل است: در TanStack Start هر import (حتی پویا) از
- * ماژولی که در گراف کلاینت باشد، ioredis را به باندل مرورگر می‌کشاند.
- * پس این فایل بی‌فریم‌ورک و بی‌وابستگی به نود می‌ماند و از هر دو سو
- * import شدنش بی‌خطر است.
- */
-
-/**
- * تنها سمت موجود (سند تصمیم ۰۰۰۲): «قیمت» هر سکو، تومان بر گرم و **پیش از
- * هر کارمزد**. منبع تک‌قیمتی ⟸ همان عددش؛ منبع دوقیمتی ⟸ میانگین دو عددِ
- * خودش. هرگز میانگین بین‌سکویی نیست.
- *
- * `BUY`/`SELL` (قیمت مؤثر) و `MEAN` (قیمت مرجع سکو) حذف شدند — کارمزد جدا
- * در `PlatformTerms` می‌آید و هیچ لایه‌ای آن را در قیمت ضرب نمی‌کند.
- */
 export type Side = "PRICE";
-/**
- * برچسب هر کدام روی سایت فرق می‌کند چون ادعای متفاوتی می‌کنند:
- * - `API` / `MANUAL`: خود سکو اعلامش کرده (در API یا در سندش).
- * - `IMPLIED`: **برآورد ما** از نصفِ اسپرد سکو — سکو چنین چیزی نگفته.
- * - `UNKNOWN`: هیچ‌جا معلوم نیست ⟸ هر سه عدد تهی‌اند و جعل نمی‌شوند؛
- *   صفرِ ساختگی هم جعل است.
- */
 export type FeeSource = "API" | "MANUAL" | "IMPLIED" | "UNKNOWN";
 export type DataPolicy = "ALLOWED" | "RESTRICTED" | "PERMISSION_PENDING" | "BLOCKED";
-/**
- * مدل معاملاتی سکو (بند ۹.۲): داریک دفتر سفارش است، بقیه فروشنده (OTC).
- * قیمت دفتر سفارش از سفارش کاربران می‌آید و اسپردش با بقیه هم‌جنس نیست —
- * باید در جدول برچسب صریح بخورد.
- */
 export type MarketModel = "OTC" | "ORDER_BOOK";
 
-/**
- * یک سکوی قابل نمایش عمومی — عضو فهرستی که گردآورنده می‌نویسد.
- * فیلتر نمایش (گلدیکا و هر PERMISSION_PENDING دیگر) سمت گردآورنده/استور
- * اعمال شده؛ وب هرچه در فهرست است را رندر می‌کند و بس.
- */
 export interface ListedPlatform {
   slug: string;
   name_fa: string;
   data_policy: DataPolicy;
-  /** غیبت = OTC — پیش از مهاجرت ۰۰۴ این فیلد در payload نبود. */
   market_model?: MarketModel;
-  /**
-   * فراداده‌ی صفحه‌ی سکو (بلیت ۷) — گردآورنده فقط از سند تحقیق ۰۱ پرشان
-   * می‌کند؛ جای نامستند null است و وب همان «ثبت نشده» را می‌گوید، جعل نمی‌کند.
-   * اختیاری تا payload قدیمی‌تر بدون این کلیدها هم رندر شود.
-   */
   name_en?: string | null;
   website_url?: string | null;
   legal_entity?: string | null;
   delivery_note_fa?: string | null;
   /**
-   * لینک معرف (بلیت ۹؛ بند ۱۳، تصمیم ۲۱) — مقصد ‎/go/<slug>‎ وقتی کد معرف
-   * مالک رسیده باشد؛ تا آن روز null است و ‎/go/‎ به website_url می‌رود.
-   * الگوی پارامتر هر سکو (referralCode / r / invitation؛ گلدیکا ندارد) در
-   * referral_param مستند است — پارامترِ بی‌کد، برای ساختن referral_url بعدی.
-   *
-   * ⚠️ بند ۶.۴ (الزام غیرقابل‌مذاکره): این دو فیلد **هرگز** ورودی
+   * ⚠️ (الزام غیرقابل‌مذاکره): این دو فیلد **هرگز** ورودی
    * مرتب‌سازی نیستند — groupRows/editorialPick فقط قیمت و کارمزد گردآورنده
    * را می‌خوانند؛ تستش در tests/sponsored-links.test.tsx است.
    */
@@ -74,16 +21,8 @@ export interface ListedPlatform {
   referral_param?: string | null;
 }
 
-/**
- * یک دارایی از payload ‏`tablo:instruments` — موجودیت کامل با وضعیت
- * دروازه‌ی انتشار (بند ۱۳، تصمیم ۱۰). `published` در گردآورنده محاسبه شده
- * (دست‌کم دو سکوی پشتیبانِ قابل نمایش)؛ وب فقط پرچم را می‌خواند:
- * published=false ⟸ 404 و غایب از سایت‌مپ.
- */
 export interface InstrumentListing {
-  /** لاتین و تخت — عضو جدول مرکزی اسلاگ (تصمیم ۱۱). */
   slug: string;
-  /** کد دارایی — همان مقدار `instrument` سطرهای Quote (مثلاً "GOLD_18K"). */
   instrument: string;
   name_fa: string;
   unit_fa: string;
@@ -105,7 +44,6 @@ export interface Quote {
 
 export interface PlatformTerms {
   platform_slug: string;
-  /** فقط با `fee_source = "UNKNOWN"` تهی‌اند؛ در آن حالت هر سه تهی‌اند. */
   buy_fee_percent: string | null;
   sell_fee_percent: string | null;
   round_trip_percent: string | null;
@@ -113,10 +51,6 @@ export interface PlatformTerms {
   buy_enabled: boolean;
   sell_enabled: boolean;
   observed_at: string;
-  /**
-   * حدنصاب سفارش به تومان — گردآورنده هنوز نمی‌فرستد؛ اختیاری تا وقتی
-   * به payload اضافه شد، بدون تغییر این لایه رندر شود (غیبتش تحمل می‌شود).
-   */
   min_order_toman?: string | number | null;
 }
 
@@ -125,10 +59,6 @@ export interface PlatformSnapshot {
   quotes: Quote[];
   terms: PlatformTerms;
   fetched_at: string;
-  /**
-   * رد چک میانه‌ی گردآورنده. اسنپ‌شات سرکوب‌شده هرگز به استور جاری (و در
-   * نتیجه به این لایه) نمی‌رسد؛ فیلد فقط برای آینگی کامل با JSON کانونی است.
-   */
   suppressed: boolean;
 }
 
@@ -136,33 +66,22 @@ export interface PriceSource {
   getListedPlatforms(): Promise<ListedPlatform[]>;
   getSnapshot(platformSlug: string): Promise<PlatformSnapshot | null>;
   getUpdatedAt(platformSlug: string): Promise<string | null>;
-  /**
-   * payload ‏`tablo:instruments`‏ — اختیاری تا فیک‌های قدیمی تست‌ها بدون
-   * تغییر سبز بمانند؛ غیبت = فهرست خالی (هیچ صفحه‌ی دارایی‌ای).
-   */
   getInstruments?(): Promise<InstrumentListing[]>;
 }
 
-/** سازنده‌ی منبع پیش‌فرض — فقط `server/price-source.ts` ثبتش می‌کند. */
 export type PriceSourceFactory = () => PriceSource;
 
 let activeSource: PriceSource | null = null;
 let defaultFactory: PriceSourceFactory | null = null;
 
-/** تزریق منبع داده — در تست‌ها فیک seed شده، در صورت نیاز در اجرا هم. */
 export function setPriceSource(source: PriceSource): void {
   activeSource = source;
 }
 
-/**
- * ثبت سازنده‌ی منبع پیش‌فرض (ردیس). تنبل است: تا اولین خواندن ساخته
- * نمی‌شود، پس در تست‌ها که `setPriceSource` مقدم است هیچ اتصالی باز نمی‌شود.
- */
 export function setDefaultPriceSource(factory: PriceSourceFactory): void {
   defaultFactory = factory;
 }
 
-/** پاک‌کردن تزریق — برای جداسازی تست‌ها. */
 export function resetPriceSource(): void {
   activeSource = null;
 }
@@ -170,8 +89,6 @@ export function resetPriceSource(): void {
 function source(): PriceSource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {
-    // این «کهنگی» نیست، اشکال پیکربندی است: صفحه‌ی خالیِ ۲۰۰ را گوگل ایندکس
-    // می‌کند و بدتر از خطاست. پس بلند و زود می‌شکند.
     throw new Error(
       "هیچ PriceSource ثبت نشده — از «@/lib/server/price-source» بخوان یا setPriceSource صدا بزن",
     );

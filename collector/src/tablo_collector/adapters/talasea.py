@@ -1,14 +1,3 @@
-"""آداپتر طلاسی — `api.talasea.ir/api/market/getGoldPrice`.
-
-نکات تأییدشده (سند تحقیق ۰۱، بندهای ۳.۳ و ۳.۶):
-
-- `price` تومان بر **میلی‌گرم** است ⟸ ضریب صریح ×۱۰۰۰ (بند ۴ سند معماری).
-- کارمزد از خود API می‌آید: `fee` (و `feeTable` پلکانی، برای ماشین‌حساب
-  بلیت‌های بعدی) ⟸ `fee_source = API`.
-- `disableBuy` / `disableSell` وضعیت باز بودن هر سمت است — قابلیتی که هیچ
-  رقیبی ندارد (بند ۵ سند معماری).
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -30,7 +19,6 @@ class TalaseaAdapter:
     slug = "talasea"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = TALASEA_ENDPOINT
-    # ضریب صریح این منبع: تومان بر میلی‌گرم، ×۱۰۰۰ (سند تحقیق ۰۱، بند ۳.۳).
     scale = Decimal("1000")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:

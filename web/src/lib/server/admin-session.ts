@@ -1,14 +1,3 @@
-/**
- * نشست پنل مدیریت — تنها جای خواندن `TABLO_ADMIN_PASSWORD_HASH` و
- * `TABLO_ADMIN_SESSION_SECRET` واقعی، ساخت هدر `Set-Cookie` واقعی، و
- * نگهداری وضعیت قفل موقت. تصمیم‌های الگوریتمی (هش/امضا/قفل) در
- * `lib/admin-auth.ts` است — این فایل فقط آن‌ها را به env/کوکی واقعی وصل
- * می‌کند (همان تفکیک `views.ts` ⟸ `server/view-counter.ts`).
- *
- * **فقط سمت سرور.** هرگز از هیچ مسیر/کامپوننت کلاینتی مستقیم import نشود —
- * پلاگین import-protection تنکستک با نشانه‌ی زیر بیلد را می‌شکند اگر کسی
- * اشتباه کرد.
- */
 import "@tanstack/react-start/server-only";
 
 import {
@@ -23,17 +12,10 @@ import {
   type AttemptState,
 } from "../admin-auth";
 
-/** نام کوکی نشست پنل. */
 export const ADMIN_SESSION_COOKIE = "tablo_admin_session";
 
 const SESSION_TTL_SECONDS = Math.floor(SESSION_TTL_MS / 1000);
 
-/**
- * Map ساده در سطح ماژول — یک پردازش Node تنها (سرور یک‌هسته‌ای، بدون
- * ردیس). یک رمز و یک کاربر دارد (تصمیم صریح مالک)، پس قفل سراسری کافی
- * است؛ کلید ثابت فقط برای اجازه دادن به گسترش آینده (مثلاً به‌ازای IP)
- * بدون عوض کردن این امضا.
- */
 const attemptsByKey = new Map<string, AttemptState>();
 const RATE_LIMIT_KEY = "login";
 
@@ -41,22 +23,18 @@ function currentAttemptState(): AttemptState {
   return attemptsByKey.get(RATE_LIMIT_KEY) ?? INITIAL_ATTEMPT_STATE;
 }
 
-/** آیا ورود همین الان به‌خاطر تلاش‌های ناموفق پیاپی قفل است؟ */
 export function isLoginLocked(nowMs: number = Date.now()): boolean {
   return isLockedOut(currentAttemptState(), nowMs);
 }
 
-/** ثبت یک تلاش ناموفق — فراخوان باید پیش از این خودش `isLoginLocked` را بسنجد. */
 export function registerFailedLogin(nowMs: number = Date.now()): void {
   attemptsByKey.set(RATE_LIMIT_KEY, recordFailedAttempt(currentAttemptState(), nowMs));
 }
 
-/** ورود موفق ⟸ شمارنده‌ی تلاش‌های ناموفق پاک می‌شود. */
 export function registerSuccessfulLogin(): void {
   attemptsByKey.set(RATE_LIMIT_KEY, recordSuccessfulAttempt());
 }
 
-/** فقط برای تست — بین تست‌ها Map مشترک را بازنشانی می‌کند. */
 export function resetLoginAttempts(): void {
   attemptsByKey.clear();
 }
@@ -66,20 +44,12 @@ function envOrNull(name: string): string | null {
   return value === undefined || value === "" ? null : value;
 }
 
-/**
- * تأیید رمز در برابر هش env. متغیر تنظیم‌نشده ⟸ همیشه رد (fail closed) —
- * همان قاعده‌ی `revalidate-blog.ts` برای توکن تنظیم‌نشده.
- */
 export function verifyAdminPassword(password: string): boolean {
   const hash = envOrNull("TABLO_ADMIN_PASSWORD_HASH");
   if (hash === null) return false;
   return verifyPassword(password, hash);
 }
 
-/**
- * هدر `Set-Cookie` نشست تازه — `null` یعنی `TABLO_ADMIN_SESSION_SECRET`
- * تنظیم نشده (پیکربندی ناقص سرور، نه خطای کاربر).
- */
 export function buildSessionCookie(nowMs: number = Date.now()): string | null {
   const secret = envOrNull("TABLO_ADMIN_SESSION_SECRET");
   if (secret === null) return null;
@@ -94,7 +64,6 @@ export function buildSessionCookie(nowMs: number = Date.now()): string | null {
   ].join("; ");
 }
 
-/** هدر `Set-Cookie` خروج — همان کوکی را با انقضای فوری بازمی‌نویسد. */
 export function buildLogoutCookie(): string {
   return [
     `${ADMIN_SESSION_COOKIE}=`,
@@ -106,7 +75,6 @@ export function buildLogoutCookie(): string {
   ].join("; ");
 }
 
-/** مقدار یک کوکی را از هدر خام `Cookie` می‌خواند — `null` یعنی نبود. */
 function readCookie(cookieHeader: string | null, name: string): string | null {
   if (cookieHeader === null) return null;
   for (const part of cookieHeader.split(";")) {
@@ -122,12 +90,6 @@ function readCookie(cookieHeader: string | null, name: string): string | null {
   return null;
 }
 
-/**
- * آیا هدر `Cookie` خام یک نشست معتبر و منقضی‌نشده دارد؟ ورودی عمداً رشته‌ی
- * خام هدر است نه `Request` — هم از مسیر `server:{handlers}` (با
- * `request.headers.get("cookie")`) و هم از تابع سروری لایوت `/admin`
- * (با `getRequestHeader("cookie")`) یکسان صدا زده می‌شود.
- */
 export function hasValidSession(cookieHeader: string | null, nowMs: number = Date.now()): boolean {
   const secret = envOrNull("TABLO_ADMIN_SESSION_SECRET");
   if (secret === null) return false;

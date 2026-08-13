@@ -1,12 +1,3 @@
-/**
- * پوسته‌ی مشترک صفحات محتوا (بلاگ، دارایی، سکو، صفحات ایستا).
- *
- * عمداً همان چیدمان صفحه‌ی اصلی است — سرصفحه‌ی چسبان، هاله‌ی بالای صفحه،
- * ستون میانی و پاصفحه‌ی حقوقی — تا سایت یکدست بماند. فقط عرض ستون کمتر است
- * چون این صفحات متنی‌اند نه داشبورد.
- *
- * هیچ داده‌ای اینجا خوانده نمی‌شود: پوسته است و بس.
- */
 import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/tablo/SiteHeader";
@@ -17,7 +8,6 @@ export function PageShell({
   wide = false,
 }: {
   children: ReactNode;
-  /** صفحه‌ی دارایی جدول پهن دارد و ستون پهن‌تری می‌خواهد. */
   wide?: boolean;
 }) {
   return (
@@ -49,10 +39,6 @@ export function PageShell({
   );
 }
 
-/**
- * خرده‌نان بصری — آینه‌ی همان زنجیره‌ای که در JSON-LD (`breadcrumbJsonLd`)
- * منتشر می‌شود. آخرین حلقه لینک ندارد چون خودِ همین صفحه است.
- */
 export function Breadcrumbs({
   items,
 }: {

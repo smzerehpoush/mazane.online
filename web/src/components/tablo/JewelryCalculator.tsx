@@ -1,17 +1,3 @@
-/**
- * ماشین‌حساب طلای زینتی (بند ۸ سند طراحی).
- *
- * چهار فیلد: وزن، اجرت ساخت، سود، مالیات بر ارزش افزوده. سلکتور عیار ندارد —
- * مبنا همیشه قیمت گرم طلای ۱۸ عیارِ **سکوی مرجع** است و نامش زیر خروجی
- * می‌آید (قاعده‌ی سخت ۴: هر عدد نام صاحبش را دارد).
- *
- * ⚠️ خودِ فرمول اینجا نیست: در `lib/calculator.ts` است — «تنها دروازه»ی حساب
- * ماشین‌حساب، که تست خودش را دارد. دلیل اینکه چرا ناقض قاعده‌ی سخت ۱ نیست
- * هم همان‌جا نوشته شده، کنار `amountFromWeight` که از پیش همان دسته بود.
- *
- * ⚠️ پوسته سروررندر است (بند ۱۴) و فقط محاسبه بعد از تعامل کاربر انجام
- * می‌شود. با جاوااسکریپت خاموش، فیلدها دیده می‌شوند و خروجی «—» می‌ماند.
- */
 import { useState } from "react";
 
 import { jewelryTotal, parseCalculatorInput } from "@/lib/calculator";
@@ -20,7 +6,6 @@ import { formatFaNumber } from "@/lib/fa-number";
 interface Field {
   key: string;
   label: string;
-  /** پیش‌فرض بازار برای درصدها؛ وزن عمداً خالی است تا کاربر خودش بزند. */
   initial: string;
 }
 
@@ -35,7 +20,6 @@ export function JewelryCalculator({
   pricePerGram,
   referenceName,
 }: {
-  /** قیمت گرم سکوی مرجع؛ `null` یعنی امروز عددی نداریم. */
   pricePerGram: number | null;
   referenceName: string | null;
 }) {
@@ -44,8 +28,6 @@ export function JewelryCalculator({
   );
 
   const weight = parseCalculatorInput(values["weight"] ?? "");
-  // درصد خالی = صفر (نه «نامعتبر»): کاربری که فقط وزن را زده، باید قیمت خام
-  // طلا را ببیند، نه خط تیره.
   const percent = (key: string): number => parseCalculatorInput(values[key] ?? "") ?? 0;
 
   const total =

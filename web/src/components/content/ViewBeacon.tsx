@@ -1,22 +1,3 @@
-/**
- * فرستنده‌ی بازدید پست — تنها جایی که شمارنده صدا زده می‌شود.
- *
- * چرا از مرورگر و نه در رندر سرور: HTML صفحه در لبه‌ی آروان کش می‌شود، پس
- * شمارش سمت سرور فقط cache-miss ها را می‌دید (دلیل کامل در `lib/views.ts`).
- *
- * سه فیلتر ساده، بدون کوکی و بدون هیچ داده‌ی شخصی:
- *
- * ۱. **مکث ۳ ثانیه‌ای در حالت مرئی.** رد شدن سریع و بیشتر خزنده‌ها شمرده
- *    نمی‌شوند. تب پنهان اصلاً تایمر را شروع نمی‌کند.
- * ۲. **یک‌بار در هر نشست تب** (`sessionStorage`). رفرش یا برگشت با دکمه‌ی
- *    back دوباره نمی‌شمارد. `sessionStorage` کوکی نیست، به سرور نمی‌رود و
- *    با بستن تب پاک می‌شود.
- * ۳. **رد کردن مرورگر خودکار** (`navigator.webdriver`).
- *
- * عدد نتیجه یک تخمین صادقانه است، نه آمار دقیق — و فقط برای *ترتیب دادن*
- * پست‌ها استفاده می‌شود، نه نمایش عدد. اگر روزی عدد را نشان دادیم، باید
- * صریح بگوییم تخمینی است.
- */
 import { useEffect } from "react";
 
 const DWELL_MS = 3000;
@@ -45,7 +26,6 @@ export function ViewBeacon({ slug }: { slug: string }) {
       const body = JSON.stringify({ slug });
       const blob = new Blob([body], { type: "application/json" });
       if (!navigator.sendBeacon("/api/post-view", blob)) {
-        // sendBeacon در دسترس نبود یا صف پر بود ⟸ تلاش دوم، بی‌سروصدا.
         void fetch("/api/post-view", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

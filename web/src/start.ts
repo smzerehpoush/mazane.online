@@ -19,21 +19,16 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
-// Start installs this automatically when src/start.ts is absent; defining the
-// file opts out, so re-add it explicitly to keep server functions protected
-// from cross-site requests.
+// ⚠️ وجود همین فایل، نصب خودکار CSRF را لغو می‌کند؛ اگر این میان‌افزار برداشته
+// شود، توابع سرور بی‌محافظ در برابر درخواست‌های cross-site می‌مانند.
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
-// `edgeCacheMiddleware` عمداً **بیرونی‌ترین** است: باید هدر کش را روی پاسخ
-// نهایی بنشاند، از جمله ۵۰۰ی که errorMiddleware می‌سازد (که باید no-store
-// بگیرد تا لبه‌ی آروان خطا را کش نکند). جزئیات در lib/seo/cache-headers.ts.
-//
-// `adminSecurityMiddleware` بلافاصله داخل آن است: قبل از این‌که
-// edgeCacheMiddleware تصمیم نهایی کش را بگیرد، هدر no-store/noindex پنل را
-// می‌گذارد؛ edgeCacheMiddleware چون می‌بیند پاسخ از قبل Cache-Control دارد
-// دست نمی‌زند (بند ۱ سیاست کش). جزئیات در lib/seo/admin-headers.ts.
+// ⚠️ ترتیب حیاتی است: `edgeCacheMiddleware` باید بیرونی‌ترین بماند تا هدر کش
+// روی ۵۰۰ی errorMiddleware هم بنشیند و لبه خطا را کش نکند؛ و
+// `adminSecurityMiddleware` بلافاصله داخل آن، تا no-store/noindex پنل پیش از
+// تصمیم نهایی کش گذاشته شود.
 export const startInstance = createStart(() => ({
   requestMiddleware: [
     edgeCacheMiddleware,

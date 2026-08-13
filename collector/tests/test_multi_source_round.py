@@ -1,9 +1,3 @@
-"""مرز گردآورنده — نوبت چندمنبعی: چک میانه‌ی تقاطعی، کهنگی، فهرست عمومی.
-
-همه‌ی payload ها فیکسچرهای واقعی ضبط‌شده‌اند؛ سناریوی «مقیاس غلط» با
-دست‌کاری همان فیکسچر ساخته می‌شود. هیچ تماس شبکه‌ای نیست.
-"""
-
 import json
 import logging
 from datetime import UTC, datetime
@@ -64,10 +58,7 @@ async def test_healthy_round_publishes_all_four_sources() -> None:
 async def test_wrong_scale_source_is_suppressed_with_warning(
     caplog: Any,
 ) -> None:
-    """قاعده‌ی ۳ قراردادها: انحراف >۰٫۵٪ از میانه‌ی سایر منابع ⟸ عدم انتشار
-    + هشدار؛ ولی در تاریخچه با پرچم سرکوب ثبت می‌شود."""
     payloads = all_payloads()
-    # مقیاس غلط: mid_price گلدیکا ده برابر (انگار ضریب ÷۱۰ فراموش شده باشد).
     payloads[GOLDIKA_ENDPOINT]["data"]["mid_price"] = 1851423500
     store = InMemoryStore()
 
@@ -76,28 +67,23 @@ async def test_wrong_scale_source_is_suppressed_with_warning(
             ALL_ADAPTERS, make_fetcher(payloads), store, platforms=PLATFORMS, now=FETCHED_AT
         )
 
-    # منتشر نشد: نه قیمت جاری، نه updated_at.
     assert await store.get_snapshot("goldika") is None
     assert await store.get_updated_at("goldika") is None
 
-    # ولی در تاریخچه با پرچم سرکوب ثبت شد (آرشیو الزام حقوقی است — بند ۷.۱).
     goldika_history = [s for s in store.history if s.platform_slug == "goldika"]
     assert len(goldika_history) == 1
     assert goldika_history[0].suppressed is True
 
-    # هشدار در لاگ.
     warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
     assert any("goldika" in r.getMessage() for r in warnings)
 
-    # سایر منابع سالم منتشر شدند.
     for slug in ("wallgold", "talasea", "milli"):
         assert await store.get_snapshot(slug) is not None
 
 
 async def test_median_check_skipped_with_fewer_than_three_fresh_sources() -> None:
-    """با کمتر از ۳ منبع تازه رأی‌گیری ممکن نیست — حتی عدد پرت هم منتشر می‌شود."""
     payloads = all_payloads()
-    payloads[GOLDIKA_ENDPOINT]["data"]["mid_price"] = 1851423500  # پرت
+    payloads[GOLDIKA_ENDPOINT]["data"]["mid_price"] = 1851423500
     store = InMemoryStore()
 
     await collect_round(
@@ -113,7 +99,6 @@ async def test_median_check_skipped_with_fewer_than_three_fresh_sources() -> Non
 
 
 async def test_dead_source_does_not_break_the_round() -> None:
-    """قطع منبع ⟸ کهنگی، نه خطا: بقیه‌ی نوبت کامل می‌شود."""
     payloads = all_payloads()
     payloads[MILLI_ENDPOINT] = RuntimeError("connection refused")
     store = InMemoryStore()
@@ -129,17 +114,13 @@ async def test_dead_source_does_not_break_the_round() -> None:
 
 
 async def test_goldika_is_stored_but_never_listed() -> None:
-    """گلدیکا `PERMISSION_PENDING` است: کرال و ذخیره می‌شود ولی در فهرستی که
-    وب می‌خواند نیست — اجرای قید در داده، نه با فیلتر در وب (بند ۱۲.۳)."""
     store = InMemoryStore()
 
     await collect_round(
         ALL_ADAPTERS, make_fetcher(all_payloads()), store, platforms=PLATFORMS, now=FETCHED_AT
     )
 
-    # در استور هست…
     assert await store.get_snapshot("goldika") is not None
-    # …ولی در فهرست عمومی نیست (فهرست کامل: بلیت ۴، test_full_roster_round).
     listed = await store.get_listed_platforms()
     assert "goldika" not in {p.slug for p in listed}
     assert {"wallgold", "talasea", "milli"} <= {p.slug for p in listed}

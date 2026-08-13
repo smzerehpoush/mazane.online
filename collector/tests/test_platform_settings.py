@@ -1,10 +1,3 @@
-"""مرز گردآورنده — تنظیمات سکو از پنل (بلیت ۲۱): پستگرس ⟸ چارت‌کانفیگ ⟸ ردیس.
-
-هیچ تماس شبکه‌ای/دیتابیس واقعی‌ای نیست: `FakeSettingsGateway` همان قرارداد
-`SettingsGateway` را برمی‌گرداند و `InMemoryStore` جای ردیس را می‌گیرد —
-دقیقاً همان مرزی که `test_multi_source_round.py` برای نوبت قیمت می‌سنجد.
-"""
-
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -48,16 +41,11 @@ def row(
 
 
 class FakeSettingsGateway:
-    """فیک `SettingsGateway` — همان قرارداد `PostgresSettingsGateway`."""
-
     def __init__(self, rows: tuple[PlatformSettingRow, ...]) -> None:
         self._rows = rows
 
     async def list_platform_settings(self) -> tuple[PlatformSettingRow, ...]:
         return self._rows
-
-
-# ------------------------------------------------ chart_config_from_settings
 
 
 def test_filters_to_in_chart_rows_only() -> None:
@@ -77,7 +65,6 @@ def test_sorts_by_chart_order() -> None:
     )
     config = chart_config_from_settings(rows, LISTED)
     assert [c.slug for c in config] == ["wallgold", "talasea", "milli"]
-    # ترتیب خروجی رتبه‌ی صفرمبنای نهایی است، نه chart_order خام.
     assert [c.order for c in config] == [0, 1, 2]
 
 
@@ -88,28 +75,24 @@ def test_null_order_goes_last_then_by_slug() -> None:
         row("talasea", order=None),
     )
     config = chart_config_from_settings(rows, LISTED)
-    # milli و talasea هر دو order=None اند ⟸ بعد از wallgold، به ترتیب اسلاگ.
     assert [c.slug for c in config] == ["wallgold", "milli", "talasea"]
 
 
 def test_malformed_color_is_dropped() -> None:
-    """رنگ بدشکل — دفاع دوم، حتی اگر رنگ نامعتبر از راهی دیگر در جدول نشست."""
     rows = (
         row("wallgold", color="not-a-color"),
-        row("talasea", color="#1D6FE0"),  # حروف بزرگ هم معتبر است
+        row("talasea", color="#1D6FE0"),
         row("milli", color=None),
     )
     config = chart_config_from_settings(rows, LISTED)
     assert [c.slug for c in config] == ["talasea"]
-    # رنگ ذخیره‌شده همیشه lower است.
     assert config[0].color == "#1d6fe0"
 
 
 def test_unlisted_or_unknown_slug_is_dropped() -> None:
-    """اسلاگ ناشناخته/غیرقابل‌نمایش (گلدیکا: PERMISSION_PENDING) قابل افزودن نیست."""
     rows = (
         row("wallgold"),
-        row("goldika"),  # در LISTED نیست
+        row("goldika"),
         row("no-such-platform"),
     )
     config = chart_config_from_settings(rows, LISTED)
@@ -123,20 +106,12 @@ def test_name_fa_comes_from_listed_platform_registry() -> None:
 
 
 def test_more_than_six_or_fewer_than_two_is_not_gated_here() -> None:
-    """شمار (بین ۲ تا ۶) دروازه‌ی نوشتن پنل است، نه این تابع — همه‌ی ردیف‌های
-    معتبر منتقل می‌شوند و فرود امن سمت وب اجرا می‌شود (بند ۵ طراحی تیکت ۲۱)."""
     rows = (row("wallgold", order=0),)
     config = chart_config_from_settings(rows, LISTED)
     assert len(config) == 1
 
 
-# ------------------------------------------------ یک «دور» گردآورنده کامل
-
-
 async def test_settings_sync_round_writes_ordered_config_to_store() -> None:
-    """همان چیزی که `main.py::settings_sync_loop` هر نوبت انجام می‌دهد:
-    خواندن گیت‌وی ⟸ ساخت پیکربندی ⟸ نوشتن در استور — و پس از یک دور، نمودار
-    (از `store.get_chart_config`) همان تنظیمات را می‌بیند."""
     gateway = FakeSettingsGateway(
         (
             row("talasea", order=1, color="#9b8ce8"),
@@ -146,7 +121,6 @@ async def test_settings_sync_round_writes_ordered_config_to_store() -> None:
     )
     store = InMemoryStore()
 
-    # همان بدنه‌ی حلقه، بدون asyncio.sleep — یک نوبت دستی.
     settings_rows = await gateway.list_platform_settings()
     config = chart_config_from_settings(settings_rows, LISTED)
     await store.save_chart_config(config)
@@ -158,12 +132,8 @@ async def test_settings_sync_round_writes_ordered_config_to_store() -> None:
 
 
 async def test_store_get_chart_config_is_empty_before_any_write() -> None:
-    """نبودِ تنظیمات ⟸ تهی، نه خطا — وب در این حالت به پیش‌فرض کد برمی‌گردد."""
     store = InMemoryStore()
     assert await store.get_chart_config() == ()
-
-
-# ------------------------------------------------ platforms_with_referral_overrides (بلیت ۲۳)
 
 
 def test_referral_override_replaces_registry_value() -> None:
@@ -171,13 +141,10 @@ def test_referral_override_replaces_registry_value() -> None:
     merged = platforms_with_referral_overrides(rows, LISTED)
     by_slug = {p.slug: p for p in merged}
     assert by_slug["wallgold"].referral_url == "https://wallgold.ir/r/mzn"
-    # بقیه دست‌نخورده می‌مانند — همان شیء رجیستری.
     assert by_slug["talasea"] is TALASEA
 
 
 def test_referral_override_ignores_empty_or_missing_rows() -> None:
-    """`referral_url=None` (هنوز ذخیره نشده) یا `""` (پاک‌شده) ⟸ بدون override
-    — یعنی رجیستری همان‌طور که هست عبور می‌کند (فرود امن به website_url در وب)."""
     rows = (row("wallgold", referral_url=None), row("talasea", referral_url=""))
     merged = platforms_with_referral_overrides(rows, LISTED)
     assert merged == LISTED
@@ -196,9 +163,6 @@ def test_referral_override_preserves_registry_order() -> None:
 
 
 def test_referral_override_applies_regardless_of_listing_status() -> None:
-    """`is_listed` فیلتر نمایش عمومی است، نه شرط override — merge روی کل
-    رجیستری اجرا می‌شود؛ فیلتر نمایش خودش در `save_platforms`/`is_listed`
-    اعمال می‌شود، نه اینجا."""
     full_registry = LISTED + (GOLDIKA,)
     rows = (row("goldika", referral_url="https://goldika.example/r/x"),)
     merged = platforms_with_referral_overrides(rows, full_registry)
@@ -207,20 +171,13 @@ def test_referral_override_applies_regardless_of_listing_status() -> None:
 
 
 async def test_referral_override_reaches_listed_platforms_via_save_platforms() -> None:
-    """مسیر کامل بلیت ۲۳: تنظیمات پنل ⟸ merge با رجیستری ⟸ همان مسیر
-    `save_platforms` که `platform_loop` هر نوبت صدا می‌زند ⟸ `tablo:listed`
-    (اینجا: `store.get_listed_platforms`) — بدون کلید ردیس تازه، و بدون
-    اثر روی سکوهایی که override ندارند."""
     gateway = FakeSettingsGateway(
         (row("wallgold", referral_url="https://wallgold.ir/r/mzn-secret"),)
     )
     store = InMemoryStore()
 
-    # همان بدنه‌ی settings_sync_loop، بدون asyncio.sleep — یک نوبت دستی.
     settings_rows = await gateway.list_platform_settings()
     merged = platforms_with_referral_overrides(settings_rows, LISTED)
-    # همان بدنه‌ی platform_loop (collect_round) که این فهرست merge‌شده را
-    # به store.save_platforms می‌دهد.
     await store.save_platforms(merged)
 
     listed = await store.get_listed_platforms()

@@ -1,11 +1,3 @@
-/**
- * ساخت پست تازه در پنل — ‎/admin/posts/new‎ (بلیت ۲۲).
- *
- * پست تازه همیشه `draft` ساخته می‌شود (منطق در `lib/admin-posts.ts::createPost`)
- * — انتشار یک قدم جدا در صفحه‌ی ویرایش است. پیش‌نمایش دقیقاً همان
- * `renderMarkdown` صفحه‌ی عمومی پست را صدا می‌زند تا هیچ رفتار متفاوتی بین
- * پیش‌نمایش و صفحه‌ی واقعی نباشد.
- */
 import { useMemo, useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 

@@ -1,13 +1,4 @@
 /**
- * بلیت ۸ — سه چیز در مرز وب:
- *
- * ۱) منطق سوآپ به‌روزرسان زنده به‌صورت تابع خالص: «مقادیر فعلی DOM +
- *    ردیف payload ⟸ مقادیر جدید» — بدون DOM و بدون شبکه.
- * ۲) HTML سروررندر همان قلاب‌های ‎data-live‎ ای را دارد که سوآپ لازم دارد
- *    (قیمت، برچسب زمان، پسوند کهنگی) — و فقط همان‌ها.
- * ۳) رشته‌ی `price_display` که ‎/api/prices‎ می‌دهد بیت‌به‌بیت همان است که
- *    رندر سرور در سلول قیمت گذاشته — وگرنه سوآپ عدد را «می‌پراند».
- *
  * ⚠️ تست پیکربندی رندر (`revalidate = 60`) حذف شد: ISR مفهومی مالِ نکست بود
  * و در تنکستک استارت وجود ندارد. جایگزینش سیاست کش لبه است که در
  * `tests/seo.test.ts` سنجیده می‌شود (‎s-maxage=60‎ + ‎stale-if-error‎).
@@ -78,13 +69,12 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
   });
 
   it("بدون ردیف payload، عدد می‌ماند ولی برچسب زمان از ISO خود DOM پیر می‌شود", () => {
-    // سرور «۱ دقیقه پیش» رندر کرده بود؛ ۴ دقیقه گذشته و payload این سکو را ندارد.
     const current = domState({ updatedAtIso: isoSecondsAgo(4 * 60) });
     const next = nextRowDomState(current, undefined, NOW);
     expect(next.priceText).toBe(current.priceText);
     expect(next.updatedAtIso).toBe(current.updatedAtIso);
     expect(next.updatedText).toBe("۴ دقیقه پیش");
-    expect(next.staleText).toBe(STALE_SUFFIX_FA); // آستانه‌ی کهنگی ۳ دقیقه است
+    expect(next.staleText).toBe(STALE_SUFFIX_FA);
   });
 
   it("قطع منبع (payload بی‌قیمت) ⟸ عدد قبلی می‌ماند و فقط کهنگی گزارش می‌شود", () => {
@@ -98,7 +88,7 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
       },
       NOW,
     );
-    expect(next.priceText).toBe("۱۸٬۷۰۴٬۰۵۵"); // کهنگی، نه خطا — عدد جعل/پاک نمی‌شود
+    expect(next.priceText).toBe("۱۸٬۷۰۴٬۰۵۵");
     expect(next.updatedText).toBe("۱۰ دقیقه پیش");
     expect(next.staleText).toBe(STALE_SUFFIX_FA);
   });
@@ -165,7 +155,7 @@ describe("قلاب‌های داشبورد در HTML سروررندر", () => {
   });
 });
 
-describe("شمارنده‌ی زنده‌ی کارت نرخ — تابع خالص nextRateCardCountdown (بلیت ۳۱)", () => {
+describe("شمارنده‌ی زنده‌ی کارت نرخ — تابع خالص nextRateCardCountdown", () => {
   it("هر تیک، وقتی داده تازه است، یکی کم می‌شود و دریافتی درخواست نمی‌شود", () => {
     expect(nextRateCardCountdown(30, false)).toEqual({ secondsRemaining: 29, shouldFetch: false });
     expect(nextRateCardCountdown(15, false)).toEqual({ secondsRemaining: 14, shouldFetch: false });
@@ -184,7 +174,6 @@ describe("شمارنده‌ی زنده‌ی کارت نرخ — تابع خال�
       secondsRemaining: RATE_CARD_POLL_SECONDS,
       shouldFetch: false,
     });
-    // حتی درست در صفر هم کهنگی اولویت دارد — دریافتی درخواست نمی‌شود.
     expect(nextRateCardCountdown(0, true)).toEqual({
       secondsRemaining: RATE_CARD_POLL_SECONDS,
       shouldFetch: false,
@@ -213,11 +202,6 @@ describe("هم‌ارزی payload با رندر سرور", () => {
     }
   });
 
-  /**
-   * هندسه هم باید از همان تابع بیاید. اگر `/api/prices` نسخه‌ی دوم محاسبه
-   * داشت، نشانگرها بعد از اولین polling به موقعیتی می‌پریدند که با رندر
-   * اولیه نمی‌خواند — خرابی‌ای که فقط در مرورگر و بعد از ۳۰ ثانیه دیده می‌شود.
-   */
   it("rail_percent payload همان درصدی است که سرور رندر کرده", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     const payload = await livePricesPayload();
