@@ -94,7 +94,6 @@ export function HomePage({ data }: { data: HomePageData }) {
               updatedAtDisplay={live.data?.updated_at_display ?? dashboard.updatedAtDisplay}
               tick={live.tick}
               failed={live.failed}
-              onRefresh={live.refreshNow}
             />
             <MarketSummary summary={dashboard.summary} />
             <SourceCards sources={dashboard.rail.sources} nowMs={nowMs} />

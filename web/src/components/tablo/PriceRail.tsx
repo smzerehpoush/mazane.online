@@ -17,14 +17,12 @@ export function PriceRail({
   updatedAtDisplay,
   tick,
   failed,
-  onRefresh,
 }: {
   rail: RailView;
   updatedAt: string | null;
   updatedAtDisplay: string | null;
   tick: number;
   failed: boolean;
-  onRefresh: () => void;
 }) {
   const fuseRef = useRef<HTMLDivElement | null>(null);
 
@@ -72,14 +70,6 @@ export function PriceRail({
           </p>
         </div>
         <div className="flex flex-col items-end gap-0.5">
-          <button
-            type="button"
-            onClick={onRefresh}
-            data-rail-refresh
-            className="transition-smooth text-[12.5px] font-medium text-primary hover:underline"
-          >
-            همین حالا بگیر ↻
-          </button>
           {updatedAt !== null && (
             <span className="text-[10.5px] text-tx3">
               آخرین به‌روزرسانی{" "}

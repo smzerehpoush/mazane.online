@@ -299,6 +299,12 @@ describe("home page — source outage ⟸ staleness, not error", () => {
     expect(html).toContain("قیمت در دسترس نیست");
   });
 
+  it("the price axis card has no immediate refresh CTA", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).not.toContain("همین حالا بگیر");
+    expect(html).not.toContain("data-rail-refresh");
+  });
+
   it("with only one priced source, the axis isn't drawn but the page is fine", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
