@@ -137,7 +137,6 @@ describe("flat slug resolver", () => {
       expect(await resolveSlug(word)).toBeNull();
       expect(await slugPageData(word)).toBeNull();
     }
-    expect(await slugPageData("darbare-pishnahad")).toBeNull();
   });
 
   it("asset slug ⟸ instrument, platform slug ⟸ platform, unknown ⟸ 404", async () => {

@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as DarbarePishnahadRouteImport } from './routes/darbare-pishnahad'
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -50,11 +49,6 @@ const SlugRoute = SlugRouteImport.update({
 const AdminRouteRoute = AdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DarbarePishnahadRoute = DarbarePishnahadRouteImport.update({
-  id: '/darbare-pishnahad',
-  path: '/darbare-pishnahad',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MazaneChistRoute = MazaneChistRouteImport.update({
@@ -180,7 +174,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
-  '/darbare-pishnahad': typeof DarbarePishnahadRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -208,7 +201,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
-  '/darbare-pishnahad': typeof DarbarePishnahadRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -238,7 +230,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
-  '/darbare-pishnahad': typeof DarbarePishnahadRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -269,7 +260,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/$slug'
-    | '/darbare-pishnahad'
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -297,7 +287,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$slug'
-    | '/darbare-pishnahad'
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -326,7 +315,6 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/$slug'
-    | '/darbare-pishnahad'
     | '/mazane-chist'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -356,7 +344,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   SlugRoute: typeof SlugRoute
-  DarbarePishnahadRoute: typeof DarbarePishnahadRoute
   MazaneChistRoute: typeof MazaneChistRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -393,13 +380,6 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/darbare-pishnahad': {
-      id: '/darbare-pishnahad'
-      path: '/darbare-pishnahad'
-      fullPath: '/darbare-pishnahad'
-      preLoaderRoute: typeof DarbarePishnahadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mazane-chist': {
@@ -619,7 +599,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   SlugRoute: SlugRoute,
-  DarbarePishnahadRoute: DarbarePishnahadRoute,
   MazaneChistRoute: MazaneChistRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

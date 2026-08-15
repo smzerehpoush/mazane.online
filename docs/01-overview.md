@@ -165,7 +165,6 @@ Eight final tables:
 | `/blog` | List of published posts |
 | `/blog/$slug` | A single post's page |
 | `/mazane-chist` | Static page, "مظنه چیست" |
-| `/darbare-pishnahad` | Static page, "درباره‌ی پیشنهاد سردبیر" |
 | `/robots.txt` | Generated in code (`lib/seo/robots.ts`) |
 | `/sitemap.xml` | XML; deliberately returns 503 with an empty body on blog-source error |
 | `/go/$slug` | Revenue-generating outbound redirect (302) to `referral_url` or, absent that, `website_url`; `noindex` + `no-store` |

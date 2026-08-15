@@ -85,6 +85,9 @@ async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
         ReferenceInstrument.GOLD_18K_TOMAN,
         ReferenceInstrument.XAU,
         ReferenceInstrument.USD_TOMAN,
+        ReferenceInstrument.SEKEH_EMAMI_TOMAN,
+        ReferenceInstrument.SEKEH_HALF_TOMAN,
+        ReferenceInstrument.SEKEH_QUARTER_TOMAN,
     ]
     quotes = {quote.instrument: quote for quote in stored.quotes}
     gold_quote = quotes[ReferenceInstrument.GOLD_18K_TOMAN]
@@ -100,6 +103,9 @@ async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
     assert dollar_quote.value == Decimal("98700")
     assert dollar_quote.side is Side.PRICE
     assert dollar_quote.raw_scale == Decimal("1")
+    assert quotes[ReferenceInstrument.SEKEH_EMAMI_TOMAN].value == Decimal("185000000")
+    assert quotes[ReferenceInstrument.SEKEH_HALF_TOMAN].value == Decimal("94000000")
+    assert quotes[ReferenceInstrument.SEKEH_QUARTER_TOMAN].value == Decimal("52500000")
 
 
 def test_talair_banner_usdt_irt_is_stored_as_usd_toman_reference() -> None:
@@ -113,7 +119,20 @@ def test_talair_banner_usdt_irt_is_stored_as_usd_toman_reference() -> None:
     assert quotes[ReferenceInstrument.USD_TOMAN].value == Decimal("102500")
 
 
-async def test_talair_empty_banner_keeps_gold_reference() -> None:
+def test_talair_banner_coin_price_wins_over_main_payload() -> None:
+    snapshot = TalairReference().parse(
+        talair_payload(),
+        FETCHED_AT,
+        banner_payload={"price": {"SEKEH_E": "<span>۲۰۰,۰۰۰,۰۰۰</span>"}},
+    )
+
+    quotes = {quote.instrument: quote for quote in snapshot.quotes}
+    assert quotes[ReferenceInstrument.SEKEH_EMAMI_TOMAN].value == Decimal("200000000")
+    assert quotes[ReferenceInstrument.SEKEH_HALF_TOMAN].value == Decimal("94000000")
+    assert quotes[ReferenceInstrument.SEKEH_QUARTER_TOMAN].value == Decimal("52500000")
+
+
+async def test_talair_empty_banner_keeps_coin_references_from_main_payload() -> None:
     store = InMemoryStore()
 
     await collect_reference_round(
@@ -133,7 +152,12 @@ async def test_talair_empty_banner_keeps_gold_reference() -> None:
 
     stored = await store.get_reference("talair")
     assert stored is not None
-    assert [q.instrument for q in stored.quotes] == [ReferenceInstrument.GOLD_18K_TOMAN]
+    assert [q.instrument for q in stored.quotes] == [
+        ReferenceInstrument.GOLD_18K_TOMAN,
+        ReferenceInstrument.SEKEH_EMAMI_TOMAN,
+        ReferenceInstrument.SEKEH_HALF_TOMAN,
+        ReferenceInstrument.SEKEH_QUARTER_TOMAN,
+    ]
 
 
 async def test_talair_broken_gold_18k_means_stale_reference_not_bad_data() -> None:

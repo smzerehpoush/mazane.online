@@ -362,6 +362,44 @@ describe("home page — disabled cards", () => {
     expect(card?.[0]).toContain("حباب خیلی بالاتر از قیمت ذاتی است");
   });
 
+  it("the coin price card sits under the bubble meter and renders tala.ir coin prices", async () => {
+    const html = await renderHome(healthyStore(), {
+      referencePrices: [
+        {
+          reference_slug: "talair",
+          instrument: "SEKEH_EMAMI_TOMAN",
+          value: 185000000,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+        {
+          reference_slug: "talair",
+          instrument: "SEKEH_HALF_TOMAN",
+          value: 94000000,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+        {
+          reference_slug: "talair",
+          instrument: "SEKEH_QUARTER_TOMAN",
+          value: 52500000,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+    });
+    const card = html.match(/<section[^>]*data-card="coin-prices"[\s\S]*?<\/section>/);
+    expect(card).not.toBeNull();
+    expect(html.indexOf('data-card="bubble"')).toBeLessThan(
+      html.indexOf('data-card="coin-prices"'),
+    );
+    expect(card?.[0]).toContain("قیمت سکه");
+    expect(card?.[0]).toContain("سکه امامی");
+    expect(card?.[0]).toContain("نیم سکه");
+    expect(card?.[0]).toContain("ربع سکه");
+    expect(card?.[0]).toContain("۱۸۵٬۰۰۰٬۰۰۰");
+    expect(card?.[0]).toContain("۹۴٬۰۰۰٬۰۰۰");
+    expect(card?.[0]).toContain("۵۲٬۵۰۰٬۰۰۰");
+    expect(card?.[0]).toContain("تومان");
+  });
+
   it("the price-alert card is disabled too", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("هشدار قیمت");

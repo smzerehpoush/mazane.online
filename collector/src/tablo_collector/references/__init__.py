@@ -17,6 +17,9 @@ class ReferenceInstrument(StrEnum):
     GOLD_18K_TOMAN = "GOLD_18K_TOMAN"
     XAU = "XAU"
     USD_TOMAN = "USD_TOMAN"
+    SEKEH_EMAMI_TOMAN = "SEKEH_EMAMI_TOMAN"
+    SEKEH_HALF_TOMAN = "SEKEH_HALF_TOMAN"
+    SEKEH_QUARTER_TOMAN = "SEKEH_QUARTER_TOMAN"
 
 
 class ReferenceQuote(BaseModel):

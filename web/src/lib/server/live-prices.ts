@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 
 import { calculateBubble } from "../bubble";
+import { buildCoinPrices } from "../coin-prices";
 import { buildDashboard } from "../dashboard";
 import { formatToman } from "../format";
 import type { LivePricesPayload } from "../live-update";
@@ -8,6 +9,7 @@ import { priceToman } from "../rows";
 import { NO_STORE } from "../seo/cache-headers";
 import {
   chartSeriesConfig,
+  COIN_PRICE_INSTRUMENTS,
   OUNCE_REFERENCE_INSTRUMENT,
   UNION_RATE_INSTRUMENT,
   UNION_RATE_REFERENCE_SLUG,
@@ -18,22 +20,31 @@ import { fetchRows } from "./price-source";
 import { getReferencePrice } from "./reference-price-source";
 
 export async function livePricesPayload(): Promise<LivePricesPayload> {
-  const [rows, chartOverride, marketReference, ounceReference, usdReference] = await Promise.all([
-    fetchRows(),
-    getChartPlatforms(),
-    getReferencePrice({
-      referenceSlug: UNION_RATE_REFERENCE_SLUG,
-      instrument: UNION_RATE_INSTRUMENT,
-    }),
-    getReferencePrice({
-      referenceSlug: UNION_RATE_REFERENCE_SLUG,
-      instrument: OUNCE_REFERENCE_INSTRUMENT,
-    }),
-    getReferencePrice({
-      referenceSlug: UNION_RATE_REFERENCE_SLUG,
-      instrument: USD_REFERENCE_INSTRUMENT,
-    }),
-  ]);
+  const [rows, chartOverride, marketReference, ounceReference, usdReference, coinReferences] =
+    await Promise.all([
+      fetchRows(),
+      getChartPlatforms(),
+      getReferencePrice({
+        referenceSlug: UNION_RATE_REFERENCE_SLUG,
+        instrument: UNION_RATE_INSTRUMENT,
+      }),
+      getReferencePrice({
+        referenceSlug: UNION_RATE_REFERENCE_SLUG,
+        instrument: OUNCE_REFERENCE_INSTRUMENT,
+      }),
+      getReferencePrice({
+        referenceSlug: UNION_RATE_REFERENCE_SLUG,
+        instrument: USD_REFERENCE_INSTRUMENT,
+      }),
+      Promise.all(
+        COIN_PRICE_INSTRUMENTS.map((coin) =>
+          getReferencePrice({
+            referenceSlug: UNION_RATE_REFERENCE_SLUG,
+            instrument: coin.instrument,
+          }),
+        ),
+      ),
+    ]);
   const platforms = chartSeriesConfig(chartOverride);
 
   // ⚠️ The axis geometry is built with the **same function** the page's
@@ -75,6 +86,7 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
         ounceUsd: ounceReference?.value ?? null,
         usdToman: usdReference?.value ?? null,
       }),
+      coinPrices: buildCoinPrices(coinReferences),
       reference_percent: dashboard.rail.referencePercent,
       updated_at: dashboard.updatedAt,
       updated_at_display: dashboard.updatedAtDisplay,

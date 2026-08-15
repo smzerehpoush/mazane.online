@@ -83,7 +83,6 @@ describe("sitemap.xml", () => {
       "/",
       "/blog",
       "/mazane-chist",
-      "/darbare-pishnahad",
       "/tala-18",
       "/milli",
       "/wallgold",

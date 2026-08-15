@@ -32,6 +32,25 @@ _BANNER_FIELD_GROUPS = (
             "arz_dolar",
         ),
     ),
+    (
+        ReferenceInstrument.SEKEH_EMAMI_TOMAN,
+        (
+            "sekke-jad",
+            "sekke_jad",
+            "sekke_emami",
+            "sekeh_emami",
+            "emami",
+            "SEKEH_E",
+        ),
+    ),
+    (
+        ReferenceInstrument.SEKEH_HALF_TOMAN,
+        ("sekke-nim", "sekke_nim", "nim", "half", "SEKEH_NIM"),
+    ),
+    (
+        ReferenceInstrument.SEKEH_QUARTER_TOMAN,
+        ("sekke-rob", "sekke_rob", "rob", "quarter", "SEKEH_ROB"),
+    ),
 )
 
 _DIGIT_TRANSLATION = str.maketrans(
@@ -82,6 +101,10 @@ def _clean_value(raw: Any) -> Decimal | None:
     return value
 
 
+def _row_value(row: Any) -> Any:
+    return row.get("v") if isinstance(row, dict) else row
+
+
 class TalairReference:
     slug = "talair"
     name_fa = "طلا دات‌آی‌آر"
@@ -118,12 +141,10 @@ class TalairReference:
             raise AdapterError("Talair: gold body not found in payload")
 
         quotes: list[ReferenceQuote] = []
-        for field, instrument in _FIELD_TO_INSTRUMENT.items():
-            row = gold.get(field)
-            raw = row.get("v") if isinstance(row, dict) else None
-            value = _clean_value(raw)
-            if value is None:
-                continue
+
+        def append_quote(instrument: ReferenceInstrument, value: Decimal) -> None:
+            if any(quote.instrument is instrument for quote in quotes):
+                return
             quotes.append(
                 ReferenceQuote(
                     reference_slug=self.slug,
@@ -135,30 +156,38 @@ class TalairReference:
                     fetched_at=fetched_at,
                 )
             )
+
+        for field, instrument in _FIELD_TO_INSTRUMENT.items():
+            raw = _row_value(gold.get(field))
+            value = _clean_value(raw)
+            if value is None:
+                continue
+            append_quote(instrument, value)
+
+        if not any(quote.instrument is ReferenceInstrument.GOLD_18K_TOMAN for quote in quotes):
+            raise AdapterError("Talair: no valid field found in payload")
+
         banner_price = (
             banner_payload.get("price") if isinstance(banner_payload, dict) else None
         )
         if isinstance(banner_price, dict):
             for instrument, fields in _BANNER_FIELD_GROUPS:
                 for field in fields:
-                    value = _clean_value(banner_price.get(field))
+                    value = _clean_value(_row_value(banner_price.get(field)))
                     if value is None:
                         continue
-                    quotes.append(
-                        ReferenceQuote(
-                            reference_slug=self.slug,
-                            instrument=instrument,
-                            side=Side.PRICE,
-                            value=value,
-                            raw_value=value,
-                            raw_scale=self.scale,
-                            fetched_at=fetched_at,
-                        )
-                    )
+                    append_quote(instrument, value)
                     break
 
-        if not quotes:
-            raise AdapterError("Talair: no valid field found in payload")
+        sekke = payload.get("sekke") if isinstance(payload, dict) else None
+        if isinstance(sekke, dict):
+            for instrument, fields in _BANNER_FIELD_GROUPS[2:]:
+                for field in fields:
+                    value = _clean_value(_row_value(sekke.get(field)))
+                    if value is None:
+                        continue
+                    append_quote(instrument, value)
+                    break
 
         return ReferenceSnapshot(
             reference_slug=self.slug,

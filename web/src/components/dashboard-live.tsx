@@ -40,7 +40,7 @@ function setPriceText(root: ParentNode, selector: string, value: string | null):
   if (element.textContent !== value) element.textContent = value;
 }
 
-function setBubbleTomanText(root: ParentNode, selector: string, value: string | null): void {
+function setTomanText(root: ParentNode, selector: string, value: string | null): void {
   const element = root.querySelector<HTMLElement>(selector);
   if (element === null) return;
   const valueElement = element.querySelector<HTMLElement>("[data-price-value]");
@@ -170,8 +170,8 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
     if (spread !== null && data.spread_display !== null) {
       spread.textContent = `بازه اختلاف ${data.spread_display} تومان`;
     }
-    setBubbleTomanText(document, "[data-bubble-intrinsic]", data.bubble?.intrinsicDisplay ?? null);
-    setBubbleTomanText(document, "[data-bubble-amount]", data.bubble?.bubbleDisplay ?? null);
+    setTomanText(document, "[data-bubble-intrinsic]", data.bubble?.intrinsicDisplay ?? null);
+    setTomanText(document, "[data-bubble-amount]", data.bubble?.bubbleDisplay ?? null);
     setRequiredText(document, "[data-bubble-percent]", data.bubble?.bubblePercentDisplay ?? "—");
     const riskLevel = data.bubble?.riskLevel ?? null;
     const riskLabel = document.querySelector<HTMLElement>("[data-bubble-risk-label]");
@@ -188,6 +188,9 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       "[data-bubble-status]",
       data.bubble === null ? "داده اونس یا دلار هنوز در دسترس نیست" : data.bubble.riskDescription,
     );
+    for (const coin of data.coinPrices) {
+      setTomanText(document, `[data-coin-price="${CSS.escape(coin.key)}"]`, coin.priceDisplay);
+    }
 
     if (data.reference_percent !== null) {
       for (const anchor of document.querySelectorAll<HTMLElement>(".rail-anchor")) {

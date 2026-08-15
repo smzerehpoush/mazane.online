@@ -12,7 +12,6 @@ export const nav = [
   { label: "طلای ۱۸ عیار", href: "/tala-18" },
   { label: "بلاگ", href: "/blog" },
   { label: "مظنه چیست", href: "/mazane-chist" },
-  { label: "درباره‌ی پیشنهاد سردبیر", href: "/darbare-pishnahad" },
 ] as const;
 
 export const legalNote =
@@ -151,6 +150,11 @@ export const UNION_RATE_SOURCE_NAME = "قیمت مرجع اتحادیه طلا";
 export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
 export const OUNCE_REFERENCE_INSTRUMENT = "XAU";
 export const USD_REFERENCE_INSTRUMENT = "USD_TOMAN";
+export const COIN_PRICE_INSTRUMENTS = [
+  { key: "emami", label: "سکه امامی", instrument: "SEKEH_EMAMI_TOMAN" },
+  { key: "half", label: "نیم سکه", instrument: "SEKEH_HALF_TOMAN" },
+  { key: "quarter", label: "ربع سکه", instrument: "SEKEH_QUARTER_TOMAN" },
+] as const;
 
 /**
  * ⚠️ Comes from `lib/fa-number.ts`, not `Intl.NumberFormat` — same output,

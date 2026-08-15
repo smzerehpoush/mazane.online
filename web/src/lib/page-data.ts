@@ -2,12 +2,14 @@ import type { HomePageData } from "@/components/tablo/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
 import { calculateBubble } from "./bubble";
+import { buildCoinPrices } from "./coin-prices";
 import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
 import type { ReferencePrice, ReferencePriceQuery } from "./reference-price";
 import type { Row } from "./rows";
 import {
   chartSeriesConfig,
+  COIN_PRICE_INSTRUMENTS,
   HOME_CHART_HOURS,
   OUNCE_REFERENCE_INSTRUMENT,
   HOME_INSTRUMENT,
@@ -37,48 +39,60 @@ export interface HomeReaders {
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
   const chartPlatforms = chartSeriesConfig(await read.getChartPlatforms?.());
+  const getReferencePrice = read.getReferencePrice;
 
-  const [rows, history, posts, viewCounts, referenceRanges, bubbleReferences] = await Promise.all([
-    read.fetchRows(),
-    read.getPlatformHistory({
-      platformSlugs: chartPlatforms.map((platform) => platform.slug),
-      instrument: HOME_INSTRUMENT,
-      hours: HOME_CHART_HOURS,
-    }),
-    read.listPublishedPosts(),
-    read.getViewCounts?.() ?? Promise.resolve<ViewCounts>({}),
-    Promise.all(
-      RATE_CARD_RANGES.map((range) =>
-        read.getPlatformHistory({
-          platformSlugs: [UNION_RATE_REFERENCE_SLUG],
-          instrument: UNION_RATE_INSTRUMENT,
-          hours: range.hours,
-          kind: "REFERENCE",
-          ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
-        }),
-      ),
-    ),
-    read.getReferencePrice === undefined
-      ? Promise.resolve<[ReferencePrice | null, ReferencePrice | null, ReferencePrice | null]>([
-          null,
-          null,
-          null,
-        ])
-      : Promise.all([
-          read.getReferencePrice({
-            referenceSlug: UNION_RATE_REFERENCE_SLUG,
+  const [rows, history, posts, viewCounts, referenceRanges, bubbleReferences, coinReferences] =
+    await Promise.all([
+      read.fetchRows(),
+      read.getPlatformHistory({
+        platformSlugs: chartPlatforms.map((platform) => platform.slug),
+        instrument: HOME_INSTRUMENT,
+        hours: HOME_CHART_HOURS,
+      }),
+      read.listPublishedPosts(),
+      read.getViewCounts?.() ?? Promise.resolve<ViewCounts>({}),
+      Promise.all(
+        RATE_CARD_RANGES.map((range) =>
+          read.getPlatformHistory({
+            platformSlugs: [UNION_RATE_REFERENCE_SLUG],
             instrument: UNION_RATE_INSTRUMENT,
+            hours: range.hours,
+            kind: "REFERENCE",
+            ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
           }),
-          read.getReferencePrice({
-            referenceSlug: UNION_RATE_REFERENCE_SLUG,
-            instrument: OUNCE_REFERENCE_INSTRUMENT,
-          }),
-          read.getReferencePrice({
-            referenceSlug: UNION_RATE_REFERENCE_SLUG,
-            instrument: USD_REFERENCE_INSTRUMENT,
-          }),
-        ]),
-  ]);
+        ),
+      ),
+      getReferencePrice === undefined
+        ? Promise.resolve<[ReferencePrice | null, ReferencePrice | null, ReferencePrice | null]>([
+            null,
+            null,
+            null,
+          ])
+        : Promise.all([
+            getReferencePrice({
+              referenceSlug: UNION_RATE_REFERENCE_SLUG,
+              instrument: UNION_RATE_INSTRUMENT,
+            }),
+            getReferencePrice({
+              referenceSlug: UNION_RATE_REFERENCE_SLUG,
+              instrument: OUNCE_REFERENCE_INSTRUMENT,
+            }),
+            getReferencePrice({
+              referenceSlug: UNION_RATE_REFERENCE_SLUG,
+              instrument: USD_REFERENCE_INSTRUMENT,
+            }),
+          ]),
+      getReferencePrice === undefined
+        ? Promise.resolve<Array<ReferencePrice | null>>([])
+        : Promise.all(
+            COIN_PRICE_INSTRUMENTS.map((coin) =>
+              getReferencePrice({
+                referenceSlug: UNION_RATE_REFERENCE_SLUG,
+                instrument: coin.instrument,
+              }),
+            ),
+          ),
+    ]);
 
   const referenceHistory: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
   RATE_CARD_RANGES.forEach((range, index) => {
@@ -98,6 +112,7 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
       ounceUsd: bubbleReferences[1]?.value ?? null,
       usdToman: bubbleReferences[2]?.value ?? null,
     }),
+    coinPrices: buildCoinPrices(coinReferences),
     generated_at: new Date().toISOString(),
   };
 }

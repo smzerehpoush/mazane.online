@@ -6,12 +6,13 @@ import { Madde5Bar } from "@/components/tablo/LegalNotice";
 import { MarketSummary } from "@/components/tablo/MarketSummary";
 import { PopularPosts } from "@/components/tablo/PopularPosts";
 import { PriceRail } from "@/components/tablo/PriceRail";
-import { BubbleGauge, PriceAlertCard } from "@/components/tablo/SidebarCards";
+import { BubbleGauge, CoinPriceCard, PriceAlertCard } from "@/components/tablo/SidebarCards";
 import { Sidebar } from "@/components/tablo/Sidebar";
 import { SiteHeader } from "@/components/tablo/SiteHeader";
 import { SourceCards } from "@/components/tablo/SourceCards";
 import { bottomPosts, sidebarPosts } from "@/components/tablo/home-view";
 import type { BubbleView } from "@/lib/bubble";
+import type { CoinPricesView } from "@/lib/coin-prices";
 import { buildDashboard } from "@/lib/dashboard";
 import type { PublishedPost } from "@/lib/blog";
 import type { PlatformHistory, PlatformHistoryByRange } from "@/lib/history";
@@ -31,6 +32,7 @@ export interface HomePageData {
   viewCounts: ViewCounts;
   chartPlatforms: readonly ChartPlatformConfig[];
   bubble: BubbleView | null;
+  coinPrices: CoinPricesView;
   generated_at: string;
 }
 
@@ -75,6 +77,7 @@ export function HomePage({ data }: { data: HomePageData }) {
   const rankedByViews = hasViewData(data.posts, data.viewCounts);
   const hasPosts = data.posts.length > 0;
   const bubble = live.data === null ? data.bubble : live.data.bubble;
+  const coinPrices = live.data === null ? data.coinPrices : live.data.coinPrices;
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -84,6 +87,7 @@ export function HomePage({ data }: { data: HomePageData }) {
         <div className="grid items-start gap-4 min-[1081px]:grid-cols-[360px_minmax(0,1fr)]">
           <div className="order-2 flex flex-col gap-4 min-[1081px]:order-1">
             <BubbleGauge bubble={bubble} />
+            <CoinPriceCard coins={coinPrices} />
             <JewelryCalculator
               pricePerGram={reference?.priceToman ?? null}
               referenceName={reference?.name ?? null}

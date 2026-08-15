@@ -18,7 +18,6 @@ import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
-import { DarbarePishnahad, darbarePishnahadHead } from "../src/routes/darbare-pishnahad";
 import { MazaneChist, mazaneChistHead } from "../src/routes/mazane-chist";
 import {
   freshIso,
@@ -446,8 +445,8 @@ describe("BreadcrumbList", () => {
     ]);
   });
 
-  it("Static pages (blog index, darbare-pishnahad, mazane-chist) have it too", () => {
-    for (const head of [blogIndexHead(), darbarePishnahadHead(), mazaneChistHead()]) {
+  it("Static pages (blog index, mazane-chist) have it too", () => {
+    for (const head of [blogIndexHead(), mazaneChistHead()]) {
       const breadcrumb = findByType(jsonLdBlocks(head), "BreadcrumbList");
       expect(breadcrumb).toBeDefined();
       const items = (breadcrumb as Record<string, unknown>)["itemListElement"] as Record<
@@ -470,7 +469,6 @@ describe("Removed types appear nowhere", () => {
       slugHead(await pageOf("wallgold")),
       blogPostHead(post),
       blogIndexHead(),
-      darbarePishnahadHead(),
       mazaneChistHead(),
     ];
     for (const head of heads) {
