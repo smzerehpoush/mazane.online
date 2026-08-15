@@ -17,6 +17,7 @@ import { getChartPlatforms } from "./server/chart-config-source";
 import { listPublishedPosts } from "./server/blog-source";
 import { getPlatformHistory } from "./server/history-source";
 import { fetchRows } from "./server/price-source";
+import { getReferencePrice } from "./server/reference-price-source";
 import { getViewCounts } from "./server/view-counter";
 
 export type HomeData = HomePageData;
@@ -28,5 +29,6 @@ export const loadHomeData = createServerFn({ method: "GET" }).handler(async (): 
     listPublishedPosts,
     getViewCounts,
     getChartPlatforms,
+    getReferencePrice,
   }),
 );

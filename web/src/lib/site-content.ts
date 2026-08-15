@@ -149,6 +149,8 @@ export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
 export const UNION_RATE_REFERENCE_SLUG = "talair";
 export const UNION_RATE_SOURCE_NAME = "قیمت مرجع اتحادیه طلا";
 export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
+export const OUNCE_REFERENCE_INSTRUMENT = "XAU";
+export const USD_REFERENCE_INSTRUMENT = "USD_TOMAN";
 
 /**
  * ⚠️ Comes from `lib/fa-number.ts`, not `Intl.NumberFormat` — same output,

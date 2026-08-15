@@ -108,7 +108,7 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
                * ⚠️ The label of a data-less range does **not** change. An
                * earlier version put "coming soon", but that phrase has a
                * fixed meaning on this page: it's reserved for features that
-               * haven't been built yet (bubble gauge, price alert). A range
+               * haven't been built yet (price alert). A range
                * that just hasn't accumulated history yet isn't unbuilt —
                * and on a fresh install all three tabs would read "coming
                * soon", making the whole card look unshipped. Disabled state

@@ -148,6 +148,10 @@ export function seedReferencePrice(value: ReferencePrice | null): void {
   setReferencePriceSource({ getReferencePrice: async () => value });
 }
 
+function referenceKey(query: { referenceSlug: string; instrument: string }): string {
+  return `${query.referenceSlug}:${query.instrument}`;
+}
+
 export function seedEmptyPrices(): void {
   seed({ listed: [], snapshots: {}, updatedAt: {}, instruments: [] });
 }
@@ -159,6 +163,7 @@ export async function homeData(
     posts?: BlogPost[];
     views?: ViewCounts;
     chartPlatforms?: readonly ChartPlatformConfig[] | undefined;
+    referencePrices?: ReferencePrice[];
   } = {},
 ): Promise<HomePageData> {
   seed(store);
@@ -166,12 +171,27 @@ export async function homeData(
   seedBlog(extra.posts ?? []);
   const views = extra.views;
   const hasChartPlatformsReader = "chartPlatforms" in extra;
+  const references =
+    extra.referencePrices === undefined
+      ? null
+      : new Map(
+          extra.referencePrices.map((price) => [
+            referenceKey({
+              referenceSlug: price.reference_slug,
+              instrument: price.instrument,
+            }),
+            price,
+          ]),
+        );
   return assembleHomeData({
     fetchRows,
     getPlatformHistory,
     listPublishedPosts,
     ...(views === undefined ? {} : { getViewCounts: async () => views }),
     ...(hasChartPlatformsReader ? { getChartPlatforms: async () => extra.chartPlatforms } : {}),
+    ...(references === null
+      ? {}
+      : { getReferencePrice: async (query) => references.get(referenceKey(query)) ?? null }),
   });
 }
 

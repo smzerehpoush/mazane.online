@@ -1,12 +1,3 @@
-/**
- * ⚠️ This number is the **reference price**, not any platform's price — it
- * takes no part in any calculation and is never displayed as any
- * platform's price (:
- * with no cross-platform average, every number is attributed to one named
- * source). The "union rate" display label on this number is the owner's
- * recorded decision — see `adr/0001-etehadieh-label-on-talair-number.md`.
- */
-
 export interface ReferencePriceQuery {
   referenceSlug: string;
   instrument: string;

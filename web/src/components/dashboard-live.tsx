@@ -23,15 +23,10 @@
  */
 import { useEffect, useRef } from "react";
 
+import type { BubbleRiskLevel } from "@/lib/bubble";
 import { nextRowDomState, type LiveDashboard } from "@/lib/live-update";
 
 const FLASH_MS = 900;
-
-function setText(root: ParentNode, selector: string, value: string | null): void {
-  if (value === null) return;
-  const element = root.querySelector<HTMLElement>(selector);
-  if (element !== null && element.textContent !== value) element.textContent = value;
-}
 
 function setPriceText(root: ParentNode, selector: string, value: string | null): void {
   if (value === null) return;
@@ -43,6 +38,47 @@ function setPriceText(root: ParentNode, selector: string, value: string | null):
     return;
   }
   if (element.textContent !== value) element.textContent = value;
+}
+
+function setBubbleTomanText(root: ParentNode, selector: string, value: string | null): void {
+  const element = root.querySelector<HTMLElement>(selector);
+  if (element === null) return;
+  const valueElement = element.querySelector<HTMLElement>("[data-price-value]");
+  if (valueElement === null) {
+    element.textContent = value ?? "—";
+    return;
+  }
+  const nextValue = value ?? "—";
+  if (valueElement.textContent !== nextValue) valueElement.textContent = nextValue;
+  const unitElement = element.querySelector<HTMLElement>("[data-price-unit]");
+  if (unitElement !== null) unitElement.classList.toggle("hidden", value === null);
+}
+
+function setRequiredText(root: ParentNode, selector: string, value: string): void {
+  const element = root.querySelector<HTMLElement>(selector);
+  if (element !== null && element.textContent !== value) element.textContent = value;
+}
+
+function setBubbleRiskClass(element: HTMLElement, riskLevel: BubbleRiskLevel | null): void {
+  element.classList.remove(
+    "bg-rdbg",
+    "text-rdtx",
+    "bg-ambg",
+    "text-am",
+    "bg-gnbg",
+    "text-gntx",
+    "bg-muted",
+    "text-muted-foreground",
+  );
+  if (riskLevel === "HIGH") {
+    element.classList.add("bg-rdbg", "text-rdtx");
+  } else if (riskLevel === "MEDIUM") {
+    element.classList.add("bg-ambg", "text-am");
+  } else if (riskLevel === "LOW") {
+    element.classList.add("bg-gnbg", "text-gntx");
+  } else {
+    element.classList.add("bg-muted", "text-muted-foreground");
+  }
 }
 
 export function DashboardLive({ data }: { data: LiveDashboard | null }) {
@@ -134,6 +170,24 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
     if (spread !== null && data.spread_display !== null) {
       spread.textContent = `بازه اختلاف ${data.spread_display} تومان`;
     }
+    setBubbleTomanText(document, "[data-bubble-intrinsic]", data.bubble?.intrinsicDisplay ?? null);
+    setBubbleTomanText(document, "[data-bubble-amount]", data.bubble?.bubbleDisplay ?? null);
+    setRequiredText(document, "[data-bubble-percent]", data.bubble?.bubblePercentDisplay ?? "—");
+    const riskLevel = data.bubble?.riskLevel ?? null;
+    const riskLabel = document.querySelector<HTMLElement>("[data-bubble-risk-label]");
+    if (riskLabel !== null) {
+      setBubbleRiskClass(riskLabel, riskLevel);
+      if (riskLabel.textContent !== (data.bubble?.riskLabel ?? "نامشخص")) {
+        riskLabel.textContent = data.bubble?.riskLabel ?? "نامشخص";
+      }
+    }
+    const statusPanel = document.querySelector<HTMLElement>("[data-bubble-status-panel]");
+    if (statusPanel !== null) setBubbleRiskClass(statusPanel, riskLevel);
+    setRequiredText(
+      document,
+      "[data-bubble-status]",
+      data.bubble === null ? "داده اونس یا دلار هنوز در دسترس نیست" : data.bubble.riskDescription,
+    );
 
     if (data.reference_percent !== null) {
       for (const anchor of document.querySelectorAll<HTMLElement>(".rail-anchor")) {

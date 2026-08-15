@@ -1,4 +1,5 @@
 import { formatMinutesAgoFa, isStale, minutesSince } from "./format";
+import type { BubbleView } from "./bubble";
 
 export interface LivePriceRow {
   platform_slug: string;
@@ -28,6 +29,7 @@ export interface LiveDashboard {
   max_display: string | null;
   min_display: string | null;
   spread_display: string | null;
+  bubble: BubbleView | null;
   reference_percent: number | null;
   updated_at: string | null;
   /**

@@ -9,19 +9,18 @@ import {
 } from "../reference-price";
 import { pgPool } from "./blog-source";
 
-interface RollupRow {
-  hour_start: Date;
-  close_value: string;
+interface ReferenceRow {
+  fetched_at: Date;
+  value: string;
 }
 
 const SQL = `
-  select hour_start, close_value
-    from hourly_rollups
-   where kind = 'REFERENCE'
-     and source_slug = $1
+  select fetched_at, value
+    from reference_quotes
+   where reference_slug = $1
      and instrument = $2
      and side = 'PRICE'
-   order by hour_start desc
+   order by fetched_at desc
    limit 1
 `;
 
@@ -30,14 +29,14 @@ export function createPgReferencePriceSource(): ReferencePriceSource {
 
   return {
     async getReferencePrice(query: ReferencePriceQuery): Promise<ReferencePrice | null> {
-      const result = await pool.query<RollupRow>(SQL, [query.referenceSlug, query.instrument]);
+      const result = await pool.query<ReferenceRow>(SQL, [query.referenceSlug, query.instrument]);
       const row = result.rows[0];
       if (row === undefined) return null;
       return {
         reference_slug: query.referenceSlug,
         instrument: query.instrument,
-        value: Number(row.close_value),
-        read_at: row.hour_start.toISOString(),
+        value: Number(row.value),
+        read_at: row.fetched_at.toISOString(),
       };
     },
   };

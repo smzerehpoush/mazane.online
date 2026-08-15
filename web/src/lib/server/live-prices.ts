@@ -1,16 +1,39 @@
 import "@tanstack/react-start/server-only";
 
+import { calculateBubble } from "../bubble";
 import { buildDashboard } from "../dashboard";
 import { formatToman } from "../format";
 import type { LivePricesPayload } from "../live-update";
 import { priceToman } from "../rows";
 import { NO_STORE } from "../seo/cache-headers";
-import { chartSeriesConfig } from "../site-content";
+import {
+  chartSeriesConfig,
+  OUNCE_REFERENCE_INSTRUMENT,
+  UNION_RATE_INSTRUMENT,
+  UNION_RATE_REFERENCE_SLUG,
+  USD_REFERENCE_INSTRUMENT,
+} from "../site-content";
 import { getChartPlatforms } from "./chart-config-source";
 import { fetchRows } from "./price-source";
+import { getReferencePrice } from "./reference-price-source";
 
 export async function livePricesPayload(): Promise<LivePricesPayload> {
-  const [rows, chartOverride] = await Promise.all([fetchRows(), getChartPlatforms()]);
+  const [rows, chartOverride, marketReference, ounceReference, usdReference] = await Promise.all([
+    fetchRows(),
+    getChartPlatforms(),
+    getReferencePrice({
+      referenceSlug: UNION_RATE_REFERENCE_SLUG,
+      instrument: UNION_RATE_INSTRUMENT,
+    }),
+    getReferencePrice({
+      referenceSlug: UNION_RATE_REFERENCE_SLUG,
+      instrument: OUNCE_REFERENCE_INSTRUMENT,
+    }),
+    getReferencePrice({
+      referenceSlug: UNION_RATE_REFERENCE_SLUG,
+      instrument: USD_REFERENCE_INSTRUMENT,
+    }),
+  ]);
   const platforms = chartSeriesConfig(chartOverride);
 
   // ⚠️ The axis geometry is built with the **same function** the page's
@@ -47,6 +70,11 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
       max_display: dashboard.rail.maxDisplay,
       min_display: dashboard.rail.minDisplay,
       spread_display: dashboard.rail.spreadDisplay,
+      bubble: calculateBubble({
+        marketPriceToman: marketReference?.value ?? null,
+        ounceUsd: ounceReference?.value ?? null,
+        usdToman: usdReference?.value ?? null,
+      }),
       reference_percent: dashboard.rail.referencePercent,
       updated_at: dashboard.updatedAt,
       updated_at_display: dashboard.updatedAtDisplay,

@@ -11,6 +11,7 @@ import { Sidebar } from "@/components/tablo/Sidebar";
 import { SiteHeader } from "@/components/tablo/SiteHeader";
 import { SourceCards } from "@/components/tablo/SourceCards";
 import { bottomPosts, sidebarPosts } from "@/components/tablo/home-view";
+import type { BubbleView } from "@/lib/bubble";
 import { buildDashboard } from "@/lib/dashboard";
 import type { PublishedPost } from "@/lib/blog";
 import type { PlatformHistory, PlatformHistoryByRange } from "@/lib/history";
@@ -29,6 +30,7 @@ export interface HomePageData {
   posts: PublishedPost[];
   viewCounts: ViewCounts;
   chartPlatforms: readonly ChartPlatformConfig[];
+  bubble: BubbleView | null;
   generated_at: string;
 }
 
@@ -72,6 +74,7 @@ export function HomePage({ data }: { data: HomePageData }) {
   const morePosts = bottomPosts(data.posts, data.viewCounts);
   const rankedByViews = hasViewData(data.posts, data.viewCounts);
   const hasPosts = data.posts.length > 0;
+  const bubble = live.data === null ? data.bubble : live.data.bubble;
 
   return (
     <div className="relative min-h-screen bg-background">
@@ -80,7 +83,7 @@ export function HomePage({ data }: { data: HomePageData }) {
       <main className="mx-auto w-full max-w-[1340px] px-4 pt-4.5 pb-8 sm:px-[22px]">
         <div className="grid items-start gap-4 min-[1081px]:grid-cols-[360px_minmax(0,1fr)]">
           <div className="order-2 flex flex-col gap-4 min-[1081px]:order-1">
-            <BubbleGauge />
+            <BubbleGauge bubble={bubble} />
             <JewelryCalculator
               pricePerGram={reference?.priceToman ?? null}
               referenceName={reference?.name ?? null}

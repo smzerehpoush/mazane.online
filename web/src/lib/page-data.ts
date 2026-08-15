@@ -1,10 +1,7 @@
-/**
- * ⚠️ No pricing formula here — just reading and assembling the
- * payload. ⚠️ Source outage ⟸ a row with no snapshot and an empty list, not an error.
- */
 import type { HomePageData } from "@/components/tablo/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
+import { calculateBubble } from "./bubble";
 import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
 import type { ReferencePrice, ReferencePriceQuery } from "./reference-price";
@@ -12,11 +9,13 @@ import type { Row } from "./rows";
 import {
   chartSeriesConfig,
   HOME_CHART_HOURS,
+  OUNCE_REFERENCE_INSTRUMENT,
   HOME_INSTRUMENT,
   RATE_CARD_RANGES,
   UNION_RATE_INSTRUMENT,
   UNION_RATE_REFERENCE_SLUG,
   UNION_RATE_SOURCE_NAME,
+  USD_REFERENCE_INSTRUMENT,
   type ChartPlatformConfig,
 } from "./site-content";
 import type { SlugResolution } from "./slugs";
@@ -33,12 +32,13 @@ export interface HomeReaders {
   listPublishedPosts(): Promise<PublishedPost[]>;
   getViewCounts?(): Promise<ViewCounts>;
   getChartPlatforms?(): Promise<readonly ChartPlatformConfig[] | undefined>;
+  getReferencePrice?(query: ReferencePriceQuery): Promise<ReferencePrice | null>;
 }
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
   const chartPlatforms = chartSeriesConfig(await read.getChartPlatforms?.());
 
-  const [rows, history, posts, viewCounts, referenceRanges] = await Promise.all([
+  const [rows, history, posts, viewCounts, referenceRanges, bubbleReferences] = await Promise.all([
     read.fetchRows(),
     read.getPlatformHistory({
       platformSlugs: chartPlatforms.map((platform) => platform.slug),
@@ -58,6 +58,26 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
         }),
       ),
     ),
+    read.getReferencePrice === undefined
+      ? Promise.resolve<[ReferencePrice | null, ReferencePrice | null, ReferencePrice | null]>([
+          null,
+          null,
+          null,
+        ])
+      : Promise.all([
+          read.getReferencePrice({
+            referenceSlug: UNION_RATE_REFERENCE_SLUG,
+            instrument: UNION_RATE_INSTRUMENT,
+          }),
+          read.getReferencePrice({
+            referenceSlug: UNION_RATE_REFERENCE_SLUG,
+            instrument: OUNCE_REFERENCE_INSTRUMENT,
+          }),
+          read.getReferencePrice({
+            referenceSlug: UNION_RATE_REFERENCE_SLUG,
+            instrument: USD_REFERENCE_INSTRUMENT,
+          }),
+        ]),
   ]);
 
   const referenceHistory: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
@@ -73,6 +93,11 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     posts,
     viewCounts,
     chartPlatforms,
+    bubble: calculateBubble({
+      marketPriceToman: bubbleReferences[0]?.value ?? null,
+      ounceUsd: bubbleReferences[1]?.value ?? null,
+      usdToman: bubbleReferences[2]?.value ?? null,
+    }),
     generated_at: new Date().toISOString(),
   };
 }

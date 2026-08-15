@@ -272,7 +272,7 @@ describe("home page — market summary", () => {
 
   /**
    * ⚠️ "Coming soon" has a fixed meaning on this page: it's reserved for
-   * features that haven't been built yet (bubble meter, price alert). A
+   * features that haven't been built yet (price alert). A
    * range that just doesn't have history yet isn't unbuilt — and on a fresh
    * install all three tabs would say "coming soon" and the whole card would
    * look unshipped.
@@ -321,13 +321,45 @@ describe("home page — the table was removed", () => {
 });
 
 describe("home page — disabled cards", () => {
-  it("the bubble meter renders but claims no number", async () => {
+  it("the bubble meter renders no number when ounce or dollar is missing", async () => {
     const html = await renderHome(healthyStore());
     const card = html.match(/<section[^>]*data-card="bubble"[\s\S]*?<\/section>/);
     expect(card).not.toBeNull();
     expect(card?.[0]).toContain("حباب سنج");
-    expect(card?.[0]).toContain("به زودی فعال می‌شود");
+    expect(card?.[0]).toContain("داده اونس یا دلار هنوز در دسترس نیست");
     expect(card?.[0]).not.toMatch(/[۰-۹]٬[۰-۹]/);
+  });
+
+  it("the bubble meter calculates intrinsic price, bubble amount, and bubble percent from references", async () => {
+    const html = await renderHome(healthyStore(), {
+      referencePrices: [
+        {
+          reference_slug: "talair",
+          instrument: "GOLD_18K_TOMAN",
+          value: 85000,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+        {
+          reference_slug: "talair",
+          instrument: "XAU",
+          value: 31.1034768,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+        {
+          reference_slug: "talair",
+          instrument: "USD_TOMAN",
+          value: 100000,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+    });
+    const card = html.match(/<section[^>]*data-card="bubble"[\s\S]*?<\/section>/);
+    expect(card?.[0]).toContain("۷۵٬۰۰۰");
+    expect(card?.[0]).toContain("۱۰٬۰۰۰");
+    expect(card?.[0]).toContain("۱۳٫۳۳٪");
+    expect(card?.[0]).toContain("سطح ریسک");
+    expect(card?.[0]).toContain("پرریسک");
+    expect(card?.[0]).toContain("حباب خیلی بالاتر از قیمت ذاتی است");
   });
 
   it("the price-alert card is disabled too", async () => {
