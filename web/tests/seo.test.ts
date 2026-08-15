@@ -84,6 +84,8 @@ describe("sitemap.xml", () => {
       "/blog",
       "/sekeh",
       "/mazane-chist",
+      "/about",
+      "/methodology",
       "/tala-18",
       "/milli",
       "/wallgold",

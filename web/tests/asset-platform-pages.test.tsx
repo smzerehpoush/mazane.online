@@ -9,6 +9,7 @@ import { formatDateFa, formatDateTimeFa } from "../src/lib/format";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
+import { footerLinks } from "../src/lib/site-content";
 import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
 import {
   freshIso,
@@ -140,6 +141,9 @@ describe("flat slug resolver", () => {
     expect(isReservedSlug("sekeh")).toBe(true);
     expect(await resolveSlug("sekeh")).toBeNull();
     expect(await slugPageData("sekeh")).toBeNull();
+    expect(isReservedSlug("methodology")).toBe(true);
+    expect(await resolveSlug("methodology")).toBeNull();
+    expect(await slugPageData("methodology")).toBeNull();
   });
 
   it("asset slug ⟸ instrument, platform slug ⟸ platform, unknown ⟸ 404", async () => {
@@ -156,6 +160,15 @@ describe("flat slug resolver", () => {
     const html = renderToStaticMarkup(<NotFoundPanel />);
     expect(html).toContain("۴۰۴");
     expect(html).toContain("صفحه پیدا نشد");
+  });
+});
+
+describe("site trust links", () => {
+  it("footer links expose trust pages as internal links", () => {
+    expect(footerLinks).toEqual([
+      { label: "درباره تابلو", href: "/about" },
+      { label: "روش محاسبه قیمت‌ها", href: "/methodology" },
+    ]);
   });
 });
 

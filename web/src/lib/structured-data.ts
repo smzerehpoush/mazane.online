@@ -60,6 +60,26 @@ export function breadcrumbJsonLd(items: BreadcrumbItem[]): string {
   });
 }
 
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export function faqPageJsonLd(items: readonly FaqItem[]): string {
+  return jsonLdString({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  });
+}
+
 export function platformWebPageJsonLd(platform: ListedPlatform): string {
   const about: Record<string, unknown> = {
     "@type": "Organization",

@@ -1,15 +1,9 @@
 import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/tablo/SiteHeader";
-import { legalNote } from "@/lib/site-content";
+import { footerLinks, legalNote } from "@/lib/site-content";
 
-export function PageShell({
-  children,
-  wide = false,
-}: {
-  children: ReactNode;
-  wide?: boolean;
-}) {
+export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
     <div className="relative min-h-screen bg-background">
       <div
@@ -31,19 +25,22 @@ export function PageShell({
       </main>
 
       <footer className="mt-10 border-t border-border">
-        <div className="mx-auto w-full max-w-[1400px] px-4 py-6 text-[11px] leading-6 text-muted-foreground sm:px-8">
-          {legalNote}
+        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-3 px-4 py-6 text-[11px] leading-6 text-muted-foreground sm:px-8">
+          <div>{legalNote}</div>
+          <nav aria-label="لینک‌های تکمیلی" className="flex flex-wrap gap-x-4 gap-y-1">
+            {footerLinks.map((item) => (
+              <a key={item.href} href={item.href} className="transition-smooth hover:text-primary">
+                {item.label}
+              </a>
+            ))}
+          </nav>
         </div>
       </footer>
     </div>
   );
 }
 
-export function Breadcrumbs({
-  items,
-}: {
-  items: readonly { label: string; href?: string }[];
-}) {
+export function Breadcrumbs({ items }: { items: readonly { label: string; href?: string }[] }) {
   return (
     <nav aria-label="مسیر صفحه" className="mb-4 text-[11px] text-muted-foreground">
       <ol className="flex flex-wrap items-center gap-1.5">

@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
+import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SekehRouteImport } from './routes/sekeh'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -47,6 +49,11 @@ const SlugRoute = SlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -55,6 +62,11 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
 const MazaneChistRoute = MazaneChistRouteImport.update({
   id: '/mazane-chist',
   path: '/mazane-chist',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -180,7 +192,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
+  '/about': typeof AboutRoute
   '/mazane-chist': typeof MazaneChistRoute
+  '/methodology': typeof MethodologyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -208,7 +222,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
+  '/about': typeof AboutRoute
   '/mazane-chist': typeof MazaneChistRoute
+  '/methodology': typeof MethodologyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -238,7 +254,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
+  '/about': typeof AboutRoute
   '/mazane-chist': typeof MazaneChistRoute
+  '/methodology': typeof MethodologyRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -269,7 +287,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/$slug'
+    | '/about'
     | '/mazane-chist'
+    | '/methodology'
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
@@ -297,7 +317,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$slug'
+    | '/about'
     | '/mazane-chist'
+    | '/methodology'
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
@@ -326,7 +348,9 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/$slug'
+    | '/about'
     | '/mazane-chist'
+    | '/methodology'
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
@@ -356,7 +380,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   SlugRoute: typeof SlugRoute
+  AboutRoute: typeof AboutRoute
   MazaneChistRoute: typeof MazaneChistRoute
+  MethodologyRoute: typeof MethodologyRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SekehRoute: typeof SekehRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -388,6 +414,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -400,6 +433,13 @@ declare module '@tanstack/react-router' {
       path: '/mazane-chist'
       fullPath: '/mazane-chist'
       preLoaderRoute: typeof MazaneChistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -619,7 +659,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRouteRoute: AdminRouteRouteWithChildren,
   SlugRoute: SlugRoute,
+  AboutRoute: AboutRoute,
   MazaneChistRoute: MazaneChistRoute,
+  MethodologyRoute: MethodologyRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SekehRoute: SekehRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

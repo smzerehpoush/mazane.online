@@ -15,6 +15,11 @@ export const nav = [
   { label: "مظنه چیست", href: "/mazane-chist" },
 ] as const;
 
+export const footerLinks = [
+  { label: "درباره تابلو", href: "/about" },
+  { label: "روش محاسبه قیمت‌ها", href: "/methodology" },
+] as const;
+
 export const legalNote =
   "قیمت‌ها متعلق به سکوهای نام‌برده است و هر ۳۰ ثانیه به‌روزرسانی می‌شود. تابلو معامله‌گر یا مشاور سرمایه‌گذاری نیست.";
 

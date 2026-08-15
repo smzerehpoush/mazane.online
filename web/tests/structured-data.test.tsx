@@ -18,7 +18,9 @@ import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
+import { AboutPage, aboutHead } from "../src/routes/about";
 import { MazaneChist, mazaneChistHead } from "../src/routes/mazane-chist";
+import { MethodologyPage, methodologyHead } from "../src/routes/methodology";
 import { sekehHead } from "../src/routes/sekeh";
 import {
   freshIso,
@@ -207,6 +209,30 @@ describe("Organization + WebSite", () => {
     }
     const assetRaw = rawJsonLd(slugHead(await pageOf("tala-18")));
     expect(assetRaw).not.toContain('"@type":"Organization"');
+  });
+});
+
+describe("trust pages", () => {
+  it("about page has a canonical URL, breadcrumbs, visible FAQ, and FAQPage JSON-LD", () => {
+    const head = aboutHead();
+    const html = renderToStaticMarkup(<AboutPage />);
+    expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/about` });
+    expect(rawJsonLd(head)).toContain("BreadcrumbList");
+    expect(rawJsonLd(head)).toContain("FAQPage");
+    expect(html).toContain("تابلو فروشنده طلاست؟");
+    expect(html).toContain("تابلو معامله‌گر، فروشنده یا مشاور سرمایه‌گذاری نیست");
+    expect(html).toContain("/methodology");
+  });
+
+  it("methodology page has a canonical URL, breadcrumbs, visible FAQ, and FAQPage JSON-LD", () => {
+    const head = methodologyHead();
+    const html = renderToStaticMarkup(<MethodologyPage />);
+    expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/methodology` });
+    expect(rawJsonLd(head)).toContain("BreadcrumbList");
+    expect(rawJsonLd(head)).toContain("FAQPage");
+    expect(html).toContain("قیمت‌ها در تابلو چطور مقایسه می‌شوند؟");
+    expect(html).toContain("روش محاسبه قیمت طلا و سکه در تابلو");
+    expect(html).toContain("/about");
   });
 });
 

@@ -111,8 +111,9 @@ def test_real_registry_has_all_public_slugs_and_no_collisions() -> None:
 
 
 def test_static_page_slugs_are_registered() -> None:
-    assert STATIC_PAGE_SLUGS == ("sekeh",)
+    assert STATIC_PAGE_SLUGS == ("sekeh", "methodology")
     assert PUBLIC_SLUGS.kind_of("sekeh") is SlugKind.STATIC_PAGE
+    assert PUBLIC_SLUGS.kind_of("methodology") is SlugKind.STATIC_PAGE
 
 
 def test_duplicate_slug_is_rejected() -> None:
