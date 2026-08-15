@@ -18,6 +18,21 @@ TALAIR_HEADERS = {"Referer": "https://www.tala.ir/"}
 _FIELD_TO_INSTRUMENT = {
     "gold_18k": ReferenceInstrument.GOLD_18K_TOMAN,
 }
+_BANNER_FIELD_GROUPS = (
+    (ReferenceInstrument.XAU, ("ounce", "XAU", "XAU_USD")),
+    (
+        ReferenceInstrument.USD_TOMAN,
+        (
+            "dollar",
+            "dolar",
+            "usd",
+            "USD",
+            "USD_IRT",
+            "USDT_IRT",
+            "arz_dolar",
+        ),
+    ),
+)
 
 _DIGIT_TRANSLATION = str.maketrans(
     {
@@ -124,19 +139,23 @@ class TalairReference:
             banner_payload.get("price") if isinstance(banner_payload, dict) else None
         )
         if isinstance(banner_price, dict):
-            value = _clean_value(banner_price.get("ounce"))
-            if value is not None:
-                quotes.append(
-                    ReferenceQuote(
-                        reference_slug=self.slug,
-                        instrument=ReferenceInstrument.XAU,
-                        side=Side.PRICE,
-                        value=value,
-                        raw_value=value,
-                        raw_scale=self.scale,
-                        fetched_at=fetched_at,
+            for instrument, fields in _BANNER_FIELD_GROUPS:
+                for field in fields:
+                    value = _clean_value(banner_price.get(field))
+                    if value is None:
+                        continue
+                    quotes.append(
+                        ReferenceQuote(
+                            reference_slug=self.slug,
+                            instrument=instrument,
+                            side=Side.PRICE,
+                            value=value,
+                            raw_value=value,
+                            raw_scale=self.scale,
+                            fetched_at=fetched_at,
+                        )
                     )
-                )
+                    break
 
         if not quotes:
             raise AdapterError("Talair: no valid field found in payload")

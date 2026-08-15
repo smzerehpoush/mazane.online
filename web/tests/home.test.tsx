@@ -123,13 +123,30 @@ describe("home page — price axis", () => {
     expect(html).not.toContain("data-rail-anchor-label");
   });
 
-  it("the axis footer gives the min, max, and spread", async () => {
+  it("the axis footer gives only the visible min and max prices", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain("گران‌تر ·");
+    expect(html).toContain("بیشترین قیمت ·");
     expect(html).toContain("۱۸٬۶۱۱٬۰۰۰");
+    expect(html).toContain("کمترین قیمت ·");
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
-    expect(html).toContain("· ارزان‌تر");
     expect(html).toContain("بازه اختلاف ۸۱٬۰۰۰ تومان");
+    expect(html).toMatch(/data-rail-spread="true" class="hidden"/);
+  });
+
+  it("source marker names are visible, while prices stay in hover/focus tooltips", async () => {
+    const html = await renderHome(healthyStore());
+    const marker = markerOf(html, "wallgold");
+    expect(marker).toContain("data-rail-label");
+    expect(marker).toContain("data-rail-tooltip");
+    expect(marker).toContain("rail-tooltip");
+    expect(marker).toMatch(/data-rail-label="true"[\s\S]*وال‌گلد/);
+    expect(marker).toMatch(/data-rail-tooltip="true"[\s\S]*۱۸٬۶۱۱٬۰۰۰/);
+  });
+
+  it("source marker names are split above and below the axis to reduce collisions", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain('data-rail-label-position="above"');
+    expect(html).toContain('data-rail-label-position="below"');
   });
 
   /**

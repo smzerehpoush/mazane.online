@@ -232,6 +232,21 @@
   transition: right 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.rail-tooltip {
+  pointer-events: none;
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.16s ease,
+    visibility 0.16s ease;
+}
+
+.rail-marker:is(:hover, :focus-visible, :focus-within) .rail-tooltip,
+.rail-marker[data-active="true"] .rail-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
 .rail-fuse {
   width: 100%;
   animation: rail-burn 30s linear infinite;

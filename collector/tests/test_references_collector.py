@@ -53,7 +53,13 @@ def full_transport() -> FakeTransport:
         get_responses={
             TALAIR_ENDPOINT: json.dumps(talair_payload()),
             TALAIR_BANNER_ENDPOINT: json.dumps(
-                {"price": {"ounce": "<span>۴,۳۷۶.۱۶</span>"}, "banner": []}
+                {
+                    "price": {
+                        "ounce": "<span>۴,۳۷۶.۱۶</span>",
+                        "dollar": "<span>۹۸,۷۰۰</span>",
+                    },
+                    "banner": [],
+                }
             ),
         },
         post_responses={},
@@ -78,6 +84,7 @@ async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
     assert [q.instrument for q in stored.quotes] == [
         ReferenceInstrument.GOLD_18K_TOMAN,
         ReferenceInstrument.XAU,
+        ReferenceInstrument.USD_TOMAN,
     ]
     quotes = {quote.instrument: quote for quote in stored.quotes}
     gold_quote = quotes[ReferenceInstrument.GOLD_18K_TOMAN]
@@ -89,6 +96,21 @@ async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
     assert ounce_quote.value == Decimal("4376.16")
     assert ounce_quote.side is Side.PRICE
     assert ounce_quote.raw_scale == Decimal("1")
+    dollar_quote = quotes[ReferenceInstrument.USD_TOMAN]
+    assert dollar_quote.value == Decimal("98700")
+    assert dollar_quote.side is Side.PRICE
+    assert dollar_quote.raw_scale == Decimal("1")
+
+
+def test_talair_banner_usdt_irt_is_stored_as_usd_toman_reference() -> None:
+    snapshot = TalairReference().parse(
+        talair_payload(),
+        FETCHED_AT,
+        banner_payload={"price": {"USDT_IRT": "<span>۱۰۲,۵۰۰</span>"}},
+    )
+
+    quotes = {quote.instrument: quote for quote in snapshot.quotes}
+    assert quotes[ReferenceInstrument.USD_TOMAN].value == Decimal("102500")
 
 
 async def test_talair_empty_banner_keeps_gold_reference() -> None:

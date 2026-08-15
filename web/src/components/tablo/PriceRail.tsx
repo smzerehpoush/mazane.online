@@ -4,7 +4,7 @@
  * text. Animation, the fuse, and polling are an extra layer that's simply
  * absent with JS off — not that the page goes blank.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 import type { RailView } from "@/lib/dashboard";
 import { formatFaNumber } from "@/lib/fa-number";
@@ -40,6 +40,7 @@ export function PriceRail({
 }) {
   const fuseRef = useRef<HTMLDivElement | null>(null);
   const [countdown, setCountdown] = useState(RAIL_TIMER_SECONDS);
+  const [activeMarkerSlug, setActiveMarkerSlug] = useState<string | null>(null);
 
   /** ⚠️ Only after mount: `Date.now` is forbidden in server rendering. */
   useEffect(() => {
@@ -87,6 +88,14 @@ export function PriceRail({
     return () => window.clearInterval(id);
   }, [updatedAt, tick, failed]);
 
+  function handleMarkerClick(event: MouseEvent<HTMLAnchorElement>, slug: string): void {
+    if (typeof window === "undefined") return;
+    if (!window.matchMedia("(hover: none)").matches) return;
+    if (activeMarkerSlug === slug) return;
+    event.preventDefault();
+    setActiveMarkerSlug(slug);
+  }
+
   return (
     <section className="card-surface overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4 sm:px-6">
@@ -123,14 +132,13 @@ export function PriceRail({
           {/*
            * ⚠️ `mx` on mobile is required, not decorative: the marker is
            * centered with `translateX(50%)`, so an edge marker (4% and
-           * 96%) has half its label falling outside the box. Measured at
-           * 375px: Talasea reached 378px and Wallgold reached −3px.
-           * padding doesn't work — an absolute element's percentage
+           * 96%) can open a tooltip beyond the box. Padding doesn't work
+           * here — an absolute element's percentage
            * resolves against the **padding box**, so padding doesn't pull
            * it in; margin does. The extra height on mobile is intentional
            * (≤620px).
            */}
-          <div data-rail className="relative mx-7 mt-3 h-[180px] sm:mx-0 sm:h-[132px]">
+          <div data-rail className="relative mx-7 mt-3 h-[164px] sm:mx-0 sm:h-[140px]">
             <div className="absolute top-[30px] right-[4%] left-[4%] h-px bg-line2">
               <div
                 ref={fuseRef}
@@ -160,12 +168,19 @@ export function PriceRail({
                   target="_blank"
                   data-outbound="price-rail"
                   data-rail-marker={source.slug}
+                  data-rail-name={source.name}
+                  data-active={activeMarkerSlug === source.slug ? "true" : undefined}
                   aria-label={source.ariaLabel}
-                  className="rail-marker absolute top-6 flex translate-x-1/2 flex-col items-center text-inherit no-underline"
+                  className="rail-marker group absolute top-6 flex translate-x-1/2 flex-col items-center text-inherit no-underline focus-visible:outline-none"
                   style={{ right: `${source.railPercent}%` }}
+                  onClick={(event) => handleMarkerClick(event, source.slug)}
+                  onFocus={() => setActiveMarkerSlug(source.slug)}
+                  onBlur={() => setActiveMarkerSlug(null)}
+                  onMouseEnter={() => setActiveMarkerSlug(source.slug)}
+                  onMouseLeave={() => setActiveMarkerSlug(null)}
                 >
                   <span
-                    className="size-[13px] rounded-full border-[2.5px] bg-card transition-transform duration-200 group-hover:scale-125"
+                    className="size-[13px] rounded-full border-[2.5px] bg-card transition-transform duration-200 group-hover:scale-125 group-focus-visible:scale-125"
                     style={{ borderColor: source.color }}
                   />
                   <span
@@ -173,18 +188,35 @@ export function PriceRail({
                     className="w-px bg-line2"
                     style={{ height: `${source.stemLong ? STEM_LONG_PX : STEM_SHORT_PX}px` }}
                   />
-                  <span className="mt-[5px] text-xs whitespace-nowrap">{source.name}</span>
                   <span
-                    data-rail-price
-                    className="num text-[11.5px] whitespace-nowrap text-tx3"
+                    data-rail-label
+                    data-rail-label-position={source.stemLong ? "below" : "above"}
+                    className={[
+                      "max-w-[74px] truncate rounded-full bg-card/85 px-1.5 text-[11px] whitespace-nowrap shadow-[0_0_0_1px_var(--color-border)] sm:max-w-[92px] sm:text-xs",
+                      source.stemLong
+                        ? "mt-[5px]"
+                        : "absolute top-[-27px] left-1/2 -translate-x-1/2",
+                    ].join(" ")}
                   >
-                    {source.priceDisplay !== null && (
-                      <TomanPrice
-                        value={source.priceDisplay}
-                        className="inline-flex items-baseline gap-1"
-                        unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground"
-                      />
-                    )}
+                    {source.name}
+                  </span>
+                  <span
+                    data-rail-tooltip
+                    role="tooltip"
+                    className="rail-tooltip absolute top-[calc(100%+7px)] left-1/2 z-20 min-w-[118px] -translate-x-1/2 rounded-2xl border border-border bg-card/95 px-3 py-2 text-center shadow-card backdrop-blur-md"
+                  >
+                    <span
+                      data-rail-price
+                      className="num block text-[11.5px] whitespace-nowrap text-tx3"
+                    >
+                      {source.priceDisplay !== null && (
+                        <TomanPrice
+                          value={source.priceDisplay}
+                          className="inline-flex items-baseline gap-1"
+                          unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground"
+                        />
+                      )}
+                    </span>
                   </span>
                 </a>
               ),
@@ -199,7 +231,7 @@ export function PriceRail({
           */}
           <div className="mx-5 flex items-center justify-between border-t border-border pt-3 pb-4 text-[11.5px] text-tx3 sm:mx-6">
             <span data-rail-max className="inline-flex items-baseline gap-1.5">
-              گران‌تر ·{" "}
+              بیشترین قیمت ·{" "}
               {rail.maxDisplay !== null && (
                 <TomanPrice
                   value={rail.maxDisplay}
@@ -208,18 +240,18 @@ export function PriceRail({
                 />
               )}
             </span>
-            <span data-rail-spread className="text-muted-foreground">
+            <span data-rail-spread className="hidden">
               بازه اختلاف {rail.spreadDisplay} تومان
             </span>
             <span data-rail-min className="inline-flex items-baseline gap-1.5">
+              کمترین قیمت ·{" "}
               {rail.minDisplay !== null && (
                 <TomanPrice
                   value={rail.minDisplay}
                   className="num inline-flex items-baseline gap-1"
                   unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground"
                 />
-              )}{" "}
-              · ارزان‌تر
+              )}
             </span>
           </div>
         </>

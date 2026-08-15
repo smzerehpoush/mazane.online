@@ -61,6 +61,15 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
         const stem = marker.querySelector<HTMLElement>("[data-rail-stem]");
         if (stem !== null) stem.style.height = `${source.stem_long ? 38 : 10}px`;
         setPriceText(marker, "[data-rail-price]", source.price_display);
+        const name = marker.dataset["railName"];
+        if (name !== undefined) {
+          marker.setAttribute(
+            "aria-label",
+            source.price_display === null
+              ? `${name} — قیمتی ثبت نشده است`
+              : `${name} — ${source.price_display} تومان`,
+          );
+        }
       }
 
       const card = document.querySelector<HTMLElement>(
