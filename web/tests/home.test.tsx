@@ -601,7 +601,7 @@ describe("home page — blog sections (owner's decision: no empty box)", () => {
         },
       ],
     });
-    expect(html).not.toContain("<img");
+    expect(html).not.toContain("tablo-media/posts/");
   });
 });
 

@@ -6,8 +6,8 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-8">
         <a href="/" className="flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-full border border-gold/40 bg-gold-soft text-[13px] font-bold text-foreground/80 shadow-soft">
-            ت
+          <span className="grid size-10 place-items-center rounded-[14px] border border-gold/35 bg-surface shadow-soft">
+            <img src="/tablo-logo-mark.png" alt="" className="size-8 object-contain" />
           </span>
           <span className="whitespace-nowrap text-sm font-bold sm:text-base">{brand.name}</span>
         </a>

@@ -27,6 +27,7 @@ export function organizationWebSiteJsonLd(): string {
         name: BRAND_FA,
         alternateName: BRAND_ALTERNATE_FA,
         url: SITE_URL,
+        logo: `${SITE_URL}/tablo-logo-mark.png`,
       },
       {
         "@type": "WebSite",
