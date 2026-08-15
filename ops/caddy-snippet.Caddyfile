@@ -1,15 +1,15 @@
-# ops/caddy-snippet.Caddyfile — بلوک سایت tablo.gold برای کدیِ لبه‌ی پادل‌یار
+# ops/caddy-snippet.Caddyfile — the tablo.gold site block for Padelyar's edge Caddy
 #
-# این فایل مستقیماً import نمی‌شود؛ محتوایش در Caddyfile زندهٔ سرور است:
+# This file isn't imported directly; its content lives in the server's live Caddyfile:
 #   /opt/padelyar/deploy/Caddyfile
-# الگوی مبدأ پشت CDN آروان (مثل optiflow.studio): HTTP + HTTPS با tls internal.
-# TLS کاربر نهایی در لبه‌ی آروان تمام می‌شود — NS کامل آروان، نه CNAME به CDN.
+# The origin-behind-ArvanCloud-CDN pattern (like optiflow.studio): HTTP + HTTPS with tls internal.
+# End-user TLS terminates at ArvanCloud's edge — full ArvanCloud NS, not a CNAME to the CDN.
 #
-# پیش‌نیاز شبکه:
+# Network prerequisite:
 #   docker network create tablo-edge
 #   docker network connect tablo-edge padelyar-caddy
 
-# ---- tablo.gold / تابلو (پشت آروان — TLS در لبهٔ آروان) ----
+# ---- tablo.gold / Tablo (behind ArvanCloud — TLS at the ArvanCloud edge) ----
 http://tablo.gold, http://www.tablo.gold {
 	encode {
 		zstd
@@ -34,8 +34,8 @@ http://tablo.gold, http://www.tablo.gold {
 	reverse_proxy tablo-web:3000
 }
 
-# مبدأ HTTPS اگر آروان پروتکل مبدأ را HTTPS گذاشته باشد.
-# گواهی internal — در آروان SSL مبدأ غیرسختگیرانه یا HTTP به مبدأ.
+# Origin HTTPS, in case ArvanCloud has set the origin protocol to HTTPS.
+# The internal certificate — in ArvanCloud, either lenient origin SSL or HTTP to the origin.
 https://tablo.gold, https://www.tablo.gold {
 	tls internal
 	encode {
@@ -61,7 +61,7 @@ https://tablo.gold, https://www.tablo.gold {
 	reverse_proxy tablo-web:3000
 }
 
-# دامنهٔ قدیمی — ریدایرکت به tablo.gold
+# Old domain — redirect to tablo.gold
 http://mazane.online, http://www.mazane.online {
 	redir https://tablo.gold{uri} 308
 }

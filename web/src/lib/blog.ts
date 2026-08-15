@@ -44,7 +44,7 @@ function source(): BlogSource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {
     throw new Error(
-      "هیچ BlogSource ثبت نشده — از «@/lib/server/blog-source» بخوان یا setBlogSource صدا بزن",
+      'No BlogSource registered — import from "@/lib/server/blog-source" or call setBlogSource',
     );
   }
   activeSource = defaultFactory();

@@ -1,9 +1,9 @@
--- مهاجرت ۰۰۳ — هشت آداپتر REST (بلیت ۴): کارمزد نامعلوم (UNKNOWN).
--- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/003_unknown_fee_source.sql
+-- Migration 003 — eight REST adapters (ticket 4): unknown fee (UNKNOWN).
+-- Run: psql "$TABLO_DATABASE_URL" -f collector/migrations/003_unknown_fee_source.sql
 
--- بعضی سکوها (ملی‌گلد، دیجی‌کالا، همراه‌گلد) کارمزدشان را هیچ‌جا منتشر
--- نکرده‌اند: fee_source = 'UNKNOWN' و هر سه ستون کارمزد NULL — قیمت مؤثر
--- جعل نمی‌شود (فقط سطر MID ذخیره می‌شود).
+-- Some platforms (melligold, digikala, hamrahgold) have never published
+-- their fee anywhere: fee_source = 'UNKNOWN' and all three fee columns are
+-- NULL — the price is not fabricated (only the MID row is stored).
 
 alter table platform_terms
     alter column buy_fee_percent drop not null,
@@ -17,7 +17,7 @@ alter table platform_terms
     add constraint platform_terms_fee_source_check
         check (fee_source in ('API', 'MANUAL', 'UNKNOWN'));
 
--- عدد نصفه‌نیمه یعنی باگ: یا هر سه کارمزد هست (API/MANUAL) یا هیچ‌کدام (UNKNOWN).
+-- A half-populated number means a bug: either all three fees are present (API/MANUAL) or none are (UNKNOWN).
 alter table platform_terms
     drop constraint if exists platform_terms_unknown_fees_null_check;
 

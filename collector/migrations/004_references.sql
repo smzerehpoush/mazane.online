@@ -1,16 +1,18 @@
--- مهاجرت ۰۰۴ — بلیت ۵: مدل معاملاتی سکو + جدول مراجع قیمت.
--- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/004_references.sql
+-- Migration 004 — ticket 5: platform market model + price reference table.
+-- Run: psql "$TABLO_DATABASE_URL" -f collector/migrations/004_references.sql
 
--- داریک دفتر سفارش است نه OTC (بند ۹.۲ نکته‌ی ۵) — لایه‌ی وب از همین
--- ستون برچسب «دفتر سفارش» می‌زند. بقیه‌ی سکوها OTC اند.
+-- Daric is an order book, not OTC (section 9.2, note 5) — the web layer
+-- uses this same column to render the "order book" label. The rest of the
+-- platforms are OTC.
 alter table platforms
     add column if not exists market_model text not null default 'OTC'
         check (market_model in ('OTC', 'ORDER_BOOK'));
 
--- مراجع قیمت (بند ۱۲.۲: طلا دات‌آی‌آر، بن‌بست) — سکو نیستند: جدول جدا،
--- بدون هیچ ارجاعی به platforms و بدون ورود به فهرست عمومی. هر ردیف نام و
--- نشانی منبع را حمل می‌کند: عدد مرجع بدون ذکر منبع وجود ندارد (بند ۷.۱).
--- واحد هر ردیف در instrument صریح است (انس دلاری است، مظنه بر مثقال).
+-- Price references (section 12.2: tala.ir, bonbast) — not platforms: a
+-- separate table, with no reference to platforms and no entry in the public
+-- listing. Every row carries the source's name and URL: a reference number
+-- never exists without stating its source (section 7.1). Each row's unit is
+-- explicit in instrument (the ounce is priced in USD; quotes are per mithqal).
 create table if not exists reference_quotes (
     id             bigserial primary key,
     reference_slug text        not null,

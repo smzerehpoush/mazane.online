@@ -57,15 +57,15 @@ async def collect_round(
             payload = await fetch_json(adapter.endpoint)
             fresh.append(adapter.parse(payload, fetched_at))
         except Exception:
-            log.exception("گردآوری %s شکست خورد — سکو کهنه می‌ماند", adapter.slug)
+            log.exception("Collecting %s failed — platform stays stale", adapter.slug)
 
     outliers = median_outliers(fresh)
     saved: list[PlatformSnapshot] = []
     for snapshot in fresh:
         if snapshot.platform_slug in outliers:
             log.warning(
-                "چک میانه: %s بیش از آستانه از میانه‌ی سایر منابع فاصله دارد "
-                "— منتشر نمی‌شود (فقط تاریخچه، با پرچم سرکوب)",
+                "median/sanity check: %s is farther from the median of other sources "
+                "than the threshold — not published (history only, flagged suppressed)",
                 snapshot.platform_slug,
             )
             snapshot = snapshot.model_copy(update={"suppressed": True})

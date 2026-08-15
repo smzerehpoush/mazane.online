@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from .models import DataPolicy, MarketModel, Platform
 
-# ⚠️ ترتیب این تاپل همان ترتیب فهرست عمومی است — ردیف بی‌قیمت (کارمزد نامعلوم)
-# هرگز بالای ردیف قیمت‌دار نمی‌نشیند.
+# ⚠️ This tuple's order is the public listing order — a priceless row (unknown fee)
+# never sits above a priced row.
 PLATFORMS: tuple[Platform, ...] = (
     Platform(
         slug="wallgold",
@@ -117,8 +117,9 @@ PLATFORMS: tuple[Platform, ...] = (
     ),
 )
 
-# ⚠️ مرجع حقیقت فراداده‌ی سکو همین رجیستری است؛ هر بازسازی از ردیف دیتابیس باید
-# از این نگاشت کامل شود، وگرنه فیلدهایی مثل `delivery_note_fa` بی‌صدا گم می‌شوند.
+# ⚠️ This registry is the source of truth for platform metadata; any reconstruction
+# from a database row must be completed from this mapping, or fields like
+# `delivery_note_fa` silently go missing.
 PLATFORM_BY_SLUG: dict[str, Platform] = {p.slug: p for p in PLATFORMS}
 _REGISTRY_ORDER: dict[str, int] = {p.slug: i for i, p in enumerate(PLATFORMS)}
 

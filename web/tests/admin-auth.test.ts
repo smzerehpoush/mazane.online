@@ -16,23 +16,23 @@ import {
 } from "../src/lib/admin-auth";
 
 describe("hashPassword / verifyPassword", () => {
-  it("رمز درست را تأیید می‌کند", () => {
+  it("verifies the correct password", () => {
     const hash = hashPassword("correct horse battery staple");
     expect(verifyPassword("correct horse battery staple", hash)).toBe(true);
   });
 
-  it("رمز غلط رد می‌شود", () => {
+  it("rejects the wrong password", () => {
     const hash = hashPassword("correct horse battery staple");
     expect(verifyPassword("wrong", hash)).toBe(false);
   });
 
-  it("رشته‌ی فارسی هم درست کار می‌کند", () => {
+  it("works correctly with a Persian string too", () => {
     const hash = hashPassword("رمز-عبور-۱۲۳۴");
     expect(verifyPassword("رمز-عبور-۱۲۳۴", hash)).toBe(true);
     expect(verifyPassword("رمز-عبور-۱۲۳۵", hash)).toBe(false);
   });
 
-  it("دو هش از یک رمز یکسان نیستند (salt تصادفی) ولی هر دو تأیید می‌شوند", () => {
+  it("two hashes of the same password are not identical (random salt) but both verify", () => {
     const a = hashPassword("same-password");
     const b = hashPassword("same-password");
     expect(a).not.toBe(b);
@@ -40,7 +40,7 @@ describe("hashPassword / verifyPassword", () => {
     expect(verifyPassword("same-password", b)).toBe(true);
   });
 
-  it("هش بدشکل ⟸ false، نه استثنا", () => {
+  it("a malformed hash returns false, not an exception", () => {
     expect(verifyPassword("x", "not-a-valid-hash")).toBe(false);
     expect(verifyPassword("x", "")).toBe(false);
     expect(verifyPassword("x", "salthex:")).toBe(false);
@@ -52,39 +52,39 @@ describe("hashPassword / verifyPassword", () => {
 describe("createSessionToken / verifySessionToken", () => {
   const SECRET = "test-session-secret";
 
-  it("نشان تازه‌صادرشده معتبر است", () => {
+  it("a freshly issued token is valid", () => {
     const token = createSessionToken(SECRET, 1000);
     expect(verifySessionToken(SECRET, token, 1000)).toBe(true);
   });
 
-  it("در بازه‌ی TTL همچنان معتبر است", () => {
+  it("remains valid within the TTL window", () => {
     const token = createSessionToken(SECRET, 0);
     expect(verifySessionToken(SECRET, token, SESSION_TTL_MS, SESSION_TTL_MS)).toBe(true);
   });
 
-  it("بعد از انقضای TTL نامعتبر می‌شود", () => {
+  it("becomes invalid after the TTL expires", () => {
     const token = createSessionToken(SECRET, 0);
     expect(verifySessionToken(SECRET, token, SESSION_TTL_MS + 1, SESSION_TTL_MS)).toBe(false);
   });
 
-  it("با کلید غلط نامعتبر است", () => {
+  it("is invalid with the wrong secret", () => {
     const token = createSessionToken(SECRET, 1000);
     expect(verifySessionToken("wrong-secret", token, 1000)).toBe(false);
   });
 
-  it("نشان دستکاری‌شده (امضای عوض‌شده) نامعتبر است", () => {
+  it("a tampered token (changed signature) is invalid", () => {
     const token = createSessionToken(SECRET, 1000);
     const [issuedAt] = token.split(".");
     const tampered = `${issuedAt}.${"0".repeat(64)}`;
     expect(verifySessionToken(SECRET, tampered, 1000)).toBe(false);
   });
 
-  it("زمان صدور در آینده (دستکاری) نامعتبر است", () => {
+  it("an issued-at time in the future (tampering) is invalid", () => {
     const token = createSessionToken(SECRET, 5000);
     expect(verifySessionToken(SECRET, token, 1000)).toBe(false);
   });
 
-  it("نشان بدشکل ⟸ false، نه استثنا", () => {
+  it("a malformed token returns false, not an exception", () => {
     expect(verifySessionToken(SECRET, "not-a-token", 1000)).toBe(false);
     expect(verifySessionToken(SECRET, "", 1000)).toBe(false);
     expect(verifySessionToken(SECRET, "abc.def", 1000)).toBe(false);
@@ -92,8 +92,8 @@ describe("createSessionToken / verifySessionToken", () => {
   });
 });
 
-describe("قفل‌شدن موقت پس از تلاش‌های ناموفق", () => {
-  it("قبل از رسیدن به سقف قفل نیست", () => {
+describe("temporary lockout after failed attempts", () => {
+  it("is not locked before reaching the attempt limit", () => {
     let state: AttemptState = INITIAL_ATTEMPT_STATE;
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS - 1; i++) {
       state = recordFailedAttempt(state, 0);
@@ -101,7 +101,7 @@ describe("قفل‌شدن موقت پس از تلاش‌های ناموفق", ()
     }
   });
 
-  it(`دقیقاً پس از ${MAX_LOGIN_ATTEMPTS} تلاش ناموفق پیاپی قفل می‌شود`, () => {
+  it(`locks exactly after ${MAX_LOGIN_ATTEMPTS} consecutive failed attempts`, () => {
     let state: AttemptState = INITIAL_ATTEMPT_STATE;
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS; i++) {
       state = recordFailedAttempt(state, 0);
@@ -109,19 +109,19 @@ describe("قفل‌شدن موقت پس از تلاش‌های ناموفق", ()
     expect(isLockedOut(state, 0)).toBe(true);
   });
 
-  it("در بازه‌ی قفل، قفل باقی می‌ماند", () => {
+  it("stays locked during the lockout window", () => {
     let state: AttemptState = INITIAL_ATTEMPT_STATE;
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS; i++) state = recordFailedAttempt(state, 0);
     expect(isLockedOut(state, LOCKOUT_MS - 1)).toBe(true);
   });
 
-  it("بعد از پایان بازه‌ی قفل، دیگر قفل نیست", () => {
+  it("is no longer locked after the lockout window ends", () => {
     let state: AttemptState = INITIAL_ATTEMPT_STATE;
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS; i++) state = recordFailedAttempt(state, 0);
     expect(isLockedOut(state, LOCKOUT_MS)).toBe(false);
   });
 
-  it("بعد از انقضای قفل، شمارش تلاش‌های بعدی از نو شروع می‌شود", () => {
+  it("restarts the attempt count after the lockout expires", () => {
     let state: AttemptState = INITIAL_ATTEMPT_STATE;
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS; i++) state = recordFailedAttempt(state, 0);
     state = recordFailedAttempt(state, LOCKOUT_MS);
@@ -129,7 +129,7 @@ describe("قفل‌شدن موقت پس از تلاش‌های ناموفق", ()
     expect(isLockedOut(state, LOCKOUT_MS)).toBe(false);
   });
 
-  it("ورود موفق شمارنده را کاملاً پاک می‌کند", () => {
+  it("a successful login fully resets the counter", () => {
     let state: AttemptState = INITIAL_ATTEMPT_STATE;
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS - 1; i++) state = recordFailedAttempt(state, 0);
     state = recordSuccessfulAttempt();

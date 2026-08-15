@@ -1,45 +1,50 @@
-# Dockerfile.web — ایمیج تولید لایه‌ی وب (بلیت ۱۱)
+# Dockerfile.web — production image for the web layer (ticket 11)
 #
-# (عمداً بدون ‎# syntax=docker/dockerfile:1‎ — frontend داخلی BuildKit کافی است؛
-# دلیل در Dockerfile.collector.)
+# (Deliberately without `# syntax=docker/dockerfile:1` — BuildKit's built-in
+# frontend is enough; reason explained in Dockerfile.collector.)
 #
 #   docker build --platform linux/amd64 -f Dockerfile.web -t tablo-web:v1 .
 #
-# context = ریشه‌ی مخزن (فیلترشده با ‎.dockerignore‎ ریشه).
+# context = repo root (filtered by the root `.dockerignore`).
 #
-# اپ TanStack Start + Nitro است، نه نکست: ‎vite build‎ پوشه‌ی ‎.output‎ می‌سازد
-# که «خودبسنده» است — همه‌ی وابستگی‌ها (ioredis، pg، ری‌اکت) داخلش باندل شده و
-# مرحله‌ی اجرا هیچ ‎node_modules‎ ای لازم ندارد. راستی‌آزمایی شد: کپی تنها
-# ‎.output‎ به یک پوشه‌ی خالی و ‎node .output/server/index.mjs‎ ⟸ ۲۰۰.
+# The app is TanStack Start + Nitro, not Next: `vite build` produces an
+# `.output` folder that is "self-contained" — every dependency (ioredis, pg,
+# React) is bundled inside it and the runtime stage needs no `node_modules`
+# at all. Verified: copying just `.output` into an empty folder and running
+# `node .output/server/index.mjs` -> 200.
 #
-# ⚠️ حافظه/پردازنده: ‎vite build‎ به‌راحتی >1GB رم می‌خواهد. سرور تولید ۱ هسته و
-# ۲GB رم مشترک با پادل‌یار دارد (بند ۱۳ سند معماری، تصمیم ۵) — پس ساخت این
-# ایمیج «همیشه» در CI یا روی لپ‌تاپ انجام می‌شود (‎--platform linux/amd64‎)،
-# هرگز روی سرور. سرور فقط ‎docker load/pull‎ و ‎compose up‎ می‌کند.
+# ⚠️ Memory/CPU: `vite build` easily wants >1GB of RAM. The production server
+# has 1 core and 2GB of RAM shared with Padelyar (architecture doc
+# section 13, decision 5) — so building this image "always" happens in CI or
+# on a laptop (`--platform linux/amd64`), never on the server. The server
+# only runs `docker load/pull` and `compose up`.
 
-########## مرحله‌ی وابستگی‌ها ##########
+########## Dependencies stage ##########
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY web/package.json web/package-lock.json ./
-# npm ci: نصب بازتولیدپذیر دقیقاً از lock — شامل devDependencies، چون
-# ‎vite‎/‎nitro‎/‎typescript‎ برای ساخت لازم‌اند. NODE_ENV اینجا عمداً production
-# نیست، وگرنه npm اصلاً devDependencies را نصب نمی‌کند و ساخت می‌شکند.
+# npm ci: reproducible install exactly from the lockfile — including
+# devDependencies, since `vite`/`nitro`/`typescript` are needed for the
+# build. NODE_ENV is deliberately not `production` here, otherwise npm
+# wouldn't install devDependencies at all and the build would break.
 RUN npm ci --no-audit --no-fund
 
-########## مرحله‌ی ساخت ##########
+########## Build stage ##########
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY web/ ./
 RUN npm run build
 
-# دو دروازه‌ی صریح — بهتر است ساخت اینجا با پیام روشن بشکند تا اینکه ایمیج
-# ناقص یا با هدف اشتباه به سرور برسد:
+# Two explicit gates — better for the build to break here with a clear
+# message than for an incomplete image, or one with the wrong target, to
+# reach the server:
 #
-#   ۱) خروجی سرور نود باید وجود داشته باشد.
-#   ۲) پریست باید ‎node-server‎ باشد. پیش‌فرض تاریخی این استک
-#      ‎cloudflare-module‎ بوده که نه ioredis در آن کار می‌کند نه pg؛ اگر روزی
-#      ‎web/vite.config.ts‎ دست بخورد و پریست برگردد، اینجا لو می‌رود.
+#   1) The Node server output must exist.
+#   2) The preset must be `node-server`. This stack's historical default was
+#      `cloudflare-module`, in which neither ioredis nor pg works; if
+#      `web/vite.config.ts` is ever touched and the preset reverts, this
+#      catches it.
 RUN test -f .output/server/index.mjs || { \
       echo "ERROR: .output/server/index.mjs ساخته نشد — خروجی nitro خالی است"; \
       exit 1; }
@@ -49,33 +54,36 @@ RUN grep -q '"preset": "node-server"' .output/nitro.json || { \
       cat .output/nitro.json; \
       exit 1; }
 
-########## مرحله‌ی اجرا: فقط ‎.output‎ روی ایمیج لاغر ##########
+########## Runtime stage: just `.output` on a lean image ##########
 FROM node:22-alpine AS runtime
 WORKDIR /app
 
-# HOST=0.0.0.0 لازم است: کدیِ لبه از شبکه‌ی tablo-edge به این کانتینر وصل
-# می‌شود، پس گوش‌دادن روی loopback کافی نیست.
+# HOST=0.0.0.0 is required: the edge Caddy connects to this container from
+# the tablo-edge network, so listening on loopback alone isn't enough.
 #
-# ‎--max-old-space-size=192‎ عمدی و مهم است: V8 سقف heap خود را از رم «میزبان»
-# حدس می‌زند نه از سقف cgroup کانتینر. بدون این پرچم، یک نشتی یا یک بار سنگین
-# می‌تواند تا نزدیک ۲GB رشد کند و OOM-killer به‌جای این پروسه، کانتینر پادل‌یار
-# را بکشد. این عدد جفتِ ‎memory: 256M‎ در compose.prod.yml است (کمی زیر آن، تا
-# V8 زودتر GC کند و پیش از cgroup به سقف بخورد) — هر کدام عوض شد، دیگری هم.
-# اندازه‌گیری واقعی: ۶۱MB پس از ۲۰۰ درخواست SSR در کانتینر ۲۵۶MB.
+# `--max-old-space-size=192` is intentional and important: V8 guesses its
+# heap cap from the "host's" RAM, not the container's cgroup limit. Without
+# this flag, a leak or a heavy load could grow toward 2GB and the OOM-killer
+# might kill a Padelyar container instead of this process. This number is
+# paired with `memory: 256M` in compose.prod.yml (a bit below it, so V8 GCs
+# earlier and hits its own ceiling before the cgroup does) — if one changes,
+# so must the other. Measured in practice: 61MB after 200 SSR requests in a
+# 256MB container.
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
     NODE_OPTIONS=--max-old-space-size=192
 
-# ‎.output‎ خودبسنده است — نه ‎node_modules‎، نه ‎package.json‎، نه کد منبع.
-# مالکیت node:node چون پروسه با کاربر غیر-root اجرا می‌شود.
+# `.output` is self-contained — no `node_modules`, no `package.json`, no
+# source code. Owned by node:node since the process runs as a non-root user.
 COPY --from=build --chown=node:node /app/.output ./.output
 
 USER node
 EXPOSE 3000
 
-# صفحه‌ی اصلی طبق طراحی «همیشه ۲۰۰» است (قاعده‌ی ۵ قراردادها) — قطع ردیس یا
-# پستگرس کهنگی است نه خطا. پس شکست این چک یعنی خود پروسه‌ی وب مشکل دارد.
+# By design the home page is "always 200" (contracts rule 5) — a Redis or
+# Postgres outage is staleness, not an error. So a failure on this check
+# means the web process itself is broken.
 HEALTHCHECK --interval=60s --timeout=10s --start-period=20s --retries=3 \
     CMD node -e "fetch('http://127.0.0.1:3000/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 

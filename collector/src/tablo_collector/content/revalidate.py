@@ -1,9 +1,11 @@
 """
-⚠️ معنای این فراخوان با مهاجرت وب به تنکستک استارت (۲۰۲۶-۰۸-۰۶) عوض شد:
-دیگر هیچ کش صفحه‌ای در مبدأ نیست — ‎/blog‎ و ‎/blog/<slug>‎ و ‎/sitemap.xml‎ هر
-درخواست را مستقیم از پستگرس می‌سازند. پس «بازتولید» چیزی برای باطل‌کردن ندارد
-و تنها تأخیر باقی‌مانده، کش ~۶۰ ثانیه‌ای لبه است که خودش منقضی می‌شود.
-اندپوینت عمداً حفظ شده (همان ۲۰۰/۴۰۱/۴۰۰) تا این صدازننده و آزمون‌هایش نشکنند.
+⚠️ The meaning of this call changed with the web's migration to TanStack Start
+(2026-08-06): there is no longer any page cache at the origin — /blog,
+/blog/<slug>, and /sitemap.xml each build their response directly from
+Postgres. So "revalidate" has nothing left to invalidate, and the only
+remaining delay is the ~60-second edge cache, which expires on its own.
+The endpoint is kept on purpose (same 200/401/400) so this caller and its
+tests don't break.
 """
 
 from __future__ import annotations
@@ -41,7 +43,7 @@ class HttpRevalidator:
             )
             response.raise_for_status()
         except Exception as error:
-            log.warning("فراخوان بازتولید وب (%s) شکست: %s", self._url, error)
+            log.warning("web revalidate call (%s) failed: %s", self._url, error)
             return False
         return True
 
@@ -50,7 +52,7 @@ class _UnconfiguredRevalidator:
 
     async def __call__(self, slug: str | None = None) -> bool:
         log.warning(
-            "TABLO_REVALIDATE_TOKEN ست نیست — بازتولید وب انجام نشد (slug=%s)", slug
+            "TABLO_REVALIDATE_TOKEN is not set — web revalidate did not happen (slug=%s)", slug
         )
         return False
 

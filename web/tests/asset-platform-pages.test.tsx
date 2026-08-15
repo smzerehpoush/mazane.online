@@ -110,7 +110,7 @@ function assetStore(): SeededStore {
 
 async function pageOf(slug: string): Promise<SlugPageData> {
   const data = await slugPageData(slug);
-  if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
+  if (data === null) throw new Error(`page ${slug} returned 404`);
   return data;
 }
 
@@ -118,8 +118,8 @@ async function renderSlug(slug: string): Promise<string> {
   return renderToStaticMarkup(<SlugPageView data={await pageOf(slug)} />);
 }
 
-describe("حل‌کننده‌ی اسلاگ تخت", () => {
-  it("کلمات رزرو را رد می‌کند — حتی اگر payload آن اسلاگ را ادعا کند", async () => {
+describe("flat slug resolver", () => {
+  it("rejects reserved words — even if the payload claims that slug", async () => {
     const store = assetStore();
     store.instruments = [
       ...(store.instruments ?? []),
@@ -140,14 +140,14 @@ describe("حل‌کننده‌ی اسلاگ تخت", () => {
     expect(await slugPageData("darbare-pishnahad")).toBeNull();
   });
 
-  it("اسلاگ دارایی ⟸ دارایی، اسلاگ سکو ⟸ سکو، ناشناخته ⟸ ۴۰۴", async () => {
+  it("asset slug ⟸ instrument, platform slug ⟸ platform, unknown ⟸ 404", async () => {
     seed(assetStore());
     expect((await pageOf("tala-18")).kind).toBe("instrument");
     expect((await pageOf("wallgold")).kind).toBe("platform");
     expect(await slugPageData("hich-vaght-nabude")).toBeNull();
   });
 
-  it("سرصفحه‌ی ۴۰۴ صریحاً noindex است تا صفحه‌ی نبوده ایندکس نشود", () => {
+  it("the 404 head is explicitly noindex so a nonexistent page never gets indexed", () => {
     const head = slugHead(undefined);
     expect(head.meta).toContainEqual({ name: "robots", content: "noindex" });
     expect(head.links).toBeUndefined();
@@ -157,13 +157,13 @@ describe("حل‌کننده‌ی اسلاگ تخت", () => {
   });
 });
 
-describe("دروازه‌ی انتشار — دارایی تک‌سکویی صفحه نمی‌گیرد", () => {
-  it("دارایی با published=false ⟸ ۴۰۴", async () => {
+describe("publish gate — a single-platform asset gets no page", () => {
+  it("asset with published=false ⟸ 404", async () => {
     seed(assetStore());
     expect(await slugPageData("noghre")).toBeNull();
   });
 
-  it("با فعال شدن سکوی دوم (پرچم گردآورنده) صفحه ساخته می‌شود — مرز وب", async () => {
+  it("once a second platform is enabled (the collector's flag), the page gets built — the web boundary", async () => {
     const store = assetStore();
     const now = freshIso();
     store.instruments = [
@@ -197,7 +197,7 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
     expect(html).toContain("۲۰۹٬۰۰۰");
   });
 
-  it("سایت‌مپ فقط دارایی‌های دروازه‌گذشته + سکوها را دارد", () => {
+  it("sitemap only includes gate-passed assets + platforms", () => {
     const paths = buildSitemapEntries({
       posts: [],
       instruments: [TALA18, NOGHRE_SINGLE],
@@ -210,8 +210,8 @@ describe("دروازه‌ی انتشار — دارایی تک‌سکویی صف
   });
 });
 
-describe("صفحه‌ی دارایی — /tala-18", () => {
-  it("h1 فارسی دارد و هر سکو «قیمت» و دو کارمزد خودش را نشان می‌دهد", async () => {
+describe("asset page — /tala-18", () => {
+  it("h1 is in Persian, and each platform shows its own \"price\" and both fees", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
 
@@ -226,7 +226,7 @@ describe("صفحه‌ی دارایی — /tala-18", () => {
     expect(html).not.toContain("مؤثر");
   });
 
-  it("ردیف‌ها صعودی بر اساس «قیمت» مرتب‌اند", async () => {
+  it("rows are sorted ascending by \"price\"", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
     expect(html.indexOf('data-platform="daric"')).toBeLessThan(
@@ -237,7 +237,7 @@ describe("صفحه‌ی دارایی — /tala-18", () => {
     );
   });
 
-  it("سکوی کارمزد-نامعلوم دیگر گروه جدا ندارد — فقط ستون کارمزدش تهی است", async () => {
+  it("the unknown-fee platform no longer has a separate group — only its fee column is empty", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
     expect(html).not.toContain("کارمزد نامشخص — فقط قیمت میانی");
@@ -251,7 +251,7 @@ describe("صفحه‌ی دارایی — /tala-18", () => {
     expect(row).not.toMatch(/data-fee[^>]*>۰٪/);
   });
 
-  it("برچسب دفتر سفارش و کهنگی از تکه‌های مشترک بازاستفاده می‌شوند", async () => {
+  it("the order book badge and the staleness label reuse the shared fragments", async () => {
     const store = assetStore();
     store.updatedAt["daric"] = staleIso();
     seed(store);
@@ -261,7 +261,7 @@ describe("صفحه‌ی دارایی — /tala-18", () => {
     expect(daric).toContain("کهنه");
   });
 
-  it("ستون قیمت صریحاً «مالِ همان سکو» توضیح داده می‌شود و سرصفحه canonical تخت دارد", async () => {
+  it("the price column is explicitly explained as \"belonging to that platform\", and the head has a flat canonical", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
     expect(html).toContain("هیچ میانگین بین‌سکویی");
@@ -274,7 +274,7 @@ describe("صفحه‌ی دارایی — /tala-18", () => {
     });
   });
 
-  it("جدول با هیچ سکوی پشتیبانِ داده‌دار هم ۲۰۰ می‌ماند", async () => {
+  it("the table still returns 200 even with no supporting platform having data", async () => {
     const store = assetStore();
     for (const slug of ["wallgold", "talasea", "daric", "digikala"]) {
       store.snapshots[slug] = null;
@@ -287,8 +287,8 @@ describe("صفحه‌ی دارایی — /tala-18", () => {
   });
 });
 
-describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
-  it("نام، لینک وب‌سایت (با rel کامل)، شرایط، هویت حقوقی و تحویل فیزیکی را دارد", async () => {
+describe("platform page — /talasea and /wallgold", () => {
+  it("has the name, website link (with the full rel), terms, legal entity, and physical delivery", async () => {
     seed(assetStore());
     const html = await renderSlug("talasea");
 
@@ -308,13 +308,13 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(html).not.toContain("قیمت‌های این سکو");
   });
 
-  it("فراداده‌ی مستندنشده صادقانه «ثبت نشده است» می‌شود، نه جعل", async () => {
+  it("undocumented metadata is honestly shown as \"not recorded\", not fabricated", async () => {
     seed(assetStore());
     const html = await renderSlug("wallgold");
     expect(html).toContain("ثبت نشده است");
   });
 
-  it("نشان‌های باز/بسته و کهنگی روی صفحه‌ی سکو هم هستند", async () => {
+  it("open/closed and staleness badges are also on the platform page", async () => {
     const store = assetStore();
     const now = freshIso();
     store.snapshots["wallgold"] = makeSnapshot({
@@ -330,7 +330,7 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(html).toContain("کهنه");
   });
 
-  it("سرصفحه‌ی صفحه‌ی سکو canonical تخت دارد و Product نمی‌سازد", async () => {
+  it("the platform page's head has a flat canonical and doesn't build a Product", async () => {
     seed(assetStore());
     const head = slugHead(await pageOf("wallgold"));
     expect(head.meta?.[0]).toMatchObject({ title: expect.stringContaining("وال‌گلد") });
@@ -346,7 +346,7 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(raw).not.toContain("AggregateOffer");
   });
 
-  it("قطع کامل منبع ⟸ صفحه‌ی سکو ۲۰۰ می‌ماند (کهنگی، نه خطا)", async () => {
+  it("complete source outage ⟸ the platform page stays 200 (staleness, not error)", async () => {
     const store = assetStore();
     store.snapshots["talasea"] = null;
     store.updatedAt["talasea"] = staleIso();
@@ -357,7 +357,7 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
     expect(html).toContain("کهنه");
   });
 
-  it("سکوی بدون هیچ مقصد خروجی، دکمه‌ی مرده نمی‌سازد", async () => {
+  it("a platform with no outbound destination doesn't produce a dead button", async () => {
     const store = assetStore();
     store.listed = [{ slug: "wallgold", name_fa: "وال‌گلد", data_policy: "ALLOWED" }];
     seed(store);
@@ -368,8 +368,8 @@ describe("صفحه‌ی سکو — /talasea و /wallgold", () => {
   });
 });
 
-describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد معلوم/نامعلوم", () => {
-  it("کارت «قیمت» با تاریخ شمسی در تیتر و توضیح صریح اینکه کارمزد در آن نیست", async () => {
+describe("the \"today's price\" section of the platform page — known/unknown fee", () => {
+  it("the \"price\" card has the Persian date in the title and an explicit note that the fee isn't included", async () => {
     const store = assetStore();
     seed(store);
     const html = await renderSlug("talasea");
@@ -385,7 +385,7 @@ describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد �
     expect(html).not.toContain("تک‌قیمتی");
   });
 
-  it("کارمزد نامعلوم ⟸ بخش می‌آید، با قیمت و کارمزدِ «نامشخص»", async () => {
+  it("unknown fee ⟸ the section still appears, with the price and an \"unknown\" fee", async () => {
     seed(assetStore());
     const html = await renderSlug("digikala");
 
@@ -397,7 +397,7 @@ describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد �
     expect(html).toContain("سکو کارمزدش را اعلام نکرده است");
   });
 
-  it("جدول «قیمت‌های این سکو» (QuotesSection) دیگر نیست — نه برای کارمزد معلوم، نه نامعلوم", async () => {
+  it("the \"this platform's prices\" table (QuotesSection) no longer exists — neither for known nor unknown fee", async () => {
     seed(assetStore());
     const known = await renderSlug("talasea");
     const unknown = await renderSlug("digikala");
@@ -405,15 +405,15 @@ describe("بخش «قیمت امروز» صفحه‌ی سکو — کارمزد �
     expect(unknown).not.toContain("قیمت‌های این سکو");
   });
 
-  it("نوار ماده ۵ دست‌نخورده می‌ماند", async () => {
+  it("the Article 5 notice bar stays untouched", async () => {
     seed(assetStore());
     const html = await renderSlug("talasea");
     expect(html).toContain('data-legal-notice="madde-5"');
   });
 });
 
-describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳)", () => {
-  it("با مرجع قیمت seed‌شده، نوار با برچسب، عدد ۱۸ عیار و زمان خوانده‌شدنش می‌آید", async () => {
+describe("the \"union rate\" bar on the platform page (ticket 33)", () => {
+  it("with a seeded reference price, the bar renders with its label, the 18k number, and its read time", async () => {
     seed(assetStore());
     seedHistory([]);
     seedReferencePrice({
@@ -430,7 +430,7 @@ describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳
     expect(html).toContain(formatDateTimeFa("2026-08-07T10:00:00.000Z"));
   });
 
-  it("قطع منبع مرجع (بی‌سابقه) ⟸ نوار اصلاً رندر نمی‌شود، صفحه ۲۰۰ می‌ماند", async () => {
+  it("reference source outage (no history) ⟸ the bar doesn't render at all, the page stays 200", async () => {
     seed(assetStore());
     seedHistory([]);
     seedReferencePrice(null);
@@ -441,7 +441,7 @@ describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳
     expect(html).toContain("طلاسی");
   });
 
-  it("عدد نوار به قیمت مرجع خودِ سکو نمی‌خورد — دو رشته‌ی جدا در HTML", async () => {
+  it("the bar's number doesn't collide with the platform's own reference price — two separate strings in the HTML", async () => {
     seed(assetStore());
     seedHistory([]);
     seedReferencePrice({
@@ -457,8 +457,8 @@ describe("نوار «نرخ اتحادیه» صفحه‌ی سکو (تیکت ۳۳
   });
 });
 
-describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
-  it("عدد درشت = «قیمت» سکو، با برچسبی که پیش-از-کارمزد بودنش را می‌گوید", async () => {
+describe("the platform page's rate card — PlatformRateCard", () => {
+  it("the large number = the platform's \"price\", with a label stating it's before fees", async () => {
     seed(assetStore());
     seedHistory([]);
     const html = await renderSlug("talasea");
@@ -468,7 +468,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
     expect(html).not.toContain("میانگین خرید و فروش این سکو");
   });
 
-  it("کارمزد نامعلوم ⟸ برچسب «قیمت اعلامی این سکو»، از hasUnknownFee نه فهرست دستی", async () => {
+  it("unknown fee ⟸ the \"this platform's quoted price\" label, driven by hasUnknownFee, not a manual list", async () => {
     const store = assetStore();
     const now = freshIso();
     store.listed = [
@@ -489,7 +489,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
     expect(html).not.toContain("میانگین خرید و فروش این سکو");
   });
 
-  it("نمودار همان سری عدد درشت را می‌کشد؛ سه آمار (تغییرات صعودی، بیشینه، کمینه) از همان سری‌اند", async () => {
+  it("the chart plots the same large-number series; the three stats (change up, max, min) come from that same series", async () => {
     seed(assetStore());
     const history: PlatformHistory[] = [
       {
@@ -512,7 +512,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
     expect(html).toContain("text-positive");
   });
 
-  it("تغییرات نزولی رنگ text-negative می‌گیرد", async () => {
+  it("a downward change gets the text-negative color", async () => {
     seed(assetStore());
     seedHistory([
       {
@@ -534,7 +534,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
     expect(html).toContain("۱۸٬۵۹۰٬۰۰۰");
   });
 
-  it("سکوی بی‌تاریخچه: کارت بدون نمودار رندر می‌شود، صفحه ۲۰۰ می‌ماند", async () => {
+  it("a platform with no history: the card renders without a chart, the page stays 200", async () => {
     seed(assetStore());
     seedHistory([]);
     const html = await renderSlug("talasea");
@@ -542,7 +542,7 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
     expect(html).toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
   });
 
-  it("سکوی بی‌قیمت مرجع (بی‌اسنپ‌شات) اصلاً کارت را رندر نمی‌کند", async () => {
+  it("a platform with no reference price (no snapshot) doesn't render the card at all", async () => {
     const store = assetStore();
     store.snapshots["talasea"] = null;
     store.updatedAt["talasea"] = staleIso();
@@ -556,12 +556,12 @@ describe("کارت نرخ صفحه‌ی سکو — PlatformRateCard", () => {
 
 function rateCardSection(html: string): string {
   const match = html.match(/<section[^>]*aria-labelledby="rate-card-heading"[\s\S]*?<\/section>/);
-  if (!match) throw new Error("کارت نرخ در HTML نیست");
+  if (!match) throw new Error("rate card not found in HTML");
   return match[0];
 }
 
-describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت نرخ", () => {
-  it("با داده‌ی تازه، برچسب «آخرین به‌روزرسانی» و شمارنده‌ی ۳۰ ثانیه هر دو رندر می‌شوند", async () => {
+describe("the live countdown and staleness label on the rate card", () => {
+  it("with fresh data, both the \"last updated\" label and the 30-second countdown render", async () => {
     seed(assetStore());
     seedHistory([]);
     const html = await renderSlug("talasea");
@@ -572,7 +572,7 @@ describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت 
     expect(card).not.toContain("کهنه");
   });
 
-  it("با داده‌ی کهنه، شمارنده رندر نمی‌شود ولی برچسب کهنگی می‌ماند", async () => {
+  it("with stale data, the countdown doesn't render but the staleness label stays", async () => {
     const store = assetStore();
     store.updatedAt["talasea"] = staleIso();
     seed(store);
@@ -585,7 +585,7 @@ describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت 
     expect(card).not.toContain("بروزرسانی بعدی در");
   });
 
-  it("قطع منبع (بی‌اسنپ‌شات) اصلاً کارت را رندر نمی‌کند — نه شمارنده نه برچسب زمان جعلی", async () => {
+  it("source outage (no snapshot) doesn't render the card at all — no countdown, no fake timestamp label", async () => {
     const store = assetStore();
     store.snapshots["talasea"] = null;
     store.updatedAt["talasea"] = staleIso();
@@ -599,12 +599,12 @@ describe("شمارنده‌ی زنده و برچسب کهنگی روی کارت 
 
 function tabButton(html: string, label: string): string {
   const match = html.match(new RegExp(`<button[^>]*>${label}</button>`));
-  if (!match) throw new Error(`زبانه‌ی «${label}» در HTML نیست`);
+  if (!match) throw new Error(`tab "${label}" not found in HTML`);
   return match[0];
 }
 
-describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزانه/هفتگی/ماهانه", () => {
-  it("نقش tablist دارد و روزانه پیش‌فرض زبانه‌ی فعال (aria-selected) است", async () => {
+describe("the rate card's period tab bar — daily/weekly/monthly", () => {
+  it("has role=tablist and daily is the default active tab (aria-selected)", async () => {
     seed(assetStore());
     seedHistory([]);
     const html = await renderSlug("talasea");
@@ -615,7 +615,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
     expect(dailyTab).not.toContain('disabled=""');
   });
 
-  it("پوشش کافی هفتگی ⟸ زبانه‌ی هفتگی فعال و قابل‌کلیک؛ پوشش ناکافی ماهانه ⟸ «به‌زودی» و disabled", async () => {
+  it("sufficient weekly coverage ⟸ the weekly tab is active and clickable; insufficient monthly coverage ⟸ \"coming soon\" and disabled", async () => {
     seed(assetStore());
     seedHistoryByQuery((query) => {
       if (query.stepHours === 2) {
@@ -654,7 +654,7 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
     expect(html).not.toContain(">ماهانه<");
   });
 
-  it("ناحیه‌ی سه آمار aria-live دارد — تعویض زبانه عدد را برای صفحه‌خوان اعلام می‌کند", async () => {
+  it("the three-stat region has aria-live — switching tabs announces the number to screen readers", async () => {
     seed(assetStore());
     seedHistory([
       {
@@ -669,8 +669,8 @@ describe("نوار زبانه‌ی بازه‌ی کارت نرخ — روزان�
   });
 });
 
-describe("سایت‌مپ — فقط صفحات دروازه‌گذشته", () => {
-  it("دارایی منتشرشده و سکوها را دارد؛ دارایی تک‌سکویی غایب است؛ بدون lastmod", () => {
+describe("sitemap — only gate-passed pages", () => {
+  it("includes the published asset and platforms; the single-platform asset is absent; no lastmod", () => {
     const entries = buildSitemapEntries({
       posts: [],
       instruments: [TALA18, NOGHRE_SINGLE],

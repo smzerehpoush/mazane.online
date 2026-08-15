@@ -1,26 +1,28 @@
-# compose.prod.yml — استقرار تولید تابلو روی سرور اشتراکی (بلیت ۱۱)
+# compose.prod.yml — production deployment of Tablo on the shared server (ticket 11)
 #
 #   docker compose -f compose.prod.yml up -d
 #
-# واقعیت سرور (بند ۱۳ سند معماری، تصمیم ۵): اوبونتو ۲۴.۰۴، «۱ هسته، ۲GB رم»
-# (~۱٫۲GB آزاد)، ~۸GB دیسک آزاد، و ۱۱ کانتینر پادل‌یار همین حالا روی آن است؛
-# کدیِ لبه‌ی پادل‌یار درگاه‌های ۸۰/۴۴۳ را گرفته. پیامدها:
-#   - مظنه «هرگز» ۸۰/۴۴۳ را نمی‌گیرد؛ وب فقط روی 127.0.0.1 منتشر می‌شود و
-#     کدیِ موجود از طریق شبکه‌ی خارجی tablo-edge به آن reverse_proxy می‌کند
-#     (ops/caddy-snippet.Caddyfile + رانبوک).
-#   - سقف‌های منابع عمداً محافظه‌کارند: جمع سقف حافظه‌ی چهار سرویس ≈ 864MB تا
-#     پادل‌یار خفه نشود؛ سقف CPU نرم است (بالاتر از ۱ جمع می‌شود چون سقف است
-#     نه رزرو — همه هم‌زمان peak نمی‌کنند).
-#   - ایمیج‌ها بیرون از سرور ساخته می‌شوند (CI/لپ‌تاپ)؛ این فایل فقط اجرا می‌کند.
+# Server reality (architecture doc section 13, decision 5): Ubuntu 24.04, "1
+# core, 2GB RAM" (~1.2GB free), ~8GB free disk, and 11 Padelyar containers are
+# already running on it; Padelyar's edge Caddy holds ports 80/443. Consequences:
+#   - Tablo "never" binds to 80/443; web is only published on 127.0.0.1 and the
+#     existing Caddy reverse-proxies to it over the external tablo-edge network
+#     (ops/caddy-snippet.Caddyfile + the runbook).
+#   - Resource limits are deliberately conservative: the sum of the four
+#     services' memory limits ≈ 864MB so Padelyar doesn't get starved; the CPU
+#     limit is soft (adds up to more than 1 because it's a limit, not a
+#     reservation — not everything peaks at the same time).
+#   - Images are built outside the server (CI/laptop); this file only runs them.
 #
-# پیکربندی از فایل ‎.env‎ کنار همین فایل می‌آید (نمونه: ‎.env.example‎).
+# Configuration comes from the .env file next to this file (example: .env.example).
 
 name: tablo
 
-# سقف لاگ برای همه‌ی سرویس‌ها. سرور فقط ~۸GB دیسک آزاد دارد و درایور پیش‌فرض
-# ‎json-file‎ **بی‌سقف** است: یک منبعِ قطع‌شده که هر چند میلی‌ثانیه خطای اتصال
-# می‌نویسد، در یک شب دیسک را پر می‌کند و آن‌وقت پادل‌یار هم می‌خوابد.
-# ۳۰MB برای هر سرویس (۳×۱۰MB) برای عیب‌یابی کافی است.
+# Log cap for all services. The server has only ~8GB of free disk and the
+# default json-file driver is **uncapped**: a source that disconnects and
+# writes a connection error every few milliseconds fills the disk in one
+# night, and then Padelyar goes down too. 30MB per service (3×10MB) is enough
+# for troubleshooting.
 x-logging: &default-logging
   driver: json-file
   options:
@@ -33,14 +35,16 @@ services:
     restart: unless-stopped
     logging: *default-logging
     environment:
-      # پیش‌فرض عمداً «mazane» مانده: کاربر/دیتابیسِ داخل volumeِ موجود همین
-      # است و عوض‌کردن پیش‌فرض یعنی اتصال به دیتابیسی که وجود ندارد. مقدار
-      # واقعی هرحال از ‎.env‎ سرور می‌آید.
+      # Deliberately left at "mazane" as the default: the user/database inside
+      # the existing volume is exactly this, and changing the default would
+      # mean connecting to a database that doesn't exist. The real value
+      # comes from the server's .env regardless.
       POSTGRES_USER: ${POSTGRES_USER:-mazane}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD را در .env مقدار بدهید}
       POSTGRES_DB: ${POSTGRES_DB:-mazane}
-    # تنظیم برای میزبان کم‌رم: پیش‌فرض shared_buffers=128MB برای این سرور
-    # زیاده‌روی است؛ بار ما چند INSERT در ۳۰ ثانیه + چند SELECT سبک است.
+    # Tuning for a low-RAM host: the default shared_buffers=128MB is
+    # excessive for this server; our load is a few INSERTs per 30 seconds
+    # plus a few light SELECTs.
     command:
       - postgres
       - -c
@@ -51,10 +55,11 @@ services:
       - max_connections=30
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      # همان الگوی docker-compose.dev.yml: در «اولین» بوتِ volume خالی،
-      # پستگرس همه‌ی ‎*.sql‎ها را به ترتیب واژه‌نگاری (001 تا 012) اجرا
-      # می‌کند. برای volume از قبل مقداردهی‌شده، مهاجرت‌های جدید دستی اجرا
-      # می‌شوند (رانبوک، گام «مهاجرت‌ها») — mount خواندنی همین را ساده می‌کند.
+      # Same pattern as docker-compose.dev.yml: on the "first" boot of an
+      # empty volume, Postgres runs every *.sql file in lexicographic order
+      # (001 through 012). For an already-initialized volume, new migrations
+      # are run by hand (runbook, "migrations" step) — a read-only mount
+      # keeps this simple.
       - ./collector/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-mazane} -d $${POSTGRES_DB:-mazane}"]
@@ -73,14 +78,16 @@ services:
     image: redis:7
     restart: unless-stopped
     logging: *default-logging
-    # چرا این پرچم‌ها (میزبان ۲GB اشتراکی):
-    #   --maxmemory 64mb + allkeys-lru: کل داده‌ی ردیس چند صد کلید کوچک است
-    #     (قیمت جاری/فهرست/مراجع — بند ۳ سند معماری)؛ در کار عادی هرگز به سقف
-    #     نمی‌رسد. سقف + LRU «سوپاپ اطمینان» است: اگر باگی کلید تولید کند،
-    #     ردیس قدیمی‌ترین‌ها را می‌اندازد به‌جای اینکه رم میزبان مشترک را بخورد.
-    #   --save "" --appendonly no: ماندگاری لازم نیست — گردآورنده هر ۳۰ ثانیه
-    #     همه‌چیز را بازمی‌نویسد؛ خاموشی ردیس فقط یعنی حداکثر یک نوبت کهنگی.
-    #     خاموش‌کردن snapshot از fork و جهش مصرف حافظه هم جلوگیری می‌کند.
+    # Why these flags (2GB shared host):
+    #   --maxmemory 64mb + allkeys-lru: Redis's entire dataset is a few
+    #     hundred small keys (current price/listing/references — architecture
+    #     doc section 3); it never hits the cap under normal operation. The
+    #     cap + LRU is a "safety valve" — if a bug ever generates keys, Redis
+    #     evicts the oldest ones instead of eating the shared host's RAM.
+    #   --save "" --appendonly no: persistence isn't needed — the collector
+    #     rewrites everything every 30 seconds; Redis going down just means
+    #     at most one round of staleness. Turning off snapshotting also
+    #     avoids the fork and the memory-usage spike that comes with it.
     command:
       - redis-server
       - --maxmemory
@@ -105,8 +112,8 @@ services:
           memory: 96M
 
   collector:
-    # ایمیج بیرون از سرور ساخته می‌شود؛ مرجعش از ‎.env‎ می‌آید (GHCR یا ایمیج
-    # load شده — تصمیم رجیستری در رانبوک، پیش‌نیاز ۲).
+    # The image is built outside the server; its reference comes from .env
+    # (GHCR or a loaded image — registry decision in the runbook, prerequisite 2).
     image: ${TABLO_IMAGE_COLLECTOR:-ghcr.io/smzerehpoush/tablo-collector:latest}
     restart: unless-stopped
     logging: *default-logging
@@ -121,8 +128,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # به اینترنت بیرون نیاز دارد (کرال سکوها) — پس شبکه internal:true «نیست»؛
-    # فقط drivers پیش‌فرض bridge بدون انتشار هیچ درگاهی.
+    # Needs outbound internet access (crawling the platforms) — so
+    # networks.internal:true is "not" set; just the default bridge driver
+    # with no port published.
     networks: [internal]
     deploy:
       resources:
@@ -132,8 +140,9 @@ services:
 
   web:
     image: ${TABLO_IMAGE_WEB:-ghcr.io/smzerehpoush/tablo-web:latest}
-    # نام ثابت تا کدیِ لبه‌ی پادل‌یار روی شبکه‌ی tablo-edge با همین نام
-    # DNS-اش کند: ‎reverse_proxy tablo-web:3000‎ (ops/caddy-snippet.Caddyfile).
+    # Fixed name so Padelyar's edge Caddy can resolve it by this exact DNS
+    # name on the tablo-edge network: reverse_proxy tablo-web:3000
+    # (ops/caddy-snippet.Caddyfile).
     container_name: tablo-web
     restart: unless-stopped
     logging: *default-logging
@@ -141,21 +150,23 @@ services:
       TABLO_REDIS_URL: redis://redis:6379/0
       TABLO_DATABASE_URL: postgresql://${POSTGRES_USER:-mazane}:${POSTGRES_PASSWORD:?}@postgres:5432/${POSTGRES_DB:-mazane}
       TABLO_REVALIDATE_TOKEN: ${TABLO_REVALIDATE_TOKEN:?}
-      # پنل مدیریت (بلیت ۲۰) — هش رمز، نه خودِ رمز؛ تولیدش در رانبوک (۱.۴).
+      # Admin panel (ticket 20) — the password hash, not the password itself;
+      # generated per the runbook (1.4).
       TABLO_ADMIN_PASSWORD_HASH: ${TABLO_ADMIN_PASSWORD_HASH:?TABLO_ADMIN_PASSWORD_HASH را در .env مقدار بدهید — رانبوک بند ۱.۴}
       TABLO_ADMIN_SESSION_SECRET: ${TABLO_ADMIN_SESSION_SECRET:?TABLO_ADMIN_SESSION_SECRET را در .env مقدار بدهید — رانبوک بند ۱.۴}
-      # انبار عکس شاخص پست، آروان‌کلود S3-سازگار (بلیت ۲۴) — رانبوک بند ۱.۴.
-      # بدون این‌ها requiredEnv در image-store.ts پرتاب می‌کند و آپلود عکس
-      # با ۵۰۲ شکست می‌خورد؛ فقط REGION در کد پیش‌فرض دارد، بقیه اجباری‌اند.
+      # Post cover image storage, ArvanCloud S3-compatible (ticket 24) — runbook section 1.4.
+      # Without these, requiredEnv in image-store.ts throws and image upload
+      # fails with a 502; only REGION has a default in code, the rest are required.
       TABLO_ARVAN_S3_ENDPOINT: ${TABLO_ARVAN_S3_ENDPOINT:?TABLO_ARVAN_S3_ENDPOINT را در .env مقدار بدهید — رانبوک بند ۱.۴}
       TABLO_ARVAN_S3_REGION: ${TABLO_ARVAN_S3_REGION:-default}
       TABLO_ARVAN_S3_BUCKET: ${TABLO_ARVAN_S3_BUCKET:?TABLO_ARVAN_S3_BUCKET را در .env مقدار بدهید — رانبوک بند ۱.۴}
       TABLO_ARVAN_S3_ACCESS_KEY: ${TABLO_ARVAN_S3_ACCESS_KEY:?TABLO_ARVAN_S3_ACCESS_KEY را در .env مقدار بدهید — رانبوک بند ۱.۴}
       TABLO_ARVAN_S3_SECRET_KEY: ${TABLO_ARVAN_S3_SECRET_KEY:?TABLO_ARVAN_S3_SECRET_KEY را در .env مقدار بدهید — رانبوک بند ۱.۴}
-    # فقط loopback میزبان — برای راستی‌آزمایی از خود سرور (curl 127.0.0.1:3300).
-    # مظنه ۸۰/۴۴۳ را نمی‌گیرد؛ ترافیک واقعی از کدیِ لبه روی شبکه‌ی tablo-edge
-    # می‌آید، نه از این درگاه. (اتصال کدی به loopback میزبان از داخل کانتینر
-    # ممکن نیست — به همین دلیل شبکه‌ی خارجی مشترک لازم است؛ رانبوک، گام کدی.)
+    # Host loopback only — for verification from the server itself (curl 127.0.0.1:3300).
+    # Tablo doesn't bind to 80/443; real traffic comes from the edge Caddy on
+    # the tablo-edge network, not through this port. (Caddy connecting to the
+    # host loopback from inside the container isn't possible — that's why the
+    # shared external network is needed; runbook, Caddy step.)
     ports:
       - "127.0.0.1:${TABLO_WEB_PORT:-3300}:3000"
     depends_on:
@@ -168,32 +179,34 @@ services:
       resources:
         limits:
           cpus: "0.50"
-          # ۳۸۴M ← ۲۵۶M: لایه‌ی وب دیگر نکست نیست، اپ TanStack Start + Nitro
-          # است و خروجی ‎.output‎ سبک‌تر بالا می‌آید. اندازه‌گیری واقعی روی همین
-          # ایمیج: ۳۱MB بی‌کار، ۶۱MB پس از ۲۰۰ درخواست SSR.
-          # جفتِ این عدد ‎NODE_OPTIONS=--max-old-space-size=192‎ در
-          # Dockerfile.web است — هر کدام عوض شد، دیگری هم باید عوض شود.
+          # 384M ← 256M: the web layer is no longer Next.js, it's a TanStack
+          # Start + Nitro app and the .output build comes up lighter.
+          # Measured for real on this same image: 31MB idle, 61MB after 200
+          # SSR requests. This number is paired with
+          # NODE_OPTIONS=--max-old-space-size=192 in Dockerfile.web — if one
+          # changes, the other must too.
           memory: 256M
 
 networks:
   internal:
     driver: bridge
-  # شبکه‌ی مشترک با کدیِ لبه‌ی پادل‌یار؛ باید قبل از up ساخته و کانتینر کدی به
-  # آن وصل شده باشد:
+  # Network shared with Padelyar's edge Caddy; must be created and the Caddy
+  # container connected to it before up:
   #   docker network create tablo-edge
-  #   docker network connect tablo-edge <نام کانتینر کدی پادل‌یار>
+  #   docker network connect tablo-edge <Padelyar Caddy container name>
   edge:
     external: true
     name: tablo-edge
 
 volumes:
-  # ⚠️ نام واقعی volume عمداً «mazane_mazane-postgres-data» پین شده — همان
-  # چیزی که پیش از تغییر نام پروژه (۲۰۲۶-۰۸-۱۰) ساخته شده بود. بدون این پین،
-  # عوض‌شدن `name:` پروژه داکر را به سراغ volumeِ **تازه و خالی** می‌فرستد و
-  # دیتابیس تولید انگار پاک شده به نظر می‌رسد.
+  # ⚠️ The volume's real name is deliberately pinned to
+  # "mazane_mazane-postgres-data" — the exact one created before the project
+  # rename (2026-08-10). Without this pin, changing the project's `name:`
+  # sends Docker to a **fresh, empty** volume instead, and the production
+  # database looks like it's been wiped.
   #
-  # پیش از نخستین استقرار پس از تغییر نام، این را روی سرور راستی‌آزمایی کنید:
+  # Before the first deployment after the rename, verify this on the server:
   #   docker volume ls | grep postgres-data
-  # اگر نام واقعی چیز دیگری بود، همین‌جا اصلاحش کنید — نه اینکه پین را بردارید.
+  # If the real name is something else, fix it right here — don't remove the pin.
   postgres-data:
     name: mazane_mazane-postgres-data

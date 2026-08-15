@@ -135,9 +135,9 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
 ];
 
 /**
- * ⚠️ این فهرست فقط **کف** است: اگر payload زنده‌ی `tablo:instruments`
- * در دسترس باشد، همان مقدم است — پس باز شدن دروازه‌ی یک دارایی در
- * گردآورنده همچنان بدون دیپلویِ وب اثر می‌کند.
+ * ⚠️ This list is only a **floor**: if the live `tablo:instruments` payload
+ * is available, it takes precedence — so opening the gate for an asset in
+ * the collector still takes effect without a web deploy.
  */
 export const REGISTRY_INSTRUMENTS: readonly InstrumentListing[] = [
   {

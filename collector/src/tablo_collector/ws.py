@@ -52,9 +52,9 @@ class FeedCache:
     def latest(self, url: str) -> Any:
         frame = self._frames.get(url)
         if frame is None:
-            raise FeedStale(f"خوراک {url} هنوز فریمی نداده است")
+            raise FeedStale(f"feed {url} has not delivered a frame yet")
         if self._now() - frame.received_at > self._max_age:
-            raise FeedStale(f"آخرین فریم {url} کهنه‌تر از حد مجاز است")
+            raise FeedStale(f"latest frame for {url} is older than the allowed limit")
         return frame.payload
 
 
@@ -106,17 +106,17 @@ class ReconnectingFeedClient:
         while True:
             try:
                 async with self._connector() as messages:
-                    log.info("خوراک %s وصل شد", self._url)
+                    log.info("feed %s connected", self._url)
                     async for raw in messages:
                         payload = self._decode(raw)
                         if payload is None:
                             continue
                         self._cache.put(self._url, payload)
                         backoff = self._initial_backoff
-                log.warning("خوراک %s بسته شد — کهنگی، نه خطا؛ اتصال دوباره", self._url)
+                log.warning("feed %s closed — staleness, not error; reconnecting", self._url)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                log.exception("خوراک %s قطع شد — کهنگی، نه خطا؛ اتصال دوباره", self._url)
+                log.exception("feed %s dropped — staleness, not error; reconnecting", self._url)
             await self._sleep(backoff)
             backoff = min(backoff * 2, self._max_backoff)

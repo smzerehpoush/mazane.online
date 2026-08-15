@@ -1,8 +1,8 @@
 /**
- * ⚠️ از به بعد هر سکو **یک** عدد دارد: «قیمت»، پیش از هر
- * کارمزد. قیمت مؤثر خرید/فروش دیگر نه ذخیره می‌شود، نه محاسبه، نه نمایش
- * داده — کارمزد جدا در `terms` می‌آید و هیچ لایه‌ای آن را در قیمت ضرب
- * نمی‌کند. اگر روزی دوباره لازم شد، اول `` را عوض کنید.
+ * ⚠️ From now on every platform has **one** number: "price", before any
+ * fee. The effective buy/sell price is no longer stored, computed, or
+ * shown — fee comes separately in `terms`, and no layer multiplies it
+ * into the price. If it's ever needed again, change `` first.
  */
 import { listPlatforms } from "./catalog";
 import {
@@ -59,8 +59,8 @@ export function isSellOpen(row: Row): boolean {
 }
 
 /**
- * ⚠️ هیچ فیلد درآمدزایی ورودی ترتیب نیست — نگهبان سطح کد در
- * `tests/sponsored-links.test.tsx` حتی نامشان را در این فایل قرمز می‌کند.
+ * ⚠️ No monetization field is ever a sort input — a code-level guard in
+ * `tests/sponsored-links.test.tsx` flags even their names red in this file.
  */
 export function compareByPrice(instrument: string = "GOLD_18K") {
   return (a: Row, b: Row): number =>

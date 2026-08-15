@@ -1,10 +1,10 @@
 /**
- * ⚠️ چرا این تست لازم است: `tokens.css` خودش را «منبع حقیقت رنگ‌ها»
- * اعلام می‌کند و معیار پذیرش می‌گوید «هیچ رنگ هگزی بیرون از
- * `tokens.css` نیست» — ولی **هیچ‌چیز آن فایل را مصرف نمی‌کند**. تیلویند فقط
- * `../src` را می‌کاود و `` بیرون آن است، پس پالت در `styles.css`
- * دست‌نویس تکرار شده. یعنی عملاً دو منبع حقیقت داریم که می‌توانند بی‌صدا
- * واگرا شوند.
+ * ⚠️ Why this test is needed: `tokens.css` declares itself the "single
+ * source of truth for colors" and the acceptance criterion says "no hex
+ * color exists outside `tokens.css`" — but **nothing actually consumes that
+ * file**. Tailwind only scans `../src`, and `` is outside that, so the
+ * palette is hand-duplicated in `styles.css`. That means we effectively
+ * have two sources of truth that can silently drift apart.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -19,7 +19,7 @@ function read(relative: string): string {
 
 function colorVars(source: string, selector: string): Record<string, string> {
   const block = new RegExp(`${selector}\\s*\\{([\\s\\S]*?)\\n\\}`).exec(source);
-  if (block === null) throw new Error(`بلوک ${selector} پیدا نشد`);
+  if (block === null) throw new Error(`Block ${selector} not found`);
   const out: Record<string, string> = {};
   for (const [, name, value] of block[1]!.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
     const trimmed = value!.trim();
@@ -28,14 +28,14 @@ function colorVars(source: string, selector: string): Record<string, string> {
   return out;
 }
 
-describe("پالت رنگ — سند و پیاده‌سازی نباید واگرا شوند", () => {
+describe("Color palette — doc and implementation must not drift apart", () => {
   const tokens = read("docs/tokens.css");
   const styles = read("web/src/styles.css");
 
   it.each([
-    ["روشن", ":root"],
-    ["تاریک", '\\[data-theme="dark"\\]'],
-  ])("تم %s: هر رنگ سند دقیقاً همان مقدار را در styles.css دارد", (_label, selector) => {
+    ["light", ":root"],
+    ["dark", '\\[data-theme="dark"\\]'],
+  ])("%s theme: every doc color has that exact same value in styles.css", (_label, selector) => {
     const fromDoc = colorVars(tokens, selector);
     const fromCss = colorVars(styles, selector);
 
@@ -50,7 +50,7 @@ describe("پالت رنگ — سند و پیاده‌سازی نباید واگ�
     expect(drift, `واگرایی پالت:\n${drift.join("\n")}`).toEqual([]);
   });
 
-  it("اصلاح کنتراست --tx3 در هر دو فایل هست", () => {
+  it("The --tx3 contrast fix is in both files", () => {
     expect(colorVars(tokens, ":root")["--tx3"]).toBe("#666d78");
     expect(colorVars(styles, ":root")["--tx3"]).toBe("#666d78");
     expect(colorVars(tokens, '\\[data-theme="dark"\\]')["--tx3"]).toBe("#8b94a1");

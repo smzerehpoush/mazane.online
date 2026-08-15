@@ -11,14 +11,14 @@ async function getPayload(): Promise<{ response: Response; payload: LivePricesPa
 }
 
 describe("GET /api/prices", () => {
-  it("۲۰۰ با Cache-Control: no-store پاسخ می‌دهد (فقط مصرف کلاینت)", async () => {
+  it("responds 200 with Cache-Control: no-store (client consumption only)", async () => {
     seed(healthyStore());
     const { response } = await getPayload();
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  it("دقیقاً همان سکوهای فهرست‌شده — گلدیکای در استور هرگز نمی‌آید", async () => {
+  it("returns exactly the listed platforms — goldika never appears, even though it's in the store", async () => {
     const store = healthyStore();
     seed(store);
     expect(store.snapshots["goldika"]).not.toBeNull();
@@ -26,7 +26,7 @@ describe("GET /api/prices", () => {
     expect(payload.rows.map((row) => row.platform_slug)).toEqual(["wallgold", "talasea", "milli"]);
   });
 
-  it("عدد هر سکو همان «قیمت» صفحه است — هم عدد و هم رشته‌ی نمایش fa-IR", async () => {
+  it("each platform's number matches the page's \"price\" — both the raw number and the fa-IR display string", async () => {
     const store = healthyStore();
     seed(store);
     const { payload } = await getPayload();
@@ -39,7 +39,7 @@ describe("GET /api/prices", () => {
     expect(wallgold?.price_display).toBe("۱۸٬۶۱۱٬۰۰۰");
   });
 
-  it("سکوی «کارمزد نامشخص» قیمت میانی می‌دهد — همان عددی که صفحه نشان می‌دهد", async () => {
+  it("the \"unknown fee\" platform returns a mid-point price — the same number shown on the page", async () => {
     seed(storeWithUnknownFee());
     const { payload } = await getPayload();
     const digikala = payload.rows.find((row) => row.platform_slug === "digikala");
@@ -49,7 +49,7 @@ describe("GET /api/prices", () => {
     });
   });
 
-  it("قطع منبع ⟸ قیمت تهی و updated_at قدیمی، نه خطا", async () => {
+  it("source outage ⟸ null price and a stale updated_at, not an error", async () => {
     const store = healthyStore();
     const stale = staleIso();
     store.snapshots["talasea"] = null;
@@ -66,7 +66,7 @@ describe("GET /api/prices", () => {
     });
   });
 
-  it("generated_at زمان معتبر تولید payload است", async () => {
+  it("generated_at is a valid payload-generation timestamp", async () => {
     seed(healthyStore());
     const before = Date.now();
     const { payload } = await getPayload();

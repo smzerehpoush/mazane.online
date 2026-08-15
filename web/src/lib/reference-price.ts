@@ -1,9 +1,10 @@
 /**
- * ⚠️ این عدد **مرجع قیمت** است، نه قیمت هیچ سکویی — در هیچ محاسبه‌ای شرکت
- * نمی‌کند و به‌عنوان قیمت هیچ سکویی نمایش داده نمی‌شود (:
- * بدون میانگین بین‌سکویی، هر عدد به یک منبع نام‌برده منتسب است). برچسب
- * نمایشی «نرخ اتحادیه» روی این عدد تصمیم ثبت‌شده‌ی مالک است — سند
- * `adr/0001-etehadieh-label-on-talair-number.md`.
+ * ⚠️ This number is the **reference price**, not any platform's price — it
+ * takes no part in any calculation and is never displayed as any
+ * platform's price (:
+ * with no cross-platform average, every number is attributed to one named
+ * source). The "union rate" display label on this number is the owner's
+ * recorded decision — see `adr/0001-etehadieh-label-on-talair-number.md`.
  */
 
 export interface ReferencePriceQuery {
@@ -43,7 +44,7 @@ function source(): ReferencePriceSource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {
     throw new Error(
-      "هیچ ReferencePriceSource ثبت نشده — از «@/lib/server/reference-price-source» بخوان یا setReferencePriceSource صدا بزن",
+      "No ReferencePriceSource registered — import from «@/lib/server/reference-price-source» or call setReferencePriceSource",
     );
   }
   activeSource = defaultFactory();

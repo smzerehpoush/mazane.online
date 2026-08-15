@@ -1,193 +1,194 @@
-# بدهی فنی
+# Technical Debt
 
-این سند فهرست بدهی فنیِ شاهدمحور مخزن `tablo` است — هر مورد با ارجاع دقیق به
-`file:line`، اثر عملی آن روی محصول/تیم، و یک پیشنهاد رفع مشخص. شدت‌ها
-(بالا/متوسط/پایین) بر اساس این می‌آیند که مورد همین حالا چیزی را می‌شکند
-یا سرمنشأ ریسک/گیج‌کنندگی است اما فعلاً ساکت.
+This document is an evidence-based list of the `tablo` repo's technical
+debt — each item with a precise `file:line` reference, its practical impact
+on the product/team, and a specific fix proposal. Severities (High/Medium/Low)
+are based on whether the item is breaking something right now, or is a
+source of risk/confusion but currently silent.
 
-## خلاصه
+## Summary
 
-| # | عنوان | شدت | حوزه |
+| # | Title | Severity | Area |
 |---|---|---|---|
-| ۱ | CI روی main قرمز است (`tokens-sync.test.ts`) | بالا | CI/CD |
-| ۲ | سه/چهار نام برای یک محصول (`mazane` در برابر `tablo`) | متوسط | نام‌گذاری |
-| ۳ | رجیستری سکو در دو زبان دوباره تعریف شده | متوسط | نام‌گذاری، داده |
-| ۴ | دو درخت کامپوننت موازی؛ `LegalNotice` تکراری؛ `dashboard-live.tsx` یتیم | متوسط | فرانت‌اند |
-| ۵ | `PostgresStore.save_instruments`/`save_chart_config` متد no-op اند | متوسط | ذخیره‌سازی |
-| ۶ | زنجیره‌ی ایمیج/دیپلوی سه‌گانه‌ی ناهم‌راستا | متوسط | استقرار |
-| ۷ | rate-limit ورود پنل، سراسری و در حافظه‌ی یک پردازه | متوسط | امنیت عملیاتی |
-| ۸ | کل کامنت‌های توضیحی کد در working tree حذف شده‌اند (کامیت‌نشده) | متوسط | بهداشت مخزن |
-| ۹ | سه فایل بزرگ در مخزن | پایین | نگهداری‌پذیری |
-| ۱۰ | ۳۷ از ۴۵ پریمیتیو `components/ui/` هیچ مصرف‌کننده‌ای ندارند | پایین | فرانت‌اند |
-| ۱۱ | پراپ `instrumentNames` در `PlatformPage` بلااستفاده است | پایین | فرانت‌اند |
-| ۱۲ | تست تراز رجیستری به `python3` وابسته است بی‌آنکه CI آن را نصب کند | پایین | CI/CD |
-| ۱۳ | `collector-dev.log` حدود ۶۰۰ کیلوبایت در ریشه‌ی مخزن | پایین | بهداشت مخزن |
-| ۱۴ | `collector/.venv` کهنه است و به مسیر قدیمی مخزن اشاره می‌کند | پایین | بهداشت مخزن |
+| 1 | CI is red on main (`tokens-sync.test.ts`) | High | CI/CD |
+| 2 | Three/four names for one product (`mazane` vs. `tablo`) | Medium | Naming |
+| 3 | Platform registry redefined in two languages | Medium | Naming, Data |
+| 4 | Two parallel component trees; duplicated `LegalNotice`; orphaned `dashboard-live.tsx` | Medium | Frontend |
+| 5 | `PostgresStore.save_instruments`/`save_chart_config` are no-op methods | Medium | Storage |
+| 6 | Misaligned triple image/deploy chain | Medium | Deployment |
+| 7 | Panel login rate-limit is global and in a single process's memory | Medium | Operational security |
+| 8 | All explanatory code comments removed in the working tree (uncommitted) | Medium | Repo hygiene |
+| 9 | Three large files in the repo | Low | Maintainability |
+| 10 | 37 of 45 `components/ui/` primitives have no consumers | Low | Frontend |
+| 11 | The `instrumentNames` prop in `PlatformPage` is unused | Low | Frontend |
+| 12 | Registry-parity test depends on `python3` without CI installing it | Low | CI/CD |
+| 13 | `collector-dev.log`, about 600 KB, at the repo root | Low | Repo hygiene |
+| 14 | `collector/.venv` is outdated and points to the repo's old path | Low | Repo hygiene |
 
-**رفع‌شده (۲۰۲۶-۰۸-۱۳):** دروازه‌ی امنیتی CI دنبال نام کوکیِ کهنه (`mazane_admin_session`) می‌گشت نه نام واقعی (`tablo_admin_session`) — الگوی گرپ در `.github/workflows/ci.yml` و توصیفش در `CLAUDE.md` هر دو اصلاح شدند.
+**Fixed (2026-08-13):** The CI security gate was searching for the old cookie name (`mazane_admin_session`) instead of the real one (`tablo_admin_session`) — the grep pattern in `.github/workflows/ci.yml` and its description in `CLAUDE.md` were both corrected.
 
 ---
 
-## ۱. CI/CD و استقرار
+## 1. CI/CD and Deployment
 
-### ۱.۱ CI روی main قرمز است — شدت: بالا
+### 1.1 CI is red on main — Severity: High
 
 | | |
 |---|---|
-| **شاهد** | `web/tests/tokens-sync.test.ts:14-33` در بدنه‌ی `describe` مستقیماً `read("docs/tokens.css")` را صدا می‌زند (خط ۳۲). دایرکتوری `docs/` در working tree موجود اما خالی است؛ آخرین کامیتی که به آن دست زده `3d507c3 remove docs` است (`git log --oneline -1 -- docs`). |
-| **اثر عملی** | خواندن فایل با `ENOENT` شکست می‌خورد و چون این فراخوانی داخل بدنه‌ی `describe` (نه داخل `it`) است، کل فایل تست موقع collect می‌ترکد — یعنی این یک suite شکست‌خورده از ۳۲ suite است، ولی به‌خاطر جای شکست، جاب `web` در CI (`.github/workflows/ci.yml` گام `Tests`) روی هر push به main و هر PR قرمز می‌ماند. |
-| **پیشنهاد رفع** | یا `docs/tokens.css` را به‌عنوان منبع حقیقتِ پالت رنگ بازسازی و با `web/src/styles.css` هم‌تراز کرد، یا تصمیم گرفت که `styles.css` تنها منبع حقیقت است و `tokens-sync.test.ts` را حذف/بازنویسی کرد. نگه‌داشتن یک تست شکست‌خورده روی main یعنی هر شکست تست بعدی هم در نویز CI گم می‌شود. |
+| **Evidence** | `web/tests/tokens-sync.test.ts:14-33` calls `read("docs/tokens.css")` directly in the body of `describe` (line 32). The `docs/` directory exists in the working tree but is empty; the last commit that touched it is `3d507c3 remove docs` (`git log --oneline -1 -- docs`). |
+| **Practical impact** | Reading the file fails with `ENOENT`, and because this call is inside the `describe` body (not inside an `it`), the entire test file blows up during collection — meaning this is one failed suite out of 32 suites, but because of where it fails, the `web` job in CI (`.github/workflows/ci.yml`, `Tests` step) stays red on every push to main and every PR. |
+| **Suggested fix** | Either rebuild `docs/tokens.css` as the source of truth for the color palette and align it with `web/src/styles.css`, or decide that `styles.css` is the sole source of truth and delete/rewrite `tokens-sync.test.ts`. Keeping a failing test on main means every subsequent test failure gets lost in the CI noise. |
 
-### ۱.۲ زنجیره‌ی ایمیج/دیپلوی سه‌گانه‌ی ناهم‌راستا — شدت: متوسط
+### 1.2 Misaligned triple image/deploy chain — Severity: Medium
 
-سه سند/فایل، سه داستان متفاوت از این‌که ایمیج تولید از کجا می‌آید تعریف می‌کنند:
+Three docs/files each tell a different story about where the production image comes from:
 
 ```mermaid
 flowchart LR
-    subgraph CIJ["جاب images در CI (فقط push به main)"]
-        A["docker build web + collector"] -->|"push: false"| B["هیچ‌جا منتشر نمی‌شود"]
+    subgraph CIJ["images job in CI (only on push to main)"]
+        A["docker build web + collector"] -->|"push: false"| B["never published anywhere"]
     end
     subgraph CMP["compose.prod.yml"]
-        C["پیش‌فرض TABLO_IMAGE_WEB / TABLO_IMAGE_COLLECTOR"] --> D["ghcr.io/smzerehpoush/tablo-*:latest"]
+        C["default TABLO_IMAGE_WEB / TABLO_IMAGE_COLLECTOR"] --> D["ghcr.io/smzerehpoush/tablo-*:latest"]
     end
-    subgraph DPL["deploy.sh — روش واقعی طبق RUNBOOK §1.2"]
-        E["rsync کد به سرور"] --> F["docker build روی خودِ سرور"]
+    subgraph DPL["deploy.sh — actual method per RUNBOOK §1.2"]
+        E["rsync code to server"] --> F["docker build on the server itself"]
         F --> G["sed .env → tablo-*:deploy"]
-        G --> H["compose up با ایمیج محلی"]
+        G --> H["compose up with local image"]
     end
-    D -. "هیچ‌وقت pull نمی‌شود" .-> H
+    D -. "never pulled" .-> H
 ```
 
 | | |
 |---|---|
-| **شاهد** | `.github/workflows/ci.yml:121,133-134` هر دو ایمیج را با `push: false` می‌سازد (کامنت خط ۱۱۱: «تصمیم صاحب کسب‌وکار است»). `compose.prod.yml:110,134` پیش‌فرض‌ها را از `ghcr.io/smzerehpoush/tablo-{web,collector}:latest` می‌گیرد. `deploy.sh:68-69` هر دو ایمیج را با `docker build` روی سرور می‌سازد و `deploy.sh:101-102` با `sed` مقادیر `.env` را به `tablo-web:deploy`/`tablo-collector:deploy` بازنویسی می‌کند — یعنی پیش‌فرض‌های GHCR در `compose.prod.yml` هرگز مصرف نمی‌شوند. |
-| **نکته‌ی مهم برای صحت** | این زنجیره برخلاف متن اصلی `ops/RUNBOOK.md §۱.۲` نیست — آن بخش صریحاً تصمیم مالک (۲۰۲۶-۰۸-۰۸) را ثبت کرده که «ساخت روی سرور با `deploy.sh`» از این پس روش استاندارد است و مسیر GHCR را «هیچ‌وقت راه‌اندازی نشد» می‌نامد (`ops/RUNBOOK.md:136-162`). چیزی که هماهنگ نشده، **پیرامون** همان تصمیم است: جاب CI و پیش‌فرض‌های compose هنوز برای مسیر رهاشده تنظیم مانده‌اند، و چک‌لیست پایانی رانبوک هنوز آیتم «۱.۲ 👤 تصمیم رجیستری + سیم‌کشی push» را باز/تیک‌نخورده نگه داشته (`ops/RUNBOOK.md:507`) — انگار تصمیم هنوز معلق است. |
-| **اثر عملی** | جاب `images` در CI روی هر push به main دو ایمیج داکر می‌سازد که هیچ‌کدام مصرف نمی‌شوند (ایمیج collector حتی `load` هم نمی‌شود)؛ این فقط زمان/دقایق CI را می‌سوزاند. مهم‌تر، هر عملیاتیِ تازه که فقط چک‌لیست §۱۲ رانبوک را بخواند (نه بدنه‌ی §۱.۲ را) ممکن است فکر کند تصمیم رجیستری هنوز باز است و وقت روی سیم‌کشی GHCR بگذارد. |
-| **پیشنهاد رفع** | یا جاب `images` در CI حذف/غیرفعال شود (چون خروجی‌اش هرگز استفاده نمی‌شود)، یا اگر نگه داشته می‌شود کامنتش صریح بگوید «فقط برای دود-تستِ Dockerfile، نه مسیر انتشار». پیش‌فرض‌های `ghcr.io` در `compose.prod.yml` یا حذف شوند یا کامنتی بگیرند که «این پیش‌فرض هرگز در تولید استفاده نمی‌شود؛ `deploy.sh` همیشه رونویسی می‌کند». چک‌لیست §۱۲ رانبوک هم برای هماهنگی با §۱.۲ تیک بخورد. |
+| **Evidence** | `.github/workflows/ci.yml:121,133-134` builds both images with `push: false` (comment at line 111: "business owner's decision"). `compose.prod.yml:110,134` takes its defaults from `ghcr.io/smzerehpoush/tablo-{web,collector}:latest`. `deploy.sh:68-69` builds both images with `docker build` on the server, and `deploy.sh:101-102` rewrites the `.env` values to `tablo-web:deploy`/`tablo-collector:deploy` with `sed` — meaning the GHCR defaults in `compose.prod.yml` are never consumed. |
+| **Important note for accuracy** | This chain isn't contrary to the actual text of `ops/RUNBOOK.md §1.2` — that section explicitly records the owner's decision (2026-08-08) that "building on the server with `deploy.sh`" is henceforth the standard method, and calls the GHCR path "never set up" (`ops/RUNBOOK.md:136-162`). What hasn't been reconciled is what's **around** that same decision: the CI job and the compose defaults are still configured for the abandoned path, and the runbook's closing checklist still leaves the item "1.2 👤 Registry decision + push wiring" open/unchecked (`ops/RUNBOOK.md:507`) — as if the decision were still pending. |
+| **Practical impact** | The `images` job in CI builds two Docker images on every push to main, neither of which is consumed (the collector image isn't even `load`ed); this only burns CI time/minutes. More importantly, any newcomer who only reads the runbook's §12 checklist (not the body of §1.2) might think the registry decision is still open and spend time wiring up GHCR. |
+| **Suggested fix** | Either remove/disable the `images` job in CI (since its output is never used), or if it's kept, its comment should explicitly say "only a Dockerfile smoke test, not the publish path." The `ghcr.io` defaults in `compose.prod.yml` should either be removed or get a comment saying "this default is never used in production; `deploy.sh` always overrides it." The runbook's §12 checklist should also be checked off to stay consistent with §1.2. |
 
-### ۱.۳ تست تراز رجیستری به `python3` وابسته است بی‌آنکه CI آن را نصب کند — شدت: پایین
+### 1.3 Registry-parity test depends on `python3` without CI installing it — Severity: Low
 
 | | |
 |---|---|
-| **شاهد** | `web/tests/registry-parity.test.ts:1,43-46` با `execFileSync("python3", [SCRIPT, COLLECTOR], ...)` اسکریپت `web/tests/support/dump-collector-registry.py` را اجرا می‌کند. جاب `web` در `.github/workflows/ci.yml` فقط `actions/setup-node@v4` دارد (خطوط ۴۲-۴۹)؛ در کل جاب هیچ گام `setup-python` یا نصب پایتونی نیست (بررسی کامل مراحل `web` تا گام `Tests`). |
-| **اثر عملی** | فعلاً چون runner از نوع `ubuntu-latest` است و پایتون معمولاً پیش‌نصب دارد، suite سبز می‌ماند — اما این وابستگی‌ای ضمنی و مستندنشده به تصویر runner است؛ تغییر runner یا اجرای همین تست‌ها در یک کانتینر Node خالص (که این پروژه دقیقاً دارد — `Dockerfile.web` روی `node:22-alpine` است) بی‌سروصدا این suite را می‌شکند. |
-| **پیشنهاد رفع** | یک گام `actions/setup-python@v5` صریح به جاب `web` اضافه شود، یا منطق `dump-collector-registry.py` به یک اسکریپت Node/TS ساده منتقل شود تا مرز زبانی تست از خود CI هم عبور نکند. |
+| **Evidence** | `web/tests/registry-parity.test.ts:1,43-46` runs the `web/tests/support/dump-collector-registry.py` script via `execFileSync("python3", [SCRIPT, COLLECTOR], ...)`. The `web` job in `.github/workflows/ci.yml` only has `actions/setup-node@v4` (lines 42-49); there is no `setup-python` step or Python installation anywhere in the job (checked the full `web` job through the `Tests` step). |
+| **Practical impact** | For now, because the runner is `ubuntu-latest` and Python is usually preinstalled, the suite stays green — but this is an implicit, undocumented dependency on the runner image; changing runners, or running these same tests in a bare Node container (which this project has exactly — `Dockerfile.web` is on `node:22-alpine`), would silently break this suite. |
+| **Suggested fix** | Add an explicit `actions/setup-python@v5` step to the `web` job, or move the `dump-collector-registry.py` logic to a plain Node/TS script so the test's language boundary doesn't even cross into CI itself. |
 
 ---
 
-## ۲. هویت و نام‌گذاری دوگانه
+## 2. Dual Identity and Naming
 
-### ۲.۱ سه/چهار نام برای یک محصول — شدت: متوسط
+### 2.1 Three/four names for one product — Severity: Medium
 
-| نام | جایی که دیده می‌شود | شاهد |
+| Name | Where it's seen | Evidence |
 |---|---|---|
-| `mazane.online` | ریموت گیت | `git remote -v` → `origin git@github.com:smzerehpoush/mazane.online.git` |
-| `tablo.gold` | محصول/دامنه‌ی واقعی | `web/src/lib/site.ts:1` → `SITE_URL = "https://tablo.gold"` |
-| `mazane.collector*` | پیشوند همه‌ی لاگرهای گردآورنده | مثلاً `collector/src/tablo_collector/main.py:67` → `getLogger("mazane.collector")`؛ همین الگو در `ws.py:13`، `pipeline.py:15`، `robots.py:22`، `references/pipeline.py:13`، `content/*.py` |
-| `mazane` | کاربر/دیتابیس پستگرس در تولید | `compose.prod.yml:39,41` → `POSTGRES_USER:-mazane`، `POSTGRES_DB:-mazane` |
+| `mazane.online` | Git remote | `git remote -v` → `origin git@github.com:smzerehpoush/mazane.online.git` |
+| `tablo.gold` | Real product/domain | `web/src/lib/site.ts:1` → `SITE_URL = "https://tablo.gold"` |
+| `mazane.collector*` | Prefix of every collector logger | e.g. `collector/src/tablo_collector/main.py:67` → `getLogger("mazane.collector")`; same pattern in `ws.py:13`, `pipeline.py:15`, `robots.py:22`, `references/pipeline.py:13`, `content/*.py` |
+| `mazane` | Postgres user/database in production | `compose.prod.yml:39,41` → `POSTGRES_USER:-mazane`, `POSTGRES_DB:-mazane` |
 
 | | |
 |---|---|
-| **اثر عملی** | این پراکندگی فقط زیبایی‌شناختی نیست — قبلاً واقعاً باعث خرابی شده. کامنت `deploy.sh:89-93` یک حادثه‌ی مستند را ثبت می‌کند: در دیپلویِ تغییر نام (۲۰۲۶-۰۸-۱۰) چون دایرکتوری اجرا روی سرور با دایرکتوری ساخت هم‌گام نبود، compose هنوز متغیرهای `MAZANE_*` قدیمی می‌خواست و با پیام «required variable MAZANE_REVALIDATE_TOKEN is missing» متوقف شد. باقی‌ماندن نام `mazane` در لاگر/دیتابیس/ریموت یعنی خطای مشابه (خواندن لاگ اشتباه، اتصال به دیتابیس اشتباه توسط عضو تازه‌ی تیم) هنوز محتمل است — و همان نام کهنه دقیقاً سرچشمه‌ی یک باگ امنیتی مشابه در دروازه‌ی گرپ CI بود که در ۲۰۲۶-۰۸-۱۳ رفع شد (بالای این سند). |
-| **پیشنهاد رفع** | یا نام‌گذاری‌ها عمداً `mazane` بمانند (میراث زیرساخت، تغییرش پرریسک/کم‌ارزش است) و همین در یک سند مرجع (مثلاً همین‌جا) صراحتاً یادداشت شود تا هر جست‌وجوی «کد امنیتی/نام کوکی» چک‌لیستی از هر دو نام را ببیند؛ یا در یک پاس هدفمند لاگرها و دیتابیس هم به `tablo` منتقل شوند و migration مربوطه اضافه شود. |
+| **Practical impact** | This scattering isn't merely cosmetic — it has actually caused breakage before. The comment at `deploy.sh:89-93` records a documented incident: during the rename deploy (2026-08-10), because the run directory on the server wasn't in sync with the build directory, compose still wanted the old `MAZANE_*` variables and stopped with "required variable MAZANE_REVALIDATE_TOKEN is missing." The `mazane` name persisting in the logger/database/remote means a similar error (reading the wrong log, a new team member connecting to the wrong database) is still likely — and that same stale name was exactly the source of a similar security bug in the CI grep gate that was fixed on 2026-08-13 (top of this document). |
+| **Suggested fix** | Either the naming deliberately stays `mazane` (infrastructure legacy, changing it is high-risk/low-value) and this is explicitly noted in a reference document (e.g. right here) so that any future "security code/cookie name" search sees a checklist of both names; or, in a targeted pass, the loggers and database are also moved to `tablo` and the corresponding migration is added. |
 
-### ۲.۲ رجیستری سکو در دو زبان دوباره تعریف شده — شدت: متوسط
+### 2.2 Platform registry redefined in two languages — Severity: Medium
 
 | | |
 |---|---|
-| **شاهد** | `collector/src/tablo_collector/platforms.py:7` (`PLATFORMS: tuple[Platform, ...] = (...)`) و `web/src/lib/registry.ts:3` (`REGISTRY_PLATFORMS: readonly ListedPlatform[] = [...]`) هر دو، مستقل از هم، فهرست سکوها (اسلاگ، نام فارسی، `data_policy`، `market_model`، نشانی وب‌سایت و…) را می‌نویسند. تنها پل بین این دو `web/tests/registry-parity.test.ts` است که با `execFileSync("python3", …)` پایتون را با `ast` پارس می‌کند و دو فهرست را مقایسه می‌کند (همان مکانیزم مورد ۱.۳). |
-| **اثر عملی** | تراز بودن دو رجیستری فقط به این بستگی دارد که کسی این یک تست را قبل از merge اجرا کند و سبز نگه دارد؛ هیچ قید ساختاری (تایپ مشترک، تولید خودکار از یک منبع) دو فهرست را به هم قفل نمی‌کند. اضافه‌کردن سکوی پانزدهم فقط در یک طرف — بدون شکستن هیچ typecheck ای — کاملاً ممکن است و فقط با اجرای این suite خاص کشف می‌شود. |
-| **پیشنهاد رفع** | یکی از دو رجیستری منبع تولید شود (مثلاً یک اسکریپت build-time که از `platforms.py` یک فایل `registry.generated.ts` بسازد) تا واگرایی از نظر ساختاری غیرممکن شود، نه فقط تست‌محور. |
+| **Evidence** | `collector/src/tablo_collector/platforms.py:7` (`PLATFORMS: tuple[Platform, ...] = (...)`) and `web/src/lib/registry.ts:3` (`REGISTRY_PLATFORMS: readonly ListedPlatform[] = [...]`) each independently write the list of platforms (slug, Persian name, `data_policy`, `market_model`, website URL, etc.). The only bridge between the two is `web/tests/registry-parity.test.ts`, which parses the Python with `ast` via `execFileSync("python3", …)` and compares the two lists (the same mechanism as item 1.3). |
+| **Practical impact** | The two registries staying in sync depends entirely on someone running this one test before merge and keeping it green; no structural constraint (a shared type, generation from one source) locks the two lists together. Adding a fifteenth platform on only one side — without breaking any typecheck — is entirely possible and would only be discovered by running this specific suite. |
+| **Suggested fix** | Make one of the two registries the generation source (e.g. a build-time script that produces a `registry.generated.ts` file from `platforms.py`) so divergence becomes structurally impossible, not just test-guarded. |
 
 ---
 
-## ۳. لایه‌ی ذخیره‌سازی
+## 3. Storage Layer
 
-### ۳.۱ `PostgresStore.save_instruments`/`save_chart_config` متد no-op اند — شدت: متوسط
+### 3.1 `PostgresStore.save_instruments`/`save_chart_config` are no-op methods — Severity: Medium
 
 | | |
 |---|---|
-| **شاهد** | `collector/src/tablo_collector/store/postgres_store.py:271-275`: `save_instruments` فقط `pass` دارد و `get_instruments` همیشه `()` برمی‌گرداند. همان الگو در `postgres_store.py:298-302` برای `save_chart_config`/`get_chart_config`. پروتکل `Store` در `collector/src/tablo_collector/store/__init__.py:15-47` هر ۱۱ متد را به یک شکل، بدون هیچ نشانه‌ای که دو تای آن‌ها استثنا هستند، اعلام می‌کند. |
-| **اثر عملی** | در `main.py:133-134` ترتیب `MultiStore(RedisStore(...), PostgresStore(pool))` است؛ چون `MultiStore.save_*` روی همه‌ی storeها پخش می‌شود، این دو نوشتن هر ۲۰/۳۰ ثانیه بی‌صدا به پستگرس می‌رسند و هیچ کاری نمی‌کنند — نه خطا، نه لاگ. اگر روزی کسی بخواهد فهرست دارایی‌ها یا تنظیمات نمودار را از پستگرس (نه ردیس) بخواند، پاسخ همیشه خالی است بدون هیچ سرنخی در کد که چرا. |
-| **پیشنهاد رفع** | حداقل یک کامنت/مستند صریح بالای این دو متد که بگوید «عمدی — این دو داده فقط در ردیس زندگی می‌کنند»، یا اگر نیازی به تاریخچه‌ی پستگرسی این دو نیست، امضای `Store` طوری تفکیک شود (مثلاً پروتکل جدا برای «فقط-ردیس») که پیاده‌سازی no-op اصلاً لازم نباشد. |
+| **Evidence** | `collector/src/tablo_collector/store/postgres_store.py:271-275`: `save_instruments` just has `pass`, and `get_instruments` always returns `()`. Same pattern at `postgres_store.py:298-302` for `save_chart_config`/`get_chart_config`. The `Store` protocol in `collector/src/tablo_collector/store/__init__.py:15-47` declares all 11 methods uniformly, with no indication that two of them are exceptions. |
+| **Practical impact** | In `main.py:133-134` the order is `MultiStore(RedisStore(...), PostgresStore(pool))`; since `MultiStore.save_*` fans out to every store, these two writes silently reach Postgres every 20/30 seconds and do nothing — no error, no log. If someone one day wants to read the instrument list or chart settings from Postgres (not Redis), the answer is always empty, with no clue in the code as to why. |
+| **Suggested fix** | At minimum, an explicit comment/note above these two methods saying "intentional — this data lives in Redis only", or, if no Postgres history is needed for these two, split the `Store` signature (e.g. a separate "Redis-only" protocol) so a no-op implementation isn't needed at all. |
 
 ---
 
-## ۴. فرانت‌اند و کامپوننت‌ها
+## 4. Frontend and Components
 
-### ۴.۱ دو درخت کامپوننت موازی؛ `LegalNotice` تکراری؛ `dashboard-live.tsx` یتیم — شدت: متوسط
-
-| | |
-|---|---|
-| **شاهد** | `web/src/components/` سه شاخه دارد: `tablo/` (۱۴ فایل)، `content/` (۱۱ فایل)، و یک فایل تکی `dashboard-live.tsx` بیرون از هر دو (`ls web/src/components`). فایل `LegalNotice.tsx` در هر دو درخت جدا نوشته شده: `web/src/components/tablo/LegalNotice.tsx:1-21` و `web/src/components/content/LegalNotice.tsx:1-17` — هر دو دقیقاً همان رشته‌ی `MADDE5_WARNING_FA` و همان `data-legal-notice="madde-5"`/`role="note"` را صادر می‌کنند، ولی markup فرق دارد (نسخه‌ی `tablo` یک `<div>` با استایل درون‌خطی روی `--negative`/`--negative-soft`، نسخه‌ی `content` یک `<footer>` با کلاس‌های `border-gold/40 bg-gold-soft/40`). |
-| **اثر عملی** | متن حقوقی هشدار («معاملات طلای برخط...») همین حالا در دو فایل کپی شده؛ اصلاح متن یا افزودن بند تازه باید در هر دو جا هم‌زمان اعمال شود وگرنه صفحه‌ی اصلی و صفحات محتوا (سکو/بلاگ) پیام‌های حقوقی متفاوت نشان می‌دهند — دقیقاً همان چیزی که یک بار قبلاً هم اتفاق افتاده (markup این دو الان از هم جدا افتاده). `dashboard-live.tsx` هم چون بیرون از هر دو دایرکتوری تماتیک است، برای کسی که تازه به کدبیس می‌رسد جای منطقی‌اش روشن نیست. |
-| **پیشنهاد رفع** | یک `LegalNotice` مشترک (با یک پراپ برای تفاوت‌های ظاهری در صورت نیاز) در یک محل — مثلاً `components/shared/` — و import از هر دو درخت. `dashboard-live.tsx` هم یا به یکی از دو درخت منتقل شود یا صراحتاً در یک `components/shared/`/`components/live/` مستقل جا بگیرد تا «بیرون از درخت‌ها» تصادفی به نظر نرسد. |
-
-### ۴.۲ ۳۷ از ۴۵ پریمیتیو `components/ui/` هیچ مصرف‌کننده‌ای بیرون از خودشان ندارند — شدت: پایین
+### 4.1 Two parallel component trees; duplicated `LegalNotice`; orphaned `dashboard-live.tsx` — Severity: Medium
 
 | | |
 |---|---|
-| **شاهد** | `web/src/components/ui/` دقیقاً ۴۵ فایل `.tsx` دارد (`ls components/ui/*.tsx \| wc -l`). گرد کردن این‌که کدام‌ها بیرون از `components/ui` وارد می‌شوند (`grep -rl "components/ui/<name>\""` روی کل `src` منهای خودِ `components/ui`) فقط ۸ مورد را نشان می‌دهد: `badge`، `button`، `card`، `checkbox`، `input`، `label`، `switch`، `textarea` — و هفت‌تای این هشت فقط در `routes/admin/*` مصرف می‌شوند (`input` هم در `components/content/PlatformCalculator.tsx:3`). یعنی ۳۷ فایل باقی‌مانده — از جمله `web/src/components/ui/sidebar.tsx` (۷۴۴ خط، بزرگ‌ترین فایل کل درخت کامپوننت‌ها) — هیچ مصرف‌کننده‌ای بیرون از `components/ui` ندارند. `hooks/use-mobile.tsx` هم تنها از همان `sidebar.tsx:6` وارد می‌شود، پس هر دو عملاً مرده‌اند. |
-| **اثر عملی** | حجم قابل‌توجهی کد shadcn/ui (از جمله بزرگ‌ترین فایل مخزن در این لایه) هیچ مسیر رندری در محصول ندارد؛ نگهداری، بروزرسانی و مرور کد روی آن‌ها زمان می‌برد بدون بازگشت. Tree-shaking در بیلد نهایی احتمالاً این‌ها را حذف می‌کند، پس ریسک باندل نیست — ریسک، نگهداری‌پذیری و گمراه‌کردن مرورگر کد است. |
-| **پیشنهاد رفع** | یا این ۳۷ فایل (و `use-mobile.tsx`) حذف و در صورت نیاز بعدی از shadcn دوباره اضافه شوند، یا اگر نگه‌داشتنشان عمدی است (مثلاً برای توسعه‌ی آینده‌ی پنل مدیریت) یک یادداشت کوتاه در همین سند/README همین را مستند کند. |
+| **Evidence** | `web/src/components/` has three branches: `tablo/` (14 files), `content/` (11 files), and a single standalone file, `dashboard-live.tsx`, outside both (`ls web/src/components`). `LegalNotice.tsx` is written separately in both trees: `web/src/components/tablo/LegalNotice.tsx:1-21` and `web/src/components/content/LegalNotice.tsx:1-17` — both emit exactly the same `MADDE5_WARNING_FA` string and the same `data-legal-notice="madde-5"`/`role="note"`, but the markup differs (the `tablo` version is a `<div>` with inline styling on `--negative`/`--negative-soft`, the `content` version is a `<footer>` with `border-gold/40 bg-gold-soft/40` classes). |
+| **Practical impact** | The legal warning text ("live gold trading...") is already copy-pasted across two files right now; fixing the text or adding a new clause has to be applied in both places at once, otherwise the homepage and content pages (platform/blog) show different legal notices — exactly what has already happened once before (the two files' markup has now drifted apart). Since `dashboard-live.tsx` also sits outside both thematic directories, its logical home isn't clear to someone new to the codebase. |
+| **Suggested fix** | A single shared `LegalNotice` (with a prop for visual differences if needed) in one place — e.g. `components/shared/` — imported from both trees. `dashboard-live.tsx` should either move into one of the two trees or explicitly land in its own `components/shared/`/`components/live/` so that "outside the trees" doesn't look accidental. |
 
-### ۴.۳ پراپ `instrumentNames` در `PlatformPage` بلااستفاده است — شدت: پایین
+### 4.2 37 of 45 `components/ui/` primitives have no consumers outside themselves — Severity: Low
 
 | | |
 |---|---|
-| **شاهد** | `web/src/components/content/PlatformPage.tsx:123,132` پراپ `instrumentNames: Record<string, string>` را destructure می‌کند، ولی در بدنه‌ی JSX کامپوننت (خطوط بعد از تعریف تا پایان فایل) هیچ ارجاعی به آن نیست. |
-| **اثر عملی** | صرفاً یک پراپ مرده؛ چیزی نمی‌شکند، ولی هر خواننده‌ی تازه فرض می‌کند این پراپ جایی مصرف می‌شود و دنبال منطقش می‌گردد. |
-| **پیشنهاد رفع** | یا پراپ و نقطه‌ی صداکردنش حذف شوند، یا اگر قرار بوده نام دارایی در جایی از صفحه نمایش داده شود، آن رندر تکمیل شود. |
+| **Evidence** | `web/src/components/ui/` has exactly 45 `.tsx` files (`ls components/ui/*.tsx \| wc -l`). Tallying which of these are imported outside `components/ui` (`grep -rl "components/ui/<name>\""` over all of `src` minus `components/ui` itself) turns up only 8: `badge`, `button`, `card`, `checkbox`, `input`, `label`, `switch`, `textarea` — and seven of these eight are consumed only in `routes/admin/*` (`input` is also used in `components/content/PlatformCalculator.tsx:3`). That means the remaining 37 files — including `web/src/components/ui/sidebar.tsx` (744 lines, the largest file in the whole component tree) — have no consumers outside `components/ui`. `hooks/use-mobile.tsx` is only imported from that same `sidebar.tsx:6`, so both are effectively dead. |
+| **Practical impact** | A significant volume of shadcn/ui code (including the largest file in the repo at this layer) has no render path in the product; maintaining, updating, and reviewing it takes time with no payoff. Tree-shaking in the final build likely eliminates these, so it's not a bundle risk — the risk is maintainability and misleading anyone browsing the code. |
+| **Suggested fix** | Either delete these 37 files (and `use-mobile.tsx`) and re-add them from shadcn if needed later, or, if keeping them is intentional (e.g. for future admin panel development), a short note in this document/the README should record that. |
+
+### 4.3 The `instrumentNames` prop in `PlatformPage` is unused — Severity: Low
+
+| | |
+|---|---|
+| **Evidence** | `web/src/components/content/PlatformPage.tsx:123,132` destructures the `instrumentNames: Record<string, string>` prop, but there's no reference to it anywhere in the component's JSX body (lines after the definition through the end of the file). |
+| **Practical impact** | Just a dead prop; nothing breaks, but every new reader assumes this prop is consumed somewhere and goes looking for its logic. |
+| **Suggested fix** | Either remove the prop and its call site, or, if the instrument name was meant to be displayed somewhere on the page, finish that render. |
 
 ---
 
-## ۵. امنیت عملیاتی
+## 5. Operational Security
 
-### ۵.۱ rate-limit ورود پنل، سراسری و در حافظه‌ی یک پردازه — شدت: متوسط
+### 5.1 Panel login rate-limit is global and in a single process's memory — Severity: Medium
 
 | | |
 |---|---|
-| **شاهد** | `web/src/lib/server/admin-session.ts:19-20` یک `Map<string, AttemptState>` سطح ماژول (`attemptsByKey`) با یک کلید ثابت (`RATE_LIMIT_KEY = "login"`) نگه می‌دارد. `web/src/lib/admin-auth.ts:69-70` می‌گوید `MAX_LOGIN_ATTEMPTS = 5` و `LOCKOUT_MS = 15 * 60 * 1000`. |
-| **اثر عملی** | چون کلید سراسری است نه به‌ازای IP/کاربر، پنج ورود ناموفق پیاپی از **هر منبعی** — یک ادمین که رمز را اشتباه تایپ می‌کند، یا یک اسکن ساده‌ی بات — کل پنل را برای همه‌ی ادمین‌ها و همه‌ی IPها به مدت ۱۵ دقیقه قفل می‌کند (self-DoS). چون در `Map` درون‌حافظه‌ی همان پردازه‌ی Node است، هر ری‌استارت/دیپلوی وب (که طبق `compose.prod.yml` تنها یک نمونه است، پس مقیاس افقی فعلاً مسئله نیست) شمارنده را صفر می‌کند — یعنی محافظت واقعی در برابر brute-force پایدار (کسی که صبر می‌کند سرویس دوباره بالا بیاید) صفر است. |
-| **پیشنهاد رفع** | کلید rate-limit به IP یا نام‌کاربری متصل شود تا یک کاربر همه را قفل نکند، و شمارنده به یک فروشگاه پایدار بین ری‌استارت‌ها (همان ردیسی که پروژه از قبل دارد) منتقل شود. |
+| **Evidence** | `web/src/lib/server/admin-session.ts:19-20` keeps a module-level `Map<string, AttemptState>` (`attemptsByKey`) with one fixed key (`RATE_LIMIT_KEY = "login"`). `web/src/lib/admin-auth.ts:69-70` sets `MAX_LOGIN_ATTEMPTS = 5` and `LOCKOUT_MS = 15 * 60 * 1000`. |
+| **Practical impact** | Because the key is global rather than per-IP/per-user, five consecutive failed logins from **any source** — an admin mistyping their password, or a simple bot scan — locks the entire panel for all admins and all IPs for 15 minutes (self-DoS). Because it's an in-memory `Map` in that same Node process, every web restart/deploy (which, per `compose.prod.yml`, is a single instance, so horizontal scaling isn't a concern for now) resets the counter to zero — meaning real protection against a persistent brute-force attacker (one who waits for the service to come back up) is zero. |
+| **Suggested fix** | Tie the rate-limit key to IP or username so one user can't lock out everyone, and move the counter to a store that persists across restarts (the same Redis this project already has). |
 
 ---
 
-## ۶. بهداشت مخزن
+## 6. Repo Hygiene
 
-### ۶.۱ کل کامنت‌های توضیحی کد در working tree حذف شده‌اند (کامیت‌نشده) — شدت: متوسط
+### 6.1 All explanatory code comments removed in the working tree (uncommitted) — Severity: Medium
 
 | | |
 |---|---|
-| **شاهد** | `git status --short` در حال حاضر ۲۲۸ خط نشان می‌دهد (۲۲۵ فایل ردیابی‌شده‌ی تغییریافته + ۳ مسیر تازه‌ی ردیابی‌نشده: `CLAUDE.md`، `README.md`، `docs/`)؛ `git diff HEAD --stat` برای همان ۲۲۵ فایل ردیابی‌شده مجموع `397 insertions(+), 6796 deletions(-)` را گزارش می‌دهد. برای نمونه، `git show HEAD:collector/src/tablo_collector/main.py` ۳۸۴ خط دارد و شامل کامنت‌های توضیحی چندخطی (مثلاً توضیح «هفت تسک موازی» در ابتدای فایل)، ولی نسخه‌ی فعلی روی دیسک (`collector/src/tablo_collector/main.py`) ۲۸۱ خط دارد و صفر خط با `#` شروع‌شونده (`grep -c "^\s*#"` → ۰). این تغییر هنوز کامیت نشده — یعنی نسخه‌ی کامیت‌شده‌ی فعلی (`HEAD`، نه لزوماً `HEAD~1`) کامنت‌ها را دارد و با `git show HEAD:<path>` قابل بازیابی است. تنها کامنت‌هایی که در دیسک باقی مانده‌اند نشانگرهای `⚠️` هستند. |
-| **اثر عملی** | تا وقتی این وضعیت کامیت نشود چیزی گم نیست — تاریخچه‌ی «چرا»ها هنوز در `git show HEAD:<path>` در دسترس است. اما هر خواننده‌ای که فقط فایل‌های روی دیسک را بخواند (نه گیت) هیچ دلیل طراحی‌ای غیر از منطق خام کد نمی‌بیند، و اگر این تغییرات یک‌روز با `git add -A && git commit` یا مشابه آن ثبت شوند، این حجم از مستندسازی درون‌کد به‌طور دائمی از HEAD جاری حذف می‌شود (هرچند در تاریخچه باقی می‌ماند). |
-| **پیشنهاد رفع** | پیش از هر کامیت روی این working tree، یا کامنت‌های «چرا» (نه توضیح بدیهیِ «چه») به‌صورت انتخابی برگردانده شوند، یا اگر حذف عمدی و نهایی است، همین تصمیم در پیام کامیت مربوطه صریح ثبت شود تا در تاریخچه گم نشود. |
+| **Evidence** | `git status --short` currently shows 228 lines (225 modified tracked files + 3 newly untracked paths: `CLAUDE.md`, `README.md`, `docs/`); `git diff HEAD --stat` reports a total of `397 insertions(+), 6796 deletions(-)` for those same 225 tracked files. For example, `git show HEAD:collector/src/tablo_collector/main.py` has 384 lines and includes multi-line explanatory comments (e.g. the "seven parallel tasks" explanation at the top of the file), but the current on-disk version (`collector/src/tablo_collector/main.py`) has 281 lines and zero lines starting with `#` (`grep -c "^\s*#"` → 0). This change hasn't been committed yet — meaning the current committed version (`HEAD`, not necessarily `HEAD~1`) still has the comments and they're recoverable via `git show HEAD:<path>`. The only comments remaining on disk are `⚠️` markers. |
+| **Practical impact** | As long as this state isn't committed, nothing is lost — the history of "whys" is still available via `git show HEAD:<path>`. But any reader who only reads the on-disk files (not git) sees no design rationale beyond the raw code logic, and if these changes are ever recorded with `git add -A && git commit` or similar, this volume of in-code documentation is permanently removed from the current HEAD (though it remains in history). |
+| **Suggested fix** | Before any commit on this working tree, either selectively restore the "why" comments (not the obvious "what" explanations), or, if the removal is intentional and final, record that decision explicitly in the corresponding commit message so it isn't lost in history. |
 
-### ۶.۲ سه فایل بزرگ در مخزن — شدت: پایین
+### 6.2 Three large files in the repo — Severity: Low
 
-| فایل | خط | یادداشت |
+| File | Lines | Note |
 |---|---|---|
-| `web/src/components/ui/sidebar.tsx` | ۷۴۴ | همان‌طور که در ۴.۲ آمد، این فایل هم بزرگ‌ترین است هم کاملاً مرده |
-| `collector/src/tablo_collector/content/generator.py` | ۴۷۶ | زنده و پرمصرف؛ شامل هر پنج `TOPIC_BUILDER` (مقایسه‌ی کارمزد، حداقل سفارش و…)، پرامپت‌سازها و کلاینت Gemini در یک فایل |
-| `collector/src/tablo_collector/store/postgres_store.py` | ۴۵۰ | زنده؛ هم `Store` و هم `RetentionStore` را در یک کلاس (`PostgresStore`) پیاده می‌کند |
+| `web/src/components/ui/sidebar.tsx` | 744 | As noted in 4.2, this file is both the largest and completely dead |
+| `collector/src/tablo_collector/content/generator.py` | 476 | Live and heavily used; contains all five `TOPIC_BUILDER`s (fee comparison, minimum order, etc.), prompt builders, and the Gemini client in one file |
+| `collector/src/tablo_collector/store/postgres_store.py` | 450 | Live; implements both `Store` and `RetentionStore` in a single class (`PostgresStore`) |
 
 | | |
 |---|---|
-| **اثر عملی** | فقط نگهداری‌پذیری؛ چیزی در تست‌ها یا CI روی این‌ها گیر نمی‌کند. `generator.py` و `postgres_store.py` هرکدام چند مسئولیت (پرامپت‌سازی + تولید محتوا + CLI؛ یا CRUD قیمت + retention + تنظیمات) را در یک فایل جمع کرده‌اند. |
-| **پیشنهاد رفع** | `sidebar.tsx` طبق ۴.۲ حذف شود. `generator.py` می‌تواند `TOPIC_BUILDERS` را به ماژول جدا ببرد؛ `postgres_store.py` می‌تواند بخش `RetentionStore` را به فایلی مجزا (مثلاً `postgres_retention.py`) منتقل کند چون پروتکل‌هایش هم از قبل جدا تعریف شده‌اند (`Store` در برابر `RetentionStore`). |
+| **Practical impact** | Maintainability only; nothing in tests or CI trips over these. `generator.py` and `postgres_store.py` each combine several responsibilities (prompt building + content generation + CLI; or price CRUD + retention + settings) in one file. |
+| **Suggested fix** | `sidebar.tsx` should be removed per 4.2. `generator.py` could move `TOPIC_BUILDERS` into a separate module; `postgres_store.py` could move the `RetentionStore` portion into its own file (e.g. `postgres_retention.py`), since its protocols are already defined separately (`Store` vs. `RetentionStore`). |
 
-### ۶.۳ `collector-dev.log` حدود ۶۰۰ کیلوبایت در ریشه‌ی مخزن — شدت: پایین
-
-| | |
-|---|---|
-| **شاهد** | `ls -la collector-dev.log` → حدود ۶۰۵ کیلوبایت. الگوی `*.log` در `.gitignore:19` وجود دارد، پس فایل هرگز کامیت نشده و ردیابی نمی‌شود؛ فقط روی دیسک محلی جا خوش کرده. |
-| **اثر عملی** | هیچ ریسک نشت به مخزن نیست (gitignore درست کار می‌کند)، صرفاً یک فایل لاگ فراموش‌شده‌ی محلی است که فضای دیسک workspace را می‌گیرد. |
-| **پیشنهاد رفع** | حذف دستی محلی؛ ارزش افزودن گردش‌کار خودکار برای پاک‌سازی‌اش را ندارد چون از قبل gitignore شده. |
-
-### ۶.۴ `collector/.venv` کهنه است — شدت: پایین
+### 6.3 `collector-dev.log`, about 600 KB, at the repo root — Severity: Low
 
 | | |
 |---|---|
-| **شاهد** | `collector/.venv/pyvenv.cfg` → `command = .../python3.14 -m venv /Users/mahdiyar/w/mazane.online/collector/.venv` — مسیر ساخت هنوز به نام قدیمی مخزن (`mazane.online`) و نسخه‌ی متفاوت پایتون (۳.۱۴؛ پروژه `>=3.12` می‌خواهد) اشاره می‌کند. اسکریپت‌های نصب‌شده در `collector/.venv/bin/` هم هنوز نام‌های قدیمی دارند: `mazane-collector`، `mazane-enqueue`، `mazane-generate`، `mazane-retract` (که در `pyproject.toml` فعلی به‌ترتیب `tablo-collector`/`tablo-enqueue`/`tablo-generate`/`tablo-retract` نام‌گذاری شده‌اند). |
-| **اثر عملی** | فعال‌سازی این venv و اجرای مستقیم پایتونش گمراه‌کننده است چون بسته‌ی نصب‌شده با کد فعلی هم‌تراز نیست؛ به همین دلیل هم CI (`.github/workflows/ci.yml` جاب `collector`) و هم `CLAUDE.md` مسیر اصلی را `pip install -e ".[dev]"` سپس `pytest` (نه این venv) اعلام می‌کنند — `PYTHONPATH=src pytest` فقط به‌عنوان مسیر جایگزین در صورت شکست نصب مستند شده. کاری در CI نمی‌شکند چون CI اصلاً این دایرکتوری را نمی‌بیند. |
-| **پیشنهاد رفع** | حذف `collector/.venv` و بازسازی با `python3.12 -m venv .venv && pip install -e ".[dev]"`، یا مستندسازی صریح که توسعه‌دهنده‌ها باید همیشه `PYTHONPATH=src` استفاده کنند و venv را نادیده بگیرند. |
+| **Evidence** | `ls -la collector-dev.log` → about 605 KB. The `*.log` pattern is in `.gitignore:19`, so the file has never been committed and isn't tracked; it's just sitting on local disk. |
+| **Practical impact** | There's no risk of it leaking into the repo (gitignore works correctly); it's simply a forgotten local log file taking up workspace disk space. |
+| **Suggested fix** | Delete it manually, locally; not worth adding an automated cleanup workflow since it's already gitignored. |
+
+### 6.4 `collector/.venv` is outdated — Severity: Low
+
+| | |
+|---|---|
+| **Evidence** | `collector/.venv/pyvenv.cfg` → `command = .../python3.14 -m venv /Users/mahdiyar/w/mazane.online/collector/.venv` — the build path still points to the repo's old name (`mazane.online`) and a different Python version (3.14; the project requires `>=3.12`). The scripts installed in `collector/.venv/bin/` also still carry the old names: `mazane-collector`, `mazane-enqueue`, `mazane-generate`, `mazane-retract` (which in the current `pyproject.toml` are named `tablo-collector`/`tablo-enqueue`/`tablo-generate`/`tablo-retract` respectively). |
+| **Practical impact** | Activating this venv and running its Python directly is misleading because the installed package isn't in sync with the current code; that's exactly why both CI (`.github/workflows/ci.yml`, `collector` job) and `CLAUDE.md` declare the primary path as `pip install -e ".[dev]"` followed by `pytest` (not this venv) — `PYTHONPATH=src pytest` is documented only as a fallback path if the install fails. Nothing breaks in CI because CI never sees this directory at all. |
+| **Suggested fix** | Delete `collector/.venv` and rebuild it with `python3.12 -m venv .venv && pip install -e ".[dev]"`, or explicitly document that developers should always use `PYTHONPATH=src` and ignore the venv. |

@@ -20,15 +20,15 @@ class HamrahgoldAdapter:
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         data = (payload or {}).get("data") if isinstance(payload, dict) else None
         if not isinstance(data, dict):
-            raise AdapterError("همراه‌گلد: بدنه‌ی data در payload پیدا نشد")
+            raise AdapterError("Hamrahgold: data body not found in payload")
 
         raw_price = data.get("current")
         if raw_price is None:
-            raise AdapterError("همراه‌گلد: قیمت data.current در payload تهی است")
+            raise AdapterError("Hamrahgold: data.current price is empty in payload")
         try:
             raw_mid = Decimal(str(raw_price))
         except InvalidOperation as exc:
-            raise AdapterError(f"همراه‌گلد: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Hamrahgold: invalid payload: {exc!r}") from exc
 
         return unknown_fee_snapshot(
             slug=self.slug,

@@ -3,10 +3,11 @@ import { isBuyOpen, priceToman, type Row } from "./rows";
 import { SITE_URL } from "./site";
 
 /**
- * ⚠️ پیش‌تر `alternateName` غلط املایی «مضنه آنلاین» بود تا جست‌وجوی آن املا
- * هم به برند برسد. با رفتن «مظنه» از نام برند، آن نگاشت موضوعش را از دست
- * داد — ولی صفحه‌ی `/mazane-chist` هنوز هر دو املا را هدف می‌گیرد، چون آنجا
- * «مظنه» واژه‌ی بازار است نه نام ما.
+ * ⚠️ `alternateName` used to be the misspelling «مضنه آنلاین», so a search
+ * for that spelling would also reach the brand. Once «مظنه» left the brand
+ * name, that mapping lost its purpose — but the `/mazane-chist` page still
+ * targets both spellings, because there «مظنه» is a market term, not our
+ * name.
  */
 export const BRAND_FA = "تابلو";
 export const BRAND_ALTERNATE_FA = "تابلو گلد";
@@ -74,17 +75,19 @@ export function platformWebPageJsonLd(platform: ListedPlatform): string {
 }
 
 /**
- * ⚠️ `lowPrice`/`highPrice` از **قیمت** می‌آیند، نه از قیمت مؤثر (تصمیم
- * مالک ۲۰۲۶-۰۸-۱۰). دلیلش قاعده‌ی همخوانی گوگل است: داده‌ی ساخت‌یافته باید
- * نماینده‌ی محتوای **قابل مشاهده‌ی** صفحه باشد، و از وقتی قیمت مؤثر از
- * رابط کاربری حذف شد، فرستادنش به گوگل یعنی عددی که در HTML صفحه نیست.
- * پیامدش را بپذیرید: این بازه پیش-از-کارمزد است و از هزینه‌ی واقعی خرید
- * پایین‌تر — همان چیزی که ستون‌های کارمزدِ کنارش توضیح می‌دهند.
- * ⚠️ فقط سکوهایی که **خریدشان باز است** شمرده می‌شوند (`isBuyOpen`).
- * `AggregateOffer` ادعای «می‌توانی همین حالا بخری» است؛ سکوی خریدبسته روی
- * خودِ صفحه نشان «خرید بسته است» می‌گیرد و کارت «بهترین خرید» هم نامزدش
- * نمی‌کند، پس اگر در این بازه بماند، داده‌ی ساخت‌یافته پیشنهادی را به گوگل
- * تبلیغ می‌کند که در دسترس نیست و با متن همان صفحه در تناقض است.
+ * ⚠️ `lowPrice`/`highPrice` come from **price**, not the effective price
+ * (owner's decision, 2026-08-10). The reason is Google's consistency rule:
+ * structured data must represent the page's **visible** content, and since
+ * the effective price was removed from the UI, sending it to Google would
+ * mean a number that isn't in the page's HTML. Accept the consequence: this
+ * range is pre-fee and lower than the real cost of buying — exactly what
+ * the fee columns beside it explain.
+ * ⚠️ Only platforms whose **buy is open** are counted (`isBuyOpen`).
+ * `AggregateOffer` is a claim that "you can buy right now"; a buy-closed
+ * platform shows "buy is closed" on its own page and isn't a candidate for
+ * the "best buy" card either, so if it stayed in this range, the structured
+ * data would be advertising an offer to Google that isn't available and
+ * contradicts that very page's own text.
  */
 export function assetProductJsonLd(listing: InstrumentListing, knownRows: Row[]): string | null {
   if (listing.currency !== "TOMAN") return null;

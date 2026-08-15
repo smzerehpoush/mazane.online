@@ -1,149 +1,163 @@
-# واژه‌نامه‌ی دامنه
+# Domain Glossary
 
-این سند واژگان مشترک بقیه‌ی داک‌هاست. هر ورودی مشتق از کد است: `models.py`،
-`pricing.py`، `adapters/common.py` و migrations. برای هر اصطلاح سه چیز آمده:
-تعریف، نمایندگی‌اش در کد، و چیزی که *نیست* — چون بیشترِ سوءتفاهم‌ها از فرض چیزی
-شبیه یک الگوی آشنا (BUY/SELL دوسویه، «قیمت مؤثر» شامل کارمزد، …) می‌آید که این
-کدبیس عمداً پیاده نکرده.
+This document is the shared vocabulary for the rest of the docs. Every entry
+is derived from code: `models.py`, `pricing.py`, `adapters/common.py`, and the
+migrations. For each term, three things are given: its definition, its
+representation in code, and what it *isn't* — because most misunderstandings
+come from assuming something resembles a familiar pattern (two-sided
+BUY/SELL, an "effective price" that includes fees, …) that this codebase
+deliberately does not implement.
 
-همه‌ی اعضای enum از `collector/src/tablo_collector/models.py:10-37` هستند مگر
-جای دیگری ذکر شود.
+All enum members are from `collector/src/tablo_collector/models.py:10-37`
+unless stated otherwise.
 
-## نقشه‌ی سریع
+## Quick Map
 
-| اصطلاح | نوع در کد | اعضا/شکل |
+| Term | Type in code | Members/shape |
 |---|---|---|
-| Side | `StrEnum`, یک عضو | `PRICE` |
-| Instrument | `StrEnum`, چهار عضو | `GOLD_18K`، `ABSHODE_MITHQAL`، `SILVER_990`، `XAU` |
-| FeeSource | `StrEnum`, چهار عضو | `API`، `MANUAL`، `IMPLIED`، `UNKNOWN` |
-| DataPolicy | `StrEnum`, چهار عضو | `ALLOWED`، `RESTRICTED`، `PERMISSION_PENDING`، `BLOCKED` |
-| MarketModel | `StrEnum`, دو عضو | `OTC`، `ORDER_BOOK` |
-| Platform | `BaseModel` (frozen) | فراداده‌ی ثابت هر سکو — رجیستری در `platforms.py` |
-| Quote | `BaseModel` (frozen) | یک سطر قیمت خام برای یک `(platform_slug, instrument)` |
-| PlatformTerms | `BaseModel` (frozen) | کارمزد و وضعیت باز/بسته‌ی همان نوبت |
-| PlatformSnapshot | `BaseModel` (frozen) | `Quote`های یک سکو در یک نوبت + `terms` + پرچم `suppressed` |
+| Side | `StrEnum`, one member | `PRICE` |
+| Instrument | `StrEnum`, four members | `GOLD_18K`, `ABSHODE_MITHQAL`, `SILVER_990`, `XAU` |
+| FeeSource | `StrEnum`, four members | `API`, `MANUAL`, `IMPLIED`, `UNKNOWN` |
+| DataPolicy | `StrEnum`, four members | `ALLOWED`, `RESTRICTED`, `PERMISSION_PENDING`, `BLOCKED` |
+| MarketModel | `StrEnum`, two members | `OTC`, `ORDER_BOOK` |
+| Platform | `BaseModel` (frozen) | Fixed metadata for each platform — registry in `platforms.py` |
+| Quote | `BaseModel` (frozen) | One raw price row for a `(platform_slug, instrument)` |
+| PlatformTerms | `BaseModel` (frozen) | The fee and open/closed status for that same round |
+| PlatformSnapshot | `BaseModel` (frozen) | A platform's `Quote`s for one round + `terms` + the `suppressed` flag |
 
 ---
 
-## «قیمت» و اینکه چرا Side فقط یک عضو دارد
+## "Price" and why Side has only one member
 
-`Side` در `models.py:10-11` این‌طور تعریف شده:
+`Side` is defined in `models.py:10-11` as follows:
 
 ```python
 class Side(StrEnum):
     PRICE = "PRICE"
 ```
 
-یک عضو. این تک‌عضوی‌بودن یک تصمیم است، نه سادگی تصادفی — و مهاجرت
-`017_one_price_per_platform.sql` مستقیماً همین تصمیم را اجرا می‌کند. پیش از آن
-(بند «۳ تغییر نام سمتِ باقی‌مانده» در همان فایل) این ستون سه/چهار مقدار داشت:
-در `001_init.sql` قید `check (side in ('BUY','SELL','MID'))`، در `013_mean_side.sql`
-یک عضو `MEAN` هم اضافه شد (برای اینکه «قیمت مرجع سکو» سطر ماندگار جدول شود، نه
-فقط یک computed field). مهاجرت ۰۱۷ همه‌ی سطرهای `BUY`/`SELL`/`MEAN` را حذف کرد،
-`MID` را به `PRICE` تغییر نام داد، و قید نهایی را تک‌مقداری کرد:
-`check (side = 'PRICE')` — هم روی `quotes`، هم `reference_quotes`، هم
-`hourly_rollups`.
+One member. Being single-membered is a deliberate decision, not accidental
+simplicity — and the `017_one_price_per_platform.sql` migration directly
+enforces exactly this decision. Before that (see item "3. Rename the
+remaining side" in that same file), this column had three/four values:
+`001_init.sql` had the constraint `check (side in ('BUY','SELL','MID'))`, and
+`013_mean_side.sql` added a `MEAN` member as well (so that the "platform's
+reference price" would become a persisted table row, rather than just a
+computed field). Migration 017 deleted every `BUY`/`SELL`/`MEAN` row, renamed
+`MID` to `PRICE`, and made the final constraint single-valued:
+`check (side = 'PRICE')` — on `quotes`, on `reference_quotes`, and on
+`hourly_rollups` alike.
 
-**«قیمت» در این کدبیس یعنی**: یک عدد به‌ازای هر `(platform_slug, instrument)` در
-هر نوبت گردآوری، **پیش از هر کارمزد**. `pricing.py` این را با یک کامنت هشدار در
-ابتدای فایل (`pricing.py:5`) تثبیت می‌کند:
+**"Price" in this codebase means**: one number per `(platform_slug,
+instrument)` for each collection round, **before any fee**. `pricing.py`
+pins this down with a warning comment at the top of the file
+(`pricing.py:5`):
 
-> `⚠️ کارمزد هرگز در قیمت ضرب نمی‌شود — «قیمت مؤثر» در کد وجود ندارد.`
+> `⚠️ Fees are never multiplied into the price — there is no "effective price" in the code.`
 
-هیچ‌جای کد چیزی مثل `mid × (1 ± fee)` وجود ندارد؛ کارمزد در `PlatformTerms` جدا
-می‌ماند.
+Nowhere in the code is there anything like `mid × (1 ± fee)`; the fee stays
+separate, in `PlatformTerms`.
 
-«قیمت» **چه چیزی نیست**:
-- نیست میانگین دو طرف *بین‌سکویی* — `mean_of_pair` فقط ask/bid همان یک سکو در
-  همان نوبت را میانگین می‌گیرد (کامنت هشدار `pricing.py:30`).
-- نیست چیزی که کارمزد در آن ضرب شده باشد.
-- نیست چیزی با سمت خرید/فروش جدا در لایه‌ی نهایی — حتی سکوهای دوقیمتی (مثل
-  آن‌هایی که `dealer_snapshot` می‌گیرند) به یک عدد `PRICE` تقلیل می‌یابند؛
-  دو طرف خامشان فقط برای محاسبه‌ی `implied_side_fee` مصرف می‌شود و خودشان
-  هرگز ذخیره نمی‌شوند.
-- ستون `side` با اینکه تک‌مقداری است حذف نشده — چون در `hourly_rollups` جزوِ
-  کلید طبیعی `unique (kind, source_slug, instrument, side, hour_start)` است
-  (توضیح صریح در `017_one_price_per_platform.sql`، بخش ۴).
+**What "price" is not**:
+- It is not the average of the two sides *across platforms* — `mean_of_pair`
+  only averages the ask/bid of that same single platform in that same round
+  (warning comment at `pricing.py:30`).
+- It is not something that has had a fee multiplied into it.
+- It is not something with separate buy/sell sides at the final layer — even
+  two-sided platforms (like the ones that go through `dealer_snapshot`) are
+  reduced to a single `PRICE` number; their raw two sides are only consumed
+  to compute `implied_side_fee` and are never themselves stored.
+- The `side` column, despite being single-valued, was not dropped — because
+  in `hourly_rollups` it is part of the natural key
+  `unique (kind, source_slug, instrument, side, hour_start)` (explained
+  explicitly in `017_one_price_per_platform.sql`, section 4).
 
 ---
 
 ## Instrument
 
-چهار عضو در `models.py:14-18`، با متادیتای نمایشی در `instruments.py:24-57`:
+Four members in `models.py:14-18`, with display metadata in
+`instruments.py:24-57`:
 
-| عضو Instrument | اسلاگ | نام فارسی | واحد | عیار/عیارخلوص | ارز |
+| Instrument member | Slug | Persian name | Unit | Karat/purity | Currency |
 |---|---|---|---|---|---|
 | `GOLD_18K` | `tala-18` | طلای ۱۸ عیار | گرم | `750` | TOMAN |
 | `ABSHODE_MITHQAL` | `abshode` | طلای آب‌شده (مظنه) | مثقال | — | TOMAN |
 | `SILVER_990` | `noghre` | نقره‌ی ۹۹۰ | گرم | `990` | TOMAN |
 | `XAU` | `ons-jahani` | انس جهانی طلا | اونس | — | USD |
 
-**چه چیزی نیست**: enum چهار عضو دارد، ولی خط تولید داده فقط یکی را پر می‌کند.
-هر چهارده آداپتور (`grep instruments *.py` روی `adapters/`) دقیقاً همین سطر را
-تکرار می‌کنند:
+**What this is not**: the enum has four members, but the data production
+pipeline only populates one of them. All fourteen adapters
+(`grep instruments *.py` under `adapters/`) repeat exactly this same line:
 
 ```python
 instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
 ```
 
-یعنی سه عضو دیگر (`ABSHODE_MITHQAL`، `SILVER_990`، `XAU`) امروز در enum، در
-`InstrumentInfo`، و در جدول‌های SQL هست، ولی هیچ آداپتوری قیمتی برایشان تولید
-نمی‌کند. دروازه‌ی انتشار (`PUBLISH_GATE_MIN_PLATFORMS = 2` در
-`instruments.py:10`) هم همین را قفل می‌کند: `published` یک دارایی وقتی True
-می‌شود که دست‌کم دو سکوی `is_listed` آن را بدهند؛ چون فقط `GOLD_18K` قیمت
-دارد، فقط `tala-18` می‌تواند `published=True` بگیرد.
+In other words, the other three members (`ABSHODE_MITHQAL`, `SILVER_990`,
+`XAU`) exist today in the enum, in `InstrumentInfo`, and in the SQL tables,
+but no adapter produces a price for them. The publish gate
+(`PUBLISH_GATE_MIN_PLATFORMS = 2` in `instruments.py:10`) locks the same
+thing in place: an asset's `published` becomes True only when at least two
+`is_listed` platforms supply it; since only `GOLD_18K` has a price, only
+`tala-18` can ever get `published=True`.
 
 ---
 
-## FeeSource و تفاوت «صفر» با «تهی»
+## FeeSource, and the difference between "zero" and "null"
 
-چهار عضو در `models.py:21-25`: `API`، `MANUAL`، `IMPLIED`، `UNKNOWN`.
-`adapters/common.py` دقیقاً چهار سازنده‌ی اسنپ‌شات دارد و هر آداپتور یکی از
-آن‌ها را صدا می‌زند؛ سازنده fee_source را تعیین می‌کند، نه آداپتور دستی:
+Four members in `models.py:21-25`: `API`, `MANUAL`, `IMPLIED`, `UNKNOWN`.
+`adapters/common.py` has exactly four snapshot constructors, and every
+adapter calls one of them; the constructor determines `fee_source` — it isn't
+set by the adapter by hand:
 
-| سازنده | fee_source | کارمزد خرید/فروش | سکوها |
+| Constructor | fee_source | Buy/sell fee | Platforms |
 |---|---|---|---|
-| `known_fee_snapshot` | `API` یا `MANUAL` (پارامتری) | عدد واقعی، از payload یا ثابت دستی | wallgold (API), talasea (API), goldika (API), milli (MANUAL) |
-| `dealer_snapshot` | `IMPLIED` | برآوردی: `implied_side_fee = (ask-bid)/(ask+bid)` | technogold, tlyn, ecogold, zarafza, baazar |
-| `order_book_snapshot` | `MANUAL` | **صفر واقعی** (`Decimal("0")`) | daric (تنها مصرف‌کننده) |
-| `unknown_fee_snapshot` | `UNKNOWN` | **تهی** (`None`) برای هر سه ستون | melligold, digikala, hamrahgold, invi |
+| `known_fee_snapshot` | `API` or `MANUAL` (parameterized) | Real number, from the payload or a manual constant | wallgold (API), talasea (API), goldika (API), milli (MANUAL) |
+| `dealer_snapshot` | `IMPLIED` | Estimated: `implied_side_fee = (ask-bid)/(ask+bid)` | technogold, tlyn, ecogold, zarafza, baazar |
+| `order_book_snapshot` | `MANUAL` | **A real zero** (`Decimal("0")`) | daric (the only consumer) |
+| `unknown_fee_snapshot` | `UNKNOWN` | **Null** (`None`) for all three columns | melligold, digikala, hamrahgold, invi |
 
-نکته‌ی محوری، عیناً از کامنت پایانی مهاجرت `017_one_price_per_platform.sql`:
+The central point, quoted verbatim from the closing comment of the
+`017_one_price_per_platform.sql` migration:
 
-> «توجه: صفر با تهی یکی نیست — داریک ۰٫۰ می‌گیرد (می‌دانیم کارمزدی نیست)،
-> ملی‌گلد تهی (نمی‌دانیم).»
+> "Note: zero and null are not the same thing — daric gets 0.0 (we know there's no fee), melligold gets null (we don't know)."
 
-یعنی `MANUAL` با کارمزد صفر (داریک — دفتر سفارش، کارمزد پلتفرم صفر است، ما
-می‌دانیم) از نظر داده کاملاً متفاوت است با `UNKNOWN` (ملی‌گلد و بقیه — سکو
-کارمزدش را هیچ‌جا اعلام نکرده، پس بجای حدس زدن، صریحاً تهی می‌گذاریم). قرارداد
-این دو‌تایی («یا هر سه پر، یا هر سه تهی») در دو لایه‌ی مستقل قفل شده:
+In other words, `MANUAL` with a zero fee (daric — an order book, the
+platform fee is zero, and we know it) is, data-wise, completely different
+from `UNKNOWN` (melligold and the rest — the platform has never disclosed
+its fee anywhere, so instead of guessing, we explicitly leave it null). This
+all-or-nothing contract ("either all three are populated, or all three are
+null") is locked in at two independent layers:
 
-- در پایتون: `PlatformTerms._fees_match_source` (`models.py:86-94`) —
-  `model_validator` که اگر `fee_source is UNKNOWN` و یکی از سه فیلد کارمزد
-  عدد داشته باشد `ValueError` می‌اندازد، و برعکس.
-- در SQL: `platform_terms_unknown_fees_null_check` (تعریف‌شده در
-  `003_unknown_fee_source.sql`؛ مهاجرت ۰۱۷ این قید را دست‌نخورده می‌گذارد و فقط
-  `platform_terms_fee_source_check` را برای افزودن `IMPLIED` بازتعریف می‌کند)
-  — همان قاعده به‌عنوان `CHECK CONSTRAINT`.
+- In Python: `PlatformTerms._fees_match_source` (`models.py:86-94`) — a
+  `model_validator` that raises `ValueError` if `fee_source is UNKNOWN` and
+  any of the three fee fields has a number, and vice versa.
+- In SQL: `platform_terms_unknown_fees_null_check` (defined in
+  `003_unknown_fee_source.sql`; migration 017 leaves this constraint
+  untouched and only redefines `platform_terms_fee_source_check` to add
+  `IMPLIED`) — the same rule, as a `CHECK CONSTRAINT`.
 
-یک قفل سوم، زودتر و عمومی‌تر، در خودِ `_snapshot()` (`adapters/common.py:60-61`)
-است: اگر فقط یکی از `buy_fee`/`sell_fee` تهی باشد (نه هر دو، نه هیچ‌کدام)
-`ValueError` می‌اندازد — «کارمزد یک‌سمته یعنی باگ».
+A third lock, earlier and more general, lives in `_snapshot()` itself
+(`adapters/common.py:60-61`): if only one of `buy_fee`/`sell_fee` is null
+(not both, not neither) it raises `ValueError` — "a one-sided fee means a
+bug."
 
-`IMPLIED` تنها عضوی است که مهاجرت ۰۱۷ به enum/CHECK اضافه کرده
-(`platform_terms_fee_source_check` را از سه‌مقداری `(API, MANUAL, UNKNOWN)` به
-چهارمقداری کرد). دلیل مستند در همان فایل: پیش از این پنج سکوی
-`dealer_snapshot` هم زیر برچسب فرضیِ نزدیک‌تر (عملاً بدون برچسب مجزا) می‌رفتند؛
-حالا صریح است که این عدد را *ما* از نصفِ اسپرد برآورد کرده‌ایم، نه سکو اعلام
-کرده.
+`IMPLIED` is the only member that migration 017 added to the enum/CHECK (it
+turned `platform_terms_fee_source_check` from a three-valued
+`(API, MANUAL, UNKNOWN)` constraint into a four-valued one). The documented
+reason, in the same file: before this, the five `dealer_snapshot` platforms
+were lumped under whichever label was closest (in practice, with no separate
+label of their own); now it's explicit that *we* estimated this number from
+half the spread, rather than the platform having declared it.
 
 ---
 
-## DataPolicy و اینکه کدام سکو عمومی است
+## DataPolicy, and which platform is public
 
-چهار عضو در `models.py:28-32`: `ALLOWED`، `RESTRICTED`، `PERMISSION_PENDING`،
-`BLOCKED`. تنها فیلتر فهرست عمومی همین یک `property` است
-(`models.py:56-58`):
+Four members in `models.py:28-32`: `ALLOWED`, `RESTRICTED`,
+`PERMISSION_PENDING`, `BLOCKED`. The only filter for the public listing is
+this single `property` (`models.py:56-58`):
 
 ```python
 @property
@@ -151,147 +165,160 @@ def is_listed(self) -> bool:
     return self.data_policy == DataPolicy.ALLOWED
 ```
 
-از چهارده سکوی رجیستری `PLATFORMS` (`platforms.py:7-118`)، سیزده‌تا
-`data_policy=ALLOWED` هستند و دقیقاً یکی — **goldika** —
+Of the fourteen platforms in the `PLATFORMS` registry (`platforms.py:7-118`),
+thirteen have `data_policy=ALLOWED`, and exactly one — **goldika** — has
 `data_policy=PERMISSION_PENDING`:
 
-| data_policy | تعداد سکو | معنی عملی |
+| data_policy | Platform count | Practical meaning |
 |---|---|---|
-| `ALLOWED` | ۱۳ | `is_listed=True` — در `tablo:listed`، در فهرست عمومی، `supporting_platform_slugs` |
-| `PERMISSION_PENDING` | ۱ (goldika) | کرال و ذخیره می‌شود، ولی هرگز عمومی لیست نمی‌شود |
-| `RESTRICTED` | ۰ | تعریف‌شده در enum و CHECK دیتابیس، امروز هیچ سکویی آن را ندارد |
-| `BLOCKED` | ۰ | همان — تعریف‌شده، بی‌مصرف در رجیستری فعلی |
+| `ALLOWED` | 13 | `is_listed=True` — in `tablo:listed`, in the public listing, in `supporting_platform_slugs` |
+| `PERMISSION_PENDING` | 1 (goldika) | Crawled and stored, but never listed publicly |
+| `RESTRICTED` | 0 | Defined in the enum and the database CHECK, but no platform has it today |
+| `BLOCKED` | 0 | Same — defined, unused in the current registry |
 
-goldika با این‌همه دور از چشم نیست: آداپتورش در `main.run()` نمونه‌سازی
-می‌شود، snapshot می‌گیرد، در Postgres و Redis (`tablo:current:goldika`) ذخیره
-می‌شود — فقط `tablo:listed` و صفحه‌ی عمومی آن را حذف می‌کنند، و
-`build_listings` هم آن را در `supporting_platform_slugs` نمی‌شمارد چون آن هم
-از `platform.is_listed` فیلتر می‌کند.
+Even so, goldika isn't hidden away: its adapter is instantiated in
+`main.run()` and takes a snapshot, which is stored in both Postgres and Redis
+(`tablo:current:goldika`) — only `tablo:listed` and the public page exclude
+it, and `build_listings` doesn't count it in `supporting_platform_slugs`
+either, since that also filters on `platform.is_listed`.
 
-**چه چیزی نیست**: `DataPolicy` تصمیم حقوقی/مجوز است، نه سیگنال کیفیت داده یا
-کهنگی. سکوی `ALLOWED` هم می‌تواند کهنه یا suppressed باشد — این دو محور کاملاً
-مستقل‌اند.
-
----
-
-## MarketModel و اینکه چرا داریک فرق دارد
-
-دو عضو در `models.py:35-37`: `OTC` (پیش‌فرض) و `ORDER_BOOK`. از چهارده سکو،
-**داریک تنها یکی است** با `market_model=MarketModel.ORDER_BOOK`
-(`platforms.py:75`)؛ سیزده‌تای دیگر پیش‌فرض `OTC` را دارند.
-
-این تفاوت تصادفی نیست — تا لایه‌ی ساخت اسنپ‌شات هم می‌رسد: داریک تنها مصرف‌کننده‌ی
-`order_book_snapshot` است (جدول بالا)، که:
-
-- کارمزد را همیشه **صفر واقعی** با `fee_source=MANUAL` می‌گذارد (نه `API`، چون
-  «صفر بودن کارمزد پلتفرم» را ما تصمیم گرفتیم/می‌دانیم، سکو آن را به این شکل
-  اعلام نکرده).
-- `observed_at` جدا از `fetched_at` می‌پذیرد — داریک یک ثابت
-  `DARIC_FEE_OBSERVED_AT = datetime(2026, 8, 10, tzinfo=UTC)` دارد.
-- تنها سکویی است که در `main.py` یک نگاشت `ws_primary` دارد (WebSocket-اول،
-  REST-جایگزین در قطعی): یعنی مسیر دریافت داده‌اش هم زیرساختی متفاوت است.
-
-معنای دامنه‌ای: `OTC` یعنی سکو خودش یک نرخ اعلام می‌کند (دو طرف یا یک عدد)؛
-`ORDER_BOOK` یعنی قیمت از میانگین بهترین خرید/فروش یک دفتر سفارش زنده می‌آید،
-نه از یک نرخ اعلامی.
-
-**چه چیزی نیست**: `MarketModel` کارمزد را تعیین نمی‌کند به‌طور مستقیم — رابطه‌ی
-`ORDER_BOOK ⇒ MANUAL/صفر` فقط برای داریک، از راه اینکه او تنها مصرف‌کننده‌ی
-`order_book_snapshot` است، نه یک قاعده‌ی عمومی در مدل‌ها.
+**What this is not**: `DataPolicy` is a legal/permissions decision, not a
+signal of data quality or staleness. An `ALLOWED` platform can still be
+stale or suppressed — these two axes are entirely independent.
 
 ---
 
-## «سرکوب» / suppressed
+## MarketModel, and why daric is different
 
-`PlatformSnapshot.suppressed: bool = False` (`models.py:104`) پرچمی است که
-**بعد از** ساخت اسنپ‌شات، در `collect_round` (`pipeline.py:44-77`) روی آن
-گذاشته می‌شود — نه در خودِ آداپتور. منطق:
+Two members in `models.py:35-37`: `OTC` (the default) and `ORDER_BOOK`. Of
+the fourteen platforms, **daric is the only one** with
+`market_model=MarketModel.ORDER_BOOK` (`platforms.py:75`); the other
+thirteen carry the default `OTC`.
 
-1. `median_outliers` (`sanity.py:27-44`) روی همه‌ی اسنپ‌شات‌های موفقِ یک نوبت
-   اجرا می‌شود. اگر تعداد سکوهای قیمت‌دار کمتر از `MIN_SOURCES_FOR_CHECK = 3`
-   باشد، چک اصلاً انجام نمی‌شود (`frozenset()` خالی).
-2. برای هر سکو، میانه‌ی قیمتِ *بقیه*‌ی سکوها گرفته می‌شود (کنارگذاشتن-خود؛
-   میانه‌ی صفر رد می‌شود). اگر `|price - median| / median` از
-   `MEDIAN_DEVIATION_THRESHOLD = Decimal("0.005")` (نیم درصد) بیشتر باشد، آن
-   سکو پرت است.
-3. سکوی پرت با `snapshot.model_copy(update={"suppressed": True})` علامت
-   می‌خورد و همچنان `store.save_snapshot` می‌شود.
+This difference isn't incidental — it reaches all the way down into the
+snapshot-construction layer: daric is the only consumer of
+`order_book_snapshot` (table above), which:
 
-اثر پرچم در لایه‌ی ذخیره‌سازی نامتقارن است — این‌جا «سرکوب» معنای واقعی‌اش را
-نشان می‌دهد:
+- Always sets the fee to **a real zero** with `fee_source=MANUAL` (not
+  `API`, because it's *we* who decided/know the platform fee is zero — the
+  platform itself never announced it this way).
+- Accepts `observed_at` separately from `fetched_at` — daric has a constant
+  `DARIC_FEE_OBSERVED_AT = datetime(2026, 8, 10, tzinfo=UTC)`.
+- Is the only platform with a `ws_primary` entry in `main.py` (WebSocket-first,
+  with REST as a fallback on outage): meaning its data-ingestion path is
+  infrastructurally different too.
 
-| store | رفتار با `suppressed=True` |
+Domain meaning: `OTC` means the platform itself quotes a rate (either
+two-sided or a single number); `ORDER_BOOK` means the price comes from
+averaging the best bid/ask of a live order book, not from a quoted rate.
+
+**What this is not**: `MarketModel` doesn't directly determine the fee — the
+relationship `ORDER_BOOK ⇒ MANUAL/zero` holds only for daric, by virtue of it
+being the sole consumer of `order_book_snapshot`, not as a general rule
+encoded in the models.
+
+---
+
+## "Suppression" / suppressed
+
+`PlatformSnapshot.suppressed: bool = False` (`models.py:104`) is a flag that
+gets set **after** the snapshot is built, in `collect_round`
+(`pipeline.py:44-77`) — not inside the adapter itself. The logic:
+
+1. `median_outliers` (`sanity.py:27-44`) runs over all the successful
+   snapshots of one round. If the number of platforms with a price is fewer
+   than `MIN_SOURCES_FOR_CHECK = 3`, the check doesn't run at all (an empty
+   `frozenset()`).
+2. For each platform, the median price of *the other* platforms is taken
+   (leave-one-out; a median of zero is rejected). If
+   `|price - median| / median` exceeds `MEDIAN_DEVIATION_THRESHOLD =
+   Decimal("0.005")` (half a percent), that platform is an outlier.
+3. The outlier platform is flagged via
+   `snapshot.model_copy(update={"suppressed": True})` and is still passed to
+   `store.save_snapshot`.
+
+The flag's effect at the storage layer is asymmetric — this is where
+"suppression" reveals its real meaning:
+
+| Store | Behavior with `suppressed=True` |
 |---|---|
-| `RedisStore.save_snapshot` | زودبازگشت (`redis_store.py:47-48`) — نه `tablo:current:{slug}` نوشته می‌شود، نه `tablo:updated_at:{slug}` |
-| `PostgresStore.save_snapshot` | می‌نویسد، عادی، با ستون `suppressed=true` |
+| `RedisStore.save_snapshot` | Early return (`redis_store.py:47-48`) — neither `tablo:current:{slug}` nor `tablo:updated_at:{slug}` gets written |
+| `PostgresStore.save_snapshot` | Writes normally, with the column `suppressed=true` |
 
-یعنی سکوی سرکوب‌شده **در تاریخچه هست، در قیمت جاری نیست**. کوئری‌های خواندنِ
-Postgres هم همین را تثبیت می‌کنند: `_SELECT_LATEST_FETCHED_AT` و
-`_SELECT_QUOTES_AT` هر دو شرط `and not suppressed` دارند. در لایه‌ی نگه‌داری
-(`retention.py`) هم سطرهای سرکوب‌شده هرگز تجمیع، فشرده یا هرس نمی‌شوند — سه‌جای
-جدا در کد همین را تضمین می‌کنند.
+In other words, a suppressed platform **exists in history, but not in the
+current price**. Postgres's read queries confirm the same thing: both
+`_SELECT_LATEST_FETCHED_AT` and `_SELECT_QUOTES_AT` carry an
+`and not suppressed` condition. In the retention layer (`retention.py`) too,
+suppressed rows are never aggregated, compacted, or pruned — three separate
+spots in the code guarantee this.
 
-**چه چیزی نیست**: `suppressed` یک وضعیت خطا یا کهنگی نیست — سکو با موفقیت
-گردآوری شده، عدد معتبری هم دارد، فقط از نظر آماری با اجماع سایر منابع همان
-لحظه فاصله‌ی زیاد دارد. یک شکست شبکه یا پارس‌نشدن، `suppressed` نمی‌سازد؛ اصلاً
-اسنپ‌شاتی تولید نمی‌شود (بخش بعد).
-
----
-
-## کهنگی در برابر خطا
-
-این تمایز در چند لایه‌ی مستقل تکرار می‌شود، و هرجا تکرار شده عمداً بوده:
-
-- **در گردآورنده**: خطای هر آداپتور در `collect_round` جداگانه گرفته می‌شود
-  (`pipeline.py:56-60`) و فقط `log.exception` می‌زند؛ هیچ اسنپ‌شات جدیدی برای
-  آن سکو ساخته نمی‌شود، مقدار قبلی در Redis (اگر TTL‌اش هنوز سر نرسیده) همان
-  می‌ماند. یک منبع مرده کل نوبت را نمی‌شکند — نه استثنا بالا می‌رود، نه بقیه‌ی
-  سکوها متوقف می‌شوند.
-- **در ردیس**: `tablo:updated_at:{slug}` عمداری بدون TTL نوشته می‌شود
-  (کامنت `redis_store.py:54`: «کهنگی سیگنال است، نه خطا»)؛ `tablo:current:{slug}`
-  با TTL کوتاه (۱۲۰ ثانیه پیش‌فرض) دارد. وقتی TTL سر برسد، `get_snapshot` مقدار
-  تهی می‌دهد، ولی `get_updated_at` هنوز آخرین زمان واقعی گردآوری موفق را
-  برمی‌گرداند — یعنی وب می‌تواند بگوید «آخرین قیمت از چه زمانی کهنه است»، نه
-  فقط «قیمتی نیست».
-- **در وب**: آستانه‌ی کهنگی سه دقیقه است — `STALE_AFTER_MINUTES = 3`
-  (`web/src/lib/format.ts:24`؛ همان مقدار در `web/src/lib/live-update.ts`).
-  قطع کامل منبع (ردیس/پستگرس) هرگز به صفحه‌ی خطا یا HTTP 5xx تبدیل نمی‌شود —
-  لایه‌های داده‌ی وب (`price-source.ts`, `history.ts`, `reference-price.ts`, …)
-  خطای اتصال را قورت می‌دهند و مقدار تهی/فهرست‌خالی می‌دهند؛ کامپوننت با آن
-  عدد تهی رندر می‌کند، نه با پرتاب.
-
-**استثنای صریح این قاعده**: بارگذاری تک‌پست بلاگ. آن‌جا خطای گذرا عمداً قورت
-داده *نمی*‌شود، چون تبدیلش به ۴۰۴ یعنی گوگل صفحه را از ایندکس می‌اندازد —
-پس همان‌جا خطا بالا می‌رود و صفحه ۵۰۰ می‌شود؛ یعنی «کهنگی به‌جای خطا» یک قاعده‌ی
-مطلقِ کل سیستم نیست، قاعده‌ی داده‌ی *قیمت* است.
+**What this is not**: `suppressed` is not an error state or a staleness
+state — the platform was collected successfully and has a valid number,
+it's just statistically far from the consensus of the other sources at that
+same moment. A network failure or a parse failure does not produce
+`suppressed`; no snapshot gets produced at all (next section).
 
 ---
 
-## نمودار جریان یک نوبت گردآوری
+## Staleness versus error
+
+This distinction repeats across several independent layers, and everywhere
+it repeats, it was deliberate:
+
+- **In the collector**: each adapter's error is caught individually in
+  `collect_round` (`pipeline.py:56-60`) and only triggers a `log.exception`;
+  no new snapshot is built for that platform, and the previous value in
+  Redis (if its TTL hasn't expired yet) stays as-is. One dead source doesn't
+  break the whole round — no exception propagates up, and the other
+  platforms don't stop either.
+- **In Redis**: `tablo:updated_at:{slug}` is deliberately written with no
+  TTL (comment at `redis_store.py:54`: "staleness is a signal, not an
+  error"); `tablo:current:{slug}` has a short TTL (120 seconds by default).
+  Once the TTL expires, `get_snapshot` returns null, but `get_updated_at`
+  still returns the real timestamp of the last successful collection —
+  meaning the web layer can say "how stale is the latest price," not just
+  "there is no price."
+- **In the web layer**: the staleness threshold is three minutes —
+  `STALE_AFTER_MINUTES = 3` (`web/src/lib/format.ts:24`; the same value
+  appears in `web/src/lib/live-update.ts`). A complete outage of the source
+  (Redis/Postgres) never turns into an error page or an HTTP 5xx — the web
+  data layers (`price-source.ts`, `history.ts`, `reference-price.ts`, …)
+  swallow connection errors and return a null value/empty list; the
+  component renders with that null value instead of throwing.
+
+**The explicit exception to this rule**: loading a single blog post. There,
+a transient error is deliberately *not* swallowed, because turning it into a
+404 means Google drops the page from its index — so the error propagates
+instead and the page becomes a 500; meaning "staleness instead of error"
+is not an absolute rule for the whole system, it's a rule for *price* data.
+
+---
+
+## Flow diagram of one collection round
 
 ```mermaid
 flowchart TD
-    A["آداپتور: payload خام"] --> B{"کدام سازنده‌ی اسنپ‌شات؟"}
+    A["Adapter: raw payload"] --> B{"Which snapshot constructor?"}
 
     B -->|"wallgold · talasea · goldika (API)<br/>milli (MANUAL)"| C["known_fee_snapshot"]
     B -->|"technogold · tlyn · ecogold<br/>zarafza · baazar"| D["dealer_snapshot"]
-    B -->|"daric (تنها ORDER_BOOK)"| E["order_book_snapshot"]
+    B -->|"daric (only ORDER_BOOK)"| E["order_book_snapshot"]
     B -->|"melligold · digikala<br/>hamrahgold · invi"| F["unknown_fee_snapshot"]
 
-    C --> G["fee_source = API/MANUAL<br/>کارمزد = عدد واقعی"]
-    D --> H["fee_source = IMPLIED<br/>کارمزد = برآورد از اسپرد"]
-    E --> I["fee_source = MANUAL<br/>کارمزد = صفر واقعی"]
-    F --> J["fee_source = UNKNOWN<br/>کارمزد = تهی (None)"]
+    C --> G["fee_source = API/MANUAL<br/>fee = real number"]
+    D --> H["fee_source = IMPLIED<br/>fee = estimated from spread"]
+    E --> I["fee_source = MANUAL<br/>fee = real zero"]
+    F --> J["fee_source = UNKNOWN<br/>fee = null (None)"]
 
-    G & H & I & J --> K["PlatformSnapshot یک Quote، side = PRICE"]
-    K --> L{"median_outliers<br/>(کمتر از ۳ منبع؟ رد می‌شود)"}
-    L -->|"در آستانه‌ی ۰٫۵٪"| M["suppressed = False"]
-    L -->|"بیش از ۰٫۵٪ از میانه"| N["suppressed = True"]
+    G & H & I & J --> K["PlatformSnapshot one Quote, side = PRICE"]
+    K --> L{"median_outliers<br/>(fewer than 3 sources? skipped)"}
+    L -->|"within 0.5% threshold"| M["suppressed = False"]
+    L -->|"more than 0.5% from median"| N["suppressed = True"]
 
     M --> O["RedisStore: tablo:current + tablo:updated_at"]
-    N --> P["RedisStore: هیچ‌چیز نمی‌نویسد (early return)"]
-    M --> Q["PostgresStore: می‌نویسد، suppressed=false"]
-    N --> R["PostgresStore: می‌نویسد، suppressed=true"]
+    N --> P["RedisStore: writes nothing (early return)"]
+    M --> Q["PostgresStore: writes, suppressed=false"]
+    N --> R["PostgresStore: writes, suppressed=true"]
 
     style N fill:#442,stroke:#a82
     style P fill:#422,stroke:#a44
@@ -299,15 +326,16 @@ flowchart TD
 
 ---
 
-## جدول ارجاع مدل‌ها
+## Model reference table
 
-| مدل | فیلدها | قید اعتبارسنجی خاص |
+| Model | Fields | Special validation constraint |
 |---|---|---|
 | `Platform` | `slug, name_fa, data_policy, market_model=OTC, name_en?, website_url?, legal_entity?, delivery_note_fa?, referral_url?, referral_param?` | — |
 | `Quote` | `platform_slug, instrument, side=PRICE, price_toman: int, raw_value: Decimal, raw_scale: Decimal, fetched_at` | — |
-| `PlatformTerms` | `platform_slug, buy_fee_percent?, sell_fee_percent?, round_trip_percent?, fee_source, buy_enabled, sell_enabled, observed_at, min_order_toman?` | `_fees_match_source`: یا هر سه کارمزد پر (API/MANUAL/IMPLIED)، یا هر سه تهی (UNKNOWN) |
-| `PlatformSnapshot` | `platform_slug, quotes: tuple[Quote,...], terms, fetched_at, suppressed=False` | `_one_price_per_instrument`: تکرار instrument در quotes رد می‌شود |
+| `PlatformTerms` | `platform_slug, buy_fee_percent?, sell_fee_percent?, round_trip_percent?, fee_source, buy_enabled, sell_enabled, observed_at, min_order_toman?` | `_fees_match_source`: either all three fees are populated (API/MANUAL/IMPLIED), or all three are null (UNKNOWN) |
+| `PlatformSnapshot` | `platform_slug, quotes: tuple[Quote,...], terms, fetched_at, suppressed=False` | `_one_price_per_instrument`: a repeated instrument in quotes is rejected |
 
-همه‌ی این مدل‌ها `model_config = ConfigDict(frozen=True)` دارند — یک اسنپ‌شات
-یا کوتِ ساخته‌شده دیگر قابل جهش نیست؛ تغییر (مثل علامت‌گذاری `suppressed`) فقط
-از راه `model_copy(update=...)` ممکن است که یک شیء *تازه* برمی‌گرداند.
+All of these models have `model_config = ConfigDict(frozen=True)` — once a
+snapshot or quote is built, it can no longer be mutated; a change (like
+flagging `suppressed`) is only possible via `model_copy(update=...)`, which
+returns a *new* object.

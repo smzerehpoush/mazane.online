@@ -1,4 +1,4 @@
-# ⚠️ نام کلیدهای ردیس قرارداد مشترک با لایه‌ی وب است؛ تغییرشان بی‌صدا وب را می‌شکند.
+# ⚠️ Redis key names are a shared contract with the web layer; changing them silently breaks the web.
 
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ class RedisStore:
             snapshot.model_dump_json(),
             ex=self._price_ttl_seconds,
         )
-        # ⚠️ بدون TTL — عمداً: کهنگی سیگنال است، نه خطا.
+        # ⚠️ No TTL — intentional: staleness is a signal, not an error.
         await self._client.set(
             updated_at_key(snapshot.platform_slug),
             snapshot.fetched_at.isoformat(),

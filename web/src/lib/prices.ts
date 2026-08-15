@@ -13,9 +13,9 @@ export interface ListedPlatform {
   legal_entity?: string | null;
   delivery_note_fa?: string | null;
   /**
-   * ⚠️ (الزام غیرقابل‌مذاکره): این دو فیلد **هرگز** ورودی
-   * مرتب‌سازی نیستند — groupRows/editorialPick فقط قیمت و کارمزد گردآورنده
-   * را می‌خوانند؛ تستش در tests/sponsored-links.test.tsx است.
+   * ⚠️ (non-negotiable requirement): these two fields are **never**
+   * sorting inputs — groupRows/editorialPick only read price and the
+   * collector's fee; tested in tests/sponsored-links.test.tsx.
    */
   referral_url?: string | null;
   referral_param?: string | null;
@@ -90,7 +90,7 @@ function source(): PriceSource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {
     throw new Error(
-      "هیچ PriceSource ثبت نشده — از «@/lib/server/price-source» بخوان یا setPriceSource صدا بزن",
+      "No PriceSource registered — import from «@/lib/server/price-source» or call setPriceSource",
     );
   }
   activeSource = defaultFactory();

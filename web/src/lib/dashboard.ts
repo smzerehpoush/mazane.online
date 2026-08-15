@@ -1,28 +1,32 @@
 /**
- * ⚠️ **همه‌ی محاسبه اینجا انجام می‌شود** : هندسه‌ی محور، آمار بازه،
- * مسیرهای SVG، و **قالب‌بندی فارسی اعداد و ساعت**. لایه‌ی زنده رشته‌ی آماده
- * می‌گیرد و فقط می‌نشاندش. دو دلیل: HTML اولیه باید عدد واقعی داشته باشد
- * (سئو و «بدون جاوااسکریپت هم بخوان»)، و هر قالب‌بندی مستقلِ سمت کلاینت یک
- * منبع تازه‌ی hydration mismatch است.
- * ⚠️ ولی **«سمت سرور» به معنای «فقط سرور» نیست**: `HomePage` این تابع را در
- * بدنه‌ی رندر صدا می‌زند، پس موقع hydration روی مرورگر هم اجرا می‌شود. برای
- * همین هر چیزی که از اینجا بیرون می‌رود باید **قطعی** باشد — نه فقط خالص.
- * `Intl` (چه عدد چه تاریخ) قطعی نیست، چون به نسخه‌ی ICU محیط وابسته است؛
- * به همین دلیل هیچ فراخوانی `Intl` در این فایل نمانده.
- * ⚠️ **هیچ فرمول قیمتی اینجا نیست.** هر عدد قیمتی
- * همان است که گردآورنده ذخیره کرده. آنچه محاسبه می‌شود سه دسته است و هر سه
- * مجازند:
- * - **هندسه‌ی نمایش** (درصد موقعیت روی محور، مختصات SVG) — مقیاس است، نه قیمت.
- * - **کمینه/بیشینه/کسر تغییرِ یک سریِ تک‌سکویی** — همان الگوی مجازی که از
- * قبل در `PlatformRateCard::computeStats` هست.
- * - **فاصله‌ی دو سرِ همان محور** (`spreadDisplay`) — تفاضل دو قیمتِ
- * منتشرشده‌ی نام‌دار، نه قیمتی تازه. صریحاً می‌خواهدش
- * («بازه اختلاف {max-min} تومان») و هر دو سرش با نام صاحبشان روی همان
- * محور دیده می‌شوند. یک آماره‌ی پراکندگی است، نه ادعای قیمت —
- * مرزش هم روشن است: تفاضل مجاز، **میانگین ممنوع**.
- * ⚠️ **هیچ میانگین بین‌سکویی‌ای ساخته نمی‌شود** و هیچ درصد
- * اختلافی بین دو سکو حساب نمی‌شود. خلاصه بازار عدد
- * **سکوی مرجع** را نشان می‌دهد، با نام خودش.
+ * ⚠️ **All computation happens here**: axis geometry, range stats,
+ * SVG paths, and **Persian formatting of numbers and time**. The live layer
+ * receives a ready-made string and just drops it in place. Two reasons: the
+ * initial HTML must carry the real number (SEO and "readable without
+ * JavaScript too"), and any client-only formatting is a fresh source of
+ * hydration mismatch.
+ * ⚠️ But **"server-side" doesn't mean "server-only"**: `HomePage` calls this
+ * function in its render body, so it also runs in the browser during
+ * hydration. That's why anything that comes out of here must be
+ * **deterministic** — not just pure. `Intl` (whether for numbers or dates)
+ * is not deterministic, since it depends on the environment's ICU version;
+ * that's why no `Intl` call remains in this file.
+ * ⚠️ **There is no price formula here.** Every price number is
+ * exactly what the collector stored. What gets computed falls into three
+ * categories, and all three are allowed:
+ * - **Display geometry** (position percentage on the axis, SVG coordinates)
+ * — it's scale, not price.
+ * - **Min/max/change-fraction of a single-platform series** — the same
+ * already-allowed pattern that's already in `PlatformRateCard::computeStats`.
+ * - **The distance between the two ends of the same axis** (`spreadDisplay`)
+ * — the difference between two named, published prices, not a new price.
+ * It's explicitly requested ("range difference {max-min} toman") and both
+ * ends are shown with their owner's name on the same axis. It's a
+ * dispersion statistic, not a price claim — and its boundary is clear too:
+ * difference allowed, **average forbidden**.
+ * ⚠️ **No cross-platform average is ever constructed** and no percentage
+ * difference between two platforms is ever computed. The market summary
+ * shows the **reference platform**'s number, under its own name.
  */
 import { formatFaClock, formatFaNumber } from "./fa-number";
 import { formatSignedPercentFa } from "./format";
@@ -54,15 +58,17 @@ export interface RailSource {
   ariaLabel: string;
   sparkline: { line: string | null; area: string | null };
   /**
-   * ⚠️ سطح-صفحه کافی نیست: `updatedAt` کل داشبورد بیشینه‌ی همه‌ی سکوهاست، پس
-   * یک سکوی مرده پشت تازگیِ بقیه پنهان می‌ماند. کهنگی را به
-   * ازای **همان منبع** می‌خواهد، نه به ازای صفحه.
+   * ⚠️ Page-level isn't enough: the dashboard's overall `updatedAt` is the
+   * max across all platforms, so a dead platform can hide behind the
+   * freshness of the rest. Staleness needs to be tracked **per source**,
+   * not per page.
    */
   updatedAt: string | null;
   /**
-   * ⚠️ این یعنی عدد **قدیمی** است. نمایشش مجاز است (: عدد قدیمی با
-   * زمانش، نه پیام خطا) ولی **فقط در کنار برچسب کهنگی** — بدون آن، یک نقطه‌ی
-   * تجمیع ساعتی بی‌سروصدا به‌جای «قیمت الان» جا می‌زند.
+   * ⚠️ This means the number is **stale**. Showing it is allowed (an old
+   * number with its timestamp, not an error message) but **only alongside
+   * a staleness label** — without it, an hourly aggregate point quietly
+   * passes itself off as the "current price".
    */
   priceFromHistory: boolean;
 }
@@ -77,8 +83,8 @@ export interface RailView {
 }
 
 /**
- * ⚠️ **این فرمول عمداً وارونه‌ی چیزی است که نوشته**، و دلیلش
- * یک اشتباه در خودِ سند و نمونه است:
+ * ⚠️ **This formula is deliberately the inverse of what's documented**,
+ * and the reason is a mistake in the doc and example themselves:
  */
 function railPercentOf(price: number, min: number, span: number): number {
   const ratio = span === 0 ? 0.5 : (price - min) / span;
@@ -121,11 +127,13 @@ const SUMMARY_WIDTH = 320;
 const SUMMARY_HEIGHT = 108;
 
 /**
- * ⚠️ اینجا `Intl.DateTimeFormat` بود و **باگ بود**: این تابع رشته‌هایی می‌سازد
- * که رندر می‌شوند (ساعت وقوع کمینه/بیشینه و برچسب «آخرین به‌روزرسانی»)، و
- * `buildDashboard` در بدنه‌ی رندر `HomePage` صدا زده می‌شود — پس هم روی سرور
- * و هم موقع hydration اجرا می‌شود. یعنی همان واگرایی نسخه‌ی ICU که
- * `lib/fa-number.ts` برای عدد بسته بود، از در تاریخ برگشته بود.
+ * ⚠️ `Intl.DateTimeFormat` used to be here, and **it was a bug**: this
+ * function builds strings that get rendered (the high/low timestamps and
+ * the "last updated" label), and `buildDashboard` is called in
+ * `HomePage`'s render body — so it runs both on the server and during
+ * hydration. That means the same ICU-version divergence that
+ * `lib/fa-number.ts` closed off for numbers had come back in through
+ * dates.
  */
 
 function summaryOf(
@@ -180,10 +188,11 @@ export interface DashboardView {
   summary: SummaryView;
   updatedAt: string | null;
   /**
-   * ⚠️ عمداً **مطلق** است و نه «۲ دقیقه پیش»: متن نسبی به `Date.now` نیاز
-   * دارد و آن را در رندر سرور ممنوع کرده (منبع دوم واگرایی hydration).
-   * حسِ تازگی را فتیله می‌دهد؛ این برچسب فقط سن داده را مستند می‌کند —
-   * الزام که با حذف جدول نباید از بین می‌رفت.
+   * ⚠️ Deliberately **absolute**, not "2 minutes ago": relative text needs
+   * `Date.now`, which is banned in server rendering (a second source of
+   * hydration divergence). It would stoke the freshness wick artificially;
+   * this label only documents the data's age — a requirement that must
+   * not have been lost when the table was removed.
    */
   updatedAtDisplay: string | null;
 }
@@ -210,9 +219,10 @@ export function buildDashboard(input: DashboardInput): DashboardView {
       platform,
       row,
       price: livePrice ?? entry?.latest ?? null,
-      // ⚠️ جدول قدیمی این فرود را نداشت و برای سکوی مرده «قیمت در دسترس نیست»
-      // می‌گذاشت. فرود مفید است (عدد قدیمی بهتر از هیچ)، ولی باید **دیده شود**
-      // که قدیمی است — وگرنه نقطه‌ی تجمیع ساعتی جای «قیمت الان» می‌نشیند.
+      // ⚠️ The old table didn't have this fallback and showed "price
+      // unavailable" for a dead platform. The fallback is useful (an old
+      // number beats nothing), but it must be **visibly marked** as old —
+      // otherwise an hourly aggregate point sits in for "current price".
       priceFromHistory: livePrice === null && (entry?.latest ?? null) !== null,
       points: entry?.points ?? [],
       name: row?.platform.name_fa ?? platform.name_fa,
@@ -284,14 +294,16 @@ export function buildDashboard(input: DashboardInput): DashboardView {
 }
 
 /**
- * ⚠️ بک‌اند زمان **به‌ازای هر سکو** می‌دهد و هیچ زمان سطح-صفحه‌ای ندارد؛ فتیله
- * یکی می‌خواهد. بیشینه انتخاب شد نه کمینه: فتیله «چقدر از تازه‌ترین
- * داده گذشته» را می‌شمارد، و یک سکوی کهنه نباید فتیله‌ی کل صفحه را عقب بکشد.
- * ⚠️ این عدد **جانشین کهنگیِ هر سکو نیست** و نباید بشود: بیشینه دقیقاً یعنی
- * یک سکوی مرده پشت تازگیِ بقیه پنهان می‌ماند. برچسب هر سکو از
- * `RailSource.updatedAt` می‌آید و روی کارت خودش رندر می‌شود. (نسخه‌ی اول این
- * فایل ادعا می‌کرد کهنگی «جای دیگری برچسب می‌خورد» در حالی که هیچ‌جا نمی‌خورد —
- * بازبینی کد گرفتش.md`.
+ * ⚠️ The backend gives a time **per platform** and has no page-level time;
+ * the wick needs a single one. Max was chosen over min: the wick counts
+ * "how much time has passed since the freshest data", and one stale
+ * platform shouldn't drag the whole page's wick backward.
+ * ⚠️ This number is **not a substitute for per-platform staleness** and
+ * must not become one: max specifically means a dead platform can hide
+ * behind the freshness of the rest. Each platform's label comes from
+ * `RailSource.updatedAt` and renders on its own card. (The first version
+ * of this file claimed staleness "gets labeled elsewhere" when nowhere
+ * does — code review caught it.md`.
  */
 function latestUpdatedAt(rows: readonly Row[]): string | null {
   let latest: string | null = null;

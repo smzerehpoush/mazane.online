@@ -21,17 +21,17 @@ class ZarafzaAdapter:
         data = (payload or {}).get("data") if isinstance(payload, dict) else None
         g18 = data.get("G18") if isinstance(data, dict) else None
         if not isinstance(g18, dict):
-            raise AdapterError("زرافزا: بدنه‌ی data.G18 در payload پیدا نشد")
+            raise AdapterError("Zarafza: data.G18 body not found in payload")
 
         sell_price = (g18.get("sell") or {}).get("price")
         buy_price = (g18.get("buy") or {}).get("price")
         if sell_price is None or buy_price is None:
-            raise AdapterError("زرافزا: قیمت sell.price/buy.price در payload تهی است")
+            raise AdapterError("Zarafza: sell.price/buy.price is empty in payload")
         try:
             raw_sell = Decimal(str(sell_price))
             raw_buy = Decimal(str(buy_price))
         except InvalidOperation as exc:
-            raise AdapterError(f"زرافزا: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Zarafza: invalid payload: {exc!r}") from exc
 
         return dealer_snapshot(
             slug=self.slug,

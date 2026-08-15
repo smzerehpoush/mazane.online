@@ -1,6 +1,6 @@
 /**
- * ⚠️ متن تحریریه است و منتقل‌شده‌ی عین‌به‌عین از ‎app/darbare-pishnahad/page.tsx‎
- * اپ نکست قبلی؛ بازنویسی نشود.
+ * ⚠️ This is editorial text, carried over verbatim from ‎app/darbare-pishnahad/page.tsx‎
+ * of the previous Next app; do not rewrite.
  */
 import { createFileRoute } from "@tanstack/react-router";
 

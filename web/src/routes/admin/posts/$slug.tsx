@@ -1,11 +1,12 @@
 /**
- * ⚠️ عمداً بدون دکمه‌ی «حذف عکس»: سرور هیچ مسیری برای پاک‌کردن image_url
- * ندارد — `POST /api/admin-posts/$slug/image` فقط آپلود/جایگزینی می‌کند و
- * هر متد دیگر (از جمله DELETE) با ۴۰۵ رد می‌شود (`adminPostImageMethodNotAllowed`
- * در `lib/server/admin-post-image.ts`؛ فرم به‌روزرسانی متن هم فقط
- * title_fa/body_md می‌پذیرد). دکمه‌ای که همیشه شکست می‌خورد بدتر از نبودنش
- * است — این یک شکاف واقعی است، نه فراموشی؛ برای حذف واقعی باید یک تیکت
- * جدا مسیر سرور را اضافه کند.
+ * ⚠️ Deliberately no "delete image" button: the server has no route to
+ * clear image_url — `POST /api/admin-posts/$slug/image` only uploads or
+ * replaces, and every other method (including DELETE) is rejected with 405
+ * (`adminPostImageMethodNotAllowed` in `lib/server/admin-post-image.ts`; the
+ * text-update form also only accepts title_fa/body_md). A button that always
+ * fails is worse than no button at all — this is a real gap, not an
+ * oversight; actually deleting needs a separate ticket to add the server
+ * route.
  */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";

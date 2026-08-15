@@ -162,30 +162,30 @@ def main(argv: Iterable[str] | None = None) -> int:
             first_ts = ts if first_ts is None or ts < first_ts else first_ts
             last_ts = ts if last_ts is None or ts > last_ts else last_ts
 
-    print(f"خط‌های لاگ خوانده‌شده: {total_lines}")
-    print(f"درخواست با UA گوگل‌بات: {googlebot_hits} از {len(hits_by_ip)} IP یکتا")
-    print(f"هیت اصیل (reverse-DNS + forward تأیید شد): {genuine_hits}")
+    print(f"log lines read: {total_lines}")
+    print(f"requests with Googlebot UA: {googlebot_hits} from {len(hits_by_ip)} unique IPs")
+    print(f"genuine hits (reverse DNS + forward confirmed): {genuine_hits}")
     if first_ts and last_ts:
-        print(f"بازه‌ی هیت‌های اصیل: {first_ts.isoformat()} تا {last_ts.isoformat()}")
+        print(f"genuine hit range: {first_ts.isoformat()} to {last_ts.isoformat()}")
     if genuine_ips:
-        print("\nIPهای اصیل گوگل:")
+        print("\ngenuine Google IPs:")
         for ip, host in sorted(genuine_ips.items(), key=lambda kv: -hits_by_ip[kv[0]]):
-            print(f"  {ip}  ({host})  — {hits_by_ip[ip]} هیت")
+            print(f"  {ip}  ({host})  — {hits_by_ip[ip]} hits")
     if impostor_ips:
-        print("\nمدعیان جعلی (UA گوگل‌بات، تأیید نشد):")
+        print("\nimpostors (Googlebot UA, not confirmed):")
         for ip, why in sorted(impostor_ips.items(), key=lambda kv: -hits_by_ip[kv[0]]):
-            print(f"  {ip}  — {hits_by_ip[ip]} هیت — {why}")
+            print(f"  {ip}  — {hits_by_ip[ip]} hits — {why}")
     if status_genuine:
-        print("\nکد وضعیت هیت‌های اصیل:", dict(sorted(status_genuine.items())))
+        print("\ngenuine hit status codes:", dict(sorted(status_genuine.items())))
         errors = sum(n for code, n in status_genuine.items() if code >= 500)
         if errors:
-            print(f"  ⚠️ {errors} پاسخ ۵xx به گوگل‌بات اصیل — فوراً پیگیری شود (بند ۱۰.۲)")
+            print(f"  ⚠️ {errors} 5xx responses to genuine Googlebot — investigate immediately")
     if paths_genuine:
-        print(f"\nمسیرهای پربازدید اصیل (تا {args.top}):")
+        print(f"\ntop genuine-hit paths (up to {args.top}):")
         for uri, count in paths_genuine.most_common(args.top):
             print(f"  {count:>6}  {uri}")
     if googlebot_hits == 0:
-        print("\nهیچ درخواستی با UA گوگل‌بات پیدا نشد.")
+        print("\nno requests with Googlebot UA found.")
     return 0
 
 

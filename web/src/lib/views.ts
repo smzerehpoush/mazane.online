@@ -1,8 +1,9 @@
 /**
- * ⚠️ **چرا شمارش از مرورگر است نه از رندر سرور:** HTML صفحه‌ها در لبه‌ی
- * آروان کش می‌شود. اگر در loader می‌شمردیم، فقط cache-miss ها
- * شمرده می‌شدند — عددی که بیشتر رفتار کش را توصیف می‌کند تا خواننده را، و
- * با روشن/خاموش شدن کش چند برابر جابه‌جا می‌شود.
+ * ⚠️ **Why counting happens from the browser, not the server render:** page
+ * HTML is cached at Arvan's edge. If we counted in the loader, only
+ * cache-misses would be counted — a number that describes cache behavior
+ * more than readers, and that swings several-fold as the cache turns on
+ * and off.
  */
 
 import type { PublishedPost } from "./blog";

@@ -1,516 +1,553 @@
-# رانبوک استقرار تابلو — بلیت ۱۱
+# Tablo Deployment Runbook — ticket 11
 
-> اجرای نظارت‌شده. هر گامی که با ‏👤 علامت خورده «فقط با حضور صاحب کسب‌وکار»
-> انجام می‌شود (دسترسی SSH، پنل آروان، سرچ‌کنسول، یا تصمیم برگشت‌ناپذیر).
-> سرور `37.32.27.201` با پروژه‌ی تولیدی پادل‌یار (۱۱ کانتینر + کدیِ لبه روی
-> ۸۰/۴۴۳) مشترک است — بند ۱۳ سند معماری، تصمیم ۵. قاعده‌ی طلایی کل این سند:
-> **پادل‌یار نباید حتی یک ثانیه بلرزد.**
+> Supervised execution. Every step marked 👤 is done "only with the business
+> owner present" (SSH access, the ArvanCloud panel, Search Console, or an
+> irreversible decision). The server `37.32.27.201` is shared with Padelyar's
+> production project (11 containers + edge Caddy on 80/443) — architecture
+> doc section 13, decision 5. The golden rule of this whole document:
+> **Padelyar must not shake for even one second.**
 >
-> **دامنهٔ محصول: `tablo.gold`** (جایگزین mazane.online). بلوک کدی، آروان،
-> Search Console باید روی همین دامنه باشند.
-> برش دامنهٔ زنده روی سرور 👤 است — مخزن فقط snippet و `SITE_URL` را به‌روز
-> نگه می‌دارد؛ Caddyfile پادل‌یار را دستی عوض کنید (`ops/caddy-snippet.Caddyfile`).
+> **Product domain: `tablo.gold`** (replacing mazane.online). The Caddy
+> block, ArvanCloud, and Search Console must all be on this same domain.
+> Cutting the live domain over on the server is 👤 — the repository only
+> keeps the snippet and `SITE_URL` up to date; change Padelyar's Caddyfile
+> by hand (`ops/caddy-snippet.Caddyfile`).
 >
-> **تصمیم DNS/CDN (مالک، ۲۰۲۶-۰۸-۰۹):** دامنه با **نیم‌سرورهای ابرآروان**
-> (delegation کامل NS) مدیریت می‌شود — **نه** اتصال CDN از مسیر CNAME به
-> هاست‌نیم آروان. لبهٔ CDN همان پروکسی ابری روی رکوردهای DNS داخل پنل آروان
-> است. جزئیات: بخش ۶.
+> **DNS/CDN decision (owner, 2026-08-09):** the domain is managed with
+> **ArvanCloud's nameservers** (full NS delegation) — **not** a CNAME
+> connection from the domain to ArvanCloud's CDN hostname. The CDN edge is
+> the same cloud/proxy toggle on the DNS records inside the ArvanCloud panel.
+> Details: section 6.
 
-فایل‌های مرتبط این مخزن:
+Files in this repository that are relevant:
 
-| فایل | نقش |
+| File | Role |
 |---|---|
-| `Dockerfile.collector` / `Dockerfile.web` | ساخت ایمیج‌ها (بیرون از سرور) |
-| `compose.prod.yml` | اجرای چهار سرویس روی سرور |
-| `.env.example` | نمونه‌ی پیکربندی — روی سرور به `‎.env‎` کپی می‌شود |
-| `ops/caddy-snippet.Caddyfile` | بلوک سایت برای Caddyfile موجود پادل‌یار |
-| `ops/verify-googlebot.py` | تأیید آفلاین reverse-DNS بازدیدهای گوگل‌بات |
-| `ops/collector-healthcheck.py` | داخل ایمیج گردآورنده کپی می‌شود |
+| `Dockerfile.collector` / `Dockerfile.web` | Build the images (outside the server) |
+| `compose.prod.yml` | Run the four services on the server |
+| `.env.example` | Configuration sample — copied to `.env` on the server |
+| `ops/caddy-snippet.Caddyfile` | Site block for Padelyar's existing Caddyfile |
+| `ops/verify-googlebot.py` | Offline reverse-DNS verification of Googlebot visits |
+| `ops/collector-healthcheck.py` | Copied inside the collector image |
 
 ---
 
-## ۰‑ب. برش دامنه به tablo.gold 👤
+## 0-b. Cutting the domain over to tablo.gold 👤
 
-وضعیت اعلام‌شدهٔ مالک (۲۰۲۶-۰۸-۰۹): دامنه خریده شده و **NS به ابرآروان** ست شده.
-مدل CDN = DNS کامل روی آروان + ابر/پروکسی روی رکورد A — **بدون CNAME به CDN**.
+Owner-reported status (2026-08-09): the domain is purchased and **NS is
+set to ArvanCloud**. CDN model = full DNS on ArvanCloud + cloud/proxy on the
+A record — **no CNAME to the CDN**.
 
-اگر روی سرور هنوز بلوک قدیمی `mazane.online` در Caddyfile پادل‌یار است:
+If the server's Padelyar Caddyfile still has the old `mazane.online` block:
 
-1. صبر تا propagate نیم‌سرورها (`dig NS tablo.gold +short` باید NSهای آروان را بدهد).
-2. در پنل DNS آروان (نه رجیسترار): رکورد `A` برای `@` → `37.32.27.201` با **ابر روشن**؛ در صورت تمایل `www` به‌صورت A یا redirect داخل آروان — **CNAME به هاست‌نیم CDN نساز**.
-4. در Caddyfile لبه: بلوک فعلی `ops/caddy-snippet.Caddyfile` (`tablo.gold { … }`)؛ `caddy reload`.
-5. عکس پست متغیر جدا نمی‌خواهد: نشانی عمومی از `TABLO_ARVAN_S3_ENDPOINT` و
-   `TABLO_ARVAN_S3_BUCKET` ساخته می‌شود (`<endpoint>/<bucket>/<key>`). فقط باکت
-   باید خواندنیِ عمومی باشد — آپلود خودش `ACL: public-read` می‌گذارد.
-6. `curl -sI https://tablo.gold/` و Host-هدر لوکال روی کدی را چک کنید.
-7. Search Console: property دامنهٔ `tablo.gold` + sitemap تازه.
-8. اگر `mazane.online` هنوز DNS دارد: ۳۰۱ به `tablo.gold` تا سئوی کهنه نسوزد.
+1. Wait for the nameservers to propagate (`dig NS tablo.gold +short` should return ArvanCloud's NS).
+2. In the ArvanCloud DNS panel (not the registrar): an `A` record for `@` → `37.32.27.201` with **cloud/proxy on**; optionally `www` as an A record or a redirect inside ArvanCloud — **do not create a CNAME to the CDN hostname**.
+4. In the edge Caddyfile: the current block from `ops/caddy-snippet.Caddyfile` (`tablo.gold { … }`); `caddy reload`.
+5. The post cover image doesn't need a separate variable: the public address is built from `TABLO_ARVAN_S3_ENDPOINT` and
+   `TABLO_ARVAN_S3_BUCKET` (`<endpoint>/<bucket>/<key>`). Only the bucket
+   needs to be publicly readable — the upload itself sets `ACL: public-read`.
+6. Check `curl -sI https://tablo.gold/` and the local Host header against Caddy.
+7. Search Console: a `tablo.gold` domain property + a fresh sitemap.
+8. If `mazane.online` still has DNS: a 301 to `tablo.gold` so old SEO doesn't burn away.
 
 ---
 
-## ۰‑ج. 👤 تغییر نام به «تابلو» — گام‌های اجباری روی سرور
+## 0-c. 👤 Renaming to "Tablo" — mandatory steps on the server
 
-تغییر نام ۲۰۲۶-۰۸-۱۰ چند شناسه‌ی زیرساختی را عوض کرد. **پیش از نخستین استقرار
-پس از این تغییر** این‌ها را انجام دهید، وگرنه سرویس بالا نمی‌آید:
+The 2026-08-10 rename changed several infrastructure identifiers. **Before
+the first deployment after this change** do the following, or the service
+won't come up:
 
-۱. **شبکه‌ی لبه** — نام از `mazane-edge` به `tablo-edge` رفت:
+1. **Edge network** — the name went from `mazane-edge` to `tablo-edge`:
    ```
    docker network create tablo-edge
-   docker network connect tablo-edge <نام کانتینر کدی پادل‌یار>
+   docker network connect tablo-edge <Padelyar Caddy container name>
    ```
-۲. **کدیِ لبه** — `reverse_proxy mazane-web:3000` را به `tablo-web:3000` عوض
-   کنید (`ops/caddy-snippet.Caddyfile` به‌روز است) و کدی را reload کنید.
-   بدون این، سایت ۵۰۲ می‌دهد.
-۳. **مسیر استقرار** — از `/opt/mazane` به `/opt/tablo` رفت. دایرکتوری را
-   منتقل کنید تا `.env` (که راز واقعی دارد) همراهش برود:
+2. **Edge Caddy** — change `reverse_proxy mazane-web:3000` to `tablo-web:3000`
+   (`ops/caddy-snippet.Caddyfile` is up to date) and reload Caddy.
+   Without this, the site returns 502.
+3. **Deployment path** — went from `/opt/mazane` to `/opt/tablo`. Move the
+   directory so `.env` (which holds real secrets) goes with it:
    ```
    sudo mv /opt/mazane /opt/tablo && sudo mv /opt/mazane-src /opt/tablo-src
    ```
-۴. **متغیرهای محیطی** — همه‌ی `MAZANE_*` به `TABLO_*` تغییر نام دادند:
+4. **Environment variables** — all `MAZANE_*` were renamed to `TABLO_*`:
    ```
    sudo sed -i 's/^MAZANE_/TABLO_/' /opt/tablo/.env
    ```
-   و `TABLO_IMAGE_CDN_BASE_URL` را کلاً حذف کنید — دیگر خوانده نمی‌شود.
-۵. **راستی‌آزمایی volume پستگرس** (مهم‌ترین گام):
+   and remove `TABLO_IMAGE_CDN_BASE_URL` entirely — it's no longer read.
+5. **Verify the Postgres volume** (the most important step):
    ```
    docker volume ls | grep postgres-data
    ```
-   باید `mazane_mazane-postgres-data` باشد — همان نامی که در
-   `compose.prod.yml` پین شده. اگر نام دیگری دید، **پین را در آن فایل اصلاح
-   کنید، نه اینکه برش دارید**؛ وگرنه داکر volume تازه و خالی می‌سازد و
-   دیتابیس انگار پاک شده به نظر می‌رسد.
+   It must be `mazane_mazane-postgres-data` — the exact name pinned in
+   `compose.prod.yml`. If you see a different name, **fix the pin in that
+   file, don't remove it**; otherwise Docker creates a fresh, empty volume
+   and the production database looks like it's been wiped.
 
-**آنچه عمداً تغییر نکرد:** نام volume، و کاربر/دیتابیس پستگرس (`mazane`).
-این‌ها داخل volume موجودند و عوض‌کردنشان مهاجرت داده می‌خواهد، نه تغییر نام.
+**What deliberately did not change:** the volume name, and the
+Postgres user/database (`mazane`). These live inside the existing volume,
+and changing them needs a data migration, not a rename.
 
-**پیامد کوتاه‌مدت:** کلیدهای ردیس از `mazane:*` به `tablo:*` رفتند. تا نخستین
-نوبت گردآوری (~۳۰ ثانیه) جدول «قیمت در دسترس نیست» نشان می‌دهد — همان قاعده‌ی
-کهنگی، نه خطا. کوکی نشست مدیریت هم نامش عوض شد، پس یک بار باید دوباره وارد
-شوید.
+**Short-term consequence:** Redis keys went from `mazane:*` to `tablo:*`.
+Until the first collection round (~30 seconds), the table shows "price
+unavailable" — the same staleness, not error rule. The admin session
+cookie's name changed too, so you'll need to log in again once.
 
-## ۰. وضعیت معیارهای پذیرش بلیت ۱۱
+## 0. Status of ticket 11's acceptance criteria
 
-هر سه معیار پذیرش به سرور/آروان زنده نیاز دارند و در این پاس مخزنی **معوق**‌اند:
+All three acceptance criteria need a live server/ArvanCloud and are
+**pending** in this repository-only pass:
 
-- [ ] معوق — «tablo.gold از پشت آروان صفحه‌ی زنده می‌دهد و برنامه‌های
-      موجود سرور سالم می‌مانند» ⟸ گام‌های ۳ تا ۶
-- [ ] معوق — «با خواباندن عمدی مبدأ، لبه پاسخ ۲۰۰ کهنه می‌دهد (آزمایش
-      ثبت‌شده)» ⟸ گام ۷ — **پیش‌شرط سخت لانچ** (بند ۱۰.۲)
-- [ ] معوق — «پایش بیرونی فعال است و لاگ گوگل‌بات با تأیید معکوس دی‌ان‌اس
-      ثبت می‌شود» ⟸ گام‌های ۸ و ۹
+- [ ] pending — "tablo.gold serves a live page from behind ArvanCloud and
+      the server's existing programs stay healthy" ⟸ steps 3 through 6
+- [ ] pending — "with the origin deliberately taken down, the edge returns a
+      stale 200 (a logged test)" ⟸ step 7 — **a hard launch prerequisite**
+      (section 10.2)
+- [ ] pending — "external monitoring is active and Googlebot's log is
+      recorded with reverse-DNS verification" ⟸ steps 8 and 9
 
 ---
 
-## ۱. پیش‌نیازها — قبل از جلسه‌ی استقرار
+## 1. Prerequisites — before the deployment session
 
-### ۱.۱ لایه‌ی وب دیگر نکست نیست — چه چیزی عوض شد
+### 1.1 The web layer is no longer Next.js — what changed
 
-اپ وب به **TanStack Start + Vite + Nitro** مهاجرت کرده. پیامدهای عملیاتی:
+The web app has migrated to **TanStack Start + Vite + Nitro**. Operational consequences:
 
-| قبل (نکست) | حالا |
+| Before (Next.js) | Now |
 |---|---|
-| خروجی `.next/standalone` | خروجی `.output/` |
+| `.next/standalone` output | `.output/` output |
 | `node server.js` | `node .output/server/index.mjs` |
-| نیاز به `output: "standalone"` در `next.config.ts` | چیزی لازم نیست — پریست در `web/vite.config.ts` است |
-| `.next/static` و `public` جدا کپی می‌شدند | `.output` **خودبسنده** است: نه `node_modules`، نه کد منبع |
+| needed `output: "standalone"` in `next.config.ts` | nothing needed — the preset is in `web/vite.config.ts` |
+| `.next/static` and `public` were copied separately | `.output` is **self-contained**: no `node_modules`, no source code |
 
-پیش‌نیاز پیکربندی قبلی (یک خط `output: "standalone"`) **منتفی شد**.
-جایش یک قید تازه نشسته که همان اندازه مسدودکننده است:
+The old configuration prerequisite (a single `output: "standalone"` line)
+**no longer applies**. In its place sits a new constraint that is just as
+blocking:
 
-> پریست Nitro باید `node-server` باشد. پیش‌فرض تاریخی این استک
-> `cloudflare-module` بود که نه `ioredis` در آن کار می‌کند نه `pg`.
-> در `web/vite.config.ts` صریح تنظیم شده و **سه‌جا** نگهبان دارد:
-> یک مرحله در `Dockerfile.web`، یک گام در CI، و همین سند.
+> The Nitro preset must be `node-server`. This stack's historical default
+> was `cloudflare-module`, where neither `ioredis` nor `pg` works. It's set
+> explicitly in `web/vite.config.ts` and has a guard in **three places**:
+> one step in `Dockerfile.web`, one step in CI, and this document.
 
-اندازه‌ها و مصرف واقعی (اندازه‌گیری‌شده، نه تخمین):
+Real sizes and usage (measured, not estimated):
 
-- ایمیج وب: **~۱۶۰MB** برای `linux/amd64` (پایه `node:22-alpine`).
-- حافظه‌ی کانتینر وب: **~۳۱MB** بی‌کار، **~۶۱MB** پس از ۲۰۰ درخواست SSR.
-  سقف `compose.prod.yml` از ۳۸۴M به **۲۵۶M** آمد؛ جمع سقف چهار سرویس
-  ۹۹۲MB ← **۸۶۴MB**.
-- `NODE_OPTIONS=--max-old-space-size=192` در `Dockerfile.web`. این عدد
-  **جفت** سقف ۲۵۶M است: V8 وگرنه سقف heap را از رم میزبان حدس می‌زند و
-  می‌تواند تا نزدیک ۲GB رشد کند — یعنی OOM-killer به‌جای این پروسه سراغ
-  پادل‌یار برود. هر کدام عوض شد، دیگری هم.
+- Web image: **~160MB** for `linux/amd64` (base `node:22-alpine`).
+- Web container memory: **~31MB** idle, **~61MB** after 200 SSR requests.
+  `compose.prod.yml`'s cap went from 384M to **256M**; the four services'
+  combined cap 992MB ← **864MB**.
+- `NODE_OPTIONS=--max-old-space-size=192` in `Dockerfile.web`. This number is
+  **paired** with the 256M cap: otherwise V8 guesses the heap cap from the
+  host's RAM and can grow to nearly 2GB — meaning the OOM-killer goes after
+  Padelyar instead of this process. If one changes, the other must too.
 
-### ۱.۲ 👤 تصمیم رجیستری ایمیج
+### 1.2 👤 Image registry decision
 
-> 🔄 **تصمیم مالک (۲۰۲۶-۰۸-۰۸): روش استاندارد از این پس `./deploy.sh` است —
-> ساخت ایمیج **روی خودِ سرور**، دقیقاً مثل الگوی پروژه‌ی هم‌خانواده‌ی پادل‌یار
-> (`~/w/padelyar/deploy.sh`، همان سرور، همان پشته‌ی TanStack Start + Vite).
-> دلیل تغییر: پادل‌یار همین‌جا سال‌هاست همین کار را می‌کند بدون خرابی گزارش‌شده.
-> ریسک زیر (رم محدود) **رد نشده، پذیرفته شده** — `deploy.sh` پیش از هر build
-> رم آزاد را چک می‌کند و اگر خطرناک بود متوقف می‌شود، و دو ایمیج را پشت‌سرهم
-> می‌سازد نه هم‌زمان. اگر یک‌بار OOM واقعی افتاد، همین‌جا برگرد به مسیر لوکال
-> زیر (بند سه‌شنبه‌ای که نگه داشته شده، نه حذف‌شده).
+> 🔄 **Owner decision (2026-08-08): the standard method from now on is
+> `./deploy.sh`** — building the image **on the server itself**, exactly
+> like the pattern of the sibling Padelyar project (`~/w/padelyar/deploy.sh`,
+> the same server, the same TanStack Start + Vite stack). Reason for the
+> change: Padelyar has been doing exactly this here for years with no
+> reported failure. The risk below (limited RAM) is **not rejected, it's
+> accepted** — `deploy.sh` checks free RAM before every build and stops if
+> it's dangerous, and it builds the two images back-to-back rather than
+> simultaneously. If a real OOM ever happens, come back here and fall back
+> to the local path below (a section kept, not deleted, for that Tuesday).
 
-مسیر فعلی: **ساخت روی سرور با `./deploy.sh`** (ریشه‌ی مخزن). کد با `rsync`
-می‌رود (`web-crawler/` و `.env` صریحاً از rsync مستثنایند)، بعد
-`docker build -f Dockerfile.web` و `-f Dockerfile.collector` پشت‌سرهم روی
-خودِ سرور، بعد `docker compose up -d web collector`.
+Current path: **build on the server with `./deploy.sh`** (repository
+root). The code goes over via `rsync` (`web-crawler/` and `.env` are
+explicitly excluded from rsync), then `docker build -f Dockerfile.web` and
+`-f Dockerfile.collector` back-to-back on the server itself, then
+`docker compose up -d web collector`.
 
-مسیرهای قدیمی‌تر (اگر روزی لازم شد رجیستری یا ساخت لپ‌تاپی برگردد):
+Older paths (in case registry-based or laptop-based builds are ever needed again):
 
-| مسیر | خوبی | ریسک |
+| Path | Upside | Risk |
 |---|---|---|
-| **GHCR:** جاب `images` در CI با `push: true` + روی سرور `docker compose pull` | تکرارپذیر، بدون انتقال دستی | دسترسی ایران به `ghcr.io` ممکن است فیلتر/محدود باشد — قبل از اتکا، از خود سرور تست شود: `curl -sI https://ghcr.io/v2/`. هیچ‌وقت راه‌اندازی نشد. |
-| **ساخت لپ‌تاپی + انتقال دستی:** `docker save tablo-web:v1 \| gzip \| ssh ubuntu@37.32.27.201 'gunzip \| sudo docker load'` | به هیچ سرویس خارجی وابسته نیست؛ صفر بار پردازشی روی سرور | دستی و کند (~۲.۵ دقیقه هر ایمیج روی این پهنای باند)؛ دیسک سرور فقط ~۷GB آزاد دارد — بعد از هر load، ایمیج‌های قدیمی پاک شوند (`sudo docker image prune -f`). دیپلوی بلیت ۳۴ (پنل مدیریت) با همین مسیر انجام شد، پیش از تصمیم بالا. |
+| **GHCR:** the `images` job in CI with `push: true` + `docker compose pull` on the server | Reproducible, no manual transfer | Iranian access to `ghcr.io` may be filtered/restricted — test from the server itself before relying on it: `curl -sI https://ghcr.io/v2/`. Never actually set up. |
+| **Laptop build + manual transfer:** `docker save tablo-web:v1 \| gzip \| ssh ubuntu@37.32.27.201 'gunzip \| sudo docker load'` | Doesn't depend on any external service; zero processing load on the server | Manual and slow (~2.5 minutes per image on this bandwidth); the server only has ~7GB free disk — after every load, old images must be pruned (`sudo docker image prune -f`). Ticket 34's deploy (the admin panel) was done via this exact path, before the decision above. |
 
-اگر GHCR انتخاب شد: در `.github/workflows/ci.yml` جاب `images` این‌ها اضافه
-می‌شود: `docker/login-action` با `GITHUB_TOKEN`، `push: true`، و تگ‌های
-`ghcr.io/smzerehpoush/mazane-{web,collector}:{latest,sha}`؛ و روی سرور یک‌بار
-`docker login ghcr.io` با PAT فقط-خواندنی (scope: `read:packages`).
+If GHCR is chosen: in `.github/workflows/ci.yml` the `images` job gets
+these added: `docker/login-action` with `GITHUB_TOKEN`, `push: true`, and
+the tags `ghcr.io/smzerehpoush/mazane-{web,collector}:{latest,sha}`; and,
+once, on the server, `docker login ghcr.io` with a read-only PAT (scope:
+`read:packages`).
 
-### ۱.۳ ساخت ایمیج‌ها (CI یا لپ‌تاپ)
+### 1.3 Building the images (CI or laptop)
 
-روی لپ‌تاپ (مک ARM) حتماً با پلتفرم سرور:
+On the laptop (Apple Silicon Mac), always with the server's platform:
 
 ```bash
 docker build --platform linux/amd64 -f Dockerfile.collector -t tablo-collector:v1 .
 docker build --platform linux/amd64 -f Dockerfile.web       -t tablo-web:v1 .
 ```
 
-راستی‌آزمایی ایمیج وب **پیش از** فرستادن به سرور — عمداً بدون ردیس و بدون
-پستگرس، چون انتظار ۲۰۰ است نه ۵۰۰ (قاعده‌ی سخت ۵: قطع منبع کهنگی است نه خطا):
+Verify the web image **before** shipping it to the server — deliberately
+without Redis and without Postgres, because the expectation is 200, not 500
+(hard rule 5: a source outage is staleness, not error):
 
 ```bash
 docker run --rm -d --name tablo-web-smoke \
   --memory 256m --cpus 0.5 -p 127.0.0.1:3399:3000 tablo-web:v1
 sleep 5
-curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3399/            # ۲۰۰
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3399/            # 200
 curl -sI http://127.0.0.1:3399/fonts/vazirmatn-variable-33.0.3.woff2 \
-  | grep -iE 'HTTP|cache-control'      # ۲۰۰ + immutable — فونت خودمیزبان
-docker stats --no-stream tablo-web-smoke                                  # ~۳۱MB
+  | grep -iE 'HTTP|cache-control'      # 200 + immutable — self-hosted font
+docker stats --no-stream tablo-web-smoke                                  # ~31MB
 docker rm -f tablo-web-smoke
 ```
 
-همین دود-تست در CI (جاب `images`) هم اجرا می‌شود.
+This same smoke test also runs in CI (the `images` job).
 
-### ۱.۴ 👤 آماده‌سازی `‎.env‎`
+### 1.4 👤 Preparing `.env`
 
-از روی `.env.example`. نکات:
+Based on `.env.example`. Notes:
 
-- `POSTGRES_PASSWORD` و `TABLO_REVALIDATE_TOKEN` با `openssl rand -hex 32`.
-- `TABLO_REVALIDATE_TOKEN` بین گردآورنده و وب مشترک است (compose خودش به هر
-  دو می‌دهد). مسیر `/api/revalidate-blog` بدون توکنِ تنظیم‌شده **همیشه ۴۰۱**
-  می‌دهد (fail closed) — پس اشتباه‌بودنش در لاگ گردآورنده دیده می‌شود.
-  با مهاجرت از نکست دیگر کش صفحه‌ای در مبدأ نیست: پست تازه در بدترین حالت
-  ۶۰ ثانیه (پنجره‌ی `s-maxage` لبه) دیرتر دیده می‌شود.
-- `TABLO_DAILY_PUBLISH_CAP` سقف انتشار روزانه‌ی بلاگ (پیش‌فرض ۲ — تصمیم ۱۶).
-- `TABLO_WEB_PORT` (پیش‌فرض ۳۳۰۰) نباید با درگاه‌های پادل‌یار تصادم کند —
-  روی سرور چک شود: `ss -ltn | grep 3300`.
-- اگر مسیر «بدون رجیستری» انتخاب شد، `TABLO_IMAGE_*` را به تگ‌های load شده
-  بگذارید (مثلاً `tablo-web:v1`).
-- 👤 **رمز پنل مدیریت (بلیت ۲۰).** پنل زیر `/admin` فقط یک رمز عبور دارد
-  (بدون جدول کاربر/نقش). خودِ رمز **هرگز** در مخزن یا `.env` نوشته نمی‌شود —
-  فقط هشش. روی لپ‌تاپ یا سرور (هرجا Node ۲۲ هست):
+- `POSTGRES_PASSWORD` and `TABLO_REVALIDATE_TOKEN` with `openssl rand -hex 32`.
+- `TABLO_REVALIDATE_TOKEN` is shared between the collector and web (compose
+  itself gives it to both). The `/api/revalidate-blog` route **always**
+  returns 401 without a configured token (fail closed) — so a mistake there
+  shows up in the collector's log. With the migration off Next.js there's no
+  more page-level cache at the origin either: a new post is seen at most 60
+  seconds later in the worst case (the edge's `s-maxage` window).
+- `TABLO_DAILY_PUBLISH_CAP` is the blog's daily publish cap (default 2 — decision 16).
+- `TABLO_WEB_PORT` (default 3300) must not collide with Padelyar's ports —
+  check on the server: `ss -ltn | grep 3300`.
+- If the "no registry" path was chosen, set `TABLO_IMAGE_*` to the loaded
+  tags (e.g. `tablo-web:v1`).
+- 👤 **Admin panel password (ticket 20).** The panel under `/admin` has only
+  a single password (no user/role table). The password itself is **never**
+  written to the repository or `.env` — only its hash. On the laptop or the
+  server (wherever Node 22 is):
   ```bash
-  cd web && npm run admin:hash-password -- '<رمز عبور انتخابی>'
+  cd web && npm run admin:hash-password -- '<chosen password>'
   ```
-  خروجی (فرمت `salt:hash` هگزادسیمال) را در `TABLO_ADMIN_PASSWORD_HASH`
-  کپی کنید. برای `TABLO_ADMIN_SESSION_SECRET` هم مثل بقیه: `openssl rand -hex 32`.
-  رمز خام را جایی جز حافظه‌ی 👤 ننویسید — اسکریپت فقط هش را در stdout چاپ
-  می‌کند و رمز را هیچ‌جا لاگ نمی‌کند.
-- 👤 **انبار عکس شاخص پست (بلیت ۲۴).** پیش از این گام، در پنل آروان‌کلود:
-  1. یک باکت فضای ابری S3-سازگار بسازید (نام دلخواه، مثلاً `mazane-posts`)
-     و یک کلید دسترسی (Access Key/Secret Key) اختصاصیِ همان باکت بسازید —
-     کلید مشترک با سرویس‌های دیگر نسازید.
-  2. `TABLO_ARVAN_S3_ENDPOINT`، `TABLO_ARVAN_S3_REGION`،
-     `TABLO_ARVAN_S3_BUCKET`، `TABLO_ARVAN_S3_ACCESS_KEY` و
-     `TABLO_ARVAN_S3_SECRET_KEY` را از همان پنل در `.env` بگذارید — این پنج
-     مقدار هیچ‌جای مخزن نیست و نباید باشد.
-  3. **هیچ زیردامنه‌ی cdn لازم نیست** (تصمیم مالک ۲۰۲۶-۰۸-۰۷، تأییدشده
-     ۲۰۲۶-۰۸-۱۰): نشانی عمومی عکس از همان endpoint و bucket بالا ساخته
-     می‌شود — `<endpoint>/<bucket>/<key>`. فقط باکت باید خواندنیِ عمومی
-     باشد؛ آپلود خودش `ACL: public-read` می‌گذارد.
-     ⚠️ این انحرافِ آگاهانه از بند طراحی تیکت ۲۴ («هیچ دامنه‌ی بیگانه‌ای روی
-     مسیر بحرانی رندر ننشیند») است: دامنه‌ی آروان در HTML صفحه دیده می‌شود و
-     عوض‌کردن ارائه‌دهنده، نشانی همه‌ی عکس‌های قدیمی را می‌شکند.
-  قطع این انبار فقط آپلود عکس تازه را می‌شکند — ذخیره‌ی متن پست و رندر
-  پست‌های موجود اثر نمی‌پذیرند (مسیرهای کاملاً جدا).
+  Copy the output (hex format `salt:hash`) into `TABLO_ADMIN_PASSWORD_HASH`.
+  For `TABLO_ADMIN_SESSION_SECRET`, same as the rest: `openssl rand -hex 32`.
+  Don't write the raw password anywhere but 👤's own memory — the script
+  only prints the hash to stdout and never logs the password anywhere.
+- 👤 **Post cover image storage (ticket 24).** Before this step, in the
+  ArvanCloud panel:
+  1. Create an S3-compatible cloud storage bucket (any name, e.g.
+     `mazane-posts`) and create an access key (Access Key/Secret Key)
+     dedicated to that same bucket — don't create a key shared with other
+     services.
+  2. Put `TABLO_ARVAN_S3_ENDPOINT`, `TABLO_ARVAN_S3_REGION`,
+     `TABLO_ARVAN_S3_BUCKET`, `TABLO_ARVAN_S3_ACCESS_KEY`, and
+     `TABLO_ARVAN_S3_SECRET_KEY` from that same panel into `.env` — these
+     five values are nowhere in the repository and must not be.
+  3. **No CDN subdomain is needed** (owner decision 2026-08-07, confirmed
+     2026-08-10): the public image URL is built from that same endpoint and
+     bucket above — `<endpoint>/<bucket>/<key>`. Only the bucket needs to be
+     publicly readable; the upload itself sets `ACL: public-read`.
+     ⚠️ This is a deliberate deviation from ticket 24's design principle
+     ("no foreign domain sits on the critical render path"): the ArvanCloud
+     domain is visible in the page HTML, and switching providers would break
+     the URL of every old image.
+  Losing this storage only breaks new image uploads — saving post text and
+  rendering existing posts are unaffected (completely separate paths).
 
-### ۱.۵ فایل‌هایی که باید روی سرور باشند
+### 1.5 Files that must be on the server
 
-فقط این‌ها (کل مخزن لازم نیست):
+Only these (the whole repository isn't needed):
 
 ```
 /opt/tablo/
 ├── compose.prod.yml
-├── .env                        # از ۱.۴
-└── collector/migrations/*.sql  # همان ساختار نسبی که compose mount می‌کند
+├── .env                        # from 1.4
+└── collector/migrations/*.sql  # the same relative structure compose mounts
 ```
 
 ---
 
-## ۲. 👤 گام صفر روی سرور — عکس وضعیت پادل‌یار
+## 2. 👤 Step zero on the server — Padelyar status snapshot
 
-قبل از هر تغییری، خط مبنا ثبت شود تا «سالم ماندن برنامه‌های موجود» قابل
-راستی‌آزمایی باشد:
+Before any change, record a baseline so that "existing programs staying
+healthy" can be verified:
 
 ```bash
 ssh root@37.32.27.201
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | tee /root/pre-mazane-docker-ps.txt
-free -m ; df -h /            # رم و دیسک آزاد — انتظار: ~1.2GB رم، ~8GB دیسک
-curl -sI https://<دامنه‌ی پادل‌یار>/ | head -5   # پادل‌یار از بیرون ۲۰۰ می‌دهد
+free -m ; df -h /            # free RAM and disk — expected: ~1.2GB RAM, ~8GB disk
+curl -sI https://<Padelyar domain>/ | head -5   # Padelyar returns 200 from outside
 ```
 
-اگر رم آزاد زیر ~۱GB بود توقف و بررسی — سقف‌های compose ما ۸۶۴MB است.
+If free RAM is under ~1GB, stop and investigate — our compose caps total 864MB.
 
 ---
 
-## ۳. 👤 استقرار کانتینرها
+## 3. 👤 Deploying the containers
 
 ```bash
 mkdir -p /opt/tablo
-# فایل‌های گام ۱.۵ را scp کنید، سپس:
+# scp the files from step 1.5, then:
 cd /opt/tablo
 chmod 600 .env
 
-docker network create tablo-edge        # شبکه‌ی مشترک با کدیِ لبه (گام ۵)
+docker network create tablo-edge        # network shared with the edge Caddy (step 5)
 
-# --- ایمیج‌ها: یکی از دو مسیر گام ۱.۲ ---
-docker compose -f compose.prod.yml pull            # مسیر GHCR
-# یا docker load  (مسیر بدون رجیستری — از لپ‌تاپ push شده با ssh)
+# --- Images: one of the two paths from step 1.2 ---
+docker compose -f compose.prod.yml pull            # GHCR path
+# or docker load  (no-registry path — pushed from the laptop via ssh)
 ```
 
-> ⚠️ `postgres:16` و `redis:7` از Docker Hub می‌آیند و هاب دسترسی IPهای
-> ایرانی را محدود می‌کند. پادل‌یار همین حالا ایمیج pull می‌کند، پس احتمالاً
-> `/etc/docker/daemon.json` سرور mirror دارد — اول همان را چک کنید. اگر
-> نبود: یا از میرور آروان (`docker pull docker.arvancloud.ir/postgres:16`
-> سپس `docker tag` به `postgres:16`) یا این دو ایمیج هم مثل ایمیج‌های مظنه
-> با `docker save | ssh docker load` منتقل شوند. به `daemon.json` دست
-> نزنید مگر با اجازه‌ی 👤 (ری‌استارت docker همه‌ی کانتینرهای پادل‌یار را
-> می‌اندازد).
+> ⚠️ `postgres:16` and `redis:7` come from Docker Hub, and the Hub
+> restricts access from Iranian IPs. Padelyar already pulls images right
+> now, so the server's `/etc/docker/daemon.json` probably has a mirror —
+> check that first. If it doesn't: either use ArvanCloud's mirror
+> (`docker pull docker.arvancloud.ir/postgres:16`, then `docker tag` to
+> `postgres:16`) or transfer these two images the same way as Tablo's
+> images, with `docker save | ssh docker load`. Don't touch `daemon.json`
+> without 👤's permission (restarting docker drops every Padelyar container).
 
 ```bash
 
 docker compose -f compose.prod.yml up -d postgres redis
-docker compose -f compose.prod.yml ps              # هر دو باید healthy شوند
+docker compose -f compose.prod.yml ps              # both must become healthy
 ```
 
-### مهاجرت‌ها (001 تا 012)
+### Migrations (001 through 012)
 
-volume تازه است ⟸ پستگرس در اولین بوت **همه‌ی** فایل‌های
-`/docker-entrypoint-initdb.d/*.sql` را به ترتیب واژه‌نگاری اجرا می‌کند
-(001، 002، 003، 004، 010، 011، 012 — شکاف شماره‌ها عمدی است). راستی‌آزمایی:
+The volume is fresh ⟸ on first boot Postgres runs **every**
+`/docker-entrypoint-initdb.d/*.sql` file in lexicographic order (001, 002,
+003, 004, 010, 011, 012 — the number gaps are deliberate). Verification:
 
 ```bash
 docker compose -f compose.prod.yml exec postgres \
   psql -U mazane -d mazane -c '\dt'
-# انتظار: جدول‌های قیمت/تاریخچه/references/posts/rollup — نه فهرست خالی
+# Expected: price/history/references/posts/rollup tables — not an empty list
 ```
 
-اگر در آینده volume از قبل مقداردهی شده بود و مهاجرت جدیدی اضافه شد، initdb
-دیگر اجرا نمی‌شود — دستی و به ترتیب شماره:
+If in the future the volume is already initialized and a new migration is
+added, initdb no longer runs it — do it by hand, in numeric order:
 
 ```bash
 docker compose -f compose.prod.yml exec postgres \
   psql -U mazane -d mazane -f /docker-entrypoint-initdb.d/013_xxx.sql
 ```
 
-### بالا آوردن وب و گردآورنده
+### Bringing up web and the collector
 
 ```bash
 docker compose -f compose.prod.yml up -d web collector
-docker compose -f compose.prod.yml ps    # همه healthy (گردآورنده تا ~۲ دقیقه start_period دارد)
+docker compose -f compose.prod.yml ps    # all healthy (the collector has up to a ~2-minute start_period)
 
-curl -s http://127.0.0.1:3300/ | head -20         # HTML فارسی صفحه‌ی اصلی
-# نکته: دیگر prerender زمان‌ساخت در کار نیست — هر درخواست SSR می‌شود و لودر
-# همان لحظه ردیس/پستگرس را می‌خواند. اگر گردآورنده هنوز نوبتی نزده باشد،
-# جدول خالی/کهنه است ولی پاسخ **۲۰۰** است، نه خطا (قاعده‌ی سخت ۵).
-# پس «صفحه بالا آمد ولی قیمت ندارد» در دقیقه‌ی اول طبیعی است؛
-# «صفحه ۵۰۰ داد» طبیعی نیست.
-curl -s http://127.0.0.1:3300/robots.txt           # شامل Disallow: /go/ و Sitemap:
+curl -s http://127.0.0.1:3300/ | head -20         # Persian HTML of the homepage
+# Note: there's no more build-time prerender — every request is SSR'd and the
+# loader reads Redis/Postgres at that exact moment. If the collector hasn't
+# had a turn yet, the table is empty/stale but the response is **200**, not
+# an error (hard rule 5).
+# So "the page came up but has no price" is normal in the first minute;
+# "the page returned 500" is not.
+curl -s http://127.0.0.1:3300/robots.txt           # includes Disallow: /go/ and Sitemap:
 curl -sI http://127.0.0.1:3300/fonts/vazirmatn-variable-33.0.3.woff2 \
-  | grep -iE 'HTTP|cache-control'   # ۲۰۰ + immutable — فونت از خود مبدأ می‌آید
-docker compose -f compose.prod.yml logs --tail 50 collector   # «نوبت گردآوری» با قیمت‌ها
+  | grep -iE 'HTTP|cache-control'   # 200 + immutable — the font comes from the origin itself
+docker compose -f compose.prod.yml logs --tail 50 collector   # a "collection round" with prices
 ```
 
 ---
 
-## ۴. 👤 راستی‌آزمایی سلامت پادل‌یار (تکرار بعد از هر گام باقی‌مانده)
+## 4. 👤 Verifying Padelyar's health (repeat after every remaining step)
 
 ```bash
 docker ps --format 'table {{.Names}}\t{{.Status}}' | diff /root/pre-mazane-docker-ps.txt - || true
-free -m                                            # رم آزاد منفی نشده باشد
-curl -sI https://<دامنه‌ی پادل‌یار>/ | head -3     # هنوز ۲۰۰
+free -m                                            # free RAM must not have gone negative
+curl -sI https://<Padelyar domain>/ | head -3     # still 200
 ```
 
 ---
 
-## ۵. 👤 اتصال به کدیِ لبه‌ی موجود
+## 5. 👤 Connecting to the existing edge Caddy
 
-> تنها گامی که به پیکربندی پادل‌یار دست می‌زند. قبلش از Caddyfile موجود نسخه‌ی
-> پشتیبان بگیرید.
+> The only step that touches Padelyar's configuration. Back up the
+> existing Caddyfile before it.
 
 ```bash
-CADDY=<نام کانتینر کدی پادل‌یار>          # از docker ps پیدا کنید
+CADDY=<Padelyar Caddy container name>          # find it from docker ps
 docker network connect tablo-edge $CADDY
 
-# داخل کانتینر کدی، نام tablo-web باید resolve و پاسخ بدهد:
+# Inside the Caddy container, the name tablo-web must resolve and respond:
 docker exec $CADDY wget -qO- http://tablo-web:3000/ | head -3
 ```
 
-سپس محتوای `ops/caddy-snippet.Caddyfile` (بدون کامنت‌های سرصفحه، از بلوک
-`tablo.gold {` به بعد) به **انتهای** Caddyfile موجود اضافه شود. نکات:
+Then append the content of `ops/caddy-snippet.Caddyfile` (without the
+header comments, from the `tablo.gold {` block onward) to the **end** of the
+existing Caddyfile. Notes:
 
-- مسیر Caddyfile را از compose پادل‌یار پیدا کنید (معمولاً bind mount).
-- برای لاگ پایدار، `/var/log/caddy` کانتینر کدی باید volume/bind داشته باشد؛
-  اگر ندارد، در compose پادل‌یار اضافه شود (یک خط volume — با اجازه‌ی 👤).
-- **TLS پشت آروان:** کدی برای `tablo.gold` گواهی ACME می‌گیرد. مسیر
-  HTTP-01 باید از لبه‌ی آروان عبور کند (`/.well-known/acme-challenge/*` کش و
-  مسدود نشود). اگر صدور گیر کرد: در پنل آروان رکورد A را موقتاً «فقط DNS»
-  (بدون پراکسی) کنید، صدور که انجام شد پراکسی را برگردانید.
+- Find the Caddyfile path from Padelyar's compose (usually a bind mount).
+- For persistent logs, the Caddy container's `/var/log/caddy` needs a
+  volume/bind; if it doesn't have one, add it to Padelyar's compose (one
+  volume line — with 👤's permission).
+- **TLS behind ArvanCloud:** Caddy obtains an ACME certificate for
+  `tablo.gold`. The HTTP-01 path must pass through the ArvanCloud edge
+  (`/.well-known/acme-challenge/*` must not be cached or blocked). If
+  issuance gets stuck: temporarily set the A record to "DNS only" (no proxy)
+  in the ArvanCloud panel, and turn the proxy back on once issuance is done.
 
 ```bash
-docker exec $CADDY caddy validate --config /etc/caddy/Caddyfile   # اول اعتبارسنجی
-docker exec $CADDY caddy reload   --config /etc/caddy/Caddyfile   # سپس reload (بدون قطعی)
+docker exec $CADDY caddy validate --config /etc/caddy/Caddyfile   # validate first
+docker exec $CADDY caddy reload   --config /etc/caddy/Caddyfile   # then reload (no downtime)
 docker exec $CADDY wget -qO- --header 'Host: tablo.gold' http://127.0.0.1/ | head -3
 ```
 
-خرابی در reload = برگرداندن Caddyfile پشتیبان + reload دوباره (بازگشت گام ۱۱).
+A failure in reload = restore the backup Caddyfile + reload again (rollback, step 11).
 
 ---
 
-## ۶. 👤 آروان — DNS و کش (NS کامل، بدون CNAME به CDN)
+## 6. 👤 ArvanCloud — DNS and caching (full NS, no CNAME to the CDN)
 
-**مدل قطعی:** رجیسترار فقط نیم‌سرورهای ابرآروان را دارد. همه‌ی رکوردها و
-لبهٔ CDN داخل پنل DNS/CDN آروان ساخته می‌شوند. مسیر «CNAME دامنه به
-هاست‌نیم CDN آروان» برای این محصول **استفاده نمی‌شود**.
+**The final model:** the registrar only has ArvanCloud's nameservers. All
+records and the CDN edge are built inside ArvanCloud's DNS/CDN panel. The
+"CNAME the domain to ArvanCloud's CDN hostname" path **is not used** for
+this product.
 
-در پنل آروان‌کلود (حساب موجود صاحب کسب‌وکار):
+In the ArvanCloud panel (the business owner's existing account):
 
-0. **نیم‌سرورها:** در رجیسترار `tablo.gold` به NSهای آروان اشاره کند (مالک:
-   انجام شده ۲۰۲۶-۰۸-۰۹). تا propagate، رکوردهای داخل پنل از اینترنت دیده
-   نمی‌شوند — با `dig NS tablo.gold` و `dig A tablo.gold` چک شود.
-1. **DNS داخل آروان:** رکورد `A` برای `@` (و در صورت تمایل `www`) به
-   `37.32.27.201` با **ابر/پراکسی روشن**. TTL کوتاه (۲ دقیقه) تا تثبیت.
-   مبدأ origin همان IP سرور است؛ ابر آروان ترافیک را از لبه می‌گیرد.
-2. **HTTPS لبه:** گواهی لبه‌ی آروان فعال؛ ارتباط لبه⟸مبدأ روی HTTPS (گواهی
-   معتبر کدی از گام ۵) یا مطابق گزینه‌های پنل.
-3. **کش:** حالت «پیروی از هدر مبدأ» — صفحه‌ی اصلی
+0. **Nameservers:** at the registrar, `tablo.gold` must point at
+   ArvanCloud's NS (owner: done 2026-08-09). Until propagation, the records
+   inside the panel aren't visible from the internet — check with
+   `dig NS tablo.gold` and `dig A tablo.gold`.
+1. **DNS inside ArvanCloud:** an `A` record for `@` (and `www` if desired) to
+   `37.32.27.201` with **cloud/proxy on**. Short TTL (2 minutes) until it
+   settles. The origin is the server's IP itself; ArvanCloud's cloud picks up
+   traffic at the edge.
+2. **Edge HTTPS:** ArvanCloud's edge certificate active; the edge⟸origin
+   connection over HTTPS (Caddy's valid certificate from step 5) or per the
+   panel's options.
+3. **Caching:** "follow the origin header" mode — the homepage returns
    `Cache-Control: public, s-maxage=60, stale-while-revalidate=600, stale-if-error=86400`
-   می‌دهد (بند ۶.۲؛ منبع حقیقتش `web/src/lib/seo/cache-headers.ts` است).
-   قانون کش دستی جداگانه برای HTML لازم نیست و **نباید** هدر مبدأ override
-   شود — به‌ویژه `stale-if-error` که همان پیش‌شرط سخت گام ۷ است.
-   دارایی‌های ایستا (`/assets/**` هش‌دار و `/fonts/**` نسخه‌دار) خودشان
-   `max-age=31536000, immutable` می‌دهند؛ آن‌ها هم دست‌نخورده رد شوند.
-4. راستی‌آزمایی از بیرون: `curl -sI https://tablo.gold/` ⟸ ۲۰۰ + همان
-   `Cache-Control` + هدرهای کش آروان (`X-Cache` یا `Ar-Cache`؛ بار دوم HIT).
+   (section 6.2; the source of truth is `web/src/lib/seo/cache-headers.ts`).
+   A separate manual cache rule for HTML isn't needed, and the origin header
+   **must not** be overridden — especially `stale-if-error`, which is
+   exactly step 7's hard prerequisite. Static assets (hashed `/assets/**` and
+   versioned `/fonts/**`) already return `max-age=31536000, immutable`
+   themselves; pass those through untouched too.
+4. Verify from outside: `curl -sI https://tablo.gold/` ⟸ 200 + the same
+   `Cache-Control` + ArvanCloud's cache headers (`X-Cache` or `Ar-Cache`; HIT
+   on the second request).
 
 ---
 
-## ۷. 👤 آزمون «۲۰۰ کهنه در قطعی مبدأ» — پیش‌شرط سخت لانچ (بند ۱۰.۲)
+## 7. 👤 The "stale 200 during an origin outage" test — hard launch prerequisite (section 10.2)
 
-> **تا این آزمون پاس نشود لانچ ممنوع است.** تنها نقطه‌ی شکست معماری میزبانی
-> همین است: اگر آروان در قطعی مبدأ به گوگل‌بات ۵xx بدهد، سایت در چند روز از
-> ایندکس حذف می‌شود. (اقدام معوق ۳ صاحب کسب‌وکار در بند ۱۳.۱.)
+> **Launch is forbidden until this test passes.** This is the hosting
+> architecture's single point of failure: if ArvanCloud returns a 5xx to
+> Googlebot during an origin outage, the site gets deindexed within a few
+> days. (Business owner's pending action 3, section 13.1.)
 
-رویه — ترجیحاً با یک نقطه‌ی دید خارج از ایران (VPS/VPN خارجی):
+Procedure — preferably from a vantage point outside Iran (a foreign VPS/VPN):
 
 ```bash
-# ۱) گرم کردن کش لبه و ثبت خط مبنا (از بیرون):
+# 1) Warm the edge cache and record the baseline (from outside):
 curl -sI https://tablo.gold/ ; sleep 5 ; curl -sI https://tablo.gold/
-# انتظار: ۲۰۰؛ بار دوم هدر کش آروان HIT
+# Expected: 200; the second request's ArvanCloud cache header is HIT
 
-# ۲) خواباندن عمدی مبدأ (روی سرور):
+# 2) Deliberately take down the origin (on the server):
 docker compose -f /opt/tablo/compose.prod.yml stop web
 
-# ۳) از بیرون، در دقیقه‌های ۱، ۲ و ۵ (مهم: بعد از انقضای s-maxage=60 هم):
+# 3) From outside, at minutes 1, 2, and 5 (important: also after s-maxage=60 expires):
 date -u ; curl -sI https://tablo.gold/
-# قبولی: هر سه بار «۲۰۰» با HTML کهنه. مردودی: هر 5xx/52x.
+# Pass: "200" all three times, with stale HTML. Fail: any 5xx/52x.
 
-# ۴) ثبت شواهد (معیار پذیرش «آزمایش ثبت‌شده»): خروجی کامل curl -i و date -u
-#    هر سه نوبت در یک فایل/اسکرین‌شات نگه داشته شود.
+# 4) Record evidence (acceptance criterion "a logged test"): keep the full
+#    output of curl -i and date -u for all three rounds in one file/screenshot.
 
-# ۵) برگرداندن مبدأ:
+# 5) Bring the origin back:
 docker compose -f /opt/tablo/compose.prod.yml start web
-curl -sI https://tablo.gold/        # دوباره ۲۰۰ تازه
+curl -sI https://tablo.gold/        # fresh 200 again
 ```
 
-اگر مردود شد: در تنظیمات کش آروان گزینه‌ی سروِ محتوای کش‌شده هنگام خطای مبدأ
-را فعال کنید (و در صورت نبود، با پشتیبانی آروان طرح شود)، سپس آزمون از نو.
-نتیجه هرچه بود، در همین سند زیر همین بند با تاریخ ثبت شود.
+If it fails: enable the "serve cached content on origin error" option in
+ArvanCloud's cache settings (and if it doesn't exist, raise it with
+ArvanCloud support), then redo the test. Whatever the result, record it in
+this document under this same section, with a date.
 
 ---
 
-## ۸. 👤 پایش بیرونی (بند ۱۰.۲، الزام ۲)
+## 8. 👤 External monitoring (section 10.2, requirement 2)
 
-پایش باید **از خارج ایران** باشد — تنها سؤال مهم این است که گوگل‌بات می‌رسد
-یا نه. هر سرویس رایگان با نودهای خارجی کافی است (UptimeRobot، Better Stack،
-StatusCake — انتخاب با 👤 چون حساب به ایمیل او می‌خورد):
+Monitoring must be **from outside Iran** — the only question that matters
+is whether Googlebot can reach it. Any free service with foreign nodes is
+enough (UptimeRobot, Better Stack, StatusCake — the choice is 👤's since the
+account is tied to their email):
 
-- دو چک HTTPS هر ۵ دقیقه: `https://tablo.gold/` و
-  `https://tablo.gold/robots.txt`؛ شرط قبولی: وضعیت ۲۰۰.
-- هشدار به ایمیل صاحب کسب‌وکار.
-- نکته: پس از آزمون گام ۷ فعال شود تا هشدار کاذب ندهد؛ یا هنگام آزمون در
-  حالت pause باشد.
+- Two HTTPS checks every 5 minutes: `https://tablo.gold/` and
+  `https://tablo.gold/robots.txt`; passing condition: status 200.
+- Alert to the business owner's email.
+- Note: activate it after step 7's test so it doesn't false-alarm; or keep
+  it paused during the test.
 
 ---
 
-## ۹. لاگ گوگل‌بات + تأیید معکوس DNS (بند ۱۰ و تصمیم ۱۴)
+## 9. Googlebot log + reverse DNS verification (section 10 and decision 14)
 
-لاگ JSON در گام ۵ فعال شد (`/var/log/caddy/mazane-access.log` داخل کانتینر
-کدی، شامل User-Agent و IP واقعی پشت آروان). تأیید اصالت، آفلاین و دوره‌ای:
+The JSON log was enabled in step 5 (`/var/log/caddy/mazane-access.log`
+inside the Caddy container, including the User-Agent and the real IP behind
+ArvanCloud). Authenticity verification, offline and periodic:
 
 ```bash
-# روی سرور (python3 روی اوبونتو ۲۴.۰۴ موجود است) — اسکریپت را یک‌بار scp کنید:
-docker exec <کانتینر کدی> cat /var/log/caddy/mazane-access.log > /tmp/mazane-access.log
+# On the server (python3 is present on Ubuntu 24.04) — scp the script over once:
+docker exec <Caddy container> cat /var/log/caddy/mazane-access.log > /tmp/mazane-access.log
 python3 /opt/tablo/verify-googlebot.py /tmp/mazane-access.log
 ```
 
-خروجی: هیت‌های اصیل گوگل (PTR به `googlebot.com`/`google.com` + forward
-تأییدشده)، مدعیان جعلی، مسیرها و کدهای وضعیت — با هشدار صریح اگر گوگل‌باتِ
-اصیل ۵xx دیده باشد. **هفتگی اجرا شود** (دستی یا cron ساده روی سرور) و تا
-زمانی که دسترسی سرچ‌کنسول تأیید نشده (تصمیم ۱۴)، این تنها معیار «گوگل ما را
-می‌خزد» است.
+Output: genuine Google hits (PTR to `googlebot.com`/`google.com` +
+verified forward), fake claimants, paths, and status codes — with an
+explicit warning if genuine Googlebot was seen getting a 5xx. **Run it
+weekly** (manually or a simple cron on the server), and until Search Console
+access is verified (decision 14), this is the only criterion for "Google is
+crawling us."
 
 ---
 
-## ۱۰. 👤 سرچ‌کنسول — DNS TXT (بند ۱۰.۲، الزام ۳)
+## 10. 👤 Search Console — DNS TXT (section 10.2, requirement 3)
 
-1. در سرچ‌کنسول، property از نوع **Domain** برای `tablo.gold`.
-2. رکورد `TXT` پیشنهادی گوگل در **پنل DNS آروان** اضافه شود (به میزبانی
-   وابسته نیست و با تغییر هاست نمی‌شکند — دلیل انتخاب این روش).
-3. سایت‌مپ نیاز به ثبت دستی ندارد: `robots.txt` خط `Sitemap:` دارد
-   (`web/app/robots.ts`)؛ ثبت دستی در سرچ‌کنسول هم بلامانع است.
-4. یادآوری: خودِ دسترسی صاحب کسب‌وکار به سرچ‌کنسول هنوز تأییدنشده است
-   (اقدام معوق ۱، بند ۱۳.۱) — گام ۹ مستقل از نتیجه کار می‌کند.
+1. In Search Console, a **Domain**-type property for `tablo.gold`.
+2. Add Google's suggested `TXT` record in **ArvanCloud's DNS panel** (it
+   doesn't depend on hosting and doesn't break when hosting changes — the
+   reason this method was chosen).
+3. The sitemap doesn't need manual registration: `robots.txt` has a
+   `Sitemap:` line (`web/app/robots.ts`); manual registration in Search
+   Console is also fine.
+4. Reminder: the business owner's own access to Search Console still isn't
+   confirmed (pending action 1, section 13.1) — step 9 works independently
+   of that outcome.
 
 ---
 
-## ۱۱. بازگشت (rollback)
+## 11. Rollback
 
-ترتیب معکوس، بدون اثر بر پادل‌یار:
+Reverse order, with no effect on Padelyar:
 
 ```bash
-# ۱) قطع ترافیک لبه: بلوک tablo.gold از Caddyfile پادل‌یار حذف/کامنت شود
+# 1) Cut edge traffic: remove/comment out the tablo.gold block from Padelyar's Caddyfile
 docker exec $CADDY caddy reload --config /etc/caddy/Caddyfile
 
-# ۲) خواباندن مظنه (داده‌ها در volume می‌مانند):
+# 2) Shut down Tablo (data stays in the volume):
 docker compose -f /opt/tablo/compose.prod.yml down
-# پاک‌سازی کامل (فقط اگر عمداً بخواهید تاریخچه هم برود): down -v
+# Full cleanup (only if you deliberately want history gone too): down -v
 
-# ۳) اختیاری: docker network disconnect tablo-edge $CADDY
-# ۴) 👤 آروان: pause پراکسی یا حذف رکورد — فقط اگر لازم شد
+# 3) Optional: docker network disconnect tablo-edge $CADDY
+# 4) 👤 ArvanCloud: pause the proxy or remove the record — only if needed
 ```
 
-هر مرحله برگشت‌پذیر است؛ `docker compose up -d` دوباره همه‌چیز را برمی‌گرداند
-(ایمیج‌ها روی سرور می‌مانند).
+Every step is reversible; `docker compose up -d` brings everything back
+again (the images stay on the server).
 
 ---
 
-## ۱۲. چک‌لیست جمع‌بندی جلسه‌ی استقرار
+## 12. Deployment session wrap-up checklist
 
-- [ ] ۱.۱ CI سبز است و `.output/nitro.json` پریست `node-server` دارد
-      (دود-تست ایمیج وب در جاب `images` پاس شده)
-- [ ] ۱.۲ 👤 تصمیم رجیستری + سیم‌کشی push (در صورت GHCR)
-- [ ] ۲ 👤 عکس وضعیت پادل‌یار ثبت شد
-- [ ] ۳ 👤 چهار سرویس healthy؛ مهاجرت‌ها اعمال؛ `127.0.0.1:3300` پاسخ ۲۰۰
-- [ ] ۴ 👤 پادل‌یار سالم (بعد از هر گام)
-- [ ] ۵ 👤 کدی reload شد؛ `tablo.gold` از لبه‌ی کدی سرو می‌شود
-- [ ] ۶ 👤 آروان: NS ست‌شده؛ A با ابر روشن (بدون CNAME به CDN) + کش پیرو هدر مبدأ
-- [ ] ۷ 👤 **آزمون ۲۰۰ کهنه پاس و شواهدش ثبت شد** (پیش‌شرط لانچ)
-- [ ] ۸ 👤 پایش بیرونی روی `/` و `/robots.txt` فعال
-- [ ] ۹ اولین اجرای `verify-googlebot.py` انجام و زمان‌بندی هفتگی گذاشته شد
-- [ ] ۱۰ 👤 TXT سرچ‌کنسول تأیید شد
+- [ ] 1.1 CI is green and `.output/nitro.json`'s preset is `node-server`
+      (the web image smoke test passed in the `images` job)
+- [ ] 1.2 👤 Registry decision + push wiring (if GHCR)
+- [ ] 2 👤 Padelyar status snapshot recorded
+- [ ] 3 👤 Four services healthy; migrations applied; `127.0.0.1:3300` returns 200
+- [ ] 4 👤 Padelyar healthy (after every step)
+- [ ] 5 👤 Caddy reloaded; `tablo.gold` is served from the edge Caddy
+- [ ] 6 👤 ArvanCloud: NS set; A record with cloud on (no CNAME to the CDN) + cache follows origin header
+- [ ] 7 👤 **Stale-200 test passed and its evidence recorded** (launch prerequisite)
+- [ ] 8 👤 External monitoring active on `/` and `/robots.txt`
+- [ ] 9 First run of `verify-googlebot.py` done and a weekly schedule set up
+- [ ] 10 👤 Search Console TXT confirmed

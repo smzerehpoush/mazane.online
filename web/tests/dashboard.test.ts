@@ -77,8 +77,8 @@ function input(overrides: Partial<DashboardInput> = {}): DashboardInput {
   };
 }
 
-describe("هندسه‌ی محور", () => {
-  it("ارزان‌ترین راست‌ترین است و گران‌ترین چپ‌ترین (RTL)", () => {
+describe("axis geometry", () => {
+  it("the cheapest is rightmost and the most expensive is leftmost (RTL)", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 19_000_000), row("b", 18_000_000)],
@@ -86,12 +86,12 @@ describe("هندسه‌ی محور", () => {
       }),
     );
     const [expensive, cheap] = rail.sources;
-    // ⚠️ `right` فاصله از لبه‌ی راست است: ارزان‌ترین ۴٪ (چسبیده به راست).
+    // ⚠️ `right` is the distance from the right edge: cheapest is 4% (flush against the right).
     expect(cheap?.railPercent).toBe(4);
     expect(expensive?.railPercent).toBe(96);
   });
 
-  it("نشانگر هرگز بیرون از بازه‌ی ۴٪ تا ۹۶٪ نمی‌رود", () => {
+  it("the marker never goes outside the 4%–96% range", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_000_000), row("b", 18_400_000), row("c", 19_000_000)],
@@ -105,11 +105,11 @@ describe("هندسه‌ی محور", () => {
   });
 
   /**
-   * ⚠️، «مورد لبه‌ای که حتماً باید حل شود». بدون کف، این دو سکو که فقط
-   * ۲٬۰۰۰ تومان فاصله دارند، دو سرِ محور را می‌گرفتند و اختلاف ناچیز عظیم
-   * دیده می‌شد.
+   * ⚠️ The edge case that absolutely must be handled. Without a floor,
+   * these two platforms — only 2,000 toman apart — would take the two
+   * ends of the axis, making a tiny difference look enormous.
    */
-  it("با اختلاف کم‌تر از ۵۰٬۰۰۰ نشانگرها حول مرکز جمع می‌مانند", () => {
+  it("with a spread under 50,000, markers stay clustered around the center", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_601_000), row("b", 18_599_000)],
@@ -122,17 +122,17 @@ describe("هندسه‌ی محور", () => {
     }
   });
 
-  it("بازه‌ی کف حول مرکز باز می‌شود، نه از یک سر", () => {
+  it("the floor spread opens around the center, not from one end", () => {
     const { min, span } = railScale([18_599_000, 18_601_000]);
     expect(span).toBe(MIN_RAIL_SPREAD_TOMAN);
     expect(min + span / 2).toBe(18_600_000);
   });
 
-  it("اختلاف بزرگ‌تر از کف، مقیاس واقعی خودش را نگه می‌دارد", () => {
+  it("a spread larger than the floor keeps its own real scale", () => {
     expect(railScale([18_000_000, 18_900_000])).toEqual({ min: 18_000_000, span: 900_000 });
   });
 
-  it("ساقه‌ها یک‌درمیان بلند و کوتاه‌اند تا برچسب‌ها روی هم نیفتند", () => {
+  it("stems alternate long and short so labels don't overlap", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_100_000), row("b", 18_200_000), row("c", 18_300_000)],
@@ -142,7 +142,7 @@ describe("هندسه‌ی محور", () => {
     expect(rail.sources.map((s) => s.stemLong)).toEqual([false, true, false]);
   });
 
-  it("پاورقی محور کمینه، بیشینه و بازه را آماده و فارسی می‌دهد", () => {
+  it("the axis footer renders min, max, and spread pre-formatted in Persian", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_600_000), row("b", 18_500_000)],
@@ -155,8 +155,8 @@ describe("هندسه‌ی محور", () => {
   });
 });
 
-describe("سکوی مرجع", () => {
-  it("لنگر روی موقعیت سکوی مرجع می‌نشیند", () => {
+describe("reference platform", () => {
+  it("the anchor sits at the reference platform's position", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_000_000), row("wallgold", 19_000_000)],
@@ -168,23 +168,23 @@ describe("سکوی مرجع", () => {
     expect(rail.referencePercent).toBe(reference?.railPercent);
   });
 
-  it("فقط یک منبع پرچم مرجع دارد", () => {
+  it("only one source carries the reference flag", () => {
     const { rail } = buildDashboard(input());
     expect(rail.sources.filter((s) => s.isReference)).toHaveLength(1);
   });
 
-  it("خلاصه بازار نام سکوی مرجع را می‌برد", () => {
+  it("the market summary carries the reference platform's name", () => {
     const { summary } = buildDashboard(input());
     expect(summary.referenceName).toBe("نام milli");
   });
 });
 
-describe("هیچ عدد بین‌سکویی", () => {
+describe("no cross-platform number", () => {
   /**
-   * ⚠️ نگهبان خط قرمز حقوقی. اگر روزی کسی میانگین یا
-   * درصد اختلاف را برگرداند، این تست باید قرمز شود.
+   * ⚠️ Guards the legal red line. If someone ever brings back an
+   * average or a diff percentage, this test must fail.
    */
-  it("هیچ عددی برابر میانگین قیمت‌ها منتشر نمی‌شود", () => {
+  it("no number equal to the average of the prices is ever published", () => {
     const prices = [18_000_000, 19_000_000];
     const { rail, summary } = buildDashboard(
       input({
@@ -208,7 +208,7 @@ describe("هیچ عدد بین‌سکویی", () => {
     expect(published).not.toContain(average);
   });
 
-  it("هیچ منبعی فیلد درصد اختلاف ندارد", () => {
+  it("no source has a diff-percentage field", () => {
     const { rail } = buildDashboard(input());
     for (const source of rail.sources) {
       expect(Object.keys(source)).not.toContain("diffPercent");
@@ -217,14 +217,14 @@ describe("هیچ عدد بین‌سکویی", () => {
   });
 });
 
-describe("خلاصه بازار — آمار همان سری تک‌سکویی", () => {
+describe("market summary — stats from that single platform's own series", () => {
   const ranges: PlatformHistoryByRange = {
     DAILY: history("milli", [100, 130, 90, 120]),
     WEEKLY: null,
     MONTHLY: null,
   };
 
-  it("کمینه، بیشینه و آخرین مقدار از همان سری بیرون می‌آیند", () => {
+  it("min, max, and latest value all come from that same series", () => {
     const { summary } = buildDashboard(input({ referenceHistory: ranges }));
     const daily = summary.ranges.find((r) => r.key === "DAILY");
     expect(daily?.currentDisplay).toBe("۱۲۰");
@@ -232,19 +232,19 @@ describe("خلاصه بازار — آمار همان سری تک‌سکویی",
     expect(daily?.low?.valueDisplay).toBe("۹۰");
   });
 
-  it("تغییرات نسبت به ابتدای همان بازه است، نه همیشه دیروز", () => {
+  it("change is relative to the start of that same range, not always yesterday", () => {
     const { summary } = buildDashboard(input({ referenceHistory: ranges }));
     const daily = summary.ranges.find((r) => r.key === "DAILY");
     expect(daily?.changeFraction).toBeCloseTo(0.2, 10);
   });
 
-  it("کنار بیشینه و کمینه ساعت وقوع می‌آید", () => {
+  it("the time of occurrence accompanies the high and low", () => {
     const { summary } = buildDashboard(input({ referenceHistory: ranges }));
     const daily = summary.ranges.find((r) => r.key === "DAILY");
     expect(daily?.high?.atDisplay).toMatch(/^[۰-۹]{2}:[۰-۹]{2}$/);
   });
 
-  it("بازه‌ی بی‌داده غیرفعال است، نه عددِ جعلی", () => {
+  it("a range with no data is disabled, not filled with a fake number", () => {
     const { summary } = buildDashboard(input({ referenceHistory: ranges }));
     const weekly = summary.ranges.find((r) => r.key === "WEEKLY");
     expect(weekly?.enabled).toBe(false);
@@ -252,14 +252,14 @@ describe("خلاصه بازار — آمار همان سری تک‌سکویی",
     expect(weekly?.area.line).toBeNull();
   });
 
-  it("هر سه بازه در خروجی هستند تا تعویض زبانه فچ نزند", () => {
+  it("all three ranges are in the output so switching tabs never triggers a fetch", () => {
     const { summary } = buildDashboard(input({ referenceHistory: ranges }));
     expect(summary.ranges.map((r) => r.key)).toEqual(["DAILY", "WEEKLY", "MONTHLY"]);
   });
 });
 
-describe("کهنگی و حالت‌های خالی", () => {
-  it("سکوی بی‌قیمت حذف نمی‌شود؛ فقط نشانگر محور نمی‌گیرد", () => {
+describe("staleness and empty states", () => {
+  it("a priceless platform isn't removed; it just gets no axis marker", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_600_000), row("wallgold", null)],
@@ -272,7 +272,7 @@ describe("کهنگی و حالت‌های خالی", () => {
     expect(missing?.priceDisplay).toBeNull();
   });
 
-  it("وقتی اسنپ‌شات نیست، آخرین نقطه‌ی تاریخچه قیمت را می‌دهد", () => {
+  it("when there's no snapshot, the last history point supplies the price", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_600_000), row("wallgold", null)],
@@ -283,7 +283,7 @@ describe("کهنگی و حالت‌های خالی", () => {
     expect(rail.sources.find((s) => s.slug === "wallgold")?.priceDisplay).toBe("۱۸٬۴۵۰٬۰۰۰");
   });
 
-  it("هیچ قیمتی نداریم ⟸ محور نیست ولی خروجی معتبر است، نه خطا", () => {
+  it("no price at all ⟸ no axis, but the output is still valid, not an error", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", null), row("wallgold", null)],
@@ -295,7 +295,7 @@ describe("کهنگی و حالت‌های خالی", () => {
     expect(rail.sources).toHaveLength(2);
   });
 
-  it("با یک منبعِ قیمت‌دار محور رسم نمی‌شود", () => {
+  it("with only one priced source, no axis is drawn", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_600_000), row("wallgold", null)],
@@ -305,14 +305,14 @@ describe("کهنگی و حالت‌های خالی", () => {
     expect(rail.hasRail).toBe(false);
   });
 
-  it("بدون تاریخچه، اسپارک‌لاین جای خالی‌اش را نگه می‌دارد", () => {
+  it("without history, the sparkline holds its empty place", () => {
     const { rail } = buildDashboard(input());
     expect(rail.sources[0]?.sparkline).toEqual({ line: null, area: null });
   });
 });
 
-describe("updatedAt سطح صفحه — مبنای فتیله", () => {
-  it("تازه‌ترین زمان میان ردیف‌ها را می‌دهد", () => {
+describe("page-level updatedAt — the basis for the wick", () => {
+  it("returns the most recent time among the rows", () => {
     const { updatedAt } = buildDashboard(
       input({
         rows: [
@@ -324,20 +324,20 @@ describe("updatedAt سطح صفحه — مبنای فتیله", () => {
     expect(updatedAt).toBe("2026-08-11T09:00:30.000Z");
   });
 
-  it("ردیف بی‌زمان نادیده گرفته می‌شود، نه اینکه خروجی را تهی کند", () => {
+  it("a timeless row is ignored rather than nulling the whole output", () => {
     const { updatedAt } = buildDashboard(
       input({ rows: [row("milli", 1, null), row("wallgold", 2, "2026-08-11T09:00:00.000Z")] }),
     );
     expect(updatedAt).toBe("2026-08-11T09:00:00.000Z");
   });
 
-  it("هیچ ردیفی زمان ندارد ⟸ null", () => {
+  it("no row has a time ⟸ null", () => {
     expect(buildDashboard(input({ rows: [row("milli", 1, null)] })).updatedAt).toBeNull();
   });
 });
 
-describe("لینک خروجی", () => {
-  it("هر منبع به ‎/go/<slug>‎ می‌رود، نه به دامنه‌ی سکو", () => {
+describe("outbound link", () => {
+  it("every source goes through /go/<slug>, never straight to the platform's domain", () => {
     const { rail } = buildDashboard(input());
     for (const source of rail.sources) {
       expect(source.href).toBe(`/go/${source.slug}`);
@@ -345,13 +345,13 @@ describe("لینک خروجی", () => {
   });
 });
 
-describe("دسترس‌پذیری", () => {
-  it("هر نشانگر برچسب متنی با نام و قیمت دارد", () => {
+describe("accessibility", () => {
+  it("every marker has a text label with name and price", () => {
     const { rail } = buildDashboard(input());
     expect(rail.sources[0]?.ariaLabel).toBe("نام milli — ۱۸٬۶۰۰٬۰۰۰ تومان");
   });
 
-  it("سکوی بی‌قیمت برچسبش دروغ نمی‌گوید", () => {
+  it("a priceless platform's label doesn't lie", () => {
     const { rail } = buildDashboard(
       input({ rows: [row("milli", null)], platforms: [platform("milli", true)] }),
     );
@@ -359,8 +359,8 @@ describe("دسترس‌پذیری", () => {
   });
 });
 
-describe("قالب‌بندی سمت سرور", () => {
-  it("همه‌ی اعداد نمایشی فارسی و آماده‌اند (کلاینت قالب نمی‌زند)", () => {
+describe("server-side formatting", () => {
+  it("all displayed numbers are Persian and pre-formatted (the client does no formatting)", () => {
     const { rail } = buildDashboard(
       input({ referenceHistory: { ...EMPTY_RANGES, DAILY: history("milli", [1, 2]) } }),
     );
@@ -369,21 +369,21 @@ describe("قالب‌بندی سمت سرور", () => {
     }
   });
 
-  it("خروجی قطعی است — همان ورودی، همان نما", () => {
+  it("output is deterministic — same input, same rendering", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(JSON.stringify(buildDashboard(input()))).toBe(JSON.stringify(buildDashboard(input())));
     warn.mockRestore();
   });
 });
 
-describe("قطعیت — هیچ Intl در مسیر رندر داشبورد", () => {
+describe("determinism — no Intl in the dashboard render path", () => {
   function codeWithoutComments(relative: string): string {
     return readFileSync(join(__dirname, "..", relative), "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*$/gm, "");
   }
 
-  it.each(["src/lib/dashboard.ts", "src/lib/spline.ts"])("%s هیچ فراخوانی Intl ندارد", (file) => {
+  it.each(["src/lib/dashboard.ts", "src/lib/spline.ts"])("%s has no Intl call", (file) => {
     const calls = codeWithoutComments(file)
       .split("\n")
       .filter((line) => /\bIntl\./.test(line));
@@ -392,14 +392,16 @@ describe("قطعیت — هیچ Intl در مسیر رندر داشبورد", () 
 });
 
 /**
- * ⚠️ رگرسیون واقعی که بازبینی کد گرفت. جدول قدیمی برای هر ردیف برچسب کهنگی
- * داشت و **فرود به تاریخچه نداشت**: سکوی مرده «قیمت در دسترس نیست» می‌گرفت.
- * نسخه‌ی اول داشبورد هر دو را از دست داد — عددِ آخرین نقطه‌ی تجمیع ساعتی را
- * بی‌هیچ نشانه‌ای به‌جای «قیمت الان» می‌نشاند. این دقیقاً چیزی است که
- * ممنوع می‌کند: عدد قدیمی مجاز است، عدد قدیمیِ **بی‌زمان** نه.
+ * ⚠️ A real regression caught by code review. The old table had a
+ * staleness label per row but **no fallback to history**: a dead
+  * platform got "price unavailable". The dashboard's first version
+ * lost both — it silently substituted the last hourly-aggregate point
+  * for "current price" with no indication at all. This is exactly what's
+ * forbidden: an old number is fine, an old number **with no timestamp**
+ * is not.
  */
-describe("کهنگی به‌ازای هر سکو", () => {
-  it("زمان هر سکو جدا حمل می‌شود، نه فقط زمان صفحه", () => {
+describe("per-platform staleness", () => {
+  it("each platform's own time travels separately, not just the page's time", () => {
     const { rail, updatedAt } = buildDashboard(
       input({
         rows: [
@@ -417,7 +419,7 @@ describe("کهنگی به‌ازای هر سکو", () => {
     expect(updatedAt).toBe("2026-08-11T09:00:00.000Z");
   });
 
-  it("قیمتِ آمده از تاریخچه علامت‌گذاری می‌شود", () => {
+  it("a price sourced from history gets flagged", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_600_000, "2026-08-11T09:00:00.000Z"), row("wallgold", null)],
@@ -430,7 +432,7 @@ describe("کهنگی به‌ازای هر سکو", () => {
     expect(rail.sources.find((s) => s.slug === "milli")?.priceFromHistory).toBe(false);
   });
 
-  it("سکوی بی‌قیمت و بی‌تاریخچه هم علامت تاریخچه نمی‌گیرد", () => {
+  it("a platform with no price and no history doesn't get the history flag either", () => {
     const { rail } = buildDashboard(
       input({ rows: [row("milli", 18_600_000), row("wallgold", null)] }),
     );

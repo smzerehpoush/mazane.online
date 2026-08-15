@@ -1,9 +1,11 @@
 /**
- * ⚠️ تفاوت آگاهانه با نثر تیکت: امضای `ImageStore.upload` یک آرگومان `slug`
- * هم می‌گیرد (اول)، نه فقط `(bytes, contentType)`. دلیل: نام‌گذاری شیء طبق
- * طراحی `posts/<slug>/<hash>.webp` است و خودِ استور یک بوکت/کلاینت مشترک
- * است، دقیقاً همان دلیلی که `ViewCounterSource.recordView(slug)` و
- * `AdminPostsSource.getPost(slug)` کلید را به متد می‌دهند نه به کارخانه.
+ * ⚠️ Deliberate deviation from the ticket's prose: `ImageStore.upload`'s
+ * signature also takes a `slug` argument (first), not just
+ * `(bytes, contentType)`. Reason: object naming follows the
+ * `posts/<slug>/<hash>.webp` design, and the store itself is a shared
+ * bucket/client — exactly the same reason `ViewCounterSource.recordView(slug)`
+ * and `AdminPostsSource.getPost(slug)` pass the key to the method rather
+ * than to the factory.
  */
 
 export interface ImageAsset {
@@ -44,7 +46,7 @@ function source(): ImageStore {
   if (activeStore !== null) return activeStore;
   if (defaultFactory === null) {
     throw new Error(
-      "هیچ ImageStore ثبت نشده — از «@/lib/server/image-store» بخوان یا setImageStore صدا بزن",
+      "No ImageStore registered — import from «@/lib/server/image-store» or call setImageStore",
     );
   }
   activeStore = defaultFactory();

@@ -1,12 +1,13 @@
 /**
- * ⚠️ اینجا هیچ فرمول قیمتی نیست. ورودی عددهای آماده‌ی
- * گردآورنده‌اند و خروجی مختصات پیکسلی — این نگاشت **مقیاس نمایش** است، نه
- * محاسبه‌ی قیمت. هیچ عددی از اینجا به کاربر نشان داده نمی‌شود؛ فقط شکل.
+ * ⚠️ There is no price formula here. The input is ready-made numbers from
+ * the collector, and the output is pixel coordinates — this mapping is
+ * **display scale**, not price computation. No number from here is ever
+ * shown to the user; only the shape.
  */
 
 export type Point = readonly [x: number, y: number];
 
-/** ⚠️ گرد کردن به یک رقم اعشار عمدی است و دو دلیل دارد: */
+/** ⚠️ Rounding to one decimal place is deliberate, for two reasons: */
 function round(value: number): string {
   return value.toFixed(1);
 }
@@ -46,10 +47,10 @@ export interface SeriesShapeOptions {
 }
 
 /**
- * ⚠️ نرمال‌سازی محور عمودی **برای هر سری مستقل** است (کمینه/بیشینه‌ی خودِ همان
- * سری — ). هدف نشان‌دادن *شکل روند* است نه سطح قیمت، و اگر همه‌ی
- * اسپارک‌لاین‌ها یک مقیاس مشترک بگیرند، سکویی که نوسانش کم است خط صاف نشان
- * می‌دهد و اطلاعات از دست می‌رود.
+ * ⚠️ Y-axis normalization is **independent per series** (each series' own
+ * min/max). The goal is showing the *trend shape*, not the price level, and
+ * if all sparklines shared one common scale, a platform with low volatility
+ * would show a flat line and information would be lost.
  */
 export function seriesPaths(values: readonly number[], options: SeriesShapeOptions): SeriesPaths {
   const { width, height, padding = 2 } = options;

@@ -1,6 +1,6 @@
-# ⚠️ مرجع قیمت سکو نیست: هرگز ردیف جدول مقایسه، لینک معرف، `PLATFORMS`،
-# فهرست عمومی (`tablo:listed`) یا رأی چک میانه نمی‌شود.
-# ⚠️ عدد مرجع فقط با ذکر منبع نمایش داده می‌شود، هرگز به‌عنوان «نرخ مظنه».
+# ⚠️ Not a platform price reference: it never becomes a comparison-table row,
+# a referral link, `PLATFORMS`, the public listing (`tablo:listed`), or a median/sanity-check vote.
+# ⚠️ The reference figure is only ever shown with its source cited, never as a "quoted rate".
 
 from __future__ import annotations
 

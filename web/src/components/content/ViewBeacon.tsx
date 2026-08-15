@@ -11,8 +11,8 @@ export function ViewBeacon({ slug }: { slug: string }) {
     try {
       if (window.sessionStorage.getItem(key) !== null) return;
     } catch {
-      // sessionStorage در حالت خصوصی بعضی مرورگرها throw می‌کند —
-      // نبودش نباید چیزی بشکند؛ فقط محافظ تکرار را از دست می‌دهیم.
+      // Some browsers throw on sessionStorage in private mode. Its absence
+      // must not break anything; we only lose the duplicate-submission guard.
     }
 
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -21,7 +21,7 @@ export function ViewBeacon({ slug }: { slug: string }) {
       try {
         window.sessionStorage.setItem(key, "1");
       } catch {
-        /* بی‌اهمیت — بالا توضیح داده شد */
+        /* Irrelevant — explained above. */
       }
       const body = JSON.stringify({ slug });
       const blob = new Blob([body], { type: "application/json" });
@@ -32,7 +32,7 @@ export function ViewBeacon({ slug }: { slug: string }) {
           body,
           keepalive: true,
         }).catch(() => {
-          /* شمارنده هرگز نباید به کاربر خطا نشان دهد */
+          /* The counter must never show an error to the user. */
         });
       }
     };

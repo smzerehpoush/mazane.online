@@ -35,8 +35,9 @@ function NotFoundComponent() {
 }
 
 /**
- * ⚠️ این صفحه هرگز نباید جای «قیمت کهنه» را بگیرد: قطع منبع داده کهنگی است
- * نه خطا و در لایه‌ی داده به «داده‌ای نیست» ترجمه شده.
+ * ⚠️ This page must never take the place of a "stale price": a data-source
+ * outage is staleness, not error, and at the data layer it translates to
+ * "no data".
  */
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
@@ -108,16 +109,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 /**
- * ⚠️ `suppressHydrationWarning` روی `<html>` اجباری است و بی‌ربط به سهل‌انگاری:
- * سرور همیشه `data-theme="light"` می‌نویسد و اسکریپت inline زیر، پیش از
- * رسیدن ری‌اکت، ممکن است `dark` کرده باشد. بدون این پرچم، ری‌اکت همان اختلاف
- * را خطای hydration گزارش می‌کند — درحالی‌که دقیقاً رفتار طراحی‌شده است
- * .
- * ⚠️ اسکریپت تم **باید** آخرین چیز داخل `<head>` و پیش از `<body>` باشد:
- * مرورگر آن را همان‌جا همگام اجرا می‌کند، پس صفت پیش از نقاشی اولین پیکسل
- * نشسته و فلش سفید رخ نمی‌دهد. جابه‌جا کردنش به انتهای بدنه یعنی برگشت فلش.
- * `dangerouslySetInnerHTML` تنها راه نوشتن اسکریپت درون‌خطی در ری‌اکت است؛
- * محتوایش ثابتِ کدنویسی‌شده است و هیچ ورودی کاربری در آن نیست.
+ * ⚠️ `suppressHydrationWarning` on `<html>` is mandatory and has nothing to
+ * do with carelessness: the server always writes `data-theme="light"`, and
+ * the inline script below may have already set `dark` before React arrives.
+ * Without this flag, React reports that same mismatch as a hydration error —
+ * even though it's exactly the intended behavior.
+ * ⚠️ The theme script **must** be the last thing inside `<head>`, before
+ * `<body>`: the browser runs it synchronously right there, so the attribute
+ * is set before the first pixel is painted and no white flash occurs. Moving
+ * it to the end of the body brings the flash back. `dangerouslySetInnerHTML`
+ * is the only way to write an inline script in React; its content is
+ * hardcoded and contains no user input.
  */
 function RootShell({ children }: { children: ReactNode }) {
   return (

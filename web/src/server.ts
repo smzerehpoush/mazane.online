@@ -31,9 +31,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 }
 
 /**
- * ⚠️ ‎no-store‎ الزامی است: این پاسخ‌ها بیرون از زنجیره‌ی میان‌افزار ساخته
- * می‌شوند و اگر لبه یک ۵۰۰ را کش کند، در قطعی مبدأ همان خطا را به‌جای
- * نسخه‌ی سالم قبلی تکرار می‌کند.
+ * ⚠️ no-store is required: these responses are built outside the middleware
+ * chain, and if the edge caches a 500, during an origin outage it will keep
+ * replaying that same error instead of the last healthy version.
  */
 function errorResponse(): Response {
   return new Response(renderErrorPage(), {

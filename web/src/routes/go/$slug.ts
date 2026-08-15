@@ -1,8 +1,8 @@
 /**
- * ⚠️ این فایل عمداً **فقط** گزینه‌ی `server` دارد و هیچ `component`ی: تنکستک
- * چنین مسیری را «server-only» می‌شناسد و کاملاً از درخت مسیر کلاینت هرس
- * می‌کند — به همین دلیل import از `lib/server/*` (و در نتیجه `ioredis`)
- * اینجا بی‌خطر است. افزودن هر گزینه‌ی دیگری این تضمین را می‌شکند.
+ * ⚠️ This file deliberately has **only** the `server` option and no `component`:
+ * TanStack recognizes such a route as "server-only" and prunes it entirely
+ * from the client route tree — which is why importing from `lib/server/*`
+ * (and hence `ioredis`) here is safe. Adding any other option breaks this guarantee.
  */
 import { createFileRoute } from "@tanstack/react-router";
 

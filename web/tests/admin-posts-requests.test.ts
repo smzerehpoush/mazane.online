@@ -115,8 +115,8 @@ afterEach(() => {
   resetAdminPostsSource();
 });
 
-describe("بدون نشست معتبر", () => {
-  it("همه‌ی endpointها ۴۰۱ می‌دهند", async () => {
+describe("without a valid session", () => {
+  it("all endpoints return 401", async () => {
     seedFake(post("p1"));
     const responses = [
       await adminPostsListResponse(anonRequest(LIST_URL, "GET")),
@@ -140,7 +140,7 @@ describe("بدون نشست معتبر", () => {
 });
 
 describe("GET /api/admin-posts", () => {
-  it("فهرست همه‌ی وضعیت‌ها را می‌دهد", async () => {
+  it("returns the list of all statuses", async () => {
     seedFake(
       post("p1", { status: "draft" }),
       post("p2", { status: "published", published_at: "2026-08-01T00:00:00.000Z" }),
@@ -154,7 +154,7 @@ describe("GET /api/admin-posts", () => {
 });
 
 describe("POST /api/admin-posts", () => {
-  it("اسلاگ بدشکل ⟸ ۴۰۰، چیزی insert نمی‌شود", async () => {
+  it("malformed slug ⟸ 400, nothing is inserted", async () => {
     const fake = seedFake();
     const response = await adminPostsCreateResponse(
       authedRequest(LIST_URL, "POST", { slug: "Bad Slug", title_fa: "ت", body_md: "م" }),
@@ -163,7 +163,7 @@ describe("POST /api/admin-posts", () => {
     expect(fake.inserted).toHaveLength(0);
   });
 
-  it("اسلاگ تکراری ⟸ ۴۰۰، پست موجود بازنویسی نمی‌شود", async () => {
+  it("duplicate slug ⟸ 400, the existing post is not overwritten", async () => {
     const fake = seedFake(post("takrari", { title_fa: "قدیمی" }));
     const response = await adminPostsCreateResponse(
       authedRequest(LIST_URL, "POST", { slug: "takrari", title_fa: "تازه", body_md: "متن" }),
@@ -173,7 +173,7 @@ describe("POST /api/admin-posts", () => {
     expect(fake.posts.get("takrari")?.title_fa).toBe("قدیمی");
   });
 
-  it("بدنه‌ی نامعتبر ⟸ ۴۰۰", async () => {
+  it("invalid body ⟸ 400", async () => {
     seedFake();
     expect(
       (await adminPostsCreateResponse(authedRequest(LIST_URL, "POST", "{ نه JSON"))).status,
@@ -183,7 +183,7 @@ describe("POST /api/admin-posts", () => {
     ).toBe(400);
   });
 
-  it("موفق ⟸ ۲۰۱، status=draft", async () => {
+  it("success ⟸ 201, status=draft", async () => {
     const fake = seedFake();
     const response = await adminPostsCreateResponse(
       authedRequest(LIST_URL, "POST", {
@@ -201,13 +201,13 @@ describe("POST /api/admin-posts", () => {
 });
 
 describe("GET /api/admin-posts/$slug", () => {
-  it("پست ناموجود ⟸ ۴۰۴", async () => {
+  it("nonexistent post ⟸ 404", async () => {
     seedFake();
     const response = await adminPostGetResponse(authedRequest(slugUrl("nist"), "GET"), "nist");
     expect(response.status).toBe(404);
   });
 
-  it("پست موجود با هر وضعیتی ⟸ ۲۰۰", async () => {
+  it("existing post regardless of status ⟸ 200", async () => {
     seedFake(post("pre-nevis", { status: "draft" }));
     const response = await adminPostGetResponse(
       authedRequest(slugUrl("pre-nevis"), "GET"),
@@ -219,8 +219,8 @@ describe("GET /api/admin-posts/$slug", () => {
   });
 });
 
-describe("POST /api/admin-posts/$slug — ویرایش", () => {
-  it("پست ناموجود ⟸ ۴۰۴", async () => {
+describe("POST /api/admin-posts/$slug — edit", () => {
+  it("nonexistent post ⟸ 404", async () => {
     seedFake();
     const response = await adminPostUpdateResponse(
       authedRequest(slugUrl("nist"), "POST", {
@@ -233,7 +233,7 @@ describe("POST /api/admin-posts/$slug — ویرایش", () => {
     expect(response.status).toBe(404);
   });
 
-  it("بدنه‌ی نامعتبر ⟸ ۴۰۰", async () => {
+  it("invalid body ⟸ 400", async () => {
     seedFake(post("p1"));
     const response = await adminPostUpdateResponse(
       authedRequest(slugUrl("p1"), "POST", { title_fa: "ت" }),
@@ -242,7 +242,7 @@ describe("POST /api/admin-posts/$slug — ویرایش", () => {
     expect(response.status).toBe(400);
   });
 
-  it("پیش‌نویس ⟸ updated_at جلو نمی‌رود، حتی با meaningfulEdit=true", async () => {
+  it("draft ⟸ updated_at does not advance, even with meaningfulEdit=true", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     seedFake(post("pre-nevis", { status: "draft", updated_at: original }));
     const response = await adminPostUpdateResponse(
@@ -258,7 +258,7 @@ describe("POST /api/admin-posts/$slug — ویرایش", () => {
     expect(body.post.updated_at).toBe(original);
   });
 
-  it("منتشرشده بدون تیک ⟸ updated_at جلو نمی‌رود", async () => {
+  it("published without the checkbox ⟸ updated_at does not advance", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     seedFake(
       post("montasher", { status: "published", published_at: original, updated_at: original }),
@@ -276,7 +276,7 @@ describe("POST /api/admin-posts/$slug — ویرایش", () => {
     expect(body.post.updated_at).toBe(original);
   });
 
-  it("منتشرشده با تیک صریح ⟸ updated_at جلو می‌رود", async () => {
+  it("published with the checkbox explicitly checked ⟸ updated_at advances", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     seedFake(
       post("montasher2", { status: "published", published_at: original, updated_at: original }),
@@ -296,7 +296,7 @@ describe("POST /api/admin-posts/$slug — ویرایش", () => {
 });
 
 describe("POST /api/admin-posts/$slug/publish", () => {
-  it("پست ناموجود ⟸ ۴۰۴", async () => {
+  it("nonexistent post ⟸ 404", async () => {
     seedFake();
     const response = await adminPostPublishResponse(
       authedRequest(slugUrl("nist") + "/publish", "POST"),
@@ -305,7 +305,7 @@ describe("POST /api/admin-posts/$slug/publish", () => {
     expect(response.status).toBe(404);
   });
 
-  it("پیش‌نویس ⟸ ۲۰۰، status=published", async () => {
+  it("draft ⟸ 200, status=published", async () => {
     seedFake(post("pre-nevis", { status: "draft" }));
     const response = await adminPostPublishResponse(
       authedRequest(slugUrl("pre-nevis") + "/publish", "POST"),
@@ -317,7 +317,7 @@ describe("POST /api/admin-posts/$slug/publish", () => {
     expect(body.post.published_at).not.toBeNull();
   });
 
-  it("از قبل منتشرشده ⟸ ۴۰۰", async () => {
+  it("already published ⟸ 400", async () => {
     seedFake(
       post("montasher", {
         status: "published",
@@ -333,7 +333,7 @@ describe("POST /api/admin-posts/$slug/publish", () => {
 });
 
 describe("POST /api/admin-posts/$slug/retract", () => {
-  it("پست ناموجود ⟸ ۴۰۴", async () => {
+  it("nonexistent post ⟸ 404", async () => {
     seedFake();
     const response = await adminPostRetractResponse(
       authedRequest(slugUrl("nist") + "/retract", "POST"),
@@ -342,7 +342,7 @@ describe("POST /api/admin-posts/$slug/retract", () => {
     expect(response.status).toBe(404);
   });
 
-  it("منتشرشده ⟸ ۲۰۰، status=retracted", async () => {
+  it("published ⟸ 200, status=retracted", async () => {
     seedFake(
       post("montasher", {
         status: "published",
@@ -358,7 +358,7 @@ describe("POST /api/admin-posts/$slug/retract", () => {
     expect(body.post.status).toBe("retracted");
   });
 
-  it("پیش‌نویس ⟸ ۴۰۰ (فقط منتشرشده پس گرفته می‌شود)", async () => {
+  it("draft ⟸ 400 (only published posts can be retracted)", async () => {
     seedFake(post("pre-nevis", { status: "draft" }));
     const response = await adminPostRetractResponse(
       authedRequest(slugUrl("pre-nevis") + "/retract", "POST"),
@@ -368,7 +368,7 @@ describe("POST /api/admin-posts/$slug/retract", () => {
   });
 });
 
-describe("متد دیگر ⟸ ۴۰۵ با هدر Allow", () => {
+describe("other method ⟸ 405 with Allow header", () => {
   it("admin-posts", () => {
     const response = adminPostsMethodNotAllowed();
     expect(response.status).toBe(405);
@@ -382,8 +382,8 @@ describe("متد دیگر ⟸ ۴۰۵ با هدر Allow", () => {
   });
 });
 
-describe("همه‌ی پاسخ‌ها بی‌کش و بدون اجازه‌ی نمایه‌سازی‌اند", () => {
-  it("هدرها روی موفق و خطا یکسان‌اند", async () => {
+describe("all responses are uncached and non-indexable", () => {
+  it("headers are identical on success and error", async () => {
     seedFake(post("p1", { status: "published", published_at: "2026-08-01T00:00:00.000Z" }));
     const responses = [
       await adminPostsListResponse(anonRequest(LIST_URL, "GET")),

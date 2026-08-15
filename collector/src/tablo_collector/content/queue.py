@@ -39,7 +39,7 @@ async def enqueue_draft(
     PUBLIC_SLUGS.validate_new_slug(slug)
     if slug in await gateway.all_slugs():
         raise SlugCollisionError(
-            f"اسلاگ {slug!r} قبلاً در جدول posts هست — قید یکتایی (تصمیم ۱۱)"
+            f"slug {slug!r} already exists in the posts table — uniqueness constraint (decision 11)"
         )
     title_fa, body_md = gate_draft(
         title_template=title_template,
@@ -50,7 +50,7 @@ async def enqueue_draft(
     )
     moment = now if now is not None else datetime.now(UTC)
     await gateway.insert_draft(slug, title_fa, body_md, now=moment)
-    log.info("پیش‌نویس %s صف شد", slug)
+    log.info("draft %s queued", slug)
 
 
 async def check_queue_depth(gateway: ContentGateway, *, daily_cap: int) -> QueueDepth:
@@ -58,8 +58,8 @@ async def check_queue_depth(gateway: ContentGateway, *, daily_cap: int) -> Queue
     days = drafts / daily_cap
     if days < QUEUE_ALERT_DAYS:
         log.warning(
-            "عمق صف محتوا %.1f روز است (%s پیش‌نویس ÷ سقف %s در روز) — "
-            "زیر آستانه‌ی %s روز؛ هدف %s روز. مولد محلی باید صف را پر کند.",
+            "content queue depth is %.1f days (%s drafts ÷ %s per-day cap) — "
+            "below the %s-day threshold; target is %s days. The local generator should fill the queue.",
             days,
             drafts,
             daily_cap,
@@ -95,16 +95,16 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
     args = sys.argv[1:]
     if len(args) not in (2, 3):
-        print("کاربرد: tablo-enqueue <slug> <title_fa> [body.md|-]", file=sys.stderr)
+        print("usage: tablo-enqueue <slug> <title_fa> [body.md|-]", file=sys.stderr)
         raise SystemExit(2)
     slug, title_fa = args[0], args[1]
     source = args[2] if len(args) == 3 else "-"
     body_md = sys.stdin.read() if source == "-" else Path(source).read_text(encoding="utf-8")
     if body_md.strip() == "":
-        print("بدنه‌ی خالی صف نمی‌شود", file=sys.stderr)
+        print("empty body is not queued", file=sys.stderr)
         raise SystemExit(2)
     try:
         asyncio.run(_run_enqueue(slug, title_fa, body_md))
     except (SlugError, DraftRejected) as exc:
-        print(f"رد شد: {exc}", file=sys.stderr)
+        print(f"rejected: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

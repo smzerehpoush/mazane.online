@@ -1,8 +1,8 @@
 /**
- * ⚠️ در تنکستک استارت اسکریپت‌های JSON-LD از `head` مسیر می‌آیند، نه از بدنه‌ی
- * جزء. پس اینجا سازنده‌های سرصفحه سنجیده می‌شوند — همان‌هایی که مسیر عیناً
- * صدایشان می‌زند — و برای هم‌ارزی عدد، از **همان** payload رندر هم گرفته
- * می‌شود.
+ * ⚠️ In TanStack Start, JSON-LD scripts come from the route's `head`, not the
+ * component body. So this tests the head builders themselves — the very
+ * ones the route calls — and for numeric equivalence, the render also uses
+ * the **same** payload.
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -161,7 +161,7 @@ const MADDE5_TEXT =
 
 async function pageOf(slug: string): Promise<SlugPageData> {
   const data = await slugPageData(slug);
-  if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
+  if (data === null) throw new Error(`Page ${slug} returned 404`);
   return data;
 }
 
@@ -170,7 +170,7 @@ async function home(): Promise<HomePageData> {
 }
 
 describe("Organization + WebSite", () => {
-  it("صفحه‌ی اصلی هر دو را با برند «تابلو» و alternateName «تابلو گلد» دارد", () => {
+  it("Home page has both, branded Tablo with alternateName Tablo Gold", () => {
     const head = homeHead();
     const graphBlock = jsonLdBlocks(head).find((block) => "@graph" in block);
     expect(graphBlock).toBeDefined();
@@ -189,7 +189,7 @@ describe("Organization + WebSite", () => {
     });
   });
 
-  it("SearchAction/potentialAction ندارد و خانه BreadcrumbList نمی‌گیرد", () => {
+  it("No SearchAction/potentialAction, and home page doesn't get a BreadcrumbList", () => {
     const head = homeHead();
     const raw = rawJsonLd(head);
     expect(raw).not.toContain("SearchAction");
@@ -197,7 +197,7 @@ describe("Organization + WebSite", () => {
     expect(raw).not.toContain("BreadcrumbList");
   });
 
-  it("WebSite/Organization سراسری روی صفحات دیگر تکرار نمی‌شود", async () => {
+  it("Site-wide WebSite/Organization isn't repeated on other pages", async () => {
     seed(assetStore());
     for (const slug of ["tala-18", "wallgold"]) {
       const raw = rawJsonLd(slugHead(await pageOf(slug)));
@@ -211,7 +211,7 @@ describe("Organization + WebSite", () => {
 });
 
 describe("WebPage + about:Organization", () => {
-  it("صفحه‌ی سکو WebPage با about از نوع Organization (نام سکو + website_url خودش) دارد", async () => {
+  it("Platform page has a WebPage with an about of type Organization (platform name + its own website_url)", async () => {
     seed(assetStore());
     const webPage = findByType(
       jsonLdBlocks(slugHead(await pageOf("wallgold"))),
@@ -225,7 +225,7 @@ describe("WebPage + about:Organization", () => {
     });
   });
 
-  it("Organization تو در توی about هیچ @id مستقل نمی‌گیرد — موجودیت جدا نیست", async () => {
+  it("Nested Organization inside about gets no independent @id — it's not a separate entity", async () => {
     seed(assetStore());
     const webPage = findByType(
       jsonLdBlocks(slugHead(await pageOf("wallgold"))),
@@ -235,13 +235,13 @@ describe("WebPage + about:Organization", () => {
     expect(about["@id"]).toBeUndefined();
   });
 
-  it("صفحه‌ی دارایی WebPage/about نمی‌گیرد — این الگو فقط صفحه‌ی سکو است", async () => {
+  it("Asset page doesn't get WebPage/about — this pattern is platform-page only", async () => {
     seed(assetStore());
     const blocks = jsonLdBlocks(slugHead(await pageOf("tala-18")));
     expect(findByType(blocks, "WebPage")).toBeUndefined();
   });
 
-  it("سکوی بدون website_url ⟸ about فقط name دارد، url جعل نمی‌شود", async () => {
+  it("Platform without website_url ⟸ about only has name, url isn't fabricated", async () => {
     const now = freshIso();
     const store: SeededStore = {
       listed: [{ slug: "wallgold", name_fa: "وال‌گلد", data_policy: "ALLOWED" }],
@@ -265,7 +265,7 @@ describe("WebPage + about:Organization", () => {
     expect(about["url"]).toBeUndefined();
   });
 
-  it("BreadcrumbList هم کنار WebPage سر جایش می‌ماند", async () => {
+  it("BreadcrumbList still holds its place alongside WebPage", async () => {
     seed(assetStore());
     const blocks = jsonLdBlocks(slugHead(await pageOf("wallgold")));
     expect(findByType(blocks, "WebPage")).toBeDefined();
@@ -274,7 +274,7 @@ describe("WebPage + about:Organization", () => {
 });
 
 describe("Product + AggregateOffer", () => {
-  it("صفحه‌ی دارایی: IRR دقیقاً ×۱۰ همان عدد تومانی قابل‌مشاهده‌ی همان payload است", async () => {
+  it("Asset page: IRR is exactly the visible toman figure from the same payload, ×10", async () => {
     seed(assetStore());
     const data = await pageOf("tala-18");
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
@@ -294,14 +294,14 @@ describe("Product + AggregateOffer", () => {
     expect(html).toContain(formatToman((offers["highPrice"] as number) / 10));
   });
 
-  it("offerCount = هر سکوی قیمت‌دارِ بازِ خرید (کارمزد نامشخص هم می‌شمرد)", async () => {
+  it("offerCount = every priced, buy-open platform (unknown fee counts too)", async () => {
     seed(assetStore());
     const product = findByType(jsonLdBlocks(slugHead(await pageOf("tala-18"))), "Product");
     const offers = (product as Record<string, unknown>)["offers"] as Record<string, unknown>;
     expect(offers["offerCount"]).toBe(4);
   });
 
-  it("ارقام قیمت JSON-LD لاتین‌اند (متن فارسی مجاز، عدد فارسی نه)", async () => {
+  it("JSON-LD price digits are Latin (Persian text is fine, Persian digits aren't)", async () => {
     seed(assetStore());
     const raw = rawJsonLd(slugHead(await pageOf("tala-18")));
     const offers = raw.match(/"offers":\{[^}]*\}/);
@@ -312,12 +312,13 @@ describe("Product + AggregateOffer", () => {
   });
 
   /**
-   * ⚠️ رگرسیون: صفحه‌ی اصلی هم دقیقاً همان `Product` + `AggregateOffer`
-   * ‎/tala-18‎ را منتشر می‌کرد (بایت‌به‌بایت جز `url`). یک موجودیت روی دو
-   * نشانی یعنی گوگل باید یکی را کانونی کند — کنیبالیزیشن بی‌دلیل.
-   * هم `Product` را «فقط صفحات دارایی» می‌داند.
+   * ⚠️ Regression: the home page used to also publish the exact same
+   * `Product` + `AggregateOffer` as /tala-18 (byte-for-byte except for
+   * `url`). One entity at two addresses means Google has to canonicalize
+   * one of them — pointless cannibalization. This also establishes
+   * `Product` as "asset pages only".
    */
-  it("صفحه‌ی اصلی Product/AggregateOffer نمی‌گیرد — موجودیت فقط روی صفحه‌ی دارایی است", async () => {
+  it("Home page doesn't get Product/AggregateOffer — the entity lives only on the asset page", async () => {
     seed(assetStore());
     const homeRaw = rawJsonLd(homeHead());
     expect(homeRaw).not.toContain('"@type":"Product"');
@@ -327,8 +328,8 @@ describe("Product + AggregateOffer", () => {
     expect(assetRaw).toContain("AggregateOffer");
   });
 
-  /** ⚠️ این تست در بازطراحی ۲۰۲۶-۰۸-۱۱ **دامنه‌اش عوض شد، نه سخت‌گیری‌اش**. */
-  it("lowPrice همان عددی است که در متن صفحه‌ی دارایی دیده می‌شود", async () => {
+  /** ⚠️ In the 2026-08-11 redesign, this test's **scope changed, not its strictness**. */
+  it("lowPrice matches the number visible in the asset page's own text", async () => {
     seed(assetStore());
     const data = await pageOf("tala-18");
     const html = renderToStaticMarkup(<SlugPageView data={data} />);
@@ -340,13 +341,14 @@ describe("Product + AggregateOffer", () => {
   });
 
   /**
-   * ⚠️ رگرسیون: `buy_enabled=false` کارت «کمترین قیمت» را درست جابه‌جا
-   * می‌کرد ولی `lowPrice` همان قیمتِ سکوی **بسته** می‌ماند — یعنی به
-   * گوگل پیشنهادی تبلیغ می‌شد که در دسترس نیست و با متن همان صفحه (نشان
-   * «خرید بسته است») در تناقض بود. یک تعریف واحد از «سمت باز» برای هر سه
-   * مصرف‌کننده: کارت، جدول، AggregateOffer.
+   * ⚠️ Regression: `buy_enabled=false` correctly moved the "lowest price"
+   * card, but `lowPrice` stayed at the **closed** platform's price —
+   * meaning Google was advertised an offer that isn't actually available,
+   * contradicting the same page's own text (the "buy closed" badge). One
+   * single definition of "open side" for all three consumers: card, table,
+   * AggregateOffer.
    */
-  it("سکوی خریدبسته در AggregateOffer نمی‌آید ولی ردیفش با نشان سر جایش می‌ماند", async () => {
+  it("Buy-closed platform doesn't enter AggregateOffer, but its row still keeps its badge", async () => {
     const store = assetStore();
     const now = freshIso();
     store.snapshots["digikala"] = makeSnapshot({
@@ -372,7 +374,7 @@ describe("Product + AggregateOffer", () => {
     expect(rowOf(html, "digikala")).toContain("خرید بسته است");
   });
 
-  it("بدون حتی یک ردیف قیمت‌دار، AggregateOffer جعل نمی‌شود (اسکریپت غایب است)", async () => {
+  it("With not even one priced row, AggregateOffer isn't fabricated (the script is absent)", async () => {
     const now = freshIso();
     const store: SeededStore = {
       listed: PLATFORMS,
@@ -388,7 +390,7 @@ describe("Product + AggregateOffer", () => {
     expect(findByType(jsonLdBlocks(head), "BreadcrumbList")).toBeDefined();
   });
 
-  it("صفحه‌ی سکو Product/Offer نمی‌گیرد — ما فروشنده نیستیم", async () => {
+  it("Platform page doesn't get Product/Offer — we aren't the seller", async () => {
     seed(assetStore());
     const raw = rawJsonLd(slugHead(await pageOf("wallgold")));
     expect(raw).not.toContain('"@type":"Product"');
@@ -397,7 +399,7 @@ describe("Product + AggregateOffer", () => {
 });
 
 describe("BreadcrumbList", () => {
-  it("صفحه‌ی دارایی: خانه ⟵ دارایی، با URL مطلق و position لاتین", async () => {
+  it("Asset page: home ⟵ asset, with an absolute URL and Latin position", async () => {
     seed(assetStore());
     const breadcrumb = findByType(
       jsonLdBlocks(slugHead(await pageOf("tala-18"))),
@@ -414,7 +416,7 @@ describe("BreadcrumbList", () => {
     ]);
   });
 
-  it("صفحه‌ی سکو: خانه ⟵ سکو", async () => {
+  it("Platform page: home ⟵ platform", async () => {
     seed(assetStore());
     const breadcrumb = findByType(
       jsonLdBlocks(slugHead(await pageOf("wallgold"))),
@@ -426,7 +428,7 @@ describe("BreadcrumbList", () => {
     ]);
   });
 
-  it("پست بلاگ: خانه ⟵ بلاگ ⟵ پست (BlogPosting هم سر جایش می‌ماند)", async () => {
+  it("Blog post: home ⟵ blog ⟵ post (BlogPosting still holds its place too)", async () => {
     seedBlog([PUBLISHED_POST]);
     const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
     const blocks = jsonLdBlocks(blogPostHead(post));
@@ -444,7 +446,7 @@ describe("BreadcrumbList", () => {
     ]);
   });
 
-  it("صفحات ایستا (فهرست بلاگ، درباره‌ی پیشنهاد، مظنه چیست) هم دارند", () => {
+  it("Static pages (blog index, darbare-pishnahad, mazane-chist) have it too", () => {
     for (const head of [blogIndexHead(), darbarePishnahadHead(), mazaneChistHead()]) {
       const breadcrumb = findByType(jsonLdBlocks(head), "BreadcrumbList");
       expect(breadcrumb).toBeDefined();
@@ -457,8 +459,8 @@ describe("BreadcrumbList", () => {
   });
 });
 
-describe("انواع حذف‌شده‌ی هیچ‌جا نیستند", () => {
-  it("FAQPage / HowTo / SearchAction / AggregateRating / Offer فروشنده — غایب مطلق", async () => {
+describe("Removed types appear nowhere", () => {
+  it("FAQPage / HowTo / SearchAction / AggregateRating / seller Offer — absolutely absent", async () => {
     seed(assetStore());
     seedBlog([PUBLISHED_POST]);
     const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
@@ -481,8 +483,8 @@ describe("انواع حذف‌شده‌ی هیچ‌جا نیستند", () => {
   });
 });
 
-describe("نوار هشدار ماده ۵ روی صفحات ارجاع", () => {
-  it("صفحه‌ی اصلی، صفحه‌ی دارایی و صفحه‌ی سکو — متن کامل در HTML سرور", async () => {
+describe("Madde-5 warning banner on referral pages", () => {
+  it("Home page, asset page, and platform page — full text in server-rendered HTML", async () => {
     const homePayload = await home();
     seed(assetStore());
     const pages = [
@@ -497,8 +499,8 @@ describe("نوار هشدار ماده ۵ روی صفحات ارجاع", () => {
   });
 });
 
-describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
-  it("هر دو املا را پوشش می‌دهد و مفهوم (قیمت یک مثقال طلای آب‌شده) را می‌گوید", () => {
+describe("The mazane-chist page — /mazane-chist", () => {
+  it("Covers both spellings and states the concept (price of one mithqal of melted gold)", () => {
     const html = renderToStaticMarkup(<MazaneChist />);
     expect(html).toContain("مظنه");
     expect(html).toContain("مضنه");
@@ -507,7 +509,7 @@ describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
     expect(html).toContain('href="/"');
   });
 
-  it("canonical تخت لاتین دارد و عنوانش فارسی است", () => {
+  it("Has a flat Latin canonical, and its title is Persian", () => {
     const head = mazaneChistHead();
     expect(head.links).toContainEqual({
       rel: "canonical",
@@ -516,14 +518,14 @@ describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
     expect(head.meta[0]?.title).toContain("مظنه چیست");
   });
 
-  it("اسلاگش سمت وب رزرو است و هرگز از مسیر داینامیک حل نمی‌شود", async () => {
+  it("Its slug is reserved on the web side and never resolves through the dynamic route", async () => {
     seed(assetStore());
     expect(isReservedSlug("mazane-chist")).toBe(true);
     expect(await resolveSlug("mazane-chist")).toBeNull();
     expect(await slugPageData("mazane-chist")).toBeNull();
   });
 
-  it("در سایت‌مپ هست — بدون lastmod", () => {
+  it("Is in the sitemap — without lastmod", () => {
     const entry = buildSitemapEntries({
       posts: [],
       instruments: [],
@@ -534,14 +536,14 @@ describe("صفحه‌ی مظنه چیست — /mazane-chist", () => {
   });
 });
 
-describe("متادیتا و lastmod", () => {
-  it("خانه canonical ریشه و og:locale=fa_IR دارد", () => {
+describe("Metadata and lastmod", () => {
+  it("Home has a root canonical and og:locale=fa_IR", () => {
     const head = homeHead();
     expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/` });
     expect(head.meta).toContainEqual({ property: "og:locale", content: "fa_IR" });
   });
 
-  it("فقط پست‌های بلاگ lastmod دارند — نوسان قیمت هرگز lastmod نیست", async () => {
+  it("Only blog posts have lastmod — price fluctuation is never lastmod", async () => {
     seedBlog([PUBLISHED_POST]);
     const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
     const entries = buildSitemapEntries({
@@ -560,8 +562,8 @@ describe("متادیتا و lastmod", () => {
   });
 });
 
-describe("عکس شاخص پست — og:image/twitter و فیلد image در BlogPosting", () => {
-  it("پست با عکس: og:image/og:image:width/og:image:height/twitter:image/twitter:card", async () => {
+describe("Post featured image — og:image/twitter and the image field in BlogPosting", () => {
+  it("Post with an image: og:image/og:image:width/og:image:height/twitter:image/twitter:card", async () => {
     seedBlog([PUBLISHED_POST_WITH_IMAGE]);
     const post = (await getPublishedPost(PUBLISHED_POST_WITH_IMAGE.slug)) as PublishedPost;
     const head = blogPostHead(post);
@@ -578,7 +580,7 @@ describe("عکس شاخص پست — og:image/twitter و فیلد image در Blo
     expect(head.meta).toContainEqual({ name: "twitter:card", content: "summary_large_image" });
   });
 
-  it("پست بدون عکس: هیچ‌کدام از تگ‌های تصویر در متا نیست — نه با مقدار خالی", async () => {
+  it("Post without an image: none of the image tags are in meta — not even with an empty value", async () => {
     seedBlog([PUBLISHED_POST]);
     const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
     const raw = JSON.stringify(blogPostHead(post).meta);
@@ -587,14 +589,14 @@ describe("عکس شاخص پست — og:image/twitter و فیلد image در Blo
     expect(raw).not.toContain("twitter:card");
   });
 
-  it("BlogPosting: فیلد image فقط وقتی عکس هست، برابر همان نشانی مطلق", async () => {
+  it("BlogPosting: the image field only exists when there's an image, equal to that same absolute URL", async () => {
     seedBlog([PUBLISHED_POST_WITH_IMAGE]);
     const post = (await getPublishedPost(PUBLISHED_POST_WITH_IMAGE.slug)) as PublishedPost;
     const [blogPosting] = jsonLdBlocks(blogPostHead(post));
     expect(blogPosting?.["image"]).toBe(PUBLISHED_POST_WITH_IMAGE.image_url);
   });
 
-  it("پست بدون عکس: فیلد image اصلاً در BlogPosting نیست", async () => {
+  it("Post without an image: the image field isn't in BlogPosting at all", async () => {
     seedBlog([PUBLISHED_POST]);
     const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
     const [blogPosting] = jsonLdBlocks(blogPostHead(post));

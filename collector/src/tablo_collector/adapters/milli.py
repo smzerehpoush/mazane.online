@@ -23,15 +23,15 @@ class MilliAdapter:
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         if not isinstance(payload, dict):
-            raise AdapterError("میلی: payload یک شیء JSON نیست")
+            raise AdapterError("Milli: payload is not a JSON object")
 
         raw_price = (payload.get("data") or {}).get("price18")
         if raw_price is None:
-            raise AdapterError("میلی: قیمت price18 در payload تهی است")
+            raise AdapterError("Milli: price18 is empty in payload")
         try:
             raw_value = Decimal(str(raw_price))
         except InvalidOperation as exc:
-            raise AdapterError(f"میلی: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Milli: invalid payload: {exc!r}") from exc
 
         return known_fee_snapshot(
             slug=self.slug,

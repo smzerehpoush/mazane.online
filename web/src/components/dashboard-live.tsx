@@ -1,22 +1,25 @@
 /**
- * ⚠️ **چرا DOM مستقیم و نه state ری‌اکت**: نشانگر محور باید با ترنزیشن ۸۰۰
- * میلی‌ثانیه‌ای بلغزد. اگر موقعیت از state بیاید، هر آپدیت یک رندر
- * تازه‌ی درخت است و کوچک‌ترین تغییر در `key` یا ترتیب، گره را re-mount می‌کند و
- * ترنزیشن می‌میرد — دقیقاً همان خرابی‌ای که «کد سالم به نظر می‌رسد».
- * ⚠️ **این یعنی re-render رخ نمی‌دهد؟ نه.** `useLiveDashboard` با `useState`
- * کار می‌کند، پس هر دریافت موفق کل درخت صفحه را دوباره رندر می‌کند. چیزی که
- * نوشته‌های زیر را حفظ می‌کند این است که `rail.sources` از داده‌ی لودر ساخته
- * شده و **عوض نمی‌شود**؛ پس ری‌اکت در diff خود هیچ تغییری در `style.right`
- * نمی‌بیند و دست به گره نمی‌زند. قرارداد شکننده‌ای است و باید صریح بماند: اگر
- * روزی موقعیت نشانگر از props بیاید، ری‌اکت هر رندر آن را به مقدار سرور
- * برمی‌گرداند و نشانگرها می‌پرند.
- * ⚠️ **هیچ محاسبه یا قالب‌بندی‌ای اینجا نیست** :
- * `rail_percent` و `price_display` از قبل سمت سرور ساخته شده‌اند
- * (`lib/dashboard.ts`، همان تابعی که رندر اولیه را ساخت). این جزء فقط
- * می‌نشاندشان.
- * ⚠️ **فلش آپدیت** : جهت رنگ از تغییر قیمت **خودِ همان منبع** نسبت به
- * مقدار قبلی‌اش می‌آید — نه مقایسه با منبع دیگر. هیچ عددی منتشر نمی‌شود، پس
- * با (حذف درصد اختلاف) تناقضی ندارد.
+ * ⚠️ **Why direct DOM and not React state**: the rail marker has to slide
+ * with an 800ms transition. If the position came from state, every update
+ * would be a fresh tree render, and the smallest change to `key` or ordering
+ * would re-mount the node and kill the transition — exactly the kind of
+ * breakage where "the code looks fine".
+ * ⚠️ **Does that mean no re-render happens? No.** `useLiveDashboard` works
+ * with `useState`, so every successful fetch re-renders the whole page tree.
+ * What keeps the writes below intact is that `rail.sources` is built from
+ * the loader data and **never changes**; so React's diff sees no change to
+ * `style.right` and leaves the node alone. This is a fragile contract and
+ * must stay explicit: if the marker position ever comes from props, React
+ * will reset it to the server value on every render and the markers will
+ * jump.
+ * ⚠️ **No computation or formatting happens here**:
+ * `rail_percent` and `price_display` are already built server-side
+ * (`lib/dashboard.ts`, the same function that produced the initial render).
+ * This component only places them.
+ * ⚠️ **Update flash**: the color direction comes from that same source's
+ * price change relative to its own previous value — not a comparison with
+ * another source. No number is published, so this doesn't conflict with
+ * (the removal of the percent-diff badge).
  */
 import { useEffect, useRef } from "react";
 
@@ -54,9 +57,9 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       if (card === null) continue;
       setText(card, "[data-source-price]", source.price_display);
 
-      // ⚠️ برچسب کهنگیِ همین کارت باید با گذر زمان **پیر شود**، وگرنه سکویی
-      // که از کار افتاده عددش را نگه می‌دارد و هیچ‌وقت «کهنه» نمی‌شود
-      // . همان تابع خالصی که جدول قدیمی استفاده می‌کرد.
+      // ⚠️ This card's staleness label must **age** with the passage of time,
+      // otherwise a platform that has stopped working keeps its number and
+      // never becomes "stale". Same pure function the old table used.
       const timeEl = card.querySelector<HTMLElement>('[data-live="updated-at"]');
       const staleEl = card.querySelector<HTMLElement>('[data-live="stale"]');
       if (timeEl !== null) {
@@ -117,10 +120,10 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       }
     }
 
-    // ⚠️ برچسب «آخرین به‌روزرسانی» عمداً اینجا نوشته **نمی‌شود**: از مسیر
-    // props ری‌اکت می‌رود (`HomePage` ⟸ `PriceRail`)، چون همان تغییر باید
-    // فاز فتیله را هم ری‌ست کند. دو نویسنده برای یک گره یعنی یکی از آن دو
-    // روزی بی‌صدا برنده می‌شود.
+    // ⚠️ The "last updated" label is deliberately **not** written here: it
+    // goes through the React props path (`HomePage` ⟸ `PriceRail`), because
+    // that same change must also reset the wick's phase. Two writers for one
+    // node means one of them will silently win someday.
     const rail = document.querySelector<HTMLElement>("[data-rail]");
     if (rail !== null) {
       rail.classList.remove("rail-flash");

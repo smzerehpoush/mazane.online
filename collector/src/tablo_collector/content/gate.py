@@ -39,14 +39,14 @@ def render_draft(template: str, slots: Mapping[str, str]) -> str:
     def fill(match: re.Match[str]) -> str:
         name = match.group(1)
         if name not in slots:
-            raise UnfilledSlotError(f"جای‌خالی {{{{{name}}}}} مقدار ندارد — پیش‌نویس رد شد")
+            raise UnfilledSlotError(f"slot {{{{{name}}}}} has no value — draft rejected")
         return slots[name]
 
     rendered = SLOT_PATTERN.sub(fill, template)
     if "{{" in rendered or "}}" in rendered:
         raise UnfilledSlotError(
-            "پس از پر شدن جای‌خالی‌ها هنوز «{{» یا «}}» در متن هست — "
-            "جای‌خالی بدقواره یا مقدار آلوده؛ پیش‌نویس رد شد"
+            "after slots are filled, «{{» or «}}» is still present in the text — "
+            "malformed slot or contaminated value; draft rejected"
         )
     return rendered
 
@@ -56,8 +56,8 @@ def _reject_digits(template: str, *, where: str) -> None:
     offender = _ANY_DIGIT.search(stripped)
     if offender is not None:
         raise DigitOutsideSlotError(
-            f"رقم {offender.group(0)!r} بیرون از جای‌خالی در {where} — "
-            "هیچ رقمی از مدل پذیرفته نمی‌شود (تصمیم ۱۶)"
+            f"digit {offender.group(0)!r} outside slot in {where} — "
+            "no digit is accepted from the model (decision 16)"
         )
 
 
@@ -88,17 +88,17 @@ def validate_draft(
 ) -> str:
     if not data_ok:
         raise DataGapError(
-            "دوره‌ی ارجاع‌شده برای سکوهای ارجاع‌شده گپ داده دارد — "
-            "پست تولید/صف نمی‌شود (تصمیم ۱۶)"
+            "the referenced period has a data gap for the referenced platforms — "
+            "post will not be generated/queued (decision 16)"
         )
-    _reject_digits(template, where="بدنه")
+    _reject_digits(template, where="body")
     rendered = render_draft(template, slots)
     for slug, body_md in existing_posts:
         score = similarity(rendered, body_md)
         if score >= SIMILARITY_THRESHOLD:
             raise NearDuplicateError(
-                f"شباهت {score:.2f} با پست موجود {slug!r} از آستانه‌ی "
-                f"{SIMILARITY_THRESHOLD} گذشت — پیش‌نویس رد شد"
+                f"similarity {score:.2f} with existing post {slug!r} exceeded threshold "
+                f"{SIMILARITY_THRESHOLD} — draft rejected"
             )
     return rendered
 
@@ -111,7 +111,7 @@ def gate_draft(
     existing_posts: Iterable[tuple[str, str]],
     data_ok: bool,
 ) -> tuple[str, str]:
-    _reject_digits(title_template, where="عنوان")
+    _reject_digits(title_template, where="title")
     body_md = validate_draft(body_template, slots, existing_posts, data_ok=data_ok)
     title_fa = render_draft(title_template, slots)
     return title_fa, body_md

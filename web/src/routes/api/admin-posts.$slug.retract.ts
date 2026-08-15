@@ -1,4 +1,4 @@
-/** ⚠️ فقط گزینه‌ی `server` — همان دلیل ‎go/$slug.ts‎ (هرس شدن از درخت کلاینت). */
+/** ⚠️ Only the `server` option — same reason as `go/$slug.ts` (pruned from the client tree). */
 import { createFileRoute } from "@tanstack/react-router";
 
 import {

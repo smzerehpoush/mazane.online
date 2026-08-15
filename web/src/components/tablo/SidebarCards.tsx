@@ -1,9 +1,10 @@
 /**
- * ⚠️ **حباب‌سنج عمداً غیرفعال است**. دلیلش داده است نه
- * طراحی: ورودی فرمول (انس جهانی × دلار) در گردآورنده وجود ندارد — منبع
- * دلاری در ۲۰۲۶-۰۸-۱۰ حذف شد و هیچ آداپتری `XAU` تولید نمی‌کند
- * . هیچ عددی جعل نمی‌شود؛ خانه‌ها خالی‌اند و نوار
- * «به زودی» می‌گیرد. طرح کامل در دست‌نخورده ثبت است.
+ * ⚠️ **The bubble gauge is intentionally disabled.** The reason is data,
+ * not design: the formula's input (global ounce price × USD) doesn't
+ * exist in the collector — the USD source was removed on 2026-08-10 and
+ * no adapter produces `XAU`. No number is faked; the fields stay empty
+ * and the bar shows "coming soon". The full design remains recorded,
+ * untouched.
  */
 import { JewelryCalculator } from "@/components/tablo/JewelryCalculator";
 

@@ -89,13 +89,13 @@ afterEach(() => {
 });
 
 describe("GET /api/admin-platform-settings", () => {
-  it("بدون نشست معتبر ⟸ ۴۰۱", async () => {
+  it("without a valid session ⟸ 401", async () => {
     seedSettings();
     const response = await adminPlatformSettingsGetResponse(anonRequest("GET"));
     expect(response.status).toBe(401);
   });
 
-  it("با نشست معتبر ⟸ ۲۰۰، فهرست سکوها با تنظیمات ذخیره‌شده ادغام می‌شود", async () => {
+  it("with a valid session ⟸ 200, the platform list is merged with saved settings", async () => {
     seedSettings([
       {
         slug: "wallgold",
@@ -135,7 +135,7 @@ describe("GET /api/admin-platform-settings", () => {
 });
 
 describe("POST /api/admin-platform-settings", () => {
-  it("بدون نشست معتبر ⟸ ۴۰۱، چیزی نوشته نمی‌شود", async () => {
+  it("without a valid session ⟸ 401, nothing is written", async () => {
     const fake = seedSettings();
     const response = await adminPlatformSettingsPostResponse(
       anonRequest("POST", { entries: VALID_ENTRIES }),
@@ -144,7 +144,7 @@ describe("POST /api/admin-platform-settings", () => {
     expect(fake.written).toBeNull();
   });
 
-  it("بدنه‌ی نامعتبر ⟸ ۴۰۰", async () => {
+  it("invalid body ⟸ 400", async () => {
     seedSettings();
     expect(
       (await adminPlatformSettingsPostResponse(authedRequest("POST", "{ نه JSON"))).status,
@@ -162,7 +162,7 @@ describe("POST /api/admin-platform-settings", () => {
     ).toBe(400);
   });
 
-  it("کمتر از ۲ سکوی فعال ⟸ ۴۰۰، چیزی نوشته نمی‌شود", async () => {
+  it("fewer than 2 active platforms ⟸ 400, nothing is written", async () => {
     const fake = seedSettings();
     const entries = VALID_ENTRIES.map((e) =>
       e.slug === "talasea" ? { ...e, in_chart: false } : e,
@@ -172,7 +172,7 @@ describe("POST /api/admin-platform-settings", () => {
     expect(fake.written).toBeNull();
   });
 
-  it("بیش از ۶ سکوی فعال ⟸ ۴۰۰", async () => {
+  it("more than 6 active platforms ⟸ 400", async () => {
     const fake = seedSettings();
     const platforms: PlatformOption[] = Array.from({ length: 7 }, (_, i) => ({
       slug: `p${i}`,
@@ -192,7 +192,7 @@ describe("POST /api/admin-platform-settings", () => {
     expect(fake.written).toBeNull();
   });
 
-  it("رنگ بدشکل ⟸ ۴۰۰", async () => {
+  it("malformed color ⟸ 400", async () => {
     const fake = seedSettings();
     const entries = VALID_ENTRIES.map((e) =>
       e.slug === "wallgold" ? { ...e, chart_color: "not-a-color" } : e,
@@ -202,7 +202,7 @@ describe("POST /api/admin-platform-settings", () => {
     expect(fake.written).toBeNull();
   });
 
-  it("اسلاگ ناشناخته/غیرقابل‌نمایش ⟸ ۴۰۰", async () => {
+  it("unknown/unlisted slug ⟸ 400", async () => {
     const fake = seedSettings();
     const entries = [
       ...VALID_ENTRIES,
@@ -219,7 +219,7 @@ describe("POST /api/admin-platform-settings", () => {
     expect(fake.written).toBeNull();
   });
 
-  it("نوشتن معتبر ⟸ ۲۰۰، رنگ lower و غیرفعال‌ها رنگ/ترتیب null می‌شوند", async () => {
+  it("valid write ⟸ 200, color is lowercased and inactive entries get null color/order", async () => {
     const fake = seedSettings();
     const response = await adminPlatformSettingsPostResponse(
       authedRequest("POST", { entries: VALID_ENTRIES }),
@@ -235,13 +235,13 @@ describe("POST /api/admin-platform-settings", () => {
     expect(milli.chart_order).toBeNull();
   });
 
-  it("متد دیگر ⟸ ۴۰۵ با هدر Allow", () => {
+  it("other method ⟸ 405 with Allow header", () => {
     const response = adminPlatformSettingsMethodNotAllowed();
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("GET, POST");
   });
 
-  it("همه‌ی پاسخ‌ها بی‌کش و بدون اجازه‌ی نمایه‌سازی‌اند", async () => {
+  it("all responses are uncached and non-indexable", async () => {
     seedSettings();
     for (const response of [
       await adminPlatformSettingsGetResponse(anonRequest("GET")),
@@ -254,8 +254,8 @@ describe("POST /api/admin-platform-settings", () => {
     }
   });
 
-  describe("نشانی معرف", () => {
-    it("طرح ناامن (http) را با پیام روشن رد می‌کند، چیزی نوشته نمی‌شود", async () => {
+  describe("referral URL", () => {
+    it("rejects an insecure scheme (http) with a clear message, nothing is written", async () => {
       const fake = seedSettings();
       const entries = VALID_ENTRIES.map((e) =>
         e.slug === "wallgold" ? { ...e, referral_url: `http://wallgold.ir/r/${REFERRAL_CODE}` } : e,
@@ -268,7 +268,7 @@ describe("POST /api/admin-platform-settings", () => {
       expect(body.error).not.toContain(REFERRAL_CODE);
     });
 
-    it("دامنه‌ی نامرتبط را با پیام روشن رد می‌کند، چیزی نوشته نمی‌شود", async () => {
+    it("rejects an unrelated domain with a clear message, nothing is written", async () => {
       const fake = seedSettings();
       const entries = VALID_ENTRIES.map((e) =>
         e.slug === "wallgold"
@@ -280,7 +280,7 @@ describe("POST /api/admin-platform-settings", () => {
       expect(fake.written).toBeNull();
     });
 
-    it("زیردامنه‌ی همان سکو را می‌پذیرد و ذخیره می‌کند", async () => {
+    it("accepts and saves a subdomain of the same platform", async () => {
       const fake = seedSettings();
       const entries = VALID_ENTRIES.map((e) =>
         e.slug === "wallgold"
@@ -293,7 +293,7 @@ describe("POST /api/admin-platform-settings", () => {
       expect(wallgold.referral_url).toBe(`https://app.wallgold.ir/r/${REFERRAL_CODE}`);
     });
 
-    it("خالی‌کردن نشانی معرف موجود، override را حذف می‌کند (null ذخیره می‌شود)", async () => {
+    it("clearing an existing referral URL removes the override (null is saved)", async () => {
       const fake = seedSettings([
         {
           slug: "wallgold",
@@ -312,7 +312,7 @@ describe("POST /api/admin-platform-settings", () => {
       expect(wallgold.referral_url).toBeNull();
     });
 
-    it("پاسخ موفق خودِ نشانی معرف را چاپ نمی‌کند", async () => {
+    it("the successful response does not print the referral URL itself", async () => {
       seedSettings();
       const entries = VALID_ENTRIES.map((e) =>
         e.slug === "wallgold"
@@ -324,7 +324,7 @@ describe("POST /api/admin-platform-settings", () => {
       expect(raw).not.toContain(REFERRAL_CODE);
     });
 
-    it("نشانی معرف تغییرکرده را لاگ می‌کند، بدون چاپ خودِ نشانی", async () => {
+    it("logs the changed referral URL without printing the URL itself", async () => {
       seedSettings();
       const spy = vi.spyOn(console, "info").mockImplementation(() => undefined);
       const entries = VALID_ENTRIES.map((e) =>
@@ -340,7 +340,7 @@ describe("POST /api/admin-platform-settings", () => {
       expect(loggedText).not.toContain(REFERRAL_CODE);
     });
 
-    it("بدون تغییر نشانی معرف، چیزی لاگ نمی‌شود", async () => {
+    it("logs nothing when the referral URL is unchanged", async () => {
       seedSettings([
         {
           slug: "wallgold",

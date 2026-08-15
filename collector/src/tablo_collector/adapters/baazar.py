@@ -20,17 +20,17 @@ class BaazarAdapter:
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         data = (payload or {}).get("data") if isinstance(payload, dict) else None
         if not isinstance(data, dict):
-            raise AdapterError("بازر: بدنه‌ی data در payload پیدا نشد")
+            raise AdapterError("Baazar: data body not found in payload")
 
         buy_price = data.get("buyPrice")
         sell_price = data.get("sellPrice")
         if buy_price is None or sell_price is None:
-            raise AdapterError("بازر: قیمت buyPrice/sellPrice در payload تهی است")
+            raise AdapterError("Baazar: buyPrice/sellPrice is empty in payload")
         try:
             raw_buy = Decimal(str(buy_price))
             raw_sell = Decimal(str(sell_price))
         except InvalidOperation as exc:
-            raise AdapterError(f"بازر: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Baazar: invalid payload: {exc!r}") from exc
 
         return dealer_snapshot(
             slug=self.slug,

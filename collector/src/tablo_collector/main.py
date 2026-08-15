@@ -165,7 +165,7 @@ async def run() -> None:
         transport = RobotsCheckedTransport(robots, HttpxReferenceTransport(client))
 
         async def platform_loop() -> None:
-            log.info("گردآورنده بالا آمد؛ بازه %s ثانیه", POLL_INTERVAL_SECONDS)
+            log.info("Collector started up; interval %s seconds", POLL_INTERVAL_SECONDS)
             while True:
                 started = time.monotonic()
                 try:
@@ -173,10 +173,10 @@ async def run() -> None:
                         adapters, fetch_json, store, platforms=platform_registry.current
                     )
                     log.info(
-                        "نوبت گردآوری: %s",
+                        "Collection round: %s",
                         {
                             s.platform_slug: (
-                                "سرکوب‌شده (چک میانه)"
+                                "suppressed (median/sanity check)"
                                 if s.suppressed
                                 else {q.side.value: q.price_toman for q in s.quotes}
                             )
@@ -184,7 +184,7 @@ async def run() -> None:
                         },
                     )
                 except Exception:
-                    log.exception("نوبت گردآوری شکست خورد")
+                    log.exception("Collection round failed")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, POLL_INTERVAL_SECONDS - elapsed))
 
@@ -196,11 +196,11 @@ async def run() -> None:
                         REFERENCE_SOURCES, transport, store
                     )
                     log.info(
-                        "نوبت مراجع: %s",
+                        "Reference round: %s",
                         {s.reference_slug: len(s.quotes) for s in saved},
                     )
                 except Exception:
-                    log.exception("نوبت مراجع شکست خورد")
+                    log.exception("Reference round failed")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, REFERENCE_POLL_INTERVAL_SECONDS - elapsed))
 
@@ -210,13 +210,13 @@ async def run() -> None:
                 try:
                     report = await retention_pass(history_store)
                     log.info(
-                        "نوبت نگه‌داری: %s تجمیع، %s فشرده، %s هرس",
+                        "Retention round: %s rolled up, %s compressed, %s pruned",
                         report.rollups_written,
                         report.rows_compressed,
                         report.rows_pruned,
                     )
                 except Exception:
-                    log.exception("نوبت نگه‌داری شکست خورد")
+                    log.exception("Retention round failed")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, RETENTION_INTERVAL_SECONDS - elapsed))
 
@@ -230,14 +230,14 @@ async def run() -> None:
                         content_gateway, revalidate_blog, daily_cap=daily_publish_cap
                     )
                     log.info(
-                        "نوبت انتشار محتوا: %s منتشر شد؛ عمق صف %.1f روز (%s پیش‌نویس ÷ سقف %s)",
-                        list(published) if published else "هیچ",
+                        "Content publish round: %s published; queue depth %.1f days (%s drafts ÷ cap %s)",
+                        list(published) if published else "none",
                         depth.days,
                         depth.drafts,
                         depth.daily_cap,
                     )
                 except Exception:
-                    log.exception("نوبت انتشار محتوا شکست خورد")
+                    log.exception("Content publish round failed")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, CONTENT_DRAIN_INTERVAL_SECONDS - elapsed))
 
@@ -252,9 +252,9 @@ async def run() -> None:
                     platform_registry.current = platforms_with_referral_overrides(
                         settings_rows, PLATFORMS
                     )
-                    log.info("نوبت تنظیمات سکو: %s سری در نمودار", len(config))
+                    log.info("Platform settings round: %s series in chart", len(config))
                 except Exception:
-                    log.exception("نوبت تنظیمات سکو شکست خورد")
+                    log.exception("Platform settings round failed")
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, SETTINGS_SYNC_INTERVAL_SECONDS - elapsed))
 

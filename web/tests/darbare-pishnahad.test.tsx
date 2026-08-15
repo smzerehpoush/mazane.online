@@ -1,7 +1,8 @@
 /**
- * ⚠️ امروز هیچ جزء «پیشنهاد سردبیر» ای روی صفحه‌ی اصلی نیست (جایگاه تبلیغ در
- * طرح تازه جایی ندارد)، ولی صفحه‌ی معیار طبق حذف نمی‌شود و در ناوبری
- * سرصفحه هم هست — پس متن و حضورش در سایت‌مپ همچنان دروازه دارند.
+ * ⚠️ Today there is no "editor's pick" component on the home page (the ad
+ * slot has no place in the new design), but the criteria page isn't removed
+ * on that account and is still in the header nav — so its copy and its
+ * presence in the sitemap are still gated here.
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -11,8 +12,8 @@ import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 import { nav } from "../src/lib/site-content";
 
-describe("صفحه‌ی معیارهای پیشنهاد سردبیر", () => {
-  it("معیار انتخاب را صریح اعلام می‌کند", () => {
+describe("editor's pick criteria page", () => {
+  it("explicitly states the selection criteria", () => {
     const html = renderToStaticMarkup(<DarbarePishnahad />);
     expect(html).toContain("پیشنهاد سردبیر");
     expect(html).toContain("کمترین هزینه‌ی رفت‌وبرگشت");
@@ -20,13 +21,13 @@ describe("صفحه‌ی معیارهای پیشنهاد سردبیر", () => {
     expect(html).toContain("باز");
   });
 
-  it("تفکیک تبلیغ و تحریریه را اعلام می‌کند: پیشنهاد فروخته نمی‌شود", () => {
+  it("states the ad/editorial separation: the pick is not sold", () => {
     const html = renderToStaticMarkup(<DarbarePishnahad />);
     expect(html).toContain("فروخته نمی‌شود");
     expect(html).toContain("تبلیغ");
   });
 
-  it("canonical تخت لاتین و BreadcrumbList دارد", () => {
+  it("has a flat Latin canonical and a BreadcrumbList", () => {
     const head = darbarePishnahadHead();
     expect(head.links).toContainEqual({
       rel: "canonical",
@@ -35,14 +36,14 @@ describe("صفحه‌ی معیارهای پیشنهاد سردبیر", () => {
     expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
   });
 
-  it("در سایت‌مپ هست (محتوای ایستا، بدون lastmod قیمتی)", () => {
+  it("is in the sitemap (static content, no price-based lastmod)", () => {
     const entries = buildSitemapEntries({ posts: [], instruments: [], platforms: [] });
     const entry = entries.find((item) => item.path === "/darbare-pishnahad");
     expect(entry).toBeDefined();
     expect(entry?.lastModified).toBeUndefined();
   });
 
-  it("از ناوبری سرصفحه در دسترس است — صفحه‌ی یتیم نمی‌ماند", () => {
+  it("is reachable from the header nav — the page is never orphaned", () => {
     expect(nav.map((item) => item.href)).toContain("/darbare-pishnahad");
   });
 });

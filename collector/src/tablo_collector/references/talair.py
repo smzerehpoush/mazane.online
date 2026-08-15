@@ -46,13 +46,13 @@ class TalairReference:
         try:
             payload = json.loads(text)
         except ValueError as exc:
-            raise AdapterError(f"طلا دات‌آی‌آر: پاسخ JSON نیست: {exc!r}") from exc
+            raise AdapterError(f"Talair: response is not JSON: {exc!r}") from exc
         return self.parse(payload, fetched_at)
 
     def parse(self, payload: Any, fetched_at: datetime) -> ReferenceSnapshot:
         gold = payload.get("gold") if isinstance(payload, dict) else None
         if not isinstance(gold, dict):
-            raise AdapterError("طلا دات‌آی‌آر: بدنه‌ی gold در payload پیدا نشد")
+            raise AdapterError("Talair: gold body not found in payload")
 
         quotes: list[ReferenceQuote] = []
         for field, instrument in _FIELD_TO_INSTRUMENT.items():
@@ -74,7 +74,7 @@ class TalairReference:
             )
 
         if not quotes:
-            raise AdapterError("طلا دات‌آی‌آر: هیچ فیلد سالمی در payload نبود")
+            raise AdapterError("Talair: no valid field found in payload")
 
         return ReferenceSnapshot(
             reference_slug=self.slug,

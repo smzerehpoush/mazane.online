@@ -1,7 +1,8 @@
 /**
- * ⚠️ **بدون جاوااسکریپت هم کار می‌کند**: موقعیت هر نشانگر در همان صفت `style`
- * سروررندر است و قیمت‌ها متن ساده‌اند. انیمیشن، فتیله و پولینگ لایه‌ی اضافه‌اند
- * که با JS خاموش صرفاً غایب‌اند — نه اینکه صفحه خالی شود.
+ * ⚠️ **Works without JavaScript too**: each marker's position is
+ * server-rendered in the same `style` attribute, and prices are plain
+ * text. Animation, the fuse, and polling are an extra layer that's simply
+ * absent with JS off — not that the page goes blank.
  */
 import { useEffect, useRef } from "react";
 
@@ -27,7 +28,7 @@ export function PriceRail({
 }) {
   const fuseRef = useRef<HTMLDivElement | null>(null);
 
-  /** ⚠️ فقط بعد از mount: `Date.now` در رندر سرور ممنوع است. */
+  /** ⚠️ Only after mount: `Date.now` is forbidden in server rendering. */
   useEffect(() => {
     const fuse = fuseRef.current;
     if (fuse === null) return;
@@ -38,12 +39,13 @@ export function PriceRail({
     }
 
     /**
-     * ⚠️ با شکست فچ فتیله باید **بایستد**. این تزئین نیست — فتیله‌ی
-     * در حال سوختن یک وعده است: «تمام که شد، قیمت‌ها تازه می‌شوند» (همان متن
-     * زیر عنوان کارت). وقتی اتصال قطع است این وعده دروغ می‌شود و بدتر از
-     * نبودنش است: کاربر عددِ کهنه را تازه می‌پندارد. نوار خطا به‌تنهایی کافی
-     * نیست، چون فتیله همچنان هر ۳۰ ثانیه پر و خالی می‌شود و حرکت، از متن
-     * ساکن قوی‌تر دیده می‌شود.
+     * ⚠️ On a fetch failure the fuse must **stop**. This isn't decoration —
+     * a burning fuse is a promise: "when it runs out, prices refresh" (the
+     * same text under the card's title). When the connection is down, that
+     * promise becomes a lie and is worse than not showing it at all: the
+     * user takes a stale number for a fresh one. The error banner alone
+     * isn't enough, because the fuse would still fill and empty every 30
+     * seconds, and motion reads stronger than static text.
      */
     if (failed) {
       fuse.style.animationPlayState = "paused";
@@ -102,13 +104,14 @@ export function PriceRail({
       {rail.hasRail ? (
         <>
           {/*
-           * ⚠️ `mx` روی موبایل الزامی است، نه تزئین: نشانگر با
-           * `translateX(50%)` وسط‌چین می‌شود، پس نشانگرِ لبه (۴٪ و ۹۶٪) نیمی
-           * از برچسبش بیرون از کادر می‌افتد. اندازه‌گیری در ۳۷۵px: طلاسی تا
-           * ۳۷۸px و وال‌گلد تا ‎−۳px‎ می‌رفتند.
-           * padding کار نمی‌کند — درصدِ عنصر absolute نسبت به **padding box**
-           * حل می‌شود و padding آن را تو نمی‌برد؛ margin می‌برد.
-           * ارتفاع بیشتر روی موبایل خواسته‌ی خودِ است (≤620px).
+           * ⚠️ `mx` on mobile is required, not decorative: the marker is
+           * centered with `translateX(50%)`, so an edge marker (4% and
+           * 96%) has half its label falling outside the box. Measured at
+           * 375px: Talasea reached 378px and Wallgold reached −3px.
+           * padding doesn't work — an absolute element's percentage
+           * resolves against the **padding box**, so padding doesn't pull
+           * it in; margin does. The extra height on mobile is intentional
+           * (≤620px).
            */}
           <div data-rail className="relative mx-7 mt-3 h-[180px] sm:mx-0 sm:h-[132px]">
             <div className="absolute top-[30px] right-[4%] left-[4%] h-px bg-line2">
@@ -141,7 +144,7 @@ export function PriceRail({
             {rail.sources.map((source) =>
               source.railPercent === null ? null : (
                 <a
-                  /** ⚠️ کلید = اسلاگ. هر چیز دیگری یعنی re-mount و مرگ ترنزیشن. */
+                  /** ⚠️ Key = slug. Anything else means re-mount and the death of the transition. */
                   key={source.slug}
                   href={source.href}
                   rel="sponsored nofollow noopener"
@@ -171,10 +174,10 @@ export function PriceRail({
           </div>
 
           {/*
-           * ⚠️ ترتیب DOM اینجا معنادار است: در RTL، **اولین** فرزندِ
-           * justify-between سمت راست می‌نشیند. «ارزان‌تر» باید سمت راست
-           * بیاید تا با جای نشانگرها بخواند. جابه‌جا کردن این دو
-           * یعنی پاورقی خلاف خودِ محور حرف بزند.
+           * ⚠️ DOM order matters here: in RTL, the **first** child of
+           * `justify-between` sits on the right. "Cheaper" must come on
+           * the right to agree with where the markers are. Swapping these
+           * two would make the footnote contradict the rail itself.
            */}
           <div className="mx-5 flex items-center justify-between border-t border-border pt-3 pb-4 text-[11.5px] text-tx3 sm:mx-6">
             <span data-rail-min>{rail.minDisplay} · ارزان‌تر</span>

@@ -47,13 +47,15 @@ export function weightFromAmount(amountToman: number, unitPriceToman: number): n
 }
 
 /**
- * ⚠️ **این ناقض نیست، به همان دلیلی که بالای این فایل نوشته
- * شده**: می‌گوید وب نباید قیمت **سکو** را بسازد یا مشتق کند. اینجا
- * هیچ قیمتی ساخته نمی‌شود — ورودی‌ها را خودِ کاربر می‌زند و خروجی هرگز ذخیره،
- * منتشر یا به سکویی منتسب نمی‌شود. این همان دسته‌ی `amountFromWeight` بالاست
- * که از پیش پذیرفته شده بود؛ فقط چند ضرب بیشتر دارد.
- * ⚠️ عمداً اینجاست و نه داخل کامپوننت: این فایل «تنها دروازه»ی حساب ماشین‌حساب
- * است و تست خودش را دارد. فرمولی که داخل یک `.tsx` زندگی کند، بی‌تست می‌ماند.
+ * ⚠️ **This is not a violation, for the same reason stated at the top of
+ * this file**: that rule says the web must not construct or derive a
+ * **platform**'s price. Nothing here constructs a price — the user enters
+ * the inputs themselves, and the output is never stored, published, or
+ * attributed to a platform. This is the same category as `amountFromWeight`
+ * above, already accepted; it just has a few more multiplications.
+ * ⚠️ Deliberately placed here and not inside a component: this file is the
+ * "only gate" for the calculator's arithmetic and has its own test. A
+ * formula living inside a `.tsx` would stay untested.
  */
 export function jewelryTotal(options: {
   weightGrams: number;

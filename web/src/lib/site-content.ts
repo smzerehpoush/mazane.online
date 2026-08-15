@@ -27,18 +27,19 @@ export interface ChartPlatformConfig {
   name_fa: string;
   color: string;
   /**
-   * ⚠️ هرگز از payload پنل نمی‌آید و همیشه در `chartSeriesConfig` نشانده
-   * می‌شود؛ توضیحش آنجاست.
+   * ⚠️ Never comes from the panel payload and is always set in
+   * `chartSeriesConfig`; explained there.
    */
   is_reference?: boolean;
 }
 
 /**
- * ⚠️ این باید یک تنظیم پنل مدیریت باشد (تصمیم مالک، ۲۰۲۶-۰۸-۱۱: «من در
- * ادمین پنل یک قیمت را به عنوان مرجع انتخاب می‌کنم»). امروز ثابتِ کد است چون
- * `platform_settings` ستون `is_reference` ندارد و بک‌اند در این مرحله دست
- * نمی‌خورد. شکاف در `api-gaps.md` ثبت شده؛ روزی که ستون آمد، فقط همین
- * ثابت جایش را به مقدار خوانده‌شده می‌دهد و هیچ مصرف‌کننده‌ای عوض نمی‌شود.
+ * ⚠️ This should be an admin-panel setting (owner's decision, 2026-08-11:
+ * "I pick a price as reference in the admin panel"). Today it's a code
+ * constant because `platform_settings` has no `is_reference` column and
+ * the backend isn't touched at this stage. The gap is logged in
+ * `api-gaps.md`; once the column exists, this constant alone hands off to
+ * the read value and no consumer changes.
  */
 export const REFERENCE_PLATFORM_SLUG = "milli";
 
@@ -82,17 +83,18 @@ export function chartSeriesConfig(
 }
 
 /**
- * ⚠️ چرا اینجا و نه در داده: payload پنل (`tablo:chart_config`) این فیلد را
- * ندارد. اگر پرچم را فقط روی `CHART_PLATFORMS` می‌گذاشتیم، به‌محض اینکه مالک
- * از پنل فهرست را تغییر می‌داد، سکوی مرجع بی‌سروصدا ناپدید می‌شد و محور
- * لنگرش را از دست می‌داد — دقیقاً همان نوع خرابی که فقط در تولید دیده می‌شود.
+ * ⚠️ Why here and not in the data: the panel payload (`tablo:chart_config`)
+ * doesn't have this field. If we put the flag only on `CHART_PLATFORMS`,
+ * the moment the owner changed the list from the panel, the reference
+ * platform would silently disappear and the axis would lose its anchor —
+ * exactly the kind of breakage that only shows up in production.
  */
 function withReference(list: readonly ChartPlatformConfig[]): readonly ChartPlatformConfig[] {
   if (list.length === 0) return list;
   const hasReference = list.some((platform) => platform.slug === REFERENCE_PLATFORM_SLUG);
   if (!hasReference) {
     console.warn(
-      `سکوی مرجع «${REFERENCE_PLATFORM_SLUG}» در فهرست نمایشی نیست — اولین عضو فهرست مرجع شد`,
+      `reference platform "${REFERENCE_PLATFORM_SLUG}" is not in the display list — first list item became the reference`,
     );
   }
   const referenceSlug = hasReference ? REFERENCE_PLATFORM_SLUG : list[0]?.slug;
@@ -126,11 +128,11 @@ export interface RateCardRangeConfig {
 }
 
 /**
- * ⚠️ عمداً جدا از `RATE_CARD_RANGES` است و نه import از آن: آن‌ها برچسب کارت
- * نرخِ **صفحه‌ی سکو**اند («روزانه/هفتگی/ماهانه») و آنجا کنار جدولی می‌نشینند
- * که واژگان خودش را دارد. یکی‌کردنشان یعنی هر تغییر در یک صفحه بی‌سروصدا
- * صفحه‌ی دیگر را هم عوض می‌کند. بازه‌ها (`hours`/`stepHours`) مشترک می‌مانند؛
- * فقط واژه فرق می‌کند.
+ * ⚠️ Deliberately separate from `RATE_CARD_RANGES`, not imported from it:
+ * those are the rate-card labels for the **platform page** ("Daily/Weekly/
+ * Monthly") and sit there next to a table with its own vocabulary. Merging
+ * them would mean any change on one page silently changes the other too.
+ * The ranges (`hours`/`stepHours`) stay shared; only the wording differs.
  */
 export const HOME_SUMMARY_RANGE_LABELS: Readonly<Record<HistoryRange, string>> = {
   DAILY: "۲۴ ساعت اخیر",
@@ -148,8 +150,8 @@ export const UNION_RATE_REFERENCE_SLUG = "talair";
 export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
 
 /**
- * ⚠️ از `lib/fa-number.ts` می‌آید نه `Intl.NumberFormat` — خروجی یکسان است
- * ولی دیگر به نسخه‌ی ICU سرور/مرورگر گره نخورده.
+ * ⚠️ Comes from `lib/fa-number.ts`, not `Intl.NumberFormat` — same output,
+ * but no longer tied to the server/browser's ICU version.
  */
 export const fa = (value: number): string => formatFaNumber(value);
 

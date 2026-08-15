@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 # ============================================================
-# دیپلوی مظنه آنلاین از لپ‌تاپ به سرور — الگوی پادل‌یار (~/w/padelyar/deploy.sh):
-# کد rsync می‌شود و ایمیج‌ها روی خودِ سرور ساخته می‌شوند، نه لوکال.
+# Deploy Tablo Online from the laptop to the server — the Padelyar pattern
+# (~/w/padelyar/deploy.sh): the code gets rsynced and the images are built on
+# the server itself, not locally.
 #
-# تصمیم مالک (۲۰۲۶-۰۸-۰۸): این عمداً برخلاف رانبوک قدیمی (بخش ۱.۲/۱.۳) است
-# که ساخت روی سرور را به‌خاطر رم محدود (۱ هسته/۲GB، مشترک با پادل‌یار) رد
-# می‌کرد. آن ریسک هنوز واقعی است — پادل‌یار همین‌جا موفق بوده، ولی هیچ سابقه‌ای
-# از خرابی/نبودِ خرابی‌اش در دسترس من نیست. به همین دلیل این اسکریپت پیش از
-# ساخت رم آزاد را چک می‌کند و اگر خطرناک بود متوقف می‌شود، و دو ایمیج را
-# پشت‌سرهم می‌سازد نه هم‌زمان (اوج مصرف رم نصف می‌شود).
+# Owner decision (2026-08-08): this is deliberately against the old runbook
+# (sections 1.2/1.3), which rejected building on the server because of
+# limited RAM (1 core/2GB, shared with Padelyar). That risk is still real —
+# Padelyar has succeeded here, but I have no record of its failures/lack of
+# failures. That's why this script checks free RAM before building and stops
+# if it's dangerous, and builds the two images back-to-back rather than
+# simultaneously (halving the peak RAM usage).
 #
-#   ./deploy.sh              دیپلوی کامل (rsync + build + up + سلامت)
-#   ./deploy.sh status       وضعیت کانتینرهای مظنه روی سرور
+#   ./deploy.sh              full deploy (rsync + build + up + health check)
+#   ./deploy.sh status       status of Tablo's containers on the server
 #   ./deploy.sh logs web|collector
 #
-# متغیرهای قابل بازنویسی:
+# Overridable variables:
 #   SERVER=ubuntu@37.32.27.201  SSH_KEY=~/.ssh/padelyar_deploy  ./deploy.sh
 # ============================================================
 set -euo pipefail
@@ -38,14 +40,14 @@ case "${1:-deploy}" in
     ssh "${SSH_OPTS[@]}" "$SERVER" "sudo docker logs -f --tail 100 tablo-${svc}"
     exit 0 ;;
   deploy) ;;
-  *) echo "دستور ناشناخته: $1 (گزینه‌ها: deploy | status | logs [web|collector])"; exit 1 ;;
+  *) echo "unknown command: $1 (options: deploy | status | logs [web|collector])"; exit 1 ;;
 esac
 
 START_TS=$(date +%s)
 
 echo "==> [1/6] انتقال کد به سرور (${REMOTE_SRC_DIR})…"
-# ⚠️ web-crawler/ کد اختصاصی کارفرماست — هرگز نباید به این سرور برود.
-# .env محلی راز واقعی دارد — هرگز نباید جای دیگری جز /opt/tablo/.env بنشیند.
+# ⚠️ web-crawler/ is the client's proprietary code — it must never go to this server.
+# The local .env holds real secrets — it must never end up anywhere but /opt/tablo/.env.
 rsync -az --delete \
   --exclude node_modules --exclude .output --exclude .git \
   --exclude .venv --exclude __pycache__ --exclude web-crawler \
@@ -86,14 +88,15 @@ ssh "${SSH_OPTS[@]}" "$SERVER" "
 "
 
 echo "==> [5/6] همگام‌سازی دایرکتوری اجرا + بالا آوردن نسخه‌ی تازه…"
-# ⚠️ ساخت از $REMOTE_SRC_DIR است ولی compose از $REMOTE_RUN_DIR اجرا می‌شود.
-# پیش از این، این دو هرگز همگام نمی‌شدند: دایرکتوری اجرا compose.prod.yml و
-# migrations خودش را داشت که با هر دیپلوی کهنه‌تر می‌شد. در دیپلوی تغییر نام
-# (۲۰۲۶-۰۸-۱۰) همین باعث شد compose هنوز MAZANE_* بخواند و با
-# «required variable MAZANE_REVALIDATE_TOKEN is missing» بایستد.
+# ⚠️ The build happens from $REMOTE_SRC_DIR but compose runs from $REMOTE_RUN_DIR.
+# Before this, the two were never kept in sync: the run directory had its own
+# compose.prod.yml and migrations that got staler with every deploy. In the
+# rename deploy (2026-08-10) this is exactly what caused compose to still
+# read MAZANE_* and fail with "required variable MAZANE_REVALIDATE_TOKEN is
+# missing".
 #
-# ‎.env‎ عمداً کپی نمی‌شود: راز واقعی فقط روی سرور است و rsync هم صریحاً
-# کنارش می‌گذارد.
+# .env is deliberately not copied: the real secret only lives on the server,
+# and rsync explicitly excludes it too.
 ssh "${SSH_OPTS[@]}" "$SERVER" "
   sudo cp $REMOTE_SRC_DIR/compose.prod.yml $REMOTE_RUN_DIR/compose.prod.yml
   sudo mkdir -p $REMOTE_RUN_DIR/collector/migrations

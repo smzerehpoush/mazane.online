@@ -1,7 +1,8 @@
 /**
- * ⚠️ تست پیکربندی رندر (`revalidate = 60`) حذف شد: ISR مفهومی مالِ نکست بود
- * و در تنکستک استارت وجود ندارد. جایگزینش سیاست کش لبه است که در
- * `tests/seo.test.ts` سنجیده می‌شود (‎s-maxage=60‎ + ‎stale-if-error‎).
+ * ⚠️ The render-config test (`revalidate = 60`) was removed: ISR is a
+ * Next.js concept and doesn't exist in TanStack Start. Its replacement is
+ * the edge cache policy, measured in `tests/seo.test.ts` (s-maxage=60 +
+ * stale-if-error).
  */
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -33,8 +34,8 @@ function domState(overrides: Partial<LiveRowDomState> = {}): LiveRowDomState {
   };
 }
 
-describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
-  it("payload تازه ⟸ قیمت و برچسب زمان هر دو عوض می‌شوند", () => {
+describe("swap logic — the pure function nextRowDomState", () => {
+  it("a fresh payload ⟸ both the price and the time label change", () => {
     const next = nextRowDomState(
       domState(),
       {
@@ -53,7 +54,7 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
     });
   });
 
-  it("payload کهنه ⟸ پسوند کهنگی اضافه می‌شود", () => {
+  it("a stale payload ⟸ the staleness suffix is added", () => {
     const next = nextRowDomState(
       domState(),
       {
@@ -68,7 +69,7 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
     expect(next.staleText).toBe(STALE_SUFFIX_FA);
   });
 
-  it("بدون ردیف payload، عدد می‌ماند ولی برچسب زمان از ISO خود DOM پیر می‌شود", () => {
+  it("with no row payload, the number stays but the time label ages from the DOM's own ISO", () => {
     const current = domState({ updatedAtIso: isoSecondsAgo(4 * 60) });
     const next = nextRowDomState(current, undefined, NOW);
     expect(next.priceText).toBe(current.priceText);
@@ -77,7 +78,7 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
     expect(next.staleText).toBe(STALE_SUFFIX_FA);
   });
 
-  it("قطع منبع (payload بی‌قیمت) ⟸ عدد قبلی می‌ماند و فقط کهنگی گزارش می‌شود", () => {
+  it("source outage (a priceless payload) ⟸ the previous number stays and only staleness is reported", () => {
     const next = nextRowDomState(
       domState(),
       {
@@ -93,7 +94,7 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
     expect(next.staleText).toBe(STALE_SUFFIX_FA);
   });
 
-  it("payload با قیمت ولی بدون updated_at ⟸ قیمت عوض، زمان از ISO خود DOM", () => {
+  it("a payload with a price but no updated_at ⟸ the price changes, the time comes from the DOM's own ISO", () => {
     const next = nextRowDomState(
       domState(),
       {
@@ -109,7 +110,7 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
     expect(next.updatedText).toBe("۱ دقیقه پیش");
   });
 
-  it("بدون هیچ ISO (سکوی بی‌سابقه) هیچ چیز عوض نمی‌شود", () => {
+  it("with no ISO at all (a platform with no history) nothing changes", () => {
     const current = domState({
       updatedAtIso: null,
       updatedText: "",
@@ -120,13 +121,14 @@ describe("منطق سوآپ — تابع خالص nextRowDomState", () => {
   });
 });
 
-describe("قلاب‌های داشبورد در HTML سروررندر", () => {
+describe("dashboard hooks in the server-rendered HTML", () => {
   /**
-   * ⚠️ با بازطراحی، جدول (و قلاب‌های ‎data-live‎ اش) حذف شد. سوآپ زنده حالا
-   * روی نشانگرهای محور و کارت‌های منبع کار می‌کند. قرارداد همان است — «کلاینت
-   * فقط متن و موقعیتِ از قبل حساب‌شده را می‌نشاند» — فقط سلکتورها عوض شده‌اند.
+   * ⚠️ With the redesign, the table (and its `data-live` hooks) was
+   * removed. The live swap now works on the axis markers and source cards.
+   * The contract is the same — "the client only places pre-computed text
+   * and position" — only the selectors changed.
    */
-  it("هر منبع نشانگر نشان‌دار با گره‌ی قیمت دارد", async () => {
+  it("every source has a tagged marker with a price node", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     for (const [slug, price] of [
       ["wallgold", "۱۸٬۶۱۱٬۰۰۰"],
@@ -139,7 +141,7 @@ describe("قلاب‌های داشبورد در HTML سروررندر", () => {
     }
   });
 
-  it("هر منبع کارت نشان‌دار با گره‌ی قیمت دارد", async () => {
+  it("every source has a tagged card with a price node", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     for (const slug of ["wallgold", "talasea", "milli"]) {
       expect(html, slug).toContain(`data-source-card="${slug}"`);
@@ -147,7 +149,7 @@ describe("قلاب‌های داشبورد در HTML سروررندر", () => {
     expect(html).toContain("data-source-price");
   });
 
-  it("پاورقی محور قلاب‌های به‌روزرسانی دارد", async () => {
+  it("the axis footer has update hooks", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     expect(html).toContain("data-rail-max");
     expect(html).toContain("data-rail-min");
@@ -155,21 +157,21 @@ describe("قلاب‌های داشبورد در HTML سروررندر", () => {
   });
 });
 
-describe("شمارنده‌ی زنده‌ی کارت نرخ — تابع خالص nextRateCardCountdown", () => {
-  it("هر تیک، وقتی داده تازه است، یکی کم می‌شود و دریافتی درخواست نمی‌شود", () => {
+describe("the rate card's live countdown — the pure function nextRateCardCountdown", () => {
+  it("each tick, when data is fresh, decrements by one and requests no fetch", () => {
     expect(nextRateCardCountdown(30, false)).toEqual({ secondsRemaining: 29, shouldFetch: false });
     expect(nextRateCardCountdown(15, false)).toEqual({ secondsRemaining: 14, shouldFetch: false });
     expect(nextRateCardCountdown(1, false)).toEqual({ secondsRemaining: 0, shouldFetch: false });
   });
 
-  it("در صفر، یک نوبت دریافت واقعی لازم است و شمارنده دوباره از ۳۰ شروع می‌شود", () => {
+  it("at zero, one real fetch is required and the counter restarts from 30", () => {
     expect(nextRateCardCountdown(0, false)).toEqual({
       secondsRemaining: RATE_CARD_POLL_SECONDS,
       shouldFetch: true,
     });
   });
 
-  it("کهنگی شمارنده را خاموش می‌کند — همیشه به ۳۰ می‌پرد و هرگز دریافت نمی‌خواهد", () => {
+  it("staleness switches off the counter — it always jumps to 30 and never requests a fetch", () => {
     expect(nextRateCardCountdown(12, true)).toEqual({
       secondsRemaining: RATE_CARD_POLL_SECONDS,
       shouldFetch: false,
@@ -181,14 +183,14 @@ describe("شمارنده‌ی زنده‌ی کارت نرخ — تابع خال�
   });
 });
 
-describe("هم‌ارزی payload با رندر سرور", () => {
+describe("payload equivalence with the server render", () => {
   /**
-   * ⚠️ قلب قرارداد زنده: رشته‌ای که polling می‌نشاند باید **بیت‌به‌بیت** همان
-   * چیزی باشد که رندر سرور گذاشته، وگرنه عدد در اولین تیک بی‌دلیل «تغییر»
-   * می‌کند. هر دو از یک تابع می‌آیند (`lib/dashboard.ts`) و این تست همان را
-   * قفل می‌کند.
+   * ⚠️ The heart of the live contract: the string that polling places must
+   * be **bit-for-bit** identical to what the server render put there, or
+   * the number "changes" for no reason on the first tick. Both come from
+   * the same function (`lib/dashboard.ts`), and this test locks that in.
    */
-  it("price_display هر سکو همان رشته‌ی رندرشده روی نشانگر است", async () => {
+  it("each platform's price_display is the same string rendered on the marker", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     const payload = await livePricesPayload();
     expect(payload.dashboard?.sources).not.toHaveLength(0);
@@ -202,7 +204,7 @@ describe("هم‌ارزی payload با رندر سرور", () => {
     }
   });
 
-  it("rail_percent payload همان درصدی است که سرور رندر کرده", async () => {
+  it("the rail_percent payload is the same percent the server rendered", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(healthyStore())} />);
     const payload = await livePricesPayload();
     for (const source of payload.dashboard?.sources ?? []) {

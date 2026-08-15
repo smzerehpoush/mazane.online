@@ -157,8 +157,8 @@ export function PlatformRateCard({
     let updatedAtIso = row.updatedAt;
     let secondsRemaining = RATE_CARD_POLL_SECONDS;
 
-    // ⚠️ این دریافت فقط updated_at را تازه می‌کند؛ عدد درشت کارت هرگز با آن
-    // عوض نمی‌شود — ‎/api/prices‎ «مؤثر خرید» می‌دهد، نه «قیمت مرجع سکو».
+    // ⚠️ This fetch only refreshes updated_at; the card's headline number never
+    // changes with it — /api/prices returns "effective buy", not "platform reference price".
     async function refreshUpdatedAt(): Promise<void> {
       try {
         const response = await fetch("/api/prices", { cache: "no-store" });
@@ -169,7 +169,7 @@ export function PlatformRateCard({
           updatedAtIso = match.updated_at;
         }
       } catch {
-        // قطع شبکه ⟸ زمان قبلی می‌ماند، کهنگی نه خطا
+        // Network outage: keep the previous timestamp; staleness, not error.
       }
     }
 

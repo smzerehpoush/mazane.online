@@ -1,7 +1,8 @@
 /**
- * ⚠️ چرا اسکریپت یک **رشته** است و نه یک ماژول import شده: باید پیش از هر
- * چیز دیگری اجرا شود، پس نمی‌تواند منتظر باندل بماند. همین‌جا کنار ثابت‌هایش
- * می‌ماند تا نام کلید و نام صفت در دو جا از هم واگرا نشوند.
+ * ⚠️ Why the script is a **string** and not an imported module: it must run
+ * before anything else, so it can't wait for the bundle. It stays right
+ * here next to its constants so the key name and attribute name don't
+ * diverge between the two places.
  */
 
 export const THEME_ATTRIBUTE = "data-theme";
@@ -27,7 +28,7 @@ export function applyTheme(theme: Theme): void {
   try {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
-    // ذخیره‌ی ترجیح از دست رفت؛ خودِ تم اعمال شده.
+    // Persisting the preference failed; the theme itself has already been applied.
   }
 }
 

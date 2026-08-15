@@ -13,9 +13,10 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
   const [rows, chartOverride] = await Promise.all([fetchRows(), getChartPlatforms()]);
   const platforms = chartSeriesConfig(chartOverride);
 
-  // ⚠️ هندسه‌ی محور با **همان تابعی** ساخته می‌شود که رندر سرور صفحه از آن
-  // استفاده می‌کند. اگر اینجا نسخه‌ی دومی نوشته می‌شد، نشانگرها بعد از اولین
-  // polling به موقعیتی می‌پریدند که با رندر اولیه نمی‌خواند.
+  // ⚠️ The axis geometry is built with the **same function** the page's
+  // server render uses. If a second version were written here, the markers
+  // would jump after the first poll to a position that doesn't match the
+  // initial render.
   const dashboard = buildDashboard({
     rows,
     platforms,

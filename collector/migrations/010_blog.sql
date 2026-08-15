@@ -1,17 +1,18 @@
--- مهاجرت ۰۱۰ — جدول پست‌های بلاگ (بلیت ۱۲).
--- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/010_blog.sql
+-- Migration 010 — blog posts table (ticket 12).
+-- Run: psql "$TABLO_DATABASE_URL" -f collector/migrations/010_blog.sql
 --
--- بدنه «مارک‌داون» است (تصمیم بلیت ۱۲؛ رندر امن سمت وب در web/lib/markdown.tsx —
--- نه HTML خام). اسلاگ لاتینِ تخت زیر فضای رزروشده‌ی /blog/ (بند ۱۳، تصمیم ۱۱).
+-- The body is "markdown" (ticket 12 decision; safe rendering happens on the
+-- web side in web/lib/markdown.tsx — not raw HTML). Flat Latin slug under
+-- the reserved /blog/ namespace (section 13, decision 11).
 --
--- چرخه‌ی وضعیت:
---   draft      ⟸ در صف؛ نه در فهرست، نه صفحه (404)، نه سایت‌مپ
---   published  ⟸ نمایش عمومی؛ صف انتشار (بلیت ۱۳) پس از نوشتن،
---                POST /api/revalidate-blog وب را صدا می‌زند
---   retracted  ⟸ پس‌گیری تک‌فرمانی (بند ۱۳، تصمیم ۱۶): 404 + حذف از فهرست و سایت‌مپ
+-- Status lifecycle:
+--   draft      <- queued; not in the listing, no page (404), not in the sitemap
+--   published  <- publicly visible; the publish queue (ticket 13) calls
+--                POST /api/revalidate-blog on the web after writing
+--   retracted  <- one-command retraction (section 13, decision 16): 404 + removed from the listing and sitemap
 --
--- updated_at فقط با تغییر معنادار محتوا عوض می‌شود — منبع lastmod سایت‌مپ
--- (بند ۶.۷: هرگز now() نگذارید).
+-- updated_at only changes on a meaningful content change — it's the
+-- sitemap's lastmod source (section 6.7: never set it to now()).
 
 create table if not exists posts (
     slug         text primary key check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
@@ -21,7 +22,7 @@ create table if not exists posts (
                  check (status in ('draft', 'published', 'retracted')),
     published_at timestamptz,
     updated_at   timestamptz not null,
-    -- هر پستی که از پیش‌نویس گذشته، تاریخ انتشار دارد (پس‌گرفته هم نگهش می‌دارد).
+    -- Every post that has moved past draft has a publish date (retracted posts keep it too).
     check (status = 'draft' or published_at is not null)
 );
 

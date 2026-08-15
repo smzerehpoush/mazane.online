@@ -1,7 +1,8 @@
 /**
- * ⚠️ این فایل هرگز به ردیس نمی‌نویسد — نوشتن پنل فقط پستگرس است؛ گردآورنده
- * خودش با تأخیر ~۲۰ ثانیه `tablo:chart_config` را همگام می‌کند و override
- * نشانی معرف را روی رجیستری زنده می‌نشاند (`tablo_collector.settings`).
+ * ⚠️ This file never writes to Redis — panel writes are Postgres-only;
+ * the collector itself syncs `tablo:chart_config` with a ~20 second delay
+ * and applies the referral URL override onto the live registry
+ * (`tablo_collector.settings`).
  */
 import "@tanstack/react-start/server-only";
 

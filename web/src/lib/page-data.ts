@@ -1,6 +1,6 @@
 /**
- * ⚠️ هیچ فرمول قیمتی اینجا نیست — فقط خواندن و بستن
- * payload. ⚠️ قطع منبع ⟸ ردیف بی‌اسنپ‌شات و فهرست خالی، نه خطا.
+ * ⚠️ No pricing formula here — just reading and assembling the
+ * payload. ⚠️ Source outage ⟸ a row with no snapshot and an empty list, not an error.
  */
 import type { HomePageData } from "@/components/tablo/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";

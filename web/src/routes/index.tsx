@@ -1,7 +1,8 @@
 /**
- * ⚠️ هیچ fetch کلاینتی برای رندر اول نیست: همه‌ی اعداد از لودر (تابع سروری
- * `loadHomeData`) می‌آیند و در همان HTML اولیه‌اند. اولویت شماره‌ی یک کسب‌وکار
- * سئوست و خزنده باید قیمت‌ها را در source صفحه ببیند، نه بعد از جاوااسکریپت.
+ * ⚠️ There is no client fetch for the first render: all the numbers come from
+ * the loader (the server function `loadHomeData`) and are already in the
+ * initial HTML. The business's number-one priority is SEO, and the crawler
+ * must see the prices in the page source, not after JavaScript runs.
  */
 import { createFileRoute } from "@tanstack/react-router";
 

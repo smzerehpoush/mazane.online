@@ -14,7 +14,7 @@ DARIC_REST_ENDPOINT = (
 )
 DARIC_WS_ENDPOINT = "wss://apie.daric.gold/ws/hubs"
 
-# ⚠️ تاریخ مشاهده‌ی کارمزد دستی است، نه زمان گردآوری — با `fetched_at` جابه‌جا نشود.
+# ⚠️ The fee observation date is manual, not the collection time — do not confuse with `fetched_at`.
 DARIC_FEE_OBSERVED_AT = datetime(2026, 8, 10, tzinfo=UTC)
 
 SIGNALR_RECORD_SEPARATOR = "\x1e"
@@ -26,14 +26,14 @@ def _decimal(value: Any, side_name: str) -> Decimal | None:
     try:
         return Decimal(str(value))
     except InvalidOperation as exc:
-        raise AdapterError(f"داریک: قیمت {side_name} نامعتبر است: {value!r}") from exc
+        raise AdapterError(f"Daric: {side_name} price is invalid: {value!r}") from exc
 
 
 def _order_price(order: Any, side_name: str) -> Decimal | None:
     if order is None:
         return None
     if not isinstance(order, dict):
-        raise AdapterError(f"داریک: {side_name} نه شیء سفارش است نه تهی")
+        raise AdapterError(f"Daric: {side_name} is neither an order object nor empty")
     return _decimal(order.get("price"), side_name)
 
 
@@ -75,12 +75,12 @@ class DaricAdapter:
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         if not isinstance(payload, dict):
-            raise AdapterError("داریک: payload شیء JSON نیست")
+            raise AdapterError("Daric: payload is not a JSON object")
 
         raw_bid, raw_ask = _top_of_book(payload)
 
         if raw_bid is None or raw_ask is None:
-            raise AdapterError("داریک: دفتر یک‌سمته است — این نوبت قیمت ندارد")
+            raise AdapterError("Daric: order book is one-sided — no price this round")
 
         return order_book_snapshot(
             slug=self.slug,

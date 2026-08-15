@@ -51,7 +51,7 @@ function source(): HistorySource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {
     throw new Error(
-      "هیچ HistorySource ثبت نشده — از «@/lib/server/history-source» بخوان یا setHistorySource صدا بزن",
+      "No HistorySource registered — import from «@/lib/server/history-source» or call setHistorySource",
     );
   }
   activeSource = defaultFactory();

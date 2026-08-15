@@ -24,12 +24,12 @@ class EcogoldAdapter:
         buy_price = gold.get("buy_price")
         sell_price = gold.get("sell_price")
         if buy_price is None or sell_price is None:
-            raise AdapterError("اکوگلد: قیمت buy_price/sell_price در payload تهی است")
+            raise AdapterError("Ecogold: buy_price/sell_price is empty in payload")
         try:
             raw_buy = Decimal(str(buy_price))
             raw_sell = Decimal(str(sell_price))
         except InvalidOperation as exc:
-            raise AdapterError(f"اکوگلد: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Ecogold: invalid payload: {exc!r}") from exc
 
         return dealer_snapshot(
             slug=self.slug,
@@ -45,5 +45,5 @@ class EcogoldAdapter:
             return next(r for r in rows if r.get("symbol") == GOLD_SYMBOL)
         except (TypeError, KeyError, StopIteration) as exc:
             raise AdapterError(
-                f"اکوگلد: نماد {GOLD_SYMBOL} در payload پیدا نشد"
+                f"Ecogold: symbol {GOLD_SYMBOL} not found in payload"
             ) from exc

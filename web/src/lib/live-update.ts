@@ -8,10 +8,11 @@ export interface LivePriceRow {
 }
 
 /**
- * ⚠️ به‌ویژه `rail_percent`: موقعیت روی محور به کمینه/بیشینه‌ی کل مجموعه
- * وابسته است، پس با هر نوبت عوض می‌شود. اگر کلاینت خودش حسابش می‌کرد، هم
- * می‌شکست و هم دو پیاده‌سازی از یک هندسه داشتیم که می‌توانند
- * واگرا شوند. کلاینت فقط عدد را در `style.right` می‌نشاند.
+ * ⚠️ Especially `rail_percent`: position on the axis depends on the whole
+ * set's min/max, so it changes on every tick. If the client computed it
+ * itself, it would both break and give us two implementations of one piece
+ * of geometry that could diverge. The client just drops the number into
+ * `style.right`.
  */
 export interface LiveDashboardSource {
   slug: string;
@@ -30,10 +31,11 @@ export interface LiveDashboard {
   reference_percent: number | null;
   updated_at: string | null;
   /**
-   * ⚠️ رشته‌ی آماده می‌آید و کلاینت قالب‌بندی نمی‌کند — همان قاعده‌ای که کل
-   * این payload بر آن بنا شده. بدون این فیلد، برچسب «آخرین به‌روزرسانی» روی
-   * زمان رندر سرور یخ می‌زد در حالی که قیمت‌های کنارش هر ۳۰ ثانیه عوض
-   * می‌شدند — یعنی دقیقاً همان برچسبی که کارش گفتن سن داده است، دروغ می‌گفت.
+   * ⚠️ Comes as a ready-made string, and the client doesn't format it —
+   * the same rule this whole payload is built on. Without this field, the
+   * "last updated" label would freeze at the server's render time
+   * while the prices next to it changed every 30 seconds — meaning the
+   * exact label whose job is to state the data's age would be lying.
    */
   updated_at_display: string | null;
 }

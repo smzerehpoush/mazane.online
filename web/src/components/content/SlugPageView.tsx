@@ -1,6 +1,6 @@
 /**
- * ⚠️ هیچ فیلد معرفی (referral) ورودی مرتب‌سازی نیست و اصلاً به این
- * لایه نمی‌رسد — `content-data.ts` پیش از serialize حذفش می‌کند.
+ * ⚠️ No referral field is ever a sort input, and it never reaches this
+ * layer — `content-data.ts` strips it before serialize.
  */
 import { AssetPage, groupRows } from "@/components/content/AssetPage";
 import { Breadcrumbs } from "@/components/content/PageShell";

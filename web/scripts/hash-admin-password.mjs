@@ -6,7 +6,7 @@ const SCRYPT_KEYLEN = 64;
 const password = process.argv[2];
 
 if (typeof password !== "string" || password.length === 0) {
-  console.error("استفاده: node scripts/hash-admin-password.mjs '<رمز عبور>'");
+  console.error("usage: node scripts/hash-admin-password.mjs '<password>'");
   process.exitCode = 1;
 } else {
   const salt = randomBytes(16);

@@ -1,93 +1,105 @@
-# CLAUDE.md — دستورالعمل ایجنت‌ها برای مخزن تابلو
+# CLAUDE.md — Agent Instructions for the Tablo Repository
 
-این سند فقط قواعد اجرایی است: چه چیزی هرگز نباید بشکند، تست/تایپ‌چک هر سرویس چگونه
-اجرا می‌شود، و عادت‌های نوشتاری این مخزن. برای معماری به `docs/01-overview.md`، دیزاین
-به `docs/02-design-components.md`، بدهی فنی به `docs/03-tech-debt.md`، و دامنه به
-`docs/04-domain.md` مراجعه کن — اینجا تکرارشان نمی‌کنم.
+This document is operational rules only: what must never break, how each service's
+test/typecheck runs, and this repo's writing conventions. For architecture see
+`docs/01-overview.md`, for design `docs/02-design-components.md`, for tech debt
+`docs/03-tech-debt.md`, and for the domain `docs/04-domain.md` — I won't repeat
+them here.
 
-## این مخزن عمداً بدون کامنت است
+## This repository is deliberately comment-free
 
-توضیح‌ها و docstringها از عمد از کد حذف شده‌اند. **کامنت تازه اضافه نکن** مگر
-هشدار سختی باشد که تایپ‌چکر و تست نمی‌گیرندش (نمونه‌ی واقعی: ترتیب میان‌افزارها در
-`web/src/start.ts`، دلیل بی‌TTL بودن `tablo:updated_at:{slug}`، یا پین‌شدن نام
-volume پستگرس در `compose.prod.yml`). این کامنت‌ها با ⚠️ شروع می‌شوند — همان الگو
-را دنبال کن، نه کامنت توضیحی معمولی. رفتار را از کد/تست/مایگریشن دربیاور، نه از
-حافظه یا مستندات دیگر.
+Explanations and docstrings have been deliberately removed from the code.
+**Don't add new comments** unless it's a hard warning that the typechecker
+and tests won't catch (real examples: the middleware order in
+`web/src/start.ts`, the reason `tablo:updated_at:{slug}` has no TTL, or the
+pinned Postgres volume name in `compose.prod.yml`). These comments start
+with ⚠️ — follow that same pattern, not an ordinary explanatory comment.
+Derive behavior from code/tests/migrations, not from memory or other docs.
 
-## تست و تایپ‌چک
+## Tests and typecheck
 
-| سرویس | نصب | تست | تایپ‌چک | نکته |
+| Service | Install | Test | Typecheck | Note |
 |---|---|---|---|---|
-| collector | `pip install -e ".[dev]"` | `pytest` | `mypy src tests` | `collector/.venv` کهنه است (مسیر ساخت قدیمیِ `mazane.online`، پایتون ۳٫۱۴). اگر کار نکرد از `PYTHONPATH=src pytest` با پایتون سیستم استفاده کن. CI روی پایتون ۳٫۱۲ اجرا می‌شود. |
-| web | `npm ci` | `npm test` (= `vitest run`) | `npm run typecheck` (= `tsc --noEmit`) | در CI تایپ‌چک **بعد از** `npm run build` می‌آید چون build خودش `src/routeTree.gen.ts` را بازتولید می‌کند؛ تایپ‌چک روی نسخه‌ی کامیت‌شده‌ی این فایل ممکن است اشتباهاً پاس/فیل بدهد. |
+| collector | `pip install -e ".[dev]"` | `pytest` | `mypy src tests` | `collector/.venv` is stale (an old build path from `mazane.online`, Python 3.14). If it doesn't work, use `PYTHONPATH=src pytest` with the system Python. CI runs on Python 3.12. |
+| web | `npm ci` | `npm test` (= `vitest run`) | `npm run typecheck` (= `tsc --noEmit`) | In CI, typecheck runs **after** `npm run build`, because build itself regenerates `src/routeTree.gen.ts`; typechecking the committed version of this file can incorrectly pass/fail. |
 
-باسلاین شناخته‌شده: collector ۱۸۷ تست pytest سبز + mypy تمیز روی ۷۲ فایل. web ۵۳۴
-تست vitest سبز در ۳۲ suite، با **یک شکست از قبل موجود**: `tests/tokens-sync.test.ts`
-چون `docs/tokens.css` در working tree نیست. این را «رفع» نکن مگر صریحاً خواسته شود؛
-اگر عدد سبزها کمتر از ۵۳۴ شد یا suite دیگری هم قرمز شد، آن وقت باگ واقعی است.
+Known baseline: collector has 187 green pytest tests + a clean mypy run across 72
+files. web has 534 green vitest tests across 32 suites, with **one pre-existing
+failure**: `tests/tokens-sync.test.ts`, because `docs/tokens.css` isn't in the
+working tree. Don't "fix" this unless explicitly asked to; if the green count
+drops below 534, or another suite also turns red, that's a real bug.
 
-`web/tests/registry-parity.test.ts` با `execFileSync("python3", ...)` یک اسکریپت
-پایتون (`web/tests/support/dump-collector-registry.py`) را صدا می‌زند — بدون هیچ
-guard ای. اگر `python3` روی ماشین نبود همین یک suite قرمز می‌شود؛ CI هم `setup-python`
-ندارد، پس اگر runner واقعاً `python3` نداشته باشد این ترد شکننده است، نه باگ کد.
+`web/tests/registry-parity.test.ts` calls a Python script
+(`web/tests/support/dump-collector-registry.py`) via `execFileSync("python3", ...)`
+— with no guard at all. If `python3` isn't on the machine, this one suite alone
+goes red; CI also has no `setup-python`, so if the runner genuinely lacks
+`python3`, this is a flaky thread, not a code bug.
 
-## قواعد سختی که هرگز نباید بشکنند
+## Hard rules that must never break
 
-| قاعده | دروازه‌ی نگهبان |
+| Rule | Guardrail |
 |---|---|
-| فونت خودمیزبان — هیچ ارجاع به `fonts.googleapis.com`/`fonts.gstatic.com` | گام CI «No external font host…»: `grep -rIlE "//fonts\.(googleapis\|gstatic)\.com" .output/public src` |
-| هیچ راز پنل ادمین در باندل کلاینت | گام CI «No admin-auth secrets…»: `grep` روی `scryptSync\|TABLO_ADMIN_PASSWORD_HASH\|TABLO_ADMIN_SESSION_SECRET\|tablo_admin_session` در `.output/public` |
-| پریست nitro باید `node-server` باشد (نه cloudflare) | گام CI + `Dockerfile.web` هر دو `grep -q '"preset": "node-server"' .output/nitro.json` می‌زنند |
-| لینک درآمدزا فقط از `/go/<slug>` با `rel="sponsored nofollow noopener"` — هرگز مستقیم به دامنه‌ی سکو | `web/tests/sponsored-links.test.tsx` (بخشی از `npm test`؛ کامنت CI: «این دروازه هرگز نباید نرم شود») |
-| هر import کلاینتی از `**/server/**` یا `server-only` باید بیلد را بشکند | `importProtection` با `behavior: "error"` در `web/vite.config.ts` |
-| مهاجرت SQL همیشه رو-به-جلو | پوشه‌ی `collector/migrations/` هیچ فایل down ندارد؛ Postgres فقط در اولین بوت یک volume خالی، `*.sql` را به ترتیب واژه‌نگاری اجرا می‌کند — کپی‌کردن فایل مهاجرت روی سرور به‌معنای اجرا شدنش نیست |
+| Self-hosted fonts — no reference to `fonts.googleapis.com`/`fonts.gstatic.com` | CI step "No external font host…": `grep -rIlE "//fonts\.(googleapis\|gstatic)\.com" .output/public src` |
+| No admin-panel secret in the client bundle | CI step "No admin-auth secrets…": `grep` for `scryptSync\|TABLO_ADMIN_PASSWORD_HASH\|TABLO_ADMIN_SESSION_SECRET\|tablo_admin_session` in `.output/public` |
+| The nitro preset must be `node-server` (not cloudflare) | Both the CI step and `Dockerfile.web` run `grep -q '"preset": "node-server"' .output/nitro.json` |
+| Revenue links only through `/go/<slug>` with `rel="sponsored nofollow noopener"` — never directly to the platform's domain | `web/tests/sponsored-links.test.tsx` (part of `npm test`; CI comment: "this gate must never be softened") |
+| Any client-side import from `**/server/**` or `server-only` must break the build | `importProtection` with `behavior: "error"` in `web/vite.config.ts` |
+| SQL migrations are always forward-only | The `collector/migrations/` folder has no down files; Postgres runs `*.sql` in lexicographic order only on the first boot of an empty volume — copying a migration file to the server doesn't mean it gets run |
 
-## قاعده‌ی «عدد ساختگی ممنوع»
+## The "no fabricated numbers" rule
 
-مسیر تولید محتوای LLM (`collector/src/tablo_collector/content/gate.py`) هیچ رقمی —
-فارسی، عربی-هندی یا لاتین — بیرون از جای‌خالی `{{slot}}` نمی‌پذیرد؛ الگو
-`_ANY_DIGIT = re.compile(r"\d")` روی متنِ سانسورشده از slotها اجرا می‌شود و رقم
-باقی‌مانده `DigitOutsideSlotError` می‌دهد. اگر روی مولد محتوا کار می‌کنی، هر عدد
-باید از داده‌ی واقعی از طریق یک slot پر شود، هرگز از متن آزاد مدل.
+The LLM content-generation path (`collector/src/tablo_collector/content/gate.py`)
+accepts no digit — Persian, Arabic-Indic, or Latin — outside a `{{slot}}`
+placeholder; the pattern `_ANY_DIGIT = re.compile(r"\d")` runs against the text
+with slots redacted, and any remaining digit raises `DigitOutsideSlotError`. If
+you're working on the content generator, every number must be filled from real
+data through a slot, never from the model's free-form text.
 
-## «کهنگی، نه خطا»
+## "Staleness, not error"
 
-قطع Redis یا Postgres هرگز نباید صفحه یا API را ۵xx کند — باید به `null`/`[]`/برچسب
-«کهنه» ترجمه شود. این قرارداد را CI هم مستقیم می‌سنجد: جاب `images` کانتینر وب را
-**بدون** Redis و Postgres بالا می‌آورد و انتظار `GET /` برابر ۲۰۰ دارد.
+A Redis or Postgres outage must never turn a page or API into a 5xx — it must
+translate to `null`/`[]`/a "stale" label. CI checks this contract directly too:
+the `images` job brings up the web container **without** Redis and Postgres and
+expects `GET /` to return 200.
 
 ```mermaid
 flowchart TD
-    A["push یا pull_request"] --> B["جاب collector\npytest + mypy"]
-    A --> C["جاب web"]
+    A["push or pull_request"] --> B["collector job\npytest + mypy"]
+    A --> C["web job"]
     C --> C1["npm ci"]
     C1 --> C2["npm run build"]
-    C2 --> C3{"nitro preset\nnode-server؟"}
-    C3 -- خیر --> X1["شکست جاب"]
-    C3 -- بله --> C4{"فونت گوگل در\nخروجی بیلد؟"}
-    C4 -- بله --> X2["شکست جاب"]
-    C4 -- خیر --> C5{"راز ادمین در\n.output/public؟"}
-    C5 -- بله --> X3["شکست جاب"]
-    C5 -- خیر --> C6["npm run typecheck"]
-    C6 --> C7["npm test\n(شامل sponsored-links)"]
-    B --> D{"push به main؟"}
+    C2 --> C3{"nitro preset\nnode-server?"}
+    C3 -- no --> X1["job fails"]
+    C3 -- yes --> C4{"Google font in\nbuild output?"}
+    C4 -- yes --> X2["job fails"]
+    C4 -- no --> C5{"admin secret in\n.output/public?"}
+    C5 -- yes --> X3["job fails"]
+    C5 -- no --> C6["npm run typecheck"]
+    C6 --> C7["npm test\n(includes sponsored-links)"]
+    B --> D{"push to main?"}
     C7 --> D
-    D -- خیر، فقط PR --> E["پایان — جاب images اجرا نمی‌شود"]
-    D -- بله --> F["جاب images: ساخت هر دو ایمیج\n+ دود-تست وب بدون Redis/Postgres\n(انتظار 200، نه 500)"]
+    D -- no, PR only --> E["end — images job does not run"]
+    D -- yes --> F["images job: build both images\n+ web smoke test without Redis/Postgres\n(expect 200, not 500)"]
 ```
 
-هر لایه‌ی خواندن داده در web (`price-source.ts`، `blog.ts`، `history.ts`،
-`reference-price.ts`، `views.ts`) این قرارداد را با try/catch دور هر فراخوان
-Redis/Postgres پیاده می‌کند — الگوی «منبع تزریق‌شدنی» (`setXSource` /
-`setDefaultXSource`) هم همین را برای تست ساده می‌کند. استثنای عمدی: بارگذاری
-تک‌پست بلاگ (`lib/content-data.ts`) و `listPublishedPostsStrict` که خطا را قورت
-نمی‌دهند — چون قورت‌دادن یعنی ۴۰۴ جعلی که گوگل صفحه را ایندکس‌زدایی می‌کند.
+Every data-reading layer in web (`price-source.ts`, `blog.ts`, `history.ts`,
+`reference-price.ts`, `views.ts`) implements this contract with a try/catch
+around every Redis/Postgres call — the "injectable source" pattern (`setXSource`
+/ `setDefaultXSource`) makes this easy to test too. The deliberate exception:
+loading a single blog post (`lib/content-data.ts`) and
+`listPublishedPostsStrict`, which do not swallow the error — because swallowing
+it would mean a fake 404, and Google would deindex the page.
 
-## نکات دیگر
+## Other notes
 
-- تریگر CI: `push` فقط روی `main`، `pull_request` بدون فیلتر شاخه؛ جاب `images`
-  فقط وقتی `push` به `main` باشد اجرا می‌شود (نه روی PR).
-- CI هیچ گام lint‌ ندارد؛ `npm run lint` (eslint) در هیچ جابی صدا زده نمی‌شود —
-  اگر کیفیت کد را می‌سنجی، خودت اجرایش کن.
-- زبان مخزن فارسی است؛ شناسه‌ها، مسیرها و کد به لاتین می‌مانند. متن پیام خطا،
-  کامنت هشدار و رشته‌های فارسی رو-به-کاربر را هم فارسی بنویس.
+- CI triggers: `push` only on `main`, `pull_request` with no branch filter; the
+  `images` job only runs when there's a `push` to `main` (not on a PR).
+- CI has no lint step; `npm run lint` (eslint) isn't invoked in any job — if
+  you're checking code quality, run it yourself.
+- Repository language policy (for agents working in this repo going forward):
+  docs, ⚠️ warning comments, test names, and internal dev-only log/exception
+  messages are written in English. Product-facing text — UI copy, end-user
+  error messages, legal notice text, and anything else a real tablo.gold
+  visitor would see — is still written in Persian, because the product itself
+  serves Persian-speaking users. Identifiers, paths, and code stay in Latin
+  script either way.

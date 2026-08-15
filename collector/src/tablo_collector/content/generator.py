@@ -67,9 +67,9 @@ class GeminiClient:
             parts = data["candidates"][0]["content"]["parts"]
             text = "".join(str(part.get("text", "")) for part in parts)
         except (KeyError, IndexError, TypeError) as exc:
-            raise RuntimeError("پاسخ جمینای شکل موردانتظار candidates/content/parts را ندارد") from exc
+            raise RuntimeError("Gemini response does not have the expected candidates/content/parts shape") from exc
         if not text.strip():
-            raise RuntimeError("پاسخ جمینای متن خالی است")
+            raise RuntimeError("Gemini response text is empty")
         return text
 
 
@@ -180,7 +180,7 @@ def fee_comparison_spec(
             continue
         rows.append((platform, buy_fee, sell_fee))
     if len(rows) < 2:
-        raise InsufficientDataError("کارمزد معلوم برای کمتر از دو سکو — مقایسه بی‌معناست")
+        raise InsufficientDataError("fee known for fewer than two platforms — comparison would be meaningless")
 
     slots: dict[str, str] = {"tarikh": _fa_date(now)}
     facts: list[str] = ["تاریخ این سنجش {{tarikh}} است."]
@@ -216,7 +216,7 @@ def minimum_order_spec(
             continue
         rows.append((platform, snapshot.terms.min_order_toman))
     if len(rows) < 2:
-        raise InsufficientDataError("حداقل سفارش مستند برای کمتر از دو سکو")
+        raise InsufficientDataError("minimum order documented for fewer than two platforms")
 
     slots: dict[str, str] = {"tarikh": _fa_date(now)}
     facts: list[str] = ["این اعداد در {{tarikh}} از خود سکوها خوانده شده‌اند."]
@@ -250,7 +250,7 @@ def round_trip_spec(
             continue
         rows.append((platform, snapshot.terms.round_trip_percent))
     if len(rows) < 2:
-        raise InsufficientDataError("هزینه‌ی رفت‌وبرگشت معلوم برای کمتر از دو سکو")
+        raise InsufficientDataError("round-trip cost known for fewer than two platforms")
 
     slots: dict[str, str] = {"tarikh": _fa_date(now)}
     facts: list[str] = ["محاسبه‌های این پست مال {{tarikh}} اند."]
@@ -287,7 +287,7 @@ def physical_delivery_spec(
 ) -> DraftSpec:
     noted = [platform for platform in platforms if platform.delivery_note_fa is not None]
     if not noted:
-        raise InsufficientDataError("هیچ سکویی شرایط تحویل فیزیکی مستند ندارد")
+        raise InsufficientDataError("no platform has documented physical delivery terms")
     silent = [platform for platform in platforms if platform.delivery_note_fa is None]
 
     slots: dict[str, str] = {"tarikh": _fa_date(now)}
@@ -319,7 +319,7 @@ def open_now_spec(
 ) -> DraftSpec:
     present = [platform for platform in platforms if platform.slug in snapshots]
     if len(present) < 2:
-        raise InsufficientDataError("اسنپ‌شات جاری برای کمتر از دو سکو")
+        raise InsufficientDataError("current snapshot for fewer than two platforms")
 
     fully_open: list[str] = []
     limited: list[str] = []
@@ -391,7 +391,7 @@ async def generate_launch_drafts(
         try:
             spec = builder(platforms, snapshots, moment)
         except InsufficientDataError as exc:
-            log.warning("موضوع «%s» تولید نشد — داده‌ی کافی نیست: %s", label, exc)
+            log.warning("topic «%s» not generated — insufficient data: %s", label, exc)
             continue
         data_ok = not await has_data_gap(
             retention,
@@ -401,7 +401,7 @@ async def generate_launch_drafts(
             until=moment,
         )
         if not data_ok:
-            log.warning("موضوع «%s» تولید نشد — گپ داده در دوره‌ی ارجاع", label)
+            log.warning("topic «%s» not generated — data gap in referenced period", label)
             continue
         prose = await llm.generate(spec.prompt, model=PROSE_MODEL)
         meta = await llm.generate(
@@ -419,10 +419,10 @@ async def generate_launch_drafts(
                 now=moment,
             )
         except (SlugError, DraftRejected) as exc:
-            log.warning("پیش‌نویس «%s» (%s) پشت دروازه رد شد: %s", label, spec.slug, exc)
+            log.warning("draft «%s» (%s) rejected at the gate: %s", label, spec.slug, exc)
             continue
         enqueued.append(spec.slug)
-        log.info("پیش‌نویس «%s» صف شد: %s", label, spec.slug)
+        log.info("draft «%s» queued: %s", label, spec.slug)
     return tuple(enqueued)
 
 
@@ -459,18 +459,18 @@ def main() -> None:
     fake = "--fake" in args
     rest = [arg for arg in args if arg != "--fake"]
     if rest:
-        print("کاربرد: tablo-generate [--fake]", file=sys.stderr)
+        print("usage: tablo-generate [--fake]", file=sys.stderr)
         raise SystemExit(2)
     if not fake and not os.environ.get("GEMINI_API_KEY"):
         print(
-            "کلید GEMINI_API_KEY تنظیم نیست — مولد فقط روی لپ‌تاپ صاحب کسب‌وکار "
-            "با کلید محلی اجرا می‌شود و کلید هرگز از این ماشین خارج نمی‌شود "
-            "(تصمیم ۱۷). برای تمرین آفلاین بدون کلید: tablo-generate --fake",
+            "GEMINI_API_KEY is not set — the generator only runs on the owner's laptop "
+            "with a local key, and the key never leaves that machine. "
+            "For offline practice without a key: tablo-generate --fake",
             file=sys.stderr,
         )
         raise SystemExit(2)
     enqueued = asyncio.run(_run_generate(fake=fake))
     if enqueued:
-        print("صف شد: " + "، ".join(enqueued))
+        print("queued: " + ", ".join(enqueued))
     else:
-        print("چیزی صف نشد — لاگ بالا دلیل هر موضوع را می‌گوید", file=sys.stderr)
+        print("nothing queued — the log above explains each topic", file=sys.stderr)

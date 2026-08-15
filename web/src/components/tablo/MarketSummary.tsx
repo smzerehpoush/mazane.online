@@ -1,12 +1,14 @@
 /**
- * ⚠️ **این کارت میانگین نیست.** طرح اولیه «میانگین پنج منبع» می‌خواست؛
- * میانگین بین‌سکویی خط قرمز حقوقی است و
- * هرگز محاسبه یا منتشر نمی‌شود. هر چهار عدد و خودِ سری **مال سکوی مرجع**اند و
- * برچسب زیر عدد درشت نامش را صریح می‌برد —،
- * ⚠️ داده‌ی **هر سه بازه** از سرور آمده (`assembleHomeData`)، پس تعویض زبانه
- * هیچ فچی نمی‌زند و فقط بین سه شیء آماده جابه‌جا می‌شود. حجمش ناچیز است:
- * بلندترین بازه (ماهانه) ۹۳ نقطه دارد و هر سه با هم به چند کیلوبایت
- * نمی‌رسند — سنجیده شد پیش از اینکه این تصمیم گرفته شود.
+ * ⚠️ **This card is not an average.** The initial design wanted a
+ * "five-source average"; a cross-platform average is a legal red line and
+ * is never computed or published. All four numbers and the series itself
+ * belong to the **reference platform**, and the label under the big number
+ * names it explicitly —
+ * ⚠️ Data for **all three ranges** comes from the server
+ * (`assembleHomeData`), so switching tabs does no fetch at all and just
+ * swaps between three ready-made objects. Its size is negligible: the
+ * longest range (monthly) has 93 points, and all three together don't add
+ * up to a few kilobytes — this was measured before the decision was made.
  */
 import { useRef, useState, type KeyboardEvent } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
@@ -102,13 +104,14 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
               }`}
             >
               {/*
-               * ⚠️ برچسب بازه‌ی بی‌داده عوض **نمی‌شود**. نسخه‌ی قبلی «به‌زودی»
-               * می‌گذاشت، ولی آن واژه در این صفحه معنای تثبیت‌شده دارد:
-               * آن را برای قابلیت‌های ساخته‌نشده (حباب‌سنج، هشدار قیمت)
-               * برداشته. بازه‌ای که فقط هنوز تاریخچه‌اش جمع نشده، ساخته‌نشده
-               * نیست — و روی نصب تازه هر سه زبانه «به‌زودی» می‌شدند، یعنی کل
-               * کارت به‌نظر عرضه‌نشده می‌آمد. غیرفعال‌بودن را `disabled` و
-               * `aria-disabled` می‌گویند، نه متن.
+               * ⚠️ The label of a data-less range does **not** change. An
+               * earlier version put "coming soon", but that phrase has a
+               * fixed meaning on this page: it's reserved for features that
+               * haven't been built yet (bubble gauge, price alert). A range
+               * that just hasn't accumulated history yet isn't unbuilt —
+               * and on a fresh install all three tabs would read "coming
+               * soon", making the whole card look unshipped. Disabled state
+               * is conveyed by `disabled` and `aria-disabled`, not by text.
                */}
               {range.label}
             </button>
@@ -125,7 +128,7 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
             {active.currentDisplay ?? "—"}
           </div>
           <div className="mt-0.5 text-[15px]">قیمت ۱ گرم طلای ۱۸ عیار</div>
-          {/* ⚠️ نام صاحب عدد اجباری است — */}
+          {/* ⚠️ Naming the owner of the number is mandatory — */}
           <div className="text-[12.5px] text-tx3">
             قیمت مرجع · {summary.referenceName ?? "—"} · تومان
           </div>
@@ -155,9 +158,10 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
       </div>
 
       {/*
-       * ⚠️ در ۳۷۵px سه ستون با اعداد هشت‌رقمی روی هم می‌افتادند. اندازه‌ی
-       * کوچک‌تر و `gap` روی موبایل مشکل را حل می‌کند بدون اینکه چیدمان
-       * سه‌ستونه‌ی عوض شود — ساعتِ وقوع هم زیر عدد می‌رود، نه کنارش.
+       * ⚠️ At 375px the three columns with eight-digit numbers overlapped.
+       * A smaller size and `gap` on mobile fix it without changing the
+       * three-column layout — the timestamp also moves below the number,
+       * not beside it.
        */}
       <div className="mt-4.5 grid grid-cols-3 gap-2 border-t border-border pt-3.5">
         <div className="min-w-0">

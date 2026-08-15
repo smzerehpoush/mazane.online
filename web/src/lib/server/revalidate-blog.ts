@@ -1,10 +1,11 @@
 /**
- * ⚠️ **آنچه با مهاجرت از نکست عوض شد.** در نکست این مسیر `revalidatePath` را
- * صدا می‌زد و صفحه‌ی ایستای ISR را دور می‌ریخت. در تنکستک استارت هیچ کش
- * صفحه‌ای سمت مبدأ وجود ندارد: ‎/blog‎، ‎/blog/<slug>‎ و ‎/sitemap.xml‎ هر
- * درخواست را مستقیم از پستگرس می‌سازند. پس «بازتولید» در مبدأ **بی‌موضوع**
- * است و تنها کهنگی باقی‌مانده، پنجره‌ی ۶۰ ثانیه‌ای کش لبه است
- * (`s-maxage=60` در `lib/seo/cache-headers.ts`) که خودش منقضی می‌شود.
+ * ⚠️ **What changed with the migration from Next.** In Next, this route
+ * called `revalidatePath` and discarded the static ISR page. In TanStack
+ * Start there is no origin-side page cache: `/blog`, `/blog/<slug>`, and
+ * `/sitemap.xml` build every request directly from Postgres. So
+ * "revalidation" at the origin is **moot**, and the only remaining
+ * staleness is the 60-second edge cache window (`s-maxage=60` in
+ * `lib/seo/cache-headers.ts`), which expires on its own.
  */
 import "@tanstack/react-start/server-only";
 
@@ -50,7 +51,7 @@ export async function revalidateBlogResponse(request: Request): Promise<Response
       slug = body.slug;
     }
   } catch {
-    // بدنه‌ی خالی یا غیر-JSON مجاز است — یعنی «فقط فهرست و سایت‌مپ».
+    // An empty or non-JSON body is allowed — meaning "just the list and sitemap."
   }
 
   const paths = [

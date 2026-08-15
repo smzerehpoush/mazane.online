@@ -123,9 +123,9 @@ export function seed(store: SeededStore): void {
     getUpdatedAt: async (slug) => store.updatedAt[slug] ?? null,
     getInstruments: async () => store.instruments ?? [],
   });
-  // ⚠️ پیکربندی منابع نمایشی هم باید تزریق شود، وگرنه ‎/api/prices‎ (که از
-  // بازطراحی به بعد برای هندسه‌ی محور به آن نیاز دارد) به ردیس **واقعی**
-  // وصل می‌شود. `undefined` یعنی «تنظیمی نیست» ⟸ فهرست پیش‌فرض کد.
+  // ⚠️ The chart-display source config must be injected too, or else /api/prices
+  // (which has needed it for axis geometry since the redesign) connects to the
+  // **real** redis. `undefined` means "not configured" ⟸ the code's default list.
   setChartConfigSource({ getChartPlatforms: async () => store.chartPlatforms });
 }
 
@@ -302,6 +302,6 @@ export function storeWithUnknownFee(): SeededStore {
 
 export function rowOf(html: string, slug: string): string {
   const match = html.match(new RegExp(`<tr[^>]*data-platform="${slug}"[\\s\\S]*?</tr>`));
-  if (!match) throw new Error(`ردیف ${slug} در HTML نیست`);
+  if (!match) throw new Error(`row ${slug} is not in HTML`);
   return match[0];
 }

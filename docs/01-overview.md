@@ -1,49 +1,51 @@
-# ۱. نمای کلی مخزن
+# 1. Repository Overview
 
-## ۱.۱ محصول در یک پاراگراف
+## 1.1 The product in one paragraph
 
-«تابلو» (tablo.gold) یک تابلوی مقایسه‌ی قیمت طلا در بازار OTC ایران است: یک
-سرویس پس‌زمینه (گردآورنده) هر ۳۰ ثانیه قیمت طلای ۱۸ عیار را از ۱۴ سکوی
-معاملاتی می‌گیرد، آن‌ها را نرمال می‌کند، یک چک میانه‌ی تقاطعی روی‌شان می‌زند
-و در ردیس (برای نمایش زنده) و پستگرس (برای تاریخچه و آرشیو) ذخیره می‌کند؛ یک
-اپ وب همان داده را روی صفحه‌ی اصلی، صفحه‌ی هر سکو/دارایی و یک بلاگ تولیدشده
-با LLM نشان می‌دهد و از طریق `/go/<slug>` به سکوها لینک درآمدزا می‌دهد. برای
-اصطلاحات دامنه (Quote، PlatformSnapshot، PlatformTerms، فهرست‌شدن و…) به
-[docs/04-domain.md](./04-domain.md) مراجعه کنید.
+"Tablo" (tablo.gold) is a gold price comparison board for Iran's OTC market:
+a background service (the collector) fetches the 18-karat gold price from 14
+trading platforms every 30 seconds, normalizes them, runs a cross-platform
+median check over them, and stores them in Redis (for live display)
+and Postgres (for history and archive); a web app shows that same data on
+the home page, on each platform/asset page, and on an LLM-generated blog,
+and links out to platforms for referral revenue via `/go/<slug>`. For domain
+terms (Quote, PlatformSnapshot, PlatformTerms, being listed, etc.) see
+[docs/04-domain.md](./04-domain.md).
 
-## ۱.۲ توپولوژی — دو سرویس، چهار کانتینر
+## 1.2 Topology — two services, four containers
 
-دو سرویسِ ساخته‌شده در این مخزن (`collector` و `web`) به‌همراه دو زیرساخت
-آماده (`postgres:16`، `redis:7`) چهار کانتینر تولید را تشکیل می‌دهند
-(`compose.prod.yml`). وب پشت لبه‌ی خارجی (کدی) قرار می‌گیرد و هرگز درگاه
-۸۰/۴۴۳ نمی‌گیرد؛ گردآورنده هیچ درگاهی منتشر نمی‌کند و فقط برای کرال سکوها به
-اینترنت بیرون نیاز دارد.
+The two services built in this repo (`collector` and `web`), together with
+two off-the-shelf infrastructure pieces (`postgres:16`, `redis:7`), make up
+the four production containers (`compose.prod.yml`). Web sits behind an
+external edge (Caddy) and never binds port 80/443 itself; the collector
+publishes no port at all and only needs outbound internet access to crawl
+the platforms.
 
 ```mermaid
 flowchart LR
-    subgraph Sources["۱۴ سکو + ۱ مرجع (talair)"]
-        HTTP["APIهای REST"]
-        WS["وب‌سوکت داریک + اینوی"]
+    subgraph Sources["14 platforms + 1 reference (talair)"]
+        HTTP["REST APIs"]
+        WS["daric + invi WebSocket"]
     end
 
-    subgraph collector_svc["سرویس collector"]
-        C["tablo-collector\n(main.run: ۵ حلقه + ۲ کلاینت WS)"]
+    subgraph collector_svc["collector service"]
+        C["tablo-collector\n(main.run: 5 loops + 2 WS clients)"]
     end
 
-    subgraph web_svc["سرویس web"]
+    subgraph web_svc["web service"]
         W["TanStack Start / Nitro\n(node-server)"]
     end
 
-    PG[("postgres\nتاریخچه + محتوا + تنظیمات")]
-    R[("redis\nقیمت جاری + فهرست + نمودار")]
-    Browser["مرورگر"]
-    Admin["پنل مدیریت (/admin)"]
+    PG[("postgres\nhistory + content + settings")]
+    R[("redis\ncurrent price + listing + chart")]
+    Browser["Browser"]
+    Admin["Admin panel (/admin)"]
 
     HTTP --> C
     WS --> C
     C -- save_snapshot/save_platforms/chart_config --> R
-    C -- save_snapshot (تاریخچه) --> PG
-    PG -. platform_settings هر ۲۰s .-> C
+    C -- save_snapshot (history) --> PG
+    PG -. platform_settings every 20s .-> C
     C -- POST /api/revalidate-blog --> W
 
     R -- ioredis get --> W
@@ -53,217 +55,221 @@ flowchart LR
     W -- upsert --> PG
 ```
 
-## ۱.۳ گردآورنده: حلقه‌ها
+## 1.3 The collector: loops
 
-`main.run()` دقیقاً هفت کوروتین را با `asyncio.gather` هم‌زمان اجرا می‌کند:
-پنج حلقه‌ی زمان‌دار به‌علاوه‌ی دو کلاینت وب‌سوکت پایدار. هر حلقه‌ی زمان‌دار
-همان الگو را دارد: زمان شروع با `time.monotonic()`، بدنه در `try/except` با
-`log.exception`، و در پایان `sleep(max(0, INTERVAL - elapsed))` — یعنی بازه
-ثابت است، نه انباشتی.  [collector/src/tablo_collector/main.py:57-61, 108-269]
+`main.run()` runs exactly seven coroutines concurrently with
+`asyncio.gather`: five timed loops plus two persistent WebSocket clients.
+Every timed loop follows the same pattern: start time via
+`time.monotonic()`, body wrapped in `try/except` with `log.exception`, and
+finally `sleep(max(0, INTERVAL - elapsed))` — meaning the interval is fixed,
+not cumulative.  [collector/src/tablo_collector/main.py:57-61, 108-269]
 
-| حلقه | بازه | مسئولیت |
+| Loop | Interval | Responsibility |
 |---|---|---|
-| `platform_loop` | ۳۰ ثانیه | `collect_round` روی ۱۴ آداپتور: فچ، parse، چک میانه (`sanity.median_outliers`)، `save_snapshot` برای هر سکو، و در پایان `save_platforms` + `save_instruments` |
-| `reference_loop` | ۱۲۰ ثانیه | `collect_reference_round` روی `REFERENCE_SOURCES` (فقط talair) با `RobotsCheckedTransport` |
-| `retention_loop` | ۳۶۰۰ ثانیه | `retention_pass(history_store)` روی پستگرس: تجمیع ساعتی، فشرده‌سازی تکرارها، هرس خام منقضی |
-| `content_loop` | ۹۰۰ ثانیه | `drain_pass`: انتشار پیش‌نویس‌های نوبتی تا سقف روزانه + فراخوان `revalidate_blog` وب |
-| `settings_sync_loop` | ۲۰ ثانیه | خواندن `platform_settings`، ساخت `chart_config` و نوشتنش در استور، به‌روزرسانی رجیستری سکوها با override نشانی معرف |
+| `platform_loop` | 30 seconds | `collect_round` over the 14 adapters: fetch, parse, median check (`sanity.median_outliers`), `save_snapshot` for each platform, then `save_platforms` + `save_instruments` |
+| `reference_loop` | 120 seconds | `collect_reference_round` over `REFERENCE_SOURCES` (talair only) with `RobotsCheckedTransport` |
+| `retention_loop` | 3600 seconds | `retention_pass(history_store)` over Postgres: hourly aggregation, duplicate compaction, pruning of expired raw rows |
+| `content_loop` | 900 seconds | `drain_pass`: publishing queued drafts up to the daily cap + calling the web `revalidate_blog` |
+| `settings_sync_loop` | 20 seconds | reading `platform_settings`, building `chart_config` and writing it to the store, updating the platform registry with the referral-URL override |
 
-به‌علاوه دو کلاینت وب‌سوکت پایدار (نه حلقه‌ی زمان‌دار) با پس‌رفت نمایی
-(`ReconnectingFeedClient`، شروع ۱ ثانیه، سقف ۶۰ ثانیه): `daric_feed.run()` و
-`invi_feed.run()`. فریم‌های رمزگشایی‌شده در `FeedCache` می‌نشینند و
-`platform_loop` از طریق `compose_fetch` آن‌ها را می‌خواند — برای داریک با
-جایگزین REST در صورت کهنگی فریم (`FeedStale`، سقف سن فریم ۹۰ ثانیه)، برای
-اینوی بدون هیچ جایگزین REST.  [collector/src/tablo_collector/ws.py:19-80,
-main.py:114-164]
+In addition, two persistent WebSocket clients (not timed loops) with
+exponential backoff (`ReconnectingFeedClient`, starting at 1 second, capped
+at 60 seconds): `daric_feed.run()` and `invi_feed.run()`. Decoded frames sit
+in `FeedCache`, and `platform_loop` reads them via `compose_fetch` — for
+daric with a REST fallback if the frame goes stale (`FeedStale`, max frame
+age 90 seconds), for invi with no REST fallback at all.
+[collector/src/tablo_collector/ws.py:19-80, main.py:114-164]
 
-User-Agent همه‌ی فچ‌های HTTP رشته‌ی `TabloBot/0.1 (+https://tablo.gold/about)`
-با مهلت ۱۵ ثانیه است.  [collector/src/tablo_collector/main.py:62-63]
+The User-Agent for every HTTP fetch is the string
+`TabloBot/0.1 (+https://tablo.gold/about)`, with a 15-second timeout.
+[collector/src/tablo_collector/main.py:62-63]
 
-## ۱.۴ ۱۴ سکو
+## 1.4 The 14 platforms
 
-ترتیب تاپل `PLATFORMS` همان ترتیب فهرست عمومی است. فقط `goldika` سیاست
-`PERMISSION_PENDING` دارد (کرال و ذخیره می‌شود، هرگز عمومی نمایش داده
-نمی‌شود چون `is_listed` تنها تابع `data_policy == ALLOWED` است)؛ فقط `daric`
-مدل بازار `ORDER_BOOK` دارد، بقیه پیش‌فرض `OTC` می‌مانند.
+The order of the `PLATFORMS` tuple is the same order as the public listing.
+Only `goldika` has the `PERMISSION_PENDING` policy (crawled and stored,
+never shown publicly, since `is_listed` is solely a function of
+`data_policy == ALLOWED`); only `daric` has the `ORDER_BOOK` market model,
+the rest stay at the default `OTC`.
 [collector/src/tablo_collector/platforms.py:7-127]
 
-| # | slug | نام فارسی | سیاست داده | مدل بازار |
+| # | slug | Persian name | Data policy | Market model |
 |---|---|---|---|---|
-| ۱ | `wallgold` | وال‌گلد | ALLOWED | OTC |
-| ۲ | `talasea` | طلاسی | ALLOWED | OTC |
-| ۳ | `milli` | میلی | ALLOWED | OTC |
-| ۴ | `technogold` | تکنوگلد | ALLOWED | OTC |
-| ۵ | `tlyn` | طلاین | ALLOWED | OTC |
-| ۶ | `ecogold` | اکوگلد | ALLOWED | OTC |
-| ۷ | `zarafza` | زرافزا | ALLOWED | OTC |
-| ۸ | `baazar` | بازر | ALLOWED | OTC |
-| ۹ | `daric` | داریک | ALLOWED | **ORDER_BOOK** |
-| ۱۰ | `melligold` | ملی‌گلد | ALLOWED | OTC |
-| ۱۱ | `digikala` | دیجی‌کالا | ALLOWED | OTC |
-| ۱۲ | `hamrahgold` | همراه‌گلد | ALLOWED | OTC |
-| ۱۳ | `invi` | اینوی | ALLOWED | OTC |
-| ۱۴ | `goldika` | گلدیکا | **PERMISSION_PENDING** | OTC |
+| 1 | `wallgold` | وال‌گلد | ALLOWED | OTC |
+| 2 | `talasea` | طلاسی | ALLOWED | OTC |
+| 3 | `milli` | میلی | ALLOWED | OTC |
+| 4 | `technogold` | تکنوگلد | ALLOWED | OTC |
+| 5 | `tlyn` | طلاین | ALLOWED | OTC |
+| 6 | `ecogold` | اکوگلد | ALLOWED | OTC |
+| 7 | `zarafza` | زرافزا | ALLOWED | OTC |
+| 8 | `baazar` | بازر | ALLOWED | OTC |
+| 9 | `daric` | داریک | ALLOWED | **ORDER_BOOK** |
+| 10 | `melligold` | ملی‌گلد | ALLOWED | OTC |
+| 11 | `digikala` | دیجی‌کالا | ALLOWED | OTC |
+| 12 | `hamrahgold` | همراه‌گلد | ALLOWED | OTC |
+| 13 | `invi` | اینوی | ALLOWED | OTC |
+| 14 | `goldika` | گلدیکا | **PERMISSION_PENDING** | OTC |
 
-هر ۱۴ آداپتور دقیقاً یک دارایی اعلام می‌کنند: `Instrument.GOLD_18K`.
+All 14 adapters declare exactly one instrument: `Instrument.GOLD_18K`.
 [collector/src/tablo_collector/adapters/*.py]
 
-## ۱.۵ قرارداد ردیس
+## 1.5 The Redis contract
 
-نام کلیدها قرارداد مشترک با لایه‌ی وب است — تغییرشان بی‌صدا وب را می‌شکند.
-[collector/src/tablo_collector/store/redis_store.py:1-20]
+Key names are a shared contract with the web layer — changing them silently
+breaks web. [collector/src/tablo_collector/store/redis_store.py:1-20]
 
-| کلید | TTL | نویسنده | خواننده در وب |
+| Key | TTL | Writer | Reader in web |
 |---|---|---|---|
-| `tablo:current:{slug}` | ۱۲۰ ثانیه (`DEFAULT_PRICE_TTL_SECONDS`) | `RedisStore.save_snapshot` | `price-source.ts` |
-| `tablo:updated_at:{slug}` | بدون TTL (عمداً — کهنگی سیگنال است، نه خطا) | همان | `price-source.ts` |
-| `tablo:listed` | بدون TTL | `save_platforms` (فقط سکوهای `is_listed`) | `price-source.ts` |
-| `tablo:instruments` | بدون TTL | `save_instruments` | `price-source.ts` |
-| `tablo:reference:{slug}` | ۹۰۰ ثانیه (`DEFAULT_REFERENCE_TTL_SECONDS`) | `save_reference` | خوانده نمی‌شود؛ نرخ مرجع وب از پستگرس (`hourly_rollups`) می‌آید |
-| `tablo:chart_config` | بدون TTL | `save_chart_config` (از `settings_sync_loop`) | `chart-config-source.ts` |
+| `tablo:current:{slug}` | 120 seconds (`DEFAULT_PRICE_TTL_SECONDS`) | `RedisStore.save_snapshot` | `price-source.ts` |
+| `tablo:updated_at:{slug}` | No TTL (deliberately — staleness is a signal, not an error) | same | `price-source.ts` |
+| `tablo:listed` | No TTL | `save_platforms` (only `is_listed` platforms) | `price-source.ts` |
+| `tablo:instruments` | No TTL | `save_instruments` | `price-source.ts` |
+| `tablo:reference:{slug}` | 900 seconds (`DEFAULT_REFERENCE_TTL_SECONDS`) | `save_reference` | Not read; web's reference rate comes from Postgres (`hourly_rollups`) |
+| `tablo:chart_config` | No TTL | `save_chart_config` (from `settings_sync_loop`) | `chart-config-source.ts` |
 
-اسنپ‌شات سرکوب‌شده (`suppressed=True`) اصلاً در ردیس نوشته نمی‌شود —
-`RedisStore.save_snapshot` زودهنگام برمی‌گردد؛ همان اسنپ‌شات در پستگرس با
-ستون `suppressed=true` درج می‌شود.
+A suppressed snapshot (`suppressed=True`) is never written to Redis at all —
+`RedisStore.save_snapshot` returns early; that same snapshot is inserted
+into Postgres with the column `suppressed=true`.
 [collector/src/tablo_collector/store/redis_store.py:46-58]
 
-## ۱.۶ شمای پستگرس — وضعیت نهایی بعد از ۱۷ مهاجرت
+## 1.6 The Postgres schema — final state after 17 migrations
 
-پوشه‌ی `collector/migrations` دقیقاً ۱۲ فایل `.sql` دارد با شماره‌های ۰۰۱ تا
-۰۰۴ و ۰۱۰ تا ۰۱۷ (جهش ۰۰۴ ← ۰۱۰). مهاجرت ۰۱۷ برگشت‌ناپذیر است: سمت‌های
-BUY/SELL/MEAN را از `quotes` و `hourly_rollups` حذف می‌کند، مرجع `bonbast` و
-هر دارایی مرجع غیر از `GOLD_18K_TOMAN` را حذف می‌کند، و باقی‌مانده را به
-`side = 'PRICE'` تک‌مقداری تغییر نام می‌دهد.
-[collector/migrations/017_one_price_per_platform.sql]
+The `collector/migrations` folder has exactly 12 `.sql` files, numbered
+001-004 and 010-017 (jumping from 004 to 010). Migration 017 is
+irreversible: it removes the BUY/SELL/MEAN sides from `quotes` and
+`hourly_rollups`, removes the `bonbast` reference and every reference asset
+other than `GOLD_18K_TOMAN`, and renames what remains to the single-valued
+`side = 'PRICE'`. [collector/migrations/017_one_price_per_platform.sql]
 
-هشت جدول نهایی:
+Eight final tables:
 
-| جدول | ستون‌ها (نوع، قید مهم) |
+| Table | Columns (type, key constraint) |
 |---|---|
-| `quotes` | `id` bigserial PK؛ `platform_slug`, `instrument` text؛ `side` text (`check = 'PRICE'`)؛ `price_toman`, `raw_value`, `raw_scale` numeric؛ `fetched_at` timestamptz؛ `suppressed` boolean not null default false. ایندکس `(platform_slug, fetched_at desc)` |
-| `platform_terms` | `id` bigserial PK؛ `platform_slug` text؛ `buy_fee_percent`, `sell_fee_percent`, `round_trip_percent` numeric **nullable**؛ `fee_source` text (`check in ('API','MANUAL','IMPLIED','UNKNOWN')`)؛ `buy_enabled`, `sell_enabled` boolean؛ `observed_at` timestamptz. قید: `UNKNOWN` ⟸ هر سه کارمزد null، هر مقدار دیگر ⟸ هر سه پر. ایندکس `(platform_slug, observed_at desc)` |
-| `platforms` | `slug` text PK؛ `name_fa` text؛ `data_policy` text (۴ مقدار: ALLOWED/RESTRICTED/PERMISSION_PENDING/BLOCKED)؛ `is_listed` boolean؛ `market_model` text not null default `'OTC'` (`check in ('OTC','ORDER_BOOK')`) |
-| `reference_quotes` | `id` bigserial PK؛ `reference_slug`, `name_fa`, `source_url` text؛ `instrument` text (`check = 'GOLD_18K_TOMAN'`)؛ `side` text (`check = 'PRICE'`)؛ `value`, `raw_value`, `raw_scale` numeric؛ `fetched_at` timestamptz. ایندکس `(reference_slug, fetched_at desc)` |
-| `hourly_rollups` | `id` bigserial PK؛ `kind` text (`check in ('PLATFORM','REFERENCE')`)؛ `source_slug`, `instrument` text؛ `side` text (`check = 'PRICE'`، نگه‌داشته‌شده چون جزو کلید طبیعی است)؛ `hour_start` timestamptz؛ `open_value`, `close_value`, `min_value`, `max_value` numeric (`check min<=max`)؛ `sample_count` integer (`check > 0`). یکتای `(kind, source_slug, instrument, side, hour_start)`؛ ایندکس `(source_slug, instrument, hour_start desc)` |
-| `posts` | `slug` text PK (`check ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`)؛ `title_fa`, `body_md` text؛ `status` text not null default `'draft'` (۳ مقدار: draft/published/retracted)؛ `published_at` timestamptz nullable؛ `updated_at` timestamptz؛ `check (status='draft' or published_at is not null)`؛ `image_url`, `image_alt`, `image_width`, `image_height` (مهاجرت ۰۱۶، هر چهار nullable با `check` اجباری‌بودن alt وقتی عکس هست). ایندکس جزئی `(published_at desc) where status='published'` |
-| `post_views` | `slug` text PK (`references posts(slug) on delete cascade`)؛ `views` bigint not null default 0 (`check >= 0`)؛ `last_seen_at` timestamptz not null default now(). ایندکس `(views desc)` — بدون هیچ داده‌ی شخصی |
-| `platform_settings` | `slug` text PK (`references platforms(slug)`)؛ `in_chart` boolean not null default false؛ `chart_color` text (`check ~ '^#[0-9a-f]{6}$'`)؛ `chart_order` int؛ `referral_url` text؛ `updated_at` timestamptz not null default now() |
+| `quotes` | `id` bigserial PK; `platform_slug`, `instrument` text; `side` text (`check = 'PRICE'`); `price_toman`, `raw_value`, `raw_scale` numeric; `fetched_at` timestamptz; `suppressed` boolean not null default false. Index `(platform_slug, fetched_at desc)` |
+| `platform_terms` | `id` bigserial PK; `platform_slug` text; `buy_fee_percent`, `sell_fee_percent`, `round_trip_percent` numeric **nullable**; `fee_source` text (`check in ('API','MANUAL','IMPLIED','UNKNOWN')`); `buy_enabled`, `sell_enabled` boolean; `observed_at` timestamptz. Constraint: `UNKNOWN` ⟸ all three fees null, any other value ⟸ all three populated. Index `(platform_slug, observed_at desc)` |
+| `platforms` | `slug` text PK; `name_fa` text; `data_policy` text (4 values: ALLOWED/RESTRICTED/PERMISSION_PENDING/BLOCKED); `is_listed` boolean; `market_model` text not null default `'OTC'` (`check in ('OTC','ORDER_BOOK')`) |
+| `reference_quotes` | `id` bigserial PK; `reference_slug`, `name_fa`, `source_url` text; `instrument` text (`check = 'GOLD_18K_TOMAN'`); `side` text (`check = 'PRICE'`); `value`, `raw_value`, `raw_scale` numeric; `fetched_at` timestamptz. Index `(reference_slug, fetched_at desc)` |
+| `hourly_rollups` | `id` bigserial PK; `kind` text (`check in ('PLATFORM','REFERENCE')`); `source_slug`, `instrument` text; `side` text (`check = 'PRICE'`, kept because it's part of the natural key); `hour_start` timestamptz; `open_value`, `close_value`, `min_value`, `max_value` numeric (`check min<=max`); `sample_count` integer (`check > 0`). Unique `(kind, source_slug, instrument, side, hour_start)`; index `(source_slug, instrument, hour_start desc)` |
+| `posts` | `slug` text PK (`check ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`); `title_fa`, `body_md` text; `status` text not null default `'draft'` (3 values: draft/published/retracted); `published_at` timestamptz nullable; `updated_at` timestamptz; `check (status='draft' or published_at is not null)`; `image_url`, `image_alt`, `image_width`, `image_height` (migration 016, all four nullable with a `check` requiring alt when there's an image). Partial index `(published_at desc) where status='published'` |
+| `post_views` | `slug` text PK (`references posts(slug) on delete cascade`); `views` bigint not null default 0 (`check >= 0`); `last_seen_at` timestamptz not null default now(). Index `(views desc)` — no personal data whatsoever |
+| `platform_settings` | `slug` text PK (`references platforms(slug)`); `in_chart` boolean not null default false; `chart_color` text (`check ~ '^#[0-9a-f]{6}$'`); `chart_order` int; `referral_url` text; `updated_at` timestamptz not null default now() |
 
-## ۱.۷ مسیرهای وب
+## 1.7 Web routes
 
-### عمومی
+### Public
 
-| مسیر | توضیح |
+| Route | Description |
 |---|---|
-| `/` | صفحه‌ی اصلی؛ همه‌ی داده از یک `loader` سروری (`loadHomeData`)، بدون فچ کلاینتی برای رندر اول |
-| `/$slug` | صفحه‌ی سکو یا دارایی؛ `resolveSlug` تعیین می‌کند کدام (`SlugPageData` دوحالته) |
-| `/blog` | فهرست پست‌های منتشرشده |
-| `/blog/$slug` | صفحه‌ی یک پست |
-| `/mazane-chist` | صفحه‌ی ایستا «مظنه چیست» |
-| `/darbare-pishnahad` | صفحه‌ی ایستا «درباره‌ی پیشنهاد سردبیر» |
-| `/robots.txt` | ساخته‌شده در کد (`lib/seo/robots.ts`) |
-| `/sitemap.xml` | XML؛ در خطای منبع بلاگ عمداً ۵۰۳ با بدنه‌ی خالی |
-| `/go/$slug` | ریدایرکت خروجی درآمدزا (۳۰۲) به `referral_url` یا در نبودش `website_url`؛ `noindex` + `no-store` |
+| `/` | Home page; all data comes from a single server `loader` (`loadHomeData`), no client-side fetch for the first render |
+| `/$slug` | Platform or asset page; `resolveSlug` determines which (`SlugPageData` is two-state) |
+| `/blog` | List of published posts |
+| `/blog/$slug` | A single post's page |
+| `/mazane-chist` | Static page, "مظنه چیست" |
+| `/darbare-pishnahad` | Static page, "درباره‌ی پیشنهاد سردبیر" |
+| `/robots.txt` | Generated in code (`lib/seo/robots.ts`) |
+| `/sitemap.xml` | XML; deliberately returns 503 with an empty body on blog-source error |
+| `/go/$slug` | Revenue-generating outbound redirect (302) to `referral_url` or, absent that, `website_url`; `noindex` + `no-store` |
 
-### پنل مدیریت (پشت `beforeLoad → checkAdminSession`)
+### Admin panel (behind `beforeLoad → checkAdminSession`)
 
-| مسیر | توضیح |
+| Route | Description |
 |---|---|
-| `/admin` | لایوت |
-| `/admin/` | داشبورد |
-| `/admin/login` | فرم ورود (تنها مسیر مستثنا از گیت نشست) |
-| `/admin/platforms` | تنظیمات نمودار/سکو |
-| `/admin/posts/` | فهرست پست‌ها |
-| `/admin/posts/new` | ساخت پست |
-| `/admin/posts/$slug` | ویرایش پست |
+| `/admin` | Layout |
+| `/admin/` | Dashboard |
+| `/admin/login` | Login form (the only route exempt from the session gate) |
+| `/admin/platforms` | Chart/platform settings |
+| `/admin/posts/` | List of posts |
+| `/admin/posts/new` | Create a post |
+| `/admin/posts/$slug` | Edit a post |
 
 ### API
 
-| مسیر | متدها | توضیح |
+| Route | Methods | Description |
 |---|---|---|
-| `/api/prices` | GET | payload زنده‌ی داشبورد؛ همیشه `no-store` |
-| `/api/admin-login` | POST | ورود پنل (قفل پس از ۵ شکست، ۱۵ دقیقه) |
-| `/api/admin-logout` | POST | خروج پنل |
-| `/api/admin-platform-settings` | GET, POST | خواندن/نوشتن عضویت و ترتیب نمودار |
-| `/api/admin-posts` | GET, POST | فهرست/ساخت پست |
-| `/api/admin-posts/$slug` | GET, POST | خواندن/ویرایش متن پست |
-| `/api/admin-posts/$slug/publish` | POST | انتشار دستی |
-| `/api/admin-posts/$slug/retract` | POST | پس‌گیری |
-| `/api/admin-posts/$slug/image` | POST | آپلود عکس شاخص (فقط آپلود، حذف ندارد) |
-| `/api/post-view` | POST | ثبت بازدید از مرورگر (بعد از ۳ ثانیه ماندن روی صفحه) |
-| `/api/revalidate-blog` | POST | توکن‌دار؛ گردآورنده پس از هر انتشار صدا می‌زند |
+| `/api/prices` | GET | Live dashboard payload; always `no-store` |
+| `/api/admin-login` | POST | Admin login (locks after 5 failures, for 15 minutes) |
+| `/api/admin-logout` | POST | Admin logout |
+| `/api/admin-platform-settings` | GET, POST | Read/write chart membership and order |
+| `/api/admin-posts` | GET, POST | List/create a post |
+| `/api/admin-posts/$slug` | GET, POST | Read/edit a post's text |
+| `/api/admin-posts/$slug/publish` | POST | Manual publish |
+| `/api/admin-posts/$slug/retract` | POST | Retract |
+| `/api/admin-posts/$slug/image` | POST | Upload the featured image (upload only, no delete) |
+| `/api/post-view` | POST | Records a view from the browser (after staying on the page for 3 seconds) |
+| `/api/revalidate-blog` | POST | Token-gated; the collector calls it after every publish |
 
-هر مسیر `routes/api/*` و `routes/go/$slug.ts` فقط `server.handlers` دارد و
-`component` ندارد — همین باعث می‌شود از درخت کلاینت هرس شود تا واردات
-`ioredis`/`pg` بی‌خطر بماند.
+Every `routes/api/*` route and `routes/go/$slug.ts` has only
+`server.handlers` and no `component` — this is what lets it be pruned from
+the client tree, so the `ioredis`/`pg` imports stay safe.
 
-## ۱.۸ مسیر داده‌ی end-to-end: از آداپتور تا مرورگر
+## 1.8 The end-to-end data path: from adapter to browser
 
-| # | جزء | فایل | کار |
+| # | Component | File | What it does |
 |---|---|---|---|
-| ۱ | آداپتور (۱۴ تا) | `collector/.../adapters/*.py` | فچ payload خام (HTTP یا `FeedCache` برای داریک/اینوی) و `parse` به `PlatformSnapshot` |
-| ۲ | `collect_round` | `collector/.../pipeline.py:44-77` | چک میانه‌ی تقاطعی (`sanity.median_outliers`)؛ سکوی پرت `suppressed=True` می‌شود |
-| ۳ | `MultiStore.save_snapshot` | `collector/.../store/__init__.py` | نوشتن هم‌زمان روی Redis (`tablo:current:{slug}`, `tablo:updated_at:{slug}`) و Postgres (`quotes`, `platform_terms` — حتی سرکوب‌شده) |
-| ۴ | `createRedisPriceSource` | `web/.../server/price-source.ts` | خواندن با `ioredis`؛ هر متد در try/catch — قطع ردیس یعنی `null`/`[]`، نه خطا |
-| ۵ | `fetchRows` / `priceToman` | `web/.../rows.ts` | ترکیب snapshot با فهرست سکوهای listed (از `lib/catalog.ts`، مقدم بر رجیستری ایستا) |
-| ۶-الف | SSR (`loadHomeData` / `content-data.ts`) | `web/.../home-data.ts`, `content-data.ts` | یک‌بار در هر درخواست؛ HTML آماده با اعداد فارسی، بدون نیاز به JS برای خوانا بودن |
-| ۶-ب | `GET /api/prices` | `web/.../server/live-prices.ts` | `useLiveDashboard` هر ۳۰ ثانیه فچ می‌کند (وقتی تب پیداست)؛ `DashboardLive` نتیجه را مستقیم روی گره‌های DOM موجود می‌نشاند، نه با state ری‌اکت |
+| 1 | Adapter (14 of them) | `collector/.../adapters/*.py` | Fetches the raw payload (HTTP or `FeedCache` for daric/invi) and `parse`s it into a `PlatformSnapshot` |
+| 2 | `collect_round` | `collector/.../pipeline.py:44-77` | Cross-platform median check (`sanity.median_outliers`); an outlier platform becomes `suppressed=True` |
+| 3 | `MultiStore.save_snapshot` | `collector/.../store/__init__.py` | Writes concurrently to Redis (`tablo:current:{slug}`, `tablo:updated_at:{slug}`) and Postgres (`quotes`, `platform_terms` — even when suppressed) |
+| 4 | `createRedisPriceSource` | `web/.../server/price-source.ts` | Reads with `ioredis`; every method is in a try/catch — a Redis outage means `null`/`[]`, not an error |
+| 5 | `fetchRows` / `priceToman` | `web/.../rows.ts` | Combines the snapshot with the list of listed platforms (from `lib/catalog.ts`, which takes precedence over the static registry) |
+| 6a | SSR (`loadHomeData` / `content-data.ts`) | `web/.../home-data.ts`, `content-data.ts` | Once per request; ready-made HTML with Persian numerals, readable without needing JS |
+| 6b | `GET /api/prices` | `web/.../server/live-prices.ts` | `useLiveDashboard` fetches every 30 seconds (when the tab is visible); `DashboardLive` writes the result directly onto existing DOM nodes, not through React state |
 
-آستانه‌ی «کهنه» در نمایش سه دقیقه است (`STALE_AFTER_MINUTES = 3`)، جدا از
-TTL ۱۲۰ثانیه‌ای خودِ کلید `tablo:current:{slug}` در ردیس.
+The display-layer "stale" threshold is three minutes
+(`STALE_AFTER_MINUTES = 3`), separate from the `tablo:current:{slug}` key's
+own 120-second TTL in Redis.
 
-## ۱.۹ اجرای محلی و متغیرهای محیطی
+## 1.9 Running locally and environment variables
 
-**زیرساخت** — فقط برای اجرای محلی؛ تست‌ها به هیچ سرویس زنده‌ای وابسته
-نیستند:
+**Infrastructure** — only for running locally; the tests depend on no live
+service:
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d   # postgres:16 روی 5432، redis:7 روی 6379
+docker compose -f docker-compose.dev.yml up -d   # postgres:16 on 5432, redis:7 on 6379
 ```
 
-مهاجرت‌ها در اولین بوت volume خالی به‌ترتیب واژه‌نگاری از
-`collector/migrations` اجرا می‌شوند (mount خواندنی روی
+On the first boot of an empty volume, the migrations run in lexicographic
+order from `collector/migrations` (mounted read-only at
 `/docker-entrypoint-initdb.d`).
 
-**گردآورنده:**
+**Collector:**
 
 ```bash
 cd collector
 pip install -e ".[dev]"
-PYTHONPATH=src python -m pytest        # ۱۸۷ تست
+PYTHONPATH=src python -m pytest        # 187 tests
 PYTHONPATH=src mypy src tests
-PYTHONPATH=src python -m tablo_collector.main   # یا: tablo-collector پس از نصب
+PYTHONPATH=src python -m tablo_collector.main   # or: tablo-collector after installing
 ```
 
-نکته: `collector/.venv` موجود کهنه است (مسیر ساخت قدیمی، اسکریپت‌های
-`mazane-*`) — برای اجرای واقعی محیط را از نو بسازید.
+Note: the existing `collector/.venv` is stale (an old build path,
+`mazane-*` scripts) — rebuild the environment from scratch for a real run.
 
-**وب:**
+**Web:**
 
 ```bash
 cd web
 npm install
-npm run dev      # vite dev — host "::", پورت 8080
-npm test         # vitest run — از ۳۲ فایل تست، ۳۱ سبز و ۱ (tokens-sync.test.ts) خراب چون docs/tokens.css در working tree نیست
+npm run dev      # vite dev — host "::", port 8080
+npm test         # vitest run — of 32 test files, 31 pass and 1 (tokens-sync.test.ts) fails because docs/tokens.css is not in the working tree
 ```
 
-**متغیرهای محیطی:**
+**Environment variables:**
 
-| متغیر | پیش‌فرض کد | خوانده می‌شود در |
+| Variable | Code default | Read in |
 |---|---|---|
-| `TABLO_REDIS_URL` | `redis://127.0.0.1:6379/0` | collector `main.py`؛ وب `price-source.ts`, `chart-config-source.ts` |
-| `TABLO_DATABASE_URL` | `postgresql://mazane:mazane@127.0.0.1:5432/mazane` | collector (`main.py`, `content/queue.py`, `content/retract.py`, `content/generator.py`)؛ وب `blog-source.ts` (`pgPool`) |
+| `TABLO_REDIS_URL` | `redis://127.0.0.1:6379/0` | collector `main.py`; web `price-source.ts`, `chart-config-source.ts` |
+| `TABLO_DATABASE_URL` | `postgresql://mazane:mazane@127.0.0.1:5432/mazane` | collector (`main.py`, `content/queue.py`, `content/retract.py`, `content/generator.py`); web `blog-source.ts` (`pgPool`) |
 | `TABLO_REVALIDATE_URL` | `http://127.0.0.1:3000/api/revalidate-blog` | collector `content/revalidate.py` |
-| `TABLO_REVALIDATE_TOKEN` | بدون پیش‌فرض (خالی ⟸ collector هرگز revalidate نمی‌کند؛ وب همیشه ۴۰۱ می‌دهد) | collector `content/revalidate.py`؛ وب `revalidate-blog.ts` |
-| `TABLO_DAILY_PUBLISH_CAP` | `2` (مقدار نامعتبر/کمتر از ۱ ⟸ برگشت به ۲ با هشدار) | collector `content/publisher.py` |
-| `TABLO_ADMIN_PASSWORD_HASH` | بدون پیش‌فرض؛ نبودش یعنی fail-closed (ورود همیشه رد) | وب `admin-session.ts` |
-| `TABLO_ADMIN_SESSION_SECRET` | بدون پیش‌فرض؛ نبودش یعنی fail-closed (نشست همیشه نامعتبر) | وب `admin-session.ts` |
-| `TABLO_ARVAN_S3_ENDPOINT` | اجباری (نبودش ⟸ خطا، آپلود عکس با ۵۰۲ شکست می‌خورد) | وب `image-store.ts` |
-| `TABLO_ARVAN_S3_REGION` | `default` | وب `image-store.ts` |
-| `TABLO_ARVAN_S3_BUCKET` | اجباری | وب `image-store.ts` |
-| `TABLO_ARVAN_S3_ACCESS_KEY` | اجباری | وب `image-store.ts` |
-| `TABLO_ARVAN_S3_SECRET_KEY` | اجباری | وب `image-store.ts` |
-| `TABLO_HEALTH_MAX_STALE_MINUTES` | `"15"` | فقط `ops/collector-healthcheck.py` (دود-تست/HEALTHCHECK داکر، نه اپلیکیشن) |
+| `TABLO_REVALIDATE_TOKEN` | No default (empty ⟸ collector never revalidates; web always returns 401) | collector `content/revalidate.py`; web `revalidate-blog.ts` |
+| `TABLO_DAILY_PUBLISH_CAP` | `2` (invalid value/less than 1 ⟸ falls back to 2 with a warning) | collector `content/publisher.py` |
+| `TABLO_ADMIN_PASSWORD_HASH` | No default; its absence means fail-closed (login is always rejected) | web `admin-session.ts` |
+| `TABLO_ADMIN_SESSION_SECRET` | No default; its absence means fail-closed (session is always invalid) | web `admin-session.ts` |
+| `TABLO_ARVAN_S3_ENDPOINT` | Required (its absence ⟸ error, image upload fails with 502) | web `image-store.ts` |
+| `TABLO_ARVAN_S3_REGION` | `default` | web `image-store.ts` |
+| `TABLO_ARVAN_S3_BUCKET` | Required | web `image-store.ts` |
+| `TABLO_ARVAN_S3_ACCESS_KEY` | Required | web `image-store.ts` |
+| `TABLO_ARVAN_S3_SECRET_KEY` | Required | web `image-store.ts` |
+| `TABLO_HEALTH_MAX_STALE_MINUTES` | `"15"` | Only `ops/collector-healthcheck.py` (smoke test/Docker HEALTHCHECK, not the application) |
 
-نمونه‌ی کامل با توضیح در `.env.example` (ریشه‌ی مخزن) است؛ `.env` واقعی
-کامیت نمی‌شود.
+A complete, annotated example lives in `.env.example` (repo root); the real
+`.env` is never committed.

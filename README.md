@@ -1,27 +1,27 @@
-# تابلو (tablo.gold)
+# Tablo (tablo.gold)
 
-تابلوی مقایسه‌ی قیمت طلای ۱۸ عیار در پلتفرم‌های آنلاین ایرانی. یک گردآورنده (collector) هر ۳۰ ثانیه از ۱۴ سکو قیمت می‌گیرد، در ردیس و پستگرس ذخیره می‌کند، و یک اپ وب (web) همان داده را روی یک تابلوی زنده و صفحات هر سکو/دارایی رندر می‌کند. هیچ محاسبه‌ی قیمتی در لایه‌ی وب انجام نمی‌شود — وب فقط می‌خواند و نمایش می‌دهد. قطع هر منبع داده «کهنگی» است، نه خطا: صفحه‌ها همچنان ۲۰۰ برمی‌گردانند.
+A board comparing 18-karat gold prices across Iranian online platforms. A collector polls 14 platforms for prices every 30 seconds, stores them in Redis and Postgres, and a web app renders that same data on a live board and per-platform/per-asset pages. No price computation happens in the web layer — web only reads and displays. An outage of any data source is "staleness," not an error: pages still return 200.
 
-## معماری در یک نگاه
+## Architecture at a glance
 
 ```mermaid
 flowchart RL
-    subgraph platforms["۱۴ سکوی طلافروشی"]
+    subgraph platforms["14 gold-trading platforms"]
         P[wallgold, talasea, milli, …]
     end
     subgraph collector["collector (Python/asyncio)"]
         direction TB
-        C1["platform_loop ۳۰ثانیه / reference_loop ۱۲۰ثانیه"]
-        C2["retention_loop ۳۶۰۰ثانیه / content_loop ۹۰۰ثانیه"]
-        C3["settings_sync_loop ۲۰ثانیه"]
+        C1["platform_loop 30s / reference_loop 120s"]
+        C2["retention_loop 3600s / content_loop 900s"]
+        C3["settings_sync_loop 20s"]
     end
-    Redis[(Redis — قیمت جاری)]
-    PG[(Postgres — تاریخچه، بلاگ، تنظیمات)]
+    Redis[(Redis — current price)]
+    PG[(Postgres — history, blog, settings)]
     subgraph web["web (TanStack Start / Nitro node-server)"]
-        W1["لایه‌ی داده src/lib/server"]
-        W2["/api/prices، صفحات SSR، پنل ادمین"]
+        W1["data layer src/lib/server"]
+        W2["/api/prices, SSR pages, admin panel"]
     end
-    Browser[مرورگر کاربر]
+    Browser[User's browser]
 
     P -- HTTP/WS --> collector
     collector -- save_* --> Redis
@@ -31,37 +31,37 @@ flowchart RL
     W1 --> W2 --> Browser
 ```
 
-## پیش‌نیازها
+## Prerequisites
 
-| ابزار | نسخه |
+| Tool | Version |
 | --- | --- |
 | Python | ≥ 3.12 |
 | Node.js | 22 |
-| Docker + Docker Compose | برای Postgres و Redis محلی |
+| Docker + Docker Compose | For local Postgres and Redis |
 
-## اجرای محلی گام‌به‌گام
+## Local setup, step by step
 
-**۱) سرویس‌های زیرساخت (Postgres + Redis):**
+**1) Infrastructure services (Postgres + Redis):**
 
 ```sh
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-مهاجرت‌های `collector/migrations/*.sql` در اولین بوت پستگرس خودکار اجرا می‌شوند. کاربر/رمز/دیتابیس پیش‌فرض هر سه `mazane` است (نام قدیمی مخزن، عمداً همین مانده).
+The `collector/migrations/*.sql` migrations run automatically on Postgres's first boot. The default user/password/database are all `mazane` (the repo's old name, deliberately left as-is).
 
-**۲) گردآورنده (collector):**
+**2) Collector:**
 
 ```sh
 cd collector
-python3 -m venv .venv-local   # collector/.venv موجود کهنه است، از آن استفاده نکنید
+python3 -m venv .venv-local   # collector/.venv is stale, don't use it
 source .venv-local/bin/activate
 pip install -e ".[dev]"
 tablo-collector
 ```
 
-بدون متغیر محیطی اضافه هم بالا می‌آید: پیش‌فرض‌های کد (`redis://127.0.0.1:6379/0` و `postgresql://mazane:mazane@127.0.0.1:5432/mazane`) دقیقاً با `docker-compose.dev.yml` می‌خوانند.
+It starts up fine with no extra environment variables: the code's defaults (`redis://127.0.0.1:6379/0` and `postgresql://mazane:mazane@127.0.0.1:5432/mazane`) line up exactly with `docker-compose.dev.yml`.
 
-**۳) وب (web):**
+**3) Web:**
 
 ```sh
 cd web
@@ -69,62 +69,52 @@ npm install
 npm run dev
 ```
 
-برای اجرای خروجی build شده: `npm run build && npm start` (که `node .output/server/index.mjs` را اجرا می‌کند).
+To run the built output: `npm run build && npm start` (which runs `node .output/server/index.mjs`).
 
-## تست و تایپ‌چک
+## Tests and typecheck
 
-| لایه | دستور | وضعیت پایه |
+| Layer | Command | Baseline status |
 | --- | --- | --- |
-| collector | `cd collector && pytest` سپس `mypy src tests` | ۱۸۷ تست سبز، mypy تمیز |
-| web | `cd web && npm test` (`vitest run`) | ۵۳۴ تست سبز در ۳۲ suite؛ دقیقاً یک suite (`tokens-sync.test.ts`) از قبل شکسته چون `docs/tokens.css` در working tree نیست |
+| collector | `cd collector && pytest` then `mypy src tests` | 187 passing tests, clean mypy |
+| web | `cd web && npm test` (`vitest run`) | 534 passing tests across 32 suites; exactly one suite (`tokens-sync.test.ts`) is pre-existing broken because `docs/tokens.css` isn't in the working tree |
 | web | `cd web && npm run typecheck` (`tsc --noEmit`) | — |
 
-CI (`.github/workflows/ci.yml`) همین دو مسیر را روی هر push/PR اجرا می‌کند (جاب‌های `collector` و `web`)، به‌علاوه‌ی جاب سوم `images` که فقط روی push به `main` ایمیج‌های Docker را می‌سازد و یک smoke test (`GET /` باید ۲۰۰ بدهد، بدون Redis/Postgres زنده) اجرا می‌کند.
+CI (`.github/workflows/ci.yml`) runs these same two paths on every push/PR (the `collector` and `web` jobs), plus a third job, `images`, that only runs on push to `main`: it builds the Docker images and runs a smoke test (`GET /` must return 200, with no live Redis/Postgres).
 
-## ساختار پوشه‌ها
+## Folder structure
 
 ```
 collector/
   src/tablo_collector/
-    adapters/       ۱۴ آداپتور سکو (هر کدام یک فایل)
-    content/        صف/مولد/انتشار محتوای بلاگ
-    references/     منبع مرجع قیمت (talair)
-    store/          Redis / Postgres / In-memory (پروتکل Store)
-    main.py         هفت کوروتین حلقه‌ی اصلی
-    platforms.py    رجیستری ۱۴ سکو
-    models.py       مدل‌های Pydantic (frozen)
-  migrations/       ۱۲ فایل SQL (001 تا 017، با جهش شماره)
-  tests/            ۲۷ فایل تست + fixtures
+    adapters/       14 platform adapters (one file each)
+    content/        blog content queue/generator/publisher
+    references/     reference price source (talair)
+    store/          Redis / Postgres / in-memory (Store protocol)
+    main.py         seven main-loop coroutines
+    platforms.py    registry of 14 platforms
+    models.py       Pydantic models (frozen)
+  migrations/       12 SQL files (001 through 017, numbering has gaps)
+  tests/            27 test files + fixtures
 
 web/
   src/
-    routes/         مسیرهای فایل‌محور TanStack Router (عمومی + /admin + /api)
-    lib/            منطق دامنه؛ lib/server/ فقط از سمت سرور import می‌شود
-    components/     tablo/ (صفحه‌ی اصلی)، content/ (صفحات سکو/بلاگ)، ui/ (shadcn)
-  tests/            ۳۲ suite
+    routes/         TanStack Router file-based routes (public + /admin + /api)
+    lib/            domain logic; lib/server/ is only imported server-side
+    components/     tablo/ (main page), content/ (platform/blog pages), ui/ (shadcn)
+  tests/            32 suites
 
-ops/                RUNBOOK، healthcheck، پیکربندی Caddy، اسکریپت تأیید گوگل‌بات
+ops/                RUNBOOK, healthcheck, Caddy config, Googlebot verification script
 .github/workflows/  CI
-compose.prod.yml, Dockerfile.web, Dockerfile.collector, deploy.sh   استقرار تولید
+compose.prod.yml, Dockerfile.web, Dockerfile.collector, deploy.sh   production deployment
 ```
 
-## مستندات بیشتر
+## Further documentation
 
-| سند | موضوع |
+| Document | Topic |
 | --- | --- |
-| [docs/01-overview.md](docs/01-overview.md) | نمای کلی محصول و معماری |
-| [docs/02-design-components.md](docs/02-design-components.md) | کامپوننت‌های دیزاین و سیستم توکن وب |
-| [docs/03-tech-debt.md](docs/03-tech-debt.md) | بدهی فنی شاهدمحور، اولویت‌بندی‌شده |
-| [docs/04-domain.md](docs/04-domain.md) | مدل دامنه (سکو، دارایی، کارمزد، …) |
-| [ops/RUNBOOK.md](ops/RUNBOOK.md) | استقرار تولید، DNS/CDN، رول‌بک |
-| [CLAUDE.md](CLAUDE.md) | راهنمای کار روی این مخزن با Claude Code |
-
----
-
-## English summary
-
-**Tablo** (tablo.gold) is a Persian gold-price comparison board for the Iranian online gold market. A Python/asyncio **collector** polls 14 online gold-trading platforms every 30 seconds — 13 of them publicly listed (12 OTC-style platforms plus one order-book platform, `daric`) and one (`goldika`) still pending publication permission; two platforms, `daric` and `invi`, stream over persistent WebSockets — normalizes prices into a single `PRICE` side per platform, and writes to **Redis** (current price, TTL-based) and **Postgres** (full history, blog posts, platform settings). A **TanStack Start** web app (React 19, Nitro `node-server` preset) reads that data — never computes prices itself — and renders the live dashboard, per-platform/per-asset pages, a blog, and an admin panel.
-
-Local dev: `docker compose -f docker-compose.dev.yml up -d` for Postgres + Redis, then `cd collector && pip install -e ".[dev]" && tablo-collector`, and `cd web && npm install && npm run dev`. Tests: `pytest` + `mypy src tests` in `collector/` (187 tests, clean mypy); `npm test` + `npm run typecheck` in `web/` (534 tests across 32 suites, one pre-existing failing suite due to a missing `docs/tokens.css`). Data-source outages degrade to staleness (HTTP 200 with a "last updated" timestamp), never a hard error — this is a deliberate design rule enforced by tests.
-
-See `docs/` for the architecture overview, design components, domain model, and known tech debt; `ops/RUNBOOK.md` for production deployment.
+| [docs/01-overview.md](docs/01-overview.md) | Product and architecture overview |
+| [docs/02-design-components.md](docs/02-design-components.md) | Design components and the web token system |
+| [docs/03-tech-debt.md](docs/03-tech-debt.md) | Evidence-based, prioritized tech debt |
+| [docs/04-domain.md](docs/04-domain.md) | Domain model (platform, asset, fee, …) |
+| [ops/RUNBOOK.md](ops/RUNBOOK.md) | Production deployment, DNS/CDN, rollback |
+| [CLAUDE.md](CLAUDE.md) | Guide to working on this repo with Claude Code |

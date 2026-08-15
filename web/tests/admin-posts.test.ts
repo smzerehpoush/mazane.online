@@ -96,12 +96,12 @@ afterEach(() => {
 });
 
 describe("isValidSlug", () => {
-  it("همان شکل اسلاگ جدول posts را می‌پذیرد", () => {
+  it("accepts the same slug shape as the posts table", () => {
     expect(isValidSlug("hazine-panhan")).toBe(true);
     expect(isValidSlug("a1-b2-c3")).toBe(true);
   });
 
-  it("شکل نادرست را رد می‌کند", () => {
+  it("rejects the wrong shape", () => {
     expect(isValidSlug("")).toBe(false);
     expect(isValidSlug("Hazine")).toBe(false);
     expect(isValidSlug("hazine_panhan")).toBe(false);
@@ -115,17 +115,17 @@ describe("nextUpdatedAt", () => {
   const current = "2026-08-01T00:00:00.000Z";
   const now = "2026-08-07T12:00:00.000Z";
 
-  it("meaningfulEdit=false ⟸ current دست‌نخورده برمی‌گردد", () => {
+  it("meaningfulEdit=false ⟸ returns current untouched", () => {
     expect(nextUpdatedAt(current, false, now)).toBe(current);
   });
 
-  it("meaningfulEdit=true ⟸ now برمی‌گردد", () => {
+  it("meaningfulEdit=true ⟸ returns now", () => {
     expect(nextUpdatedAt(current, true, now)).toBe(now);
   });
 });
 
 describe("createPost", () => {
-  it("اسلاگ بدشکل ⟸ رد می‌شود، چیزی insert نمی‌شود", async () => {
+  it("malformed slug ⟸ rejected, nothing is inserted", async () => {
     const fake = seedFake();
     const result = await createPost(
       { slug: "Bad Slug", title_fa: "عنوان", body_md: "متن" },
@@ -135,7 +135,7 @@ describe("createPost", () => {
     expect(fake.inserted).toHaveLength(0);
   });
 
-  it("اسلاگ تکراری ⟸ رد می‌شود، پست موجود بازنویسی نمی‌شود", async () => {
+  it("duplicate slug ⟸ rejected, the existing post is not overwritten", async () => {
     const fake = seedFake(post("takrari", { title_fa: "قدیمی" }));
     const result = await createPost(
       { slug: "takrari", title_fa: "تازه", body_md: "متن تازه" },
@@ -146,7 +146,7 @@ describe("createPost", () => {
     expect((await getAdminPost("takrari"))?.title_fa).toBe("قدیمی");
   });
 
-  it("عنوان/متن خالی ⟸ رد می‌شود", async () => {
+  it("empty title/body ⟸ rejected", async () => {
     seedFake();
     const result = await createPost(
       { slug: "khali", title_fa: "  ", body_md: "متن" },
@@ -155,7 +155,7 @@ describe("createPost", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("موفق ⟸ status=draft، published_at=null، updated_at=now", async () => {
+  it("success ⟸ status=draft, published_at=null, updated_at=now", async () => {
     const fake = seedFake();
     const now = "2026-08-07T00:00:00.000Z";
     const result = await createPost(
@@ -179,7 +179,7 @@ describe("createPost", () => {
     expect(fake.inserted).toHaveLength(1);
   });
 
-  it("همه‌ی پست‌ها با هر وضعیتی در فهرست هستند", async () => {
+  it("all posts, regardless of status, are in the list", async () => {
     seedFake(
       post("p1", { status: "draft" }),
       post("p2", { status: "published", published_at: "2026-08-01T00:00:00.000Z" }),
@@ -191,7 +191,7 @@ describe("createPost", () => {
 });
 
 describe("updatePost", () => {
-  it("پست ناموجود ⟸ kind=not_found", async () => {
+  it("nonexistent post ⟸ kind=not_found", async () => {
     seedFake();
     const result = await updatePost(
       "nist",
@@ -203,7 +203,7 @@ describe("updatePost", () => {
     expect(result.kind).toBe("not_found");
   });
 
-  it("پیش‌نویس ⟸ updated_at هرگز جلو نمی‌رود، حتی با meaningfulEdit=true", async () => {
+  it("draft ⟸ updated_at never advances, even with meaningfulEdit=true", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     seedFake(post("pre-nevis", { status: "draft", updated_at: original }));
     const result = await updatePost(
@@ -217,7 +217,7 @@ describe("updatePost", () => {
     expect(result.post.title_fa).toBe("عنوان تازه");
   });
 
-  it("منتشرشده بدون تیک ⟸ updated_at جلو نمی‌رود", async () => {
+  it("published without the checkbox ⟸ updated_at does not advance", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     seedFake(
       post("montasher", {
@@ -236,7 +236,7 @@ describe("updatePost", () => {
     expect(result.post.updated_at).toBe(original);
   });
 
-  it("منتشرشده با تیک صریح ⟸ updated_at جلو می‌رود", async () => {
+  it("published with the checkbox explicitly checked ⟸ updated_at advances", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     const now = "2026-08-07T00:00:00.000Z";
     seedFake(
@@ -258,7 +258,7 @@ describe("updatePost", () => {
 });
 
 describe("publishPost", () => {
-  it("پست ناموجود ⟸ kind=not_found", async () => {
+  it("nonexistent post ⟸ kind=not_found", async () => {
     seedFake();
     const result = await publishPost("nist", "2026-08-07T00:00:00.000Z");
     expect(result.ok).toBe(false);
@@ -266,7 +266,7 @@ describe("publishPost", () => {
     expect(result.kind).toBe("not_found");
   });
 
-  it("پیش‌نویس ⟸ status=published، published_at=now، updated_at=now", async () => {
+  it("draft ⟸ status=published, published_at=now, updated_at=now", async () => {
     seedFake(post("pre-nevis", { status: "draft", published_at: null }));
     const now = "2026-08-07T00:00:00.000Z";
     const result = await publishPost("pre-nevis", now);
@@ -277,7 +277,7 @@ describe("publishPost", () => {
     expect(result.post.updated_at).toBe(now);
   });
 
-  it("از قبل منتشرشده ⟸ رد می‌شود", async () => {
+  it("already published ⟸ rejected", async () => {
     seedFake(
       post("montasher", {
         status: "published",
@@ -288,7 +288,7 @@ describe("publishPost", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("پس‌گرفته‌شده دوباره منتشر می‌شود و published_at قدیمی‌اش را حفظ می‌کند", async () => {
+  it("a retracted post is published again and keeps its original published_at", async () => {
     const firstPublish = "2026-07-01T00:00:00.000Z";
     seedFake(
       post("bargasht", {
@@ -307,7 +307,7 @@ describe("publishPost", () => {
 });
 
 describe("retractPost", () => {
-  it("پست ناموجود ⟸ kind=not_found", async () => {
+  it("nonexistent post ⟸ kind=not_found", async () => {
     seedFake();
     const result = await retractPost("nist");
     expect(result.ok).toBe(false);
@@ -315,13 +315,13 @@ describe("retractPost", () => {
     expect(result.kind).toBe("not_found");
   });
 
-  it("پیش‌نویس ⟸ رد می‌شود (فقط منتشرشده پس گرفته می‌شود)", async () => {
+  it("draft ⟸ rejected (only published posts can be retracted)", async () => {
     seedFake(post("pre-nevis", { status: "draft" }));
     const result = await retractPost("pre-nevis");
     expect(result.ok).toBe(false);
   });
 
-  it("منتشرشده ⟸ status=retracted، updated_at دست‌نخورده می‌ماند", async () => {
+  it("published ⟸ status=retracted, updated_at stays untouched", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     seedFake(
       post("montasher", {
@@ -347,7 +347,7 @@ describe("setPostImage", () => {
     image_height: 900,
   };
 
-  it("پست ناموجود ⟸ kind=not_found", async () => {
+  it("nonexistent post ⟸ kind=not_found", async () => {
     seedFake();
     const result = await setPostImage("nist", image);
     expect(result.ok).toBe(false);
@@ -355,20 +355,20 @@ describe("setPostImage", () => {
     expect(result.kind).toBe("not_found");
   });
 
-  it("متن جایگزین خالی ⟸ رد می‌شود، چیزی روی منبع ذخیره نمی‌شود", async () => {
+  it("empty alt text ⟸ rejected, nothing is saved to the source", async () => {
     const fake = seedFake(post("akkas"));
     const result = await setPostImage("akkas", { ...image, image_alt: "   " });
     expect(result.ok).toBe(false);
     expect(fake.imageChanges).toHaveLength(0);
   });
 
-  it("ابعاد نامعتبر ⟸ رد می‌شود", async () => {
+  it("invalid dimensions ⟸ rejected", async () => {
     seedFake(post("akkas"));
     const result = await setPostImage("akkas", { ...image, image_width: 0 });
     expect(result.ok).toBe(false);
   });
 
-  it("موفق ⟸ هر چهار فیلد روی پست می‌نشیند، updated_at دست‌نخورده می‌ماند", async () => {
+  it("success ⟸ all four fields are set on the post, updated_at stays untouched", async () => {
     const original = "2026-08-01T00:00:00.000Z";
     const fake = seedFake(post("akkas", { status: "published", updated_at: original }));
     const result = await setPostImage("akkas", image);
@@ -382,7 +382,7 @@ describe("setPostImage", () => {
     expect(fake.imageChanges).toEqual([{ slug: "akkas", patch: image }]);
   });
 
-  it("ذخیره‌ی متن پست (updatePost) هرگز به setImage نمی‌رسد — مسیرهای مجزا", async () => {
+  it("saving post text (updatePost) never reaches setImage — separate paths", async () => {
     const fake = seedFake(post("akkas"));
     await updatePost(
       "akkas",

@@ -1,14 +1,17 @@
--- مهاجرت ۰۱۲ — سه پست تحریریه‌ی همیشه‌سبز، دست‌نویس (نه از خط لوله‌ی بلیت ۱۴).
--- اجرا: psql "$TABLO_DATABASE_URL" -f collector/migrations/012_evergreen_posts.sql
+-- Migration 012 — three evergreen editorial posts, hand-written (not from
+-- the ticket 14 pipeline).
+-- Run: psql "$TABLO_DATABASE_URL" -f collector/migrations/012_evergreen_posts.sql
 --
--- هدف: بلاگ (بلیت ۱۲) روز اول با فهرست خالی راه نیفتد. این سه پست جدا از
--- بلیت ۱۵ (پنج پست لانچ داده‌محور از پایگاه) هستند — محتوای آموزشی عمومی
--- بدون رقم بازار یا کارمزد، پس دروازه‌ی اعتبارسنجی بلیت ۱۴ (منع رقم بیرون
--- از جای‌خالی) اصلاً موضوعیت ندارد؛ به همین دلیل مستقیم status='published'
--- درج می‌شوند، نه از صف پیش‌نویس (بلیت ۱۳) عبور داده می‌شوند.
+-- Purpose: so the blog (ticket 12) doesn't launch on day one with an empty
+-- list. These three posts are separate from ticket 15 (five data-driven
+-- launch posts from the database) — general educational content with no
+-- market figures or fees, so the ticket 14 validation gate (banning figures
+-- outside the placeholder) simply doesn't apply here; that's why they're
+-- inserted directly with status='published', rather than passed through the
+-- draft queue (ticket 13).
 --
--- idempotent: on conflict (slug) do nothing — بازاجرا ردیف تکراری نمی‌سازد
--- و پستِ ویرایش‌شده‌ی دستی را هم عقب نمی‌برد.
+-- idempotent: on conflict (slug) do nothing — re-running does not create a
+-- duplicate row, and does not revert a manually edited post either.
 
 insert into posts (slug, title_fa, body_md, status, published_at, updated_at)
 values (

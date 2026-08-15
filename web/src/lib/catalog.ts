@@ -1,6 +1,7 @@
 /**
- * ⚠️ این ماژول هیچ فرمول قیمتی و هیچ عدد بین‌سکویی ندارد (قاعده‌های ۱ و ۴)
- * و هیچ وابستگی نودی ندارد، پس import شدنش از هر دو سو بی‌خطر است.
+ * ⚠️ This module has no price formula and no cross-platform number (rules 1
+ * and 4), and has no Node dependency, so importing it from either side is
+ * safe.
  */
 import {
   getInstruments,

@@ -1,10 +1,12 @@
 /**
- * ⚠️ این تست عمداً **هیچ مقایسه‌ای با `Intl` نمی‌کند.** اگر انتظارها را از
- * `Intl.NumberFormat("fa-IR")` بسازیم، تست دقیقاً همان چیزی را می‌سنجد که
- * `lib/fa-number.ts` قرار بود از آن رها شود: نسخه‌ی ICU محیط اجرا. آن‌وقت
- * روی نود لپ‌تاپ (ICU 78) سبز می‌شد و روی نود CI یا ایمیج تولید نسخه‌ی دیگر،
- * و بدتر — اگر روزی CLDR جدول فارسی را عوض کند، تست همراهش عوض می‌شد و
- * دقیقاً همان رگرسیونی که باید بگیرد را تأیید می‌کرد.
+ * ⚠️ This test deliberately makes **no comparison against `Intl`.** If we
+ * built the expectations from `Intl.NumberFormat("fa-IR")`, the test would
+ * measure exactly the thing `lib/fa-number.ts` was meant to free itself
+ * from: the runtime's ICU version. It would then pass on a laptop's Node
+ * (ICU 78) and fail on CI's Node or the production image's different
+ * version — and worse, if CLDR ever changes the Persian table, the test
+ * would change right along with it and confirm precisely the regression
+ * it's supposed to catch.
  */
 import { describe, expect, it, vi } from "vitest";
 
@@ -28,44 +30,45 @@ const PERCENT = "٪";
 const MINUS = "−";
 const LRM = "‎";
 
-describe("ارقام و جداکننده‌ها", () => {
-  it("ارقام لاتین را به فارسی می‌برد", () => {
+describe("digits and separators", () => {
+  it("converts Latin digits to Persian", () => {
     expect(formatFaNumber(0)).toBe("۰");
     expect(formatFaNumber(7)).toBe("۷");
     expect(formatFaNumber(1234567890)).toBe(`۱${GROUP}۲۳۴${GROUP}۵۶۷${GROUP}۸۹۰`);
   });
 
-  it("هزارگان را با U+066C گروه می‌کند، نه با ویرگول لاتین", () => {
+  it("groups thousands with U+066C, not a Latin comma", () => {
     expect(formatFaNumber(1234)).toBe(`۱${GROUP}۲۳۴`);
     expect(formatFaNumber(18611000)).toBe(`۱۸${GROUP}۶۱۱${GROUP}۰۰۰`);
     expect(formatFaNumber(1234)).not.toContain(",");
   });
 
-  it("عدد سه‌رقمی و کم‌تر گروه نمی‌گیرد", () => {
+  it("a three-digit number or fewer isn't grouped", () => {
     expect(formatFaNumber(999)).toBe("۹۹۹");
     expect(formatFaNumber(100)).toBe("۱۰۰");
   });
 
-  it("اعشار را با U+066B می‌نویسد، نه با نقطه", () => {
+  it("writes the decimal point with U+066B, not a dot", () => {
     expect(formatFaNumber(0.5, { maximumFractionDigits: 3 })).toBe(`۰${DECIMAL}۵`);
     expect(formatFaNumber(1.25, { maximumFractionDigits: 3 })).toBe(`۱${DECIMAL}۲۵`);
     expect(formatFaNumber(0.5, { maximumFractionDigits: 3 })).not.toContain(".");
   });
 
-  it("منفی را با U+200E + U+2212 می‌نویسد، نه با خط تیره‌ی ASCII", () => {
+  it("writes negative with U+200E + U+2212, not an ASCII hyphen", () => {
     expect(formatFaNumber(-1234)).toBe(`${LRM}${MINUS}۱${GROUP}۲۳۴`);
     expect(formatFaNumber(-1234)).not.toContain("-");
   });
 });
 
-describe("گرد کردن", () => {
+describe("rounding", () => {
   /**
-   * ⚠️ رگرسیون واقعی: پیاده‌سازی اول با `toFixed` نوشته شده بود و اینجا
-   * «۲٫۰۰» می‌داد، چون ۲٫۰۰۵ در دودویی ۲٫۰۰۴۹۹…ست. ICU روی **نمایش ده‌دهی
-   * کوتاه** گرد می‌کند، نه روی مقدار دودویی. هر بازنویسی‌ای که این تست را
-   * قرمز کند، همان اشتباه را تکرار کرده.
+   * ⚠️ A real regression: the first implementation was written with
+    * `toFixed` and gave "2.00" here, because 2.005 in binary is
+   * 2.00499…. ICU rounds on the **short decimal representation**, not
+   * the binary value. Any rewrite that turns this test red has
+   * repeated the same mistake.
    */
-  it("نیم‌رو-به-بالا روی نمایش ده‌دهی است، نه روی مقدار دودویی", () => {
+  it("half-up rounding operates on the decimal representation, not the binary value", () => {
     expect(formatFaNumber(2.005, { minimumFractionDigits: 2, maximumFractionDigits: 2 })).toBe(
       `۲${DECIMAL}۰۱`,
     );
@@ -74,12 +77,12 @@ describe("گرد کردن", () => {
     );
   });
 
-  it("سرریز گرد کردن، رقم صحیح را درست جابه‌جا می‌کند", () => {
+  it("a rounding overflow carries correctly into the integer digit", () => {
     expect(formatFaNumber(9.99, { maximumFractionDigits: 1 })).toBe(`۱۰`);
     expect(formatFaNumber(999.95, { maximumFractionDigits: 1 })).toBe(`۱${GROUP}۰۰۰`);
   });
 
-  it("صفرهای انتهایی فقط تا حداقلِ خواسته‌شده می‌مانند", () => {
+  it("trailing zeros are kept only down to the requested minimum", () => {
     expect(formatFaNumber(2, { maximumFractionDigits: 3 })).toBe("۲");
     expect(formatFaNumber(2, { minimumFractionDigits: 2, maximumFractionDigits: 2 })).toBe(
       `۲${DECIMAL}۰۰`,
@@ -87,20 +90,20 @@ describe("گرد کردن", () => {
     expect(formatFaNumber(0.995, { maximumFractionDigits: 3 })).toBe(`۰${DECIMAL}۹۹۵`);
   });
 
-  it("عدد با نماد نمایی را هم درست باز می‌کند", () => {
+  it("correctly expands a number given in exponential notation too", () => {
     expect(formatFaNumber(0.0000004, { maximumFractionDigits: 7 })).toBe(`۰${DECIMAL}۰۰۰۰۰۰۴`);
     expect(formatFaNumber(0.0000004, { maximumFractionDigits: 2 })).toBe("۰");
   });
 });
 
-describe("علامت", () => {
-  it("auto: منفیِ گردشده-به-صفر علامتش را نگه می‌دارد", () => {
+describe("sign", () => {
+  it("auto: a negative that rounds to zero keeps its sign", () => {
     expect(formatFaPercentFromFraction(-0.000004, { maximumFractionDigits: 2 })).toBe(
       `${LRM}${MINUS}۰${PERCENT}`,
     );
   });
 
-  it("exceptZero: همان ورودی بی‌علامت می‌شود", () => {
+  it("exceptZero: the same input comes out unsigned", () => {
     expect(
       formatFaPercentFromFraction(-0.000004, {
         maximumFractionDigits: 2,
@@ -115,7 +118,7 @@ describe("علامت", () => {
     ).toBe(`۰${PERCENT}`);
   });
 
-  it("exceptZero: مثبتِ ناصفر علامت + می‌گیرد", () => {
+  it("exceptZero: a nonzero positive gets a + sign", () => {
     expect(
       formatFaPercentFromFraction(0.0039, {
         maximumFractionDigits: 2,
@@ -124,13 +127,13 @@ describe("علامت", () => {
     ).toBe(`${LRM}+۰${DECIMAL}۳۹${PERCENT}`);
   });
 
-  it("صفرِ منفی علامت نمی‌گیرد (واگرایی عمدی از Intl)", () => {
+  it("negative zero gets no sign (a deliberate divergence from Intl)", () => {
     expect(formatFaNumber(-0)).toBe("۰");
   });
 });
 
-describe("ورودی نامعتبر — کهنگی نه خطا", () => {
-  it("NaN و بی‌نهایت «—» می‌دهند و بی‌صدا رد نمی‌شوند", () => {
+describe("invalid input — staleness, not error", () => {
+  it("NaN and infinity produce «—» and are never silently swallowed", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(formatFaNumber(Number.NaN)).toBe("—");
     expect(formatFaNumber(Number.POSITIVE_INFINITY)).toBe("—");
@@ -139,7 +142,7 @@ describe("ورودی نامعتبر — کهنگی نه خطا", () => {
     warn.mockRestore();
   });
 
-  it("عدد بزرگ‌تر از حدِ نمایشِ ده‌دهی هم «—» می‌گیرد، نه «1e+21»", () => {
+  it("a number beyond the decimal-display limit also gets «—», not «1e+21»", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(formatFaNumber(1e21)).toBe("—");
     expect(warn).toHaveBeenCalledOnce();
@@ -147,38 +150,38 @@ describe("ورودی نامعتبر — کهنگی نه خطا", () => {
   });
 });
 
-describe("مصرف‌کننده‌ها — خروجی نباید نسبت به قبل عوض شده باشد", () => {
-  it("formatToman: قیمت‌های واقعی امروز", () => {
+describe("consumers — the output must not have changed from before", () => {
+  it("formatToman: today's real prices", () => {
     expect(formatToman(18611000)).toBe(`۱۸${GROUP}۶۱۱${GROUP}۰۰۰`);
     expect(formatToman(18530000)).toBe(`۱۸${GROUP}۵۳۰${GROUP}۰۰۰`);
   });
 
-  it("formatPercentPointsFa: درصد آماده‌ی گردآورنده (رشته‌ی numeric پستگرس)", () => {
+  it("formatPercentPointsFa: percent as delivered by the collector (a Postgres numeric string)", () => {
     expect(formatPercentPointsFa("0.5000")).toBe(`۰${DECIMAL}۵${PERCENT}`);
     expect(formatPercentPointsFa("0.0000")).toBe(`۰${PERCENT}`);
     expect(formatPercentPointsFa("0.9950")).toBe(`۰${DECIMAL}۹۹۵${PERCENT}`);
   });
 
-  it("formatPercentFa: کسر ⟸ درصد", () => {
+  it("formatPercentFa: fraction ⟸ percent", () => {
     expect(formatPercentFa(0.0039)).toBe(`۰${DECIMAL}۳۹${PERCENT}`);
     expect(formatPercentFa(0.31)).toBe(`۳۱${PERCENT}`);
   });
 
-  it("formatSignedPercentFa: ستون «تغییرات» کارت نرخ", () => {
+  it("formatSignedPercentFa: the rate card's \"changes\" column", () => {
     expect(formatSignedPercentFa(0.0071)).toBe(`${LRM}+۰${DECIMAL}۷۱${PERCENT}`);
     expect(formatSignedPercentFa(-0.0012)).toBe(`${LRM}${MINUS}۰${DECIMAL}۱۲${PERCENT}`);
     expect(formatSignedPercentFa(0)).toBe(`۰${PERCENT}`);
   });
 
-  it("formatMinutesAgoFa: برچسب کهنگی", () => {
+  it("formatMinutesAgoFa: the staleness label", () => {
     expect(formatMinutesAgoFa(0)).toBe("لحظاتی پیش");
     expect(formatMinutesAgoFa(3)).toBe("۳ دقیقه پیش");
     expect(formatMinutesAgoFa(1500)).toBe(`۱${GROUP}۵۰۰ دقیقه پیش`);
   });
 });
 
-describe("قطعی‌بودن", () => {
-  it("خروجی به وضعیت سراسری یا فراخوانی‌های قبلی وابسته نیست", () => {
+describe("determinism", () => {
+  it("output doesn't depend on global state or prior calls", () => {
     const once = formatFaNumber(18611000);
     for (let i = 0; i < 100; i++) {
       formatFaNumber(Math.random() * 1e9, { maximumFractionDigits: 3 });
@@ -186,40 +189,41 @@ describe("قطعی‌بودن", () => {
     expect(formatFaNumber(18611000)).toBe(once);
   });
 
-  it("هیچ نویسه‌ی لاتینی در خروجی نیست (جز علامت + که خودِ Intl هم لاتین می‌دهد)", () => {
+  it("no Latin character appears in the output (except the + sign, which Intl itself renders in Latin too)", () => {
     expect(formatFaNumber(1234567.89, { maximumFractionDigits: 2 })).not.toMatch(/[0-9.,]/);
   });
 });
 
 /**
- * ⚠️ چرا این هم لازم شد: `lib/dashboard.ts` برچسب «آخرین به‌روزرسانی» و ساعت
- * وقوع کمینه/بیشینه‌ی خلاصه بازار را با `Intl.DateTimeFormat` می‌ساخت، و
- * `buildDashboard` در بدنه‌ی رندر `HomePage` صدا زده می‌شود — یعنی **هم روی
- * سرور و هم موقع hydration** اجرا می‌شد. همان ریسک واگرایی ICU که این فایل
- * برای عدد بسته بود، از در دیگری برگشته بود.
+  * ⚠️ Why this was needed too: `lib/dashboard.ts` built the "last
+  * update" label and the time of the market summary's high/low with
+ * `Intl.DateTimeFormat`, and `buildDashboard` is called inside
+ * `HomePage`'s render body — meaning it ran **both on the server and
+ * during hydration**. The same ICU-divergence risk this file had closed
+ * off for numbers had come back in through another door.
  */
-describe("ساعت فارسی — بدون Intl", () => {
-  it("زمان UTC را به ساعت تهران می‌برد", () => {
+describe("Persian clock — no Intl", () => {
+  it("converts UTC time to Tehran time", () => {
     expect(formatFaClock("2026-08-11T09:00:00Z")).toBe("۱۲:۳۰");
   });
 
-  it("گذر از نیمه‌شب را درست می‌چرخاند", () => {
+  it("correctly wraps around midnight", () => {
     expect(formatFaClock("2026-01-15T20:35:00Z")).toBe("۰۰:۰۵");
     expect(formatFaClock("2026-08-11T20:30:00Z")).toBe("۰۰:۰۰");
   });
 
-  it("همیشه دو رقمی است و با کولون ASCII جدا می‌شود", () => {
+  it("is always two digits and separated by an ASCII colon", () => {
     const out = formatFaClock("2026-08-11T04:35:00Z");
     expect(out).toBe("۰۸:۰۵");
     expect(out.charCodeAt(2)).toBe(0x3a);
   });
 
-  it("تابستان و زمستان یک اختلاف دارند (ایران ساعت تابستانی ندارد)", () => {
+  it("summer and winter share the same offset (Iran has no daylight saving)", () => {
     expect(formatFaClock("2026-01-15T12:00:00Z")).toBe("۱۵:۳۰");
     expect(formatFaClock("2026-07-15T12:00:00Z")).toBe("۱۵:۳۰");
   });
 
-  it("ورودی نامعتبر «—» می‌دهد و بی‌صدا رد نمی‌شود", () => {
+  it("invalid input produces «—» and is never silently swallowed", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(formatFaClock("چرند")).toBe("—");
     expect(warn).toHaveBeenCalledOnce();

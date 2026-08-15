@@ -49,14 +49,14 @@ class SlugRegistry:
 
     def validate_new_slug(self, slug: str) -> None:
         if slug in RESERVED_WORDS:
-            raise ReservedSlugError(f"اسلاگ {slug!r} کلمه‌ی رزرو است (تصمیم ۱۱)")
+            raise ReservedSlugError(f"slug {slug!r} is a reserved word (decision 11)")
         if not _SLUG_PATTERN.fullmatch(slug):
             raise InvalidSlugError(
-                f"اسلاگ {slug!r} لاتین تخت نیست (فقط a-z0-9 و خط تیره — بند ۶.۶)"
+                f"slug {slug!r} is not flat Latin (only a-z0-9 and hyphen — clause 6.6)"
             )
         if slug in self._slugs:
             raise SlugCollisionError(
-                f"اسلاگ {slug!r} قبلاً به {self._slugs[slug].value} داده شده — قید یکتایی"
+                f"slug {slug!r} was already given to {self._slugs[slug].value} — uniqueness constraint"
             )
 
     def kind_of(self, slug: str) -> SlugKind | None:

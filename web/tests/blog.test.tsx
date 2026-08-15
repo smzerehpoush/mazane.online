@@ -72,7 +72,7 @@ async function renderIndex(): Promise<string> {
 
 async function renderPost(slug: string): Promise<string> {
   const post = await getPublishedPost(slug);
-  if (post === null) throw new Error(`پست ${slug} ۴۰۴ شد`);
+  if (post === null) throw new Error(`post ${slug} returned 404`);
   return renderToStaticMarkup(<BlogPostView post={post} />);
 }
 
@@ -82,8 +82,8 @@ function jsonLdOf(head: ReturnType<typeof blogPostHead>): Record<string, unknown
   );
 }
 
-describe("فهرست بلاگ — /blog", () => {
-  it("پست‌های منتشرشده را با عنوان فارسی، تاریخ فارسی و لینک تخت نشان می‌دهد", async () => {
+describe("blog index — /blog", () => {
+  it("shows published posts with Persian title, Persian date, and a flat link", async () => {
     seedBlog(ALL_POSTS);
     const html = await renderIndex();
 
@@ -96,33 +96,33 @@ describe("فهرست بلاگ — /blog", () => {
     expect(html).toMatch(/<time [^>]*datetime="2026-08-01T09:00:00.000Z"/i);
   });
 
-  it("نو به کهنه مرتب است — پست تازه‌تر بالاتر", async () => {
+  it("sorted newest to oldest — the newer post is higher", async () => {
     seedBlog(ALL_POSTS);
     const html = await renderIndex();
     expect(html.indexOf(PUBLISHED_NEW.title_fa)).toBeGreaterThan(-1);
     expect(html.indexOf(PUBLISHED_NEW.title_fa)).toBeLessThan(html.indexOf(PUBLISHED_OLD.title_fa));
   });
 
-  it("پیش‌نویس و پس‌گرفته در فهرست نیستند", async () => {
+  it("draft and retracted posts are not in the list", async () => {
     seedBlog(ALL_POSTS);
     const html = await renderIndex();
     expect(html).not.toContain(DRAFT.title_fa);
     expect(html).not.toContain(RETRACTED.title_fa);
   });
 
-  it("بلاگ خالی هم صفحه‌ی سالم می‌دهد", async () => {
+  it("an empty blog still renders a healthy page", async () => {
     seedBlog([]);
     const html = await renderIndex();
     expect(html).toContain("هنوز پستی منتشر نشده است");
   });
 
-  it("سرصفحه‌اش canonical و BreadcrumbList دارد", () => {
+  it("its head has canonical and BreadcrumbList", () => {
     const head = blogIndexHead();
     expect(head.links).toContainEqual({ rel: "canonical", href: `${SITE_URL}/blog` });
     expect(head.scripts?.[0]?.children).toContain("BreadcrumbList");
   });
 
-  it("کارت پست با عکس شاخص: img با src/width/height/alt", async () => {
+  it("post card with a featured image: img with src/width/height/alt", async () => {
     seedBlog([
       {
         ...PUBLISHED_NEW,
@@ -142,15 +142,15 @@ describe("فهرست بلاگ — /blog", () => {
     expect(html).toContain('alt="توضیح عکس"');
   });
 
-  it("کارت پست بدون عکس: هیچ img ای نیست و چیدمان امروز دست‌نخورده می‌ماند", async () => {
+  it("post card without an image: no img at all, and today's layout stays untouched", async () => {
     seedBlog([PUBLISHED_OLD]);
     const html = await renderIndex();
     expect(html).not.toContain("<img");
   });
 });
 
-describe("صفحه‌ی پست — /blog/[slug]", () => {
-  it("عنوان، بدنه‌ی مارک‌داون رندرشده و تاریخ فارسی دارد", async () => {
+describe("post page — /blog/[slug]", () => {
+  it("has the title, rendered markdown body, and Persian date", async () => {
     seedBlog(ALL_POSTS);
     const html = await renderPost(PUBLISHED_OLD.slug);
 
@@ -166,7 +166,7 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(html).toMatch(/<time [^>]*datetime="2026-07-20T08:30:00.000Z"/i);
   });
 
-  it("عکس شاخص: src/width/height/alt/loading=eager بالای محتوا", async () => {
+  it("featured image: src/width/height/alt/loading=eager above the content", async () => {
     seedBlog([
       {
         ...PUBLISHED_NEW,
@@ -189,13 +189,13 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(html.indexOf("<img")).toBeLessThan(html.indexOf(PUBLISHED_NEW.body_md));
   });
 
-  it("پستِ بدون عکس دقیقاً رندر امروز است — هیچ img ای نیست", async () => {
+  it("a post without an image renders exactly like today — no img at all", async () => {
     seedBlog(ALL_POSTS);
     const html = await renderPost(PUBLISHED_OLD.slug);
     expect(html).not.toContain("<img");
   });
 
-  it("BlogPosting معتبر با تاریخ‌های ISO لاتین و هم‌ارز داده‌ی seed", async () => {
+  it("valid BlogPosting with Latin ISO dates matching the seeded data", async () => {
     seedBlog(ALL_POSTS);
     const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;
     const [blogPosting] = jsonLdOf(blogPostHead(post));
@@ -214,14 +214,14 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     });
   });
 
-  it("ترتیب اسکریپت‌ها عمدی است: BlogPosting اول، BreadcrumbList بعد", async () => {
+  it("script order is intentional: BlogPosting first, BreadcrumbList after", async () => {
     seedBlog(ALL_POSTS);
     const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;
     const blocks = jsonLdOf(blogPostHead(post));
     expect(blocks.map((block) => block["@type"])).toEqual(["BlogPosting", "BreadcrumbList"]);
   });
 
-  it("HTML خام داخل مارک‌داون escape می‌شود، نه اجرا", async () => {
+  it("raw HTML inside markdown is escaped, not executed", async () => {
     seedBlog([
       {
         ...PUBLISHED_NEW,
@@ -233,28 +233,28 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
     expect(html).not.toContain("<script>alert");
   });
 
-  it("پیش‌نویس ⟸ ۴۰۴", async () => {
+  it("draft ⟸ 404", async () => {
     seedBlog(ALL_POSTS);
     await expect(getPublishedPost(DRAFT.slug)).resolves.toBeNull();
   });
 
-  it("پس‌گرفته ⟸ ۴۰۴", async () => {
+  it("retracted ⟸ 404", async () => {
     seedBlog(ALL_POSTS);
     await expect(getPublishedPost(RETRACTED.slug)).resolves.toBeNull();
   });
 
-  it("اسلاگ ناموجود ⟸ ۴۰۴", async () => {
+  it("nonexistent slug ⟸ 404", async () => {
     seedBlog(ALL_POSTS);
     await expect(getPublishedPost("hich-vaght-nabude")).resolves.toBeNull();
   });
 
-  it("سرصفحه‌ی ۴۰۴ صریحاً noindex است — صفحه‌ی نبوده ایندکس نمی‌شود", () => {
+  it("the 404 head is explicitly noindex — a nonexistent page never gets indexed", () => {
     const head = blogPostHead(undefined);
     expect(head.meta).toContainEqual({ name: "robots", content: "noindex" });
     expect(head.scripts).toBeUndefined();
   });
 
-  it("سرصفحه‌ی پست canonical تخت زیر /blog/ دارد", async () => {
+  it("the post head has a flat canonical under /blog/", async () => {
     seedBlog(ALL_POSTS);
     const post = (await getPublishedPost(PUBLISHED_OLD.slug)) as PublishedPost;
     const head = blogPostHead(post);
@@ -266,8 +266,8 @@ describe("صفحه‌ی پست — /blog/[slug]", () => {
   });
 });
 
-describe("استور بلاگ از دسترس خارج (مثلاً build بیرون از سرور) — کهنگی/خالی، نه شکست", () => {
-  /** ⚠️ مستقیم `setBlogSource` — کمک‌کار seed فقط منبع سالم می‌سازد. */
+describe("blog store unreachable (e.g. a build outside the server) — staleness/empty, not failure", () => {
+  /** ⚠️ Calls `setBlogSource` directly — the seed helper only builds a healthy source. */
   function seedBrokenSource(): void {
     setBlogSource({
       listPosts: async () => {
@@ -279,20 +279,20 @@ describe("استور بلاگ از دسترس خارج (مثلاً build بیر�
     });
   }
 
-  it("فهرست بلاگ باز هم ۲۰۰ می‌دهد — حالت خالی", async () => {
+  it("the blog index still returns 200 — empty state", async () => {
     seedBrokenSource();
     const html = await renderIndex();
     expect(html).toContain("هنوز پستی منتشر نشده است");
   });
 
-  it("صفحه‌ی پست خطای استور را ۴۰۴ جا نمی‌زند — خطا بالا می‌رود تا ایندکس نسوزد", async () => {
+  it("the post page doesn't disguise a store error as 404 — the error propagates so indexing doesn't get burned", async () => {
     seedBrokenSource();
     await expect(getPublishedPost(PUBLISHED_OLD.slug)).rejects.toThrow("pg down");
   });
 });
 
-describe("سایت‌مپ بلاگ", () => {
-  it("lastmod پست = updated_at خودش، نه now()؛ صفحات دیگر lastmod ندارند", async () => {
+describe("blog sitemap", () => {
+  it("post lastmod = its own updated_at, not now(); other pages have no lastmod", async () => {
     seedBlog(ALL_POSTS);
     const entries = buildSitemapEntries({
       posts: await listPublishedPosts(),
@@ -311,7 +311,7 @@ describe("سایت‌مپ بلاگ", () => {
     expect(entries.find((entry) => entry.path === "/")?.lastModified).toBeUndefined();
   });
 
-  it("پیش‌نویس و پس‌گرفته در سایت‌مپ نیستند", async () => {
+  it("draft and retracted posts are not in the sitemap", async () => {
     seedBlog(ALL_POSTS);
     const paths = buildSitemapEntries({
       posts: await listPublishedPosts(),

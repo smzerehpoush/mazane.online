@@ -23,7 +23,7 @@ def daily_publish_cap_from_env() -> int:
             raise ValueError(raw)
     except ValueError:
         log.warning(
-            "TABLO_DAILY_PUBLISH_CAP=%r نامعتبر است — پیش‌فرض %s",
+            "TABLO_DAILY_PUBLISH_CAP=%r is invalid — defaulting to %s",
             raw,
             DEFAULT_DAILY_PUBLISH_CAP,
         )
@@ -52,14 +52,14 @@ async def publish_due(
     for draft in await gateway.oldest_drafts(budget):
         await gateway.set_published(draft.slug, published_at=moment)
         published.append(draft.slug)
-        log.info("پست %s منتشر شد (%s از سقف %s امروز)", draft.slug, already + len(published), daily_cap)
+        log.info("post %s published (%s of today's cap of %s)", draft.slug, already + len(published), daily_cap)
         revalidated = False
         try:
             revalidated = await revalidate(draft.slug)
         except Exception:
-            log.exception("فراخوان بازتولید وب برای %s استثنا داد", draft.slug)
+            log.exception("web revalidate call for %s raised an exception", draft.slug)
         if not revalidated:
-            log.warning("بازتولید وب برای %s نشد — ISR جبران می‌کند", draft.slug)
+            log.warning("web revalidate for %s did not happen — ISR will compensate", draft.slug)
     return tuple(published)
 
 

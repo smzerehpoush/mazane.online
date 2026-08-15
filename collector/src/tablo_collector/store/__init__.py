@@ -10,8 +10,8 @@ from ..references import ReferenceSnapshot
 from ..settings import ChartConfigEntry
 
 
-# ⚠️ اسنپ‌شات `suppressed` هرگز به قیمت جاری/`updated_at` نمی‌رسد؛ فقط تاریخچه.
-# ⚠️ فهرست عمومی فقط سکوهای `is_listed` را دارد — لایه‌ی وب هیچ فیلتری ندارد.
+# ⚠️ A `suppressed` snapshot never reaches current price/`updated_at`; history only.
+# ⚠️ The public listing only has `is_listed` platforms — the web layer applies no filtering.
 class Store(Protocol):
     async def save_snapshot(self, snapshot: PlatformSnapshot) -> None:
         ...

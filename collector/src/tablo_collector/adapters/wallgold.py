@@ -23,12 +23,12 @@ class WallgoldAdapter:
 
         raw_price = (market.get("marketCap") or {}).get("lastPrice")
         if raw_price is None:
-            raise AdapterError("وال‌گلد: قیمت طلای ۱۸ عیار در payload تهی است")
+            raise AdapterError("Wallgold: 18k gold price is empty in payload")
         try:
             raw_value = Decimal(str(raw_price))
             fee = Decimal(str(market["otcFeeCoefficient"]))
         except (InvalidOperation, KeyError) as exc:
-            raise AdapterError(f"وال‌گلد: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Wallgold: invalid payload: {exc!r}") from exc
 
         return known_fee_snapshot(
             slug=self.slug,
@@ -48,5 +48,5 @@ class WallgoldAdapter:
             return next(m for m in markets if m.get("symbol") == GOLD_SYMBOL)
         except (TypeError, KeyError, StopIteration) as exc:
             raise AdapterError(
-                f"وال‌گلد: بازار {GOLD_SYMBOL} در payload پیدا نشد"
+                f"Wallgold: market {GOLD_SYMBOL} not found in payload"
             ) from exc

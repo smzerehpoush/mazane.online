@@ -42,18 +42,18 @@ function assertOutboundLinkPolicy(
       const host = new URL(href).hostname;
       if (platformHosts.has(host)) {
         throw new Error(
-          `بند ۶.۴ نقض شد: لینک درآمدزای ${href} در «${pageName}» /go/ را دور می‌زند`,
+          `Clause 6.4 violated: revenue link ${href} in "${pageName}" bypasses /go/`,
         );
       }
       const rel = relTokens(tag);
       if (!rel.has("nofollow") || !rel.has("noopener")) {
         throw new Error(
-          `بند ۶.۴ نقض شد: لینک خروجی ${href} در «${pageName}» rel کامل ندارد (${tag})`,
+          `Clause 6.4 violated: outbound link ${href} in "${pageName}" doesn't have a complete rel (${tag})`,
         );
       }
       if (!NON_REVENUE_REFERENCE_HOSTS.has(host) && !rel.has("sponsored")) {
         throw new Error(
-          `بند ۶.۴ نقض شد: لینک خروجی ${href} در «${pageName}» sponsored ندارد (${tag})`,
+          `Clause 6.4 violated: outbound link ${href} in "${pageName}" is missing sponsored (${tag})`,
         );
       }
     } else if (href.startsWith("/go/")) {
@@ -62,12 +62,12 @@ function assertOutboundLinkPolicy(
       for (const token of ["sponsored", "nofollow", "noopener"]) {
         if (!rel.has(token)) {
           throw new Error(
-            `بند ۶.۴ نقض شد: لینک ${href} در «${pageName}» توکن ${token} را در rel ندارد (${tag})`,
+            `Clause 6.4 violated: link ${href} in "${pageName}" is missing the ${token} token in rel (${tag})`,
           );
         }
       }
       if (attrOf(tag, "target") !== "_blank") {
-        throw new Error(`لینک ${href} در «${pageName}» باید target="_blank" داشته باشد (${tag})`);
+        throw new Error(`Link ${href} in "${pageName}" must have target="_blank" (${tag})`);
       }
     }
   }
@@ -148,18 +148,19 @@ function seededStore(): SeededStore {
 
 async function renderSlug(slug: string): Promise<string> {
   const data = await slugPageData(slug);
-  if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
+  if (data === null) throw new Error(`Page ${slug} 404'd`);
   return renderToStaticMarkup(<SlugPageView data={data as SlugPageData} />);
 }
 
-describe("هیچ لینک خروجی درآمدزایی بدون sponsored یا بیرون /go/ نیست", () => {
-  it("صفحه‌ی اصلی از کاونده می‌گذرد و برای هر سکو یک لینک /go/ دارد", async () => {
+describe("no revenue-generating outbound link is without sponsored, or outside /go/", () => {
+  it("the home page passes the gate and has a /go/ link for every platform", async () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(seededStore())} />);
     const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "صفحه‌ی اصلی");
-    // ⚠️ شمار دقیق دیگر ادعا نمی‌شود: با بازطراحی، هر منبع **دو** نقطه‌ی
-    // خروج دارد (نشانگر محور و کارت منبع) و منبعِ بی‌قیمت فقط کارت می‌گیرد.
-    // چیزی که واقعاً مهم است این است که هر سکو دست‌کم یک راه خروج داشته
-    // باشد و **همه‌ی** لینک‌ها از کاونده‌ی سیاست رد شوند.
+    // ⚠️ The exact count is no longer asserted: with the redesign, each
+    // source has **two** exit points (the axis marker and the source card),
+    // and a priceless source only gets a card. What actually matters is
+    // that every platform has at least one way out, and **all** links pass
+    // the policy gate.
     expect(goLinks).toBeGreaterThanOrEqual(PLATFORMS.length);
     for (const platform of PLATFORMS) {
       expect(html, platform.slug).toContain(`href="/go/${platform.slug}"`);
@@ -167,7 +168,7 @@ describe("هیچ لینک خروجی درآمدزایی بدون sponsored یا 
     expect(html).not.toContain(REFERRAL_CODE);
   });
 
-  it("صفحه‌ی هر سکو از کاونده می‌گذرد و لینک وب‌سایتش /go/ است", async () => {
+  it("each platform's page passes the gate and its website link is /go/", async () => {
     for (const platform of PLATFORMS) {
       seed(seededStore());
       const html = await renderSlug(platform.slug);
@@ -178,14 +179,14 @@ describe("هیچ لینک خروجی درآمدزایی بدون sponsored یا 
     }
   });
 
-  it("صفحه‌ی دارایی از کاونده می‌گذرد", async () => {
+  it("the asset page passes the gate", async () => {
     seed(seededStore());
     const html = await renderSlug("tala-18");
     assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "صفحه‌ی دارایی");
     expect(html).not.toContain(REFERRAL_CODE);
   });
 
-  it("فیلدهای معرف اصلاً وارد payload کلاینت نمی‌شوند (نه فقط نمایش)", async () => {
+  it("referral fields never enter the client payload at all (not just hidden from display)", async () => {
     const data = await homeData(seededStore());
     for (const row of data.rows) {
       expect(row.platform).not.toHaveProperty("referral_url");
@@ -202,34 +203,34 @@ describe("هیچ لینک خروجی درآمدزایی بدون sponsored یا 
   });
 });
 
-describe("کاونده‌ی سیاست لینک — نقض‌ها واقعاً شکست می‌خورند", () => {
-  it("لینک مستقیم به میزبان سکو (دور زدن /go/) ⟸ شکست", () => {
+describe("link policy gate — violations actually fail", () => {
+  it("a direct link to the platform's host (bypassing /go/) ⟸ fails", () => {
     const bad = '<a href="https://wallgold.ir" rel="sponsored nofollow noopener">و</a>';
-    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(/دور می‌زند/);
+    expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(/bypasses/);
   });
 
-  it("لینک خروجی بدون sponsored ⟸ شکست", () => {
+  it("an outbound link without sponsored ⟸ fails", () => {
     const bad = '<a href="https://tabligh.example" rel="nofollow noopener">آ</a>';
     expect(() => assertOutboundLinkPolicy(bad, PLATFORM_HOSTS, "آزمایشی")).toThrow(/sponsored/);
   });
 
-  it("لینک /go/ بدون rel کامل یا بدون target=_blank ⟸ شکست", () => {
+  it("a /go/ link without a complete rel or without target=_blank ⟸ fails", () => {
     const noRel = '<a href="/go/milli" rel="nofollow noopener" target="_blank">م</a>';
     expect(() => assertOutboundLinkPolicy(noRel, PLATFORM_HOSTS, "آزمایشی")).toThrow(/sponsored/);
     const noTarget = '<a href="/go/milli" rel="sponsored nofollow noopener">م</a>';
     expect(() => assertOutboundLinkPolicy(noTarget, PLATFORM_HOSTS, "آزمایشی")).toThrow(/_blank/);
   });
 
-  it("ارجاع غیر درآمدزا به مرجع قیمت: ساده ولی حتماً nofollow", () => {
+  it("a non-revenue reference to the price source: plain, but must be nofollow", () => {
     const ok = '<a href="https://www.tala.ir/price" rel="nofollow noopener">طلا</a>';
     expect(assertOutboundLinkPolicy(ok, PLATFORM_HOSTS, "آزمایشی")).toBe(0);
     const bare = '<a href="https://www.tala.ir/price">طلا</a>';
-    expect(() => assertOutboundLinkPolicy(bare, PLATFORM_HOSTS, "آزمایشی")).toThrow(/rel کامل/);
+    expect(() => assertOutboundLinkPolicy(bare, PLATFORM_HOSTS, "آزمایشی")).toThrow(/complete rel/);
   });
 });
 
-describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای معرف نمی‌گیرد", () => {
-  it("سکوی گران‌ترِ دارای کد معرف با داشتن referral_url بالا نمی‌آید", async () => {
+describe("sorting takes no input from referral fields", () => {
+  it("the pricier platform with a referral code doesn't rank higher for having a referral_url", async () => {
     const store = seededStore();
     const now = freshIso();
     store.snapshots["milli"] = makeSnapshot({
@@ -239,22 +240,23 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     });
     const html = renderToStaticMarkup(<HomePage data={await homeData(store)} />);
 
-    // ⚠️ «ترتیب» در طرح تازه یعنی **موقعیت روی محور** (: راست =
-    // ارزان‌تر، و `right` فاصله از لبه‌ی راست است). میلی کد معرف دارد و
-    // اینجا گران‌ترین است — باید چپ‌ترین بنشیند، یعنی **بیشترین** درصد.
-    // اگر روزی کمیسیون وارد هندسه شود، همین‌جا قرمز می‌شود.
+    // ⚠️ "Order" in the new layout means **position on the axis** (right =
+    // cheaper, and `right` is the distance from the right edge). Milli has
+    // a referral code and is the most expensive here — it must sit
+    // furthest left, i.e. the **largest** percentage. If commission ever
+    // enters the geometry, this is where it turns red.
     const percentOf = (slug: string): number => {
       const marker = html.match(
         new RegExp(`data-rail-marker="${slug}"[^>]*style="right:\\s*([\\d.]+)%`),
       );
-      if (marker === null) throw new Error(`نشانگر ${slug} در HTML نیست`);
+      if (marker === null) throw new Error(`Marker ${slug} is not in the HTML`);
       return Number(marker[1]);
     };
     expect(percentOf("talasea")).toBeLessThan(percentOf("wallgold"));
     expect(percentOf("wallgold")).toBeLessThan(percentOf("milli"));
   });
 
-  it("صفحه‌ی دارایی هم همین ترتیب را دارد — کد معرف در گروه‌بندی اثر ندارد", async () => {
+  it("the asset page has the same order too — the referral code has no effect on grouping", async () => {
     const store = seededStore();
     const now = freshIso();
     store.snapshots["milli"] = makeSnapshot({
@@ -269,16 +271,17 @@ describe("مرتب‌سازی هیچ ورودی‌ای از فیلدهای مع�
     );
   });
 
-  it("توابع مرتب‌سازی حتی نام فیلدهای معرف را نمی‌شناسند (نگهبان سطح کد)", () => {
-    // «referral_url نباید هیچ ورودی‌ای به منطق مرتب‌سازی داشته
-    // باشد.» این نگهبان وجودی است: اگر روزی کسی referral را وارد
-    // tableView/bestView/groupRows یا لایه‌ی ردیف کند، همین‌جا قرمز می‌شود.
-    // ⚠️ مسیرها با بازنویسی تنکستک به‌روز شدند؛ اگر فایلی جابه‌جا شد،
-    // مسیر تازه‌اش را اینجا بگذارید — این فهرست حذف‌شدنی نیست.
+  it("the sorting functions don't even know the referral fields' names (a code-level guard)", () => {
+    // "referral_url must not feed into any sorting logic." This is an
+    // existence guard: if referral ever enters tableView/bestView/groupRows
+    // or the row layer, this test turns red here.
+    // ⚠️ Paths were updated with the TanStack rewrite; if a file moves, put
+    // its new path here — this list must not be deleted.
     for (const file of [
-      // ⚠️ با بازطراحی داشبورد، `ComparisonTable`/`home-view` جای خود را به
-      // `lib/dashboard.ts` دادند — همان‌جا که حالا ترتیب و هندسه‌ی محور ساخته
-      // می‌شود. مسیر عوض شد، پوشش نه. این فهرست حذف‌شدنی نیست.
+      // ⚠️ With the dashboard redesign, `ComparisonTable`/`home-view` gave
+      // way to `lib/dashboard.ts` — that's where ordering and axis geometry
+      // are now built. The path changed, the coverage didn't. This list
+      // must not be deleted.
       "src/lib/dashboard.ts",
       "src/components/tablo/PriceRail.tsx",
       "src/components/tablo/SourceCards.tsx",

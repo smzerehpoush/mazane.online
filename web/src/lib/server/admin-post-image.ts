@@ -1,7 +1,8 @@
 /**
- * ⚠️ **مسیر مجزا از ذخیره‌ی متن پست** (`adminPostUpdateResponse`): قطع انبار
- * عکس فقط همین مسیر را می‌شکند، نه ویرایش عنوان/متن — دو route کاملاً جدا،
- * دو تابع کاملاً جدا، هیچ وابستگی مشترکی جز خواندنِ خودِ پست ندارند.
+ * ⚠️ **Separate route from saving post text** (`adminPostUpdateResponse`):
+ * an image-store outage only breaks this route, not editing the
+ * title/body — two completely separate routes, two completely separate
+ * functions, sharing no dependency except reading the post itself.
  */
 import "@tanstack/react-start/server-only";
 

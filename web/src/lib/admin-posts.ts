@@ -1,6 +1,6 @@
-// ⚠️ `posts.updated_at` فقط با تغییر معنادار محتوا و تیک صریح کاربر جلو می‌رود؛
-// هرگز با `now` خودکار یا موقع ذخیره‌ی پیش‌نویس. تیک کلاینت هم هرگز مستقیم
-// اعتماد نمی‌شود.
+// ⚠️ `posts.updated_at` only advances on a meaningful content change plus the
+// user's explicit checkbox; never automatically with `now` or when saving a
+// draft. The client's checkbox is also never trusted directly.
 
 import type { BlogPost, PostStatus } from "./blog";
 
@@ -68,7 +68,7 @@ function source(): AdminPostsSource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {
     throw new Error(
-      "هیچ AdminPostsSource ثبت نشده — از «@/lib/server/admin-posts» بخوان یا setAdminPostsSource صدا بزن",
+      'No AdminPostsSource registered — import from "@/lib/server/admin-posts" or call setAdminPostsSource',
     );
   }
   activeSource = defaultFactory();

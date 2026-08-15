@@ -1,7 +1,7 @@
 /**
- * ⚠️ خط لوله‌ی خودکار محتوای پایتونی (`collector/src/tablo_collector/content/`)
- * همین جدول را می‌خواند/می‌نویسد — این فایل کاملاً کنارش می‌نشیند، جایگزینش
- * نمی‌شود.
+ * ⚠️ The Python content automation pipeline
+ * (`collector/src/tablo_collector/content/`) reads/writes this same table —
+ * this file sits fully alongside it, not in place of it.
  */
 import "@tanstack/react-start/server-only";
 

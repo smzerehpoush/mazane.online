@@ -12,37 +12,38 @@ const OVERRIDE: ChartPlatformConfig[] = [
   { slug: "milli", name_fa: "میلی", color: "#1d6fe0" },
 ];
 
-describe("assembleHomeData — chartPlatforms از تنظیمات پنل", () => {
-  it("بدون خواننده‌ی getChartPlatforms، همان فهرست پیش‌فرض کد است", async () => {
+describe("assembleHomeData — chartPlatforms from panel settings", () => {
+  it("without a getChartPlatforms reader, uses the same code default list", async () => {
     const data = await homeData(healthyStore());
     expect(data.chartPlatforms).toEqual(DEFAULT_CONFIG);
   });
 
-  it("خواننده‌ای که override معتبر می‌دهد، همان را جایگزین می‌کند", async () => {
+  it("a reader that returns a valid override replaces the list with it", async () => {
     const data = await homeData(healthyStore(), { chartPlatforms: OVERRIDE });
     expect(data.chartPlatforms.map((platform) => platform.slug)).toEqual(
       OVERRIDE.map((platform) => platform.slug),
     );
   });
 
-  it("خواننده‌ای که undefined می‌دهد (کلید نبود/نامعتبر) ⟸ فهرست پیش‌فرض کد", async () => {
+  it("a reader that returns undefined (missing/invalid key) ⟸ code default list", async () => {
     const data = await homeData(healthyStore(), { chartPlatforms: undefined });
     expect(data.chartPlatforms).toEqual(DEFAULT_CONFIG);
   });
 
   /**
-   * ⚠️ پرچم سکوی مرجع روی **هر** فهرستی می‌نشیند، نه فقط پیش‌فرض کد. اگر
-   * فقط روی `CHART_PLATFORMS` بود، اولین باری که مالک فهرست را از پنل عوض
-   * می‌کرد، لنگر محور بی‌سروصدا ناپدید می‌شد.
+   * ⚠️ The reference-platform flag lands on **any** list, not just the code
+   * default. If it only applied to `CHART_PLATFORMS`, the first time the
+   * list owner changed it from the panel, the axis anchor would silently
+   * vanish.
    */
-  it("سکوی مرجع روی override پنل هم نشانده می‌شود", async () => {
+  it("the reference platform is flagged on the panel override too", async () => {
     const data = await homeData(healthyStore(), { chartPlatforms: OVERRIDE });
     const references = data.chartPlatforms.filter((platform) => platform.is_reference);
     expect(references).toHaveLength(1);
     expect(references[0]?.slug).toBe("milli");
   });
 
-  it("پرس‌وجوی تاریخچه با اسلاگ‌های همان override ساخته می‌شود", async () => {
+  it("the history query is built with the same override's slugs", async () => {
     const captured: string[][] = [];
     await assembleHomeData({
       fetchRows: async () => [],

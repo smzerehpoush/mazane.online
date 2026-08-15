@@ -12,7 +12,7 @@ import {
 
 function cookieValue(setCookieHeader: string): string {
   const match = setCookieHeader.match(new RegExp(`${ADMIN_SESSION_COOKIE}=([^;]*)`));
-  if (match?.[1] === undefined) throw new Error("کوکی نشست در هدر نیست");
+  if (match?.[1] === undefined) throw new Error("session cookie missing from header");
   return match[1];
 }
 
@@ -38,7 +38,7 @@ afterEach(() => {
 });
 
 describe("POST /api/admin-login", () => {
-  it("رمز درست ⟸ ۲۰۴ با کوکی نشست امن", async () => {
+  it("correct password ⟸ 204 with secure session cookie", async () => {
     const response = await adminLoginResponse(loginRequest({ password: PASSWORD }));
     expect(response.status).toBe(204);
 
@@ -51,30 +51,30 @@ describe("POST /api/admin-login", () => {
     expect(cookie).toContain("Path=/");
   });
 
-  it("رمز غلط ⟸ ۴۰۱ بدون کوکی", async () => {
+  it("wrong password ⟸ 401 without cookie", async () => {
     const response = await adminLoginResponse(loginRequest({ password: "wrong" }));
     expect(response.status).toBe(401);
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 
-  it("بدنه‌ی نامعتبر و رمز غایب ⟸ ۴۰۰", async () => {
+  it("invalid body and missing password ⟸ 400", async () => {
     expect((await adminLoginResponse(loginRequest("{ نه JSON"))).status).toBe(400);
     expect((await adminLoginResponse(loginRequest({}))).status).toBe(400);
     expect((await adminLoginResponse(loginRequest({ password: "" }))).status).toBe(400);
   });
 
-  it("بدنه‌ی غول‌آسا ⟸ ۴۰۰ بدون parse", async () => {
+  it("oversized body ⟸ 400 without parsing", async () => {
     const response = await adminLoginResponse(loginRequest({ password: "x".repeat(2000) }));
     expect(response.status).toBe(400);
   });
 
-  it("متد دیگر ⟸ ۴۰۵ با هدر Allow", async () => {
+  it("other method ⟸ 405 with Allow header", async () => {
     const response = adminLoginMethodNotAllowed();
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("POST");
   });
 
-  it(`بعد از ${MAX_LOGIN_ATTEMPTS} تلاش ناموفق پیاپی ⟸ ۴۲۹، حتی با رمز درست`, async () => {
+  it(`after ${MAX_LOGIN_ATTEMPTS} consecutive failed attempts ⟸ 429, even with the correct password`, async () => {
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS; i++) {
       const response = await adminLoginResponse(loginRequest({ password: "wrong" }));
       expect(response.status).toBe(401);
@@ -84,7 +84,7 @@ describe("POST /api/admin-login", () => {
     expect(locked.headers.get("set-cookie")).toBeNull();
   });
 
-  it("ورود موفق شمارنده‌ی تلاش‌های ناموفق را پاک می‌کند", async () => {
+  it("a successful login clears the failed-attempt counter", async () => {
     for (let i = 0; i < MAX_LOGIN_ATTEMPTS - 1; i++) {
       await adminLoginResponse(loginRequest({ password: "wrong" }));
     }
@@ -95,13 +95,13 @@ describe("POST /api/admin-login", () => {
     expect(afterSuccess.status).toBe(401);
   });
 
-  it("هش رمز تنظیم‌نشده ⟸ همیشه ۴۰۱ (fail closed)", async () => {
+  it("unset password hash ⟸ always 401 (fail closed)", async () => {
     vi.stubEnv("TABLO_ADMIN_PASSWORD_HASH", "");
     const response = await adminLoginResponse(loginRequest({ password: PASSWORD }));
     expect(response.status).toBe(401);
   });
 
-  it("همه‌ی پاسخ‌ها بی‌کش و بدون اجازه‌ی نمایه‌سازی‌اند", async () => {
+  it("all responses are uncached and non-indexable", async () => {
     for (const response of [
       await adminLoginResponse(loginRequest({ password: PASSWORD })),
       await adminLoginResponse(loginRequest({ password: "wrong" })),
@@ -115,7 +115,7 @@ describe("POST /api/admin-login", () => {
 });
 
 describe("POST /api/admin-logout", () => {
-  it("کوکی نشست را با Max-Age=0 باطل می‌کند", () => {
+  it("invalidates the session cookie with Max-Age=0", () => {
     const response = adminLogoutResponse();
     expect(response.status).toBe(204);
     const cookie = response.headers.get("set-cookie");
@@ -126,53 +126,53 @@ describe("POST /api/admin-logout", () => {
     expect(cookie).toContain("SameSite=Strict");
   });
 
-  it("بدون هیچ نشست فعالی هم موفق است", () => {
+  it("succeeds even without any active session", () => {
     const response = adminLogoutResponse();
     expect(response.status).toBe(204);
   });
 
-  it("متد دیگر ⟸ ۴۰۵ با هدر Allow", () => {
+  it("other method ⟸ 405 with Allow header", () => {
     const response = adminLogoutMethodNotAllowed();
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("POST");
   });
 
-  it("بی‌کش و بدون اجازه‌ی نمایه‌سازی است", () => {
+  it("is uncached and non-indexable", () => {
     const response = adminLogoutResponse();
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 });
 
-describe("hasValidSession — بررسی نشست از هدر خام Cookie", () => {
-  it("بدون هدر Cookie ⟸ نامعتبر", () => {
+describe("hasValidSession — checking the session from the raw Cookie header", () => {
+  it("without a Cookie header ⟸ invalid", () => {
     expect(hasValidSession(null)).toBe(false);
   });
 
-  it("کوکی معتبرِ تازه‌صادرشده ⟸ معتبر", () => {
+  it("a freshly issued valid cookie ⟸ valid", () => {
     const cookie = buildSessionCookie(1000);
     expect(cookie).not.toBeNull();
     const header = `${ADMIN_SESSION_COOKIE}=${cookieValue(cookie as string)}`;
     expect(hasValidSession(header, 1000)).toBe(true);
   });
 
-  it("کنار کوکی‌های دیگر هم پیدا می‌شود", () => {
+  it("is found alongside other cookies", () => {
     const cookie = buildSessionCookie(1000);
     const header = `foo=bar; ${ADMIN_SESSION_COOKIE}=${cookieValue(cookie as string)}; baz=qux`;
     expect(hasValidSession(header, 1000)).toBe(true);
   });
 
-  it("بعد از انقضای TTL نامعتبر می‌شود", () => {
+  it("becomes invalid after the TTL expires", () => {
     const cookie = buildSessionCookie(0);
     const header = `${ADMIN_SESSION_COOKIE}=${cookieValue(cookie as string)}`;
     expect(hasValidSession(header, SESSION_TTL_MS + 1)).toBe(false);
   });
 
-  it("نام کوکی غلط ⟸ نامعتبر", () => {
+  it("wrong cookie name ⟸ invalid", () => {
     expect(hasValidSession("some_other_cookie=abc")).toBe(false);
   });
 
-  it("TABLO_ADMIN_SESSION_SECRET تنظیم‌نشده ⟸ همیشه نامعتبر (fail closed)", () => {
+  it("TABLO_ADMIN_SESSION_SECRET unset ⟸ always invalid (fail closed)", () => {
     const cookie = buildSessionCookie(1000);
     const header = `${ADMIN_SESSION_COOKIE}=${cookieValue(cookie as string)}`;
     vi.stubEnv("TABLO_ADMIN_SESSION_SECRET", "");

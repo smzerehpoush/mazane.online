@@ -41,7 +41,7 @@ function PriceCard({ toman }: { toman: number | null }) {
   );
 }
 
-/** ⚠️ این عدد مرجع در هیچ محاسبه‌ای وارد نمی‌شود و هرگز به‌عنوان قیمت یک سکو نمایش داده نمی‌شود. */
+/** ⚠️ This reference figure never enters any calculation and is never shown as a platform's price. */
 function UnionRateBar({ referencePrice }: { referencePrice: ReferencePrice | null }) {
   if (referencePrice === null) return null;
   return (

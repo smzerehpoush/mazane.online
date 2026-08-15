@@ -1,5 +1,5 @@
-// ⚠️ هیچ کامپوننت کلاینتی نباید این فایل را import کند — `node:crypto` و کلید
-// نشست نباید به باندل مرورگر برسند.
+// ⚠️ No client component should import this file — `node:crypto` and the
+// session key must not reach the browser bundle.
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 const SCRYPT_KEYLEN = 64;

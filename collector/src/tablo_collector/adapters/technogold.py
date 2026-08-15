@@ -20,17 +20,17 @@ class TechnogoldAdapter:
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         results = (payload or {}).get("results") if isinstance(payload, dict) else None
         if not isinstance(results, dict):
-            raise AdapterError("تکنوگلد: بدنه‌ی results در payload پیدا نشد")
+            raise AdapterError("Technogold: results body not found in payload")
 
         buy_price = results.get("buy_price")
         sell_price = results.get("sell_price")
         if buy_price is None or sell_price is None:
-            raise AdapterError("تکنوگلد: قیمت buy_price/sell_price در payload تهی است")
+            raise AdapterError("Technogold: buy_price/sell_price is empty in payload")
         try:
             raw_buy = Decimal(str(buy_price))
             raw_sell = Decimal(str(sell_price))
         except InvalidOperation as exc:
-            raise AdapterError(f"تکنوگلد: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Technogold: invalid payload: {exc!r}") from exc
 
         return dealer_snapshot(
             slug=self.slug,

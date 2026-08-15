@@ -1,31 +1,32 @@
-# کامپوننت‌های دیزاین و لایه‌ی نمایش
+# Design Components and the Display Layer
 
-این سند سه شاخه‌ی `web/src/components/`، سیستم توکن `styles.css`، لایه‌ی `lib/` زیرِ آن‌ها،
-و قواعد قالب‌بندی فارسی را می‌پوشاند. هر ادعا مستقیم از خواندن کد تأیید شده؛ جایی که چیزی
-قابل تأیید نبود، «نامشخص» نوشته شده.
+This document covers the three subtrees of `web/src/components/`, the `styles.css` token
+system, the `lib/` layer beneath them, and the Persian formatting rules. Every claim is
+verified directly by reading the code; where something couldn't be verified, it's marked
+"unknown".
 
-## ۱. سه درخت کامپوننت و مرزشان
+## 1. Three Component Trees and Their Boundary
 
-`web/src/components/` سه زیرپوشه و یک فایل مستقل دارد:
+`web/src/components/` has three subfolders and one standalone file:
 
-| شاخه | تعداد فایل | نقش |
+| Subtree | File count | Role |
 |---|---|---|
-| `components/tablo/` | ۱۴ | ترکیب‌کننده‌های صفحه‌ی اصلی (`/`) — همه پشت `HomePage.tsx` |
-| `components/content/` | ۱۱ | کیت مشترک «صفحه‌ی جزئیات»: صفحه‌ی دارایی، صفحه‌ی سکو، بلاگ، ۴۰۴، پوسته‌ی صفحه |
-| `components/ui/` | ۴۵ | پریمیتیوهای shadcn/ui — کد بالادستی، دست‌نخورده |
-| `components/dashboard-live.tsx` | ۱ (مستقل) | لایه‌ی زنده؛ مستقیم روی DOM می‌نویسد، بیرون از هر دو شاخه |
+| `components/tablo/` | 14 | Compositors for the main page (`/`) — all behind `HomePage.tsx` |
+| `components/content/` | 11 | Shared "detail page" kit: asset page, platform page, blog, 404, page shell |
+| `components/ui/` | 45 | shadcn/ui primitives — upstream code, untouched |
+| `components/dashboard-live.tsx` | 1 (standalone) | Live layer; writes directly to the DOM, outside both subtrees |
 
-مرز بین `tablo/` و `content/` تقریباً بی‌نشتی است — فقط **دو یال** کل مرز را عبور می‌کنند و هر
-دو با خواندن مستقیم import تأیید شدند:
+The boundary between `tablo/` and `content/` is nearly leak-proof — only **two edges** cross
+the entire boundary, and both were confirmed by directly reading the imports:
 
-- `components/content/PageShell.tsx` → `components/tablo/SiteHeader.tsx` (پوسته‌ی صفحات محتوا
-  همان سربرگ صفحه‌ی اصلی را می‌گیرد)
-- `components/tablo/SourceCards.tsx` → `components/content/RowParts.tsx` (کارت‌های منبع صفحه‌ی
-  اصلی جزء `Staleness` را از کیت محتوا قرض می‌گیرند)
+- `components/content/PageShell.tsx` → `components/tablo/SiteHeader.tsx` (the content pages'
+  shell uses the same header as the main page)
+- `components/tablo/SourceCards.tsx` → `components/content/RowParts.tsx` (the main page's
+  source cards borrow the `Staleness` piece from the content kit)
 
-هیچ فایل کامپوننتی در `tablo/` یا `content/` یتیم نیست — همه از یکی از مسیرهای `routes/`
-(مستقیم یا با یک/دو واسطه) قابل دسترسی‌اند. برعکس، در `components/ui/` اکثریت فایل‌ها
-هیچ مصرف‌کننده‌ای در کل `src` ندارند (بند ۴ و ۸).
+No component file in `tablo/` or `content/` is orphaned — all are reachable from one of the
+`routes/` paths (directly or via one/two intermediaries). By contrast, in `components/ui/`
+the majority of files have no consumer anywhere in `src` (sections 4 and 8).
 
 ```mermaid
 flowchart LR
@@ -38,7 +39,7 @@ flowchart LR
         Radmin["/admin/*"]
     end
 
-    subgraph T["components/tablo/ — ۱۴ فایل"]
+    subgraph T["components/tablo/ — 14 files"]
         HomePage
         SiteHeader
     end
@@ -47,14 +48,14 @@ flowchart LR
         DashboardLive
     end
 
-    subgraph C["components/content/ — ۱۱ فایل"]
+    subgraph C["components/content/ — 11 files"]
         PageShell
         SlugPageView
         BlogViews
         RowParts
     end
 
-    subgraph U["components/ui/ — ۴۵ پریمیتیو shadcn"]
+    subgraph U["components/ui/ — 45 shadcn primitives"]
         Input
     end
 
@@ -64,212 +65,218 @@ flowchart LR
     Rblog --> PageShell
     Rblog --> BlogViews
     Rstatic --> PageShell
-    Radmin -. "۷ پریمیتیو دیگر" .-> U
+    Radmin -. "7 other primitives" .-> U
 
     HomePage --> DashboardLive
-    HomePage -. "تنها یال Tablo⟶Content" .-> RowParts
-    PageShell -. "تنها یال Content⟶Tablo" .-> SiteHeader
-    C -. "Input (تنها پریمیتیو مصرف‌شده در محصول)" .-> U
+    HomePage -. "only Tablo⟶Content edge" .-> RowParts
+    PageShell -. "only Content⟶Tablo edge" .-> SiteHeader
+    C -. "Input (only primitive consumed in the product)" .-> U
 ```
 
-## ۲. `components/tablo/` — کامپوننت‌های صفحه‌ی اصلی
+## 2. `components/tablo/` — Main Page Components
 
-`HomePage.tsx` تنها ترکیب‌کننده است: ۱۲ جزء دیگر از همین شاخه را مستقیم وارد می‌کند — همه‌ی
-فایل‌های شاخه به‌جز خودش، **به‌جز `ThemeToggle.tsx`** که مستقیم import نمی‌شود و فقط با واسطه‌ی
-`SiteHeader.tsx` به درخت می‌رسد — به‌علاوه‌ی `DashboardLive` از بیرون شاخه.
+`HomePage.tsx` is the sole compositor: it directly imports 12 other pieces from this same
+subtree — every file in the subtree except itself, **with the sole exception of
+`ThemeToggle.tsx`**, which isn't imported directly and only reaches the tree via
+`SiteHeader.tsx` — plus `DashboardLive` from outside the subtree.
 
-| فایل | صادرات | نقش | قرارداد داده (props) |
+| File | Exports | Role | Data contract (props) |
 |---|---|---|---|
-| `HomePage.tsx` | `HomePage`, `homeHead`, `HomePageData` | تنها ترکیب‌کننده‌ی صفحه‌ی `/`؛ `nowMs` را از `Date.parse(data.generated_at)` می‌سازد، نه `Date.now` | `{data: HomePageData}` با فیلدهای `rows، history، referenceHistory، posts، viewCounts، chartPlatforms، generated_at` |
-| `PriceRail.tsx` | `PriceRail` | محور افقی قیمت با فتیله‌ی سوزان ۳۰ثانیه‌ای؛ موقعیت نشانگرها در همان attribute سرور‌رندر است (بدون‌جاوااسکریپت هم خوانا) | `{rail: RailView, updatedAt, updatedAtDisplay, tick: number, failed: boolean, onRefresh: () => void}` |
-| `MarketSummary.tsx` | `MarketSummary` | کارت «خلاصه بازار»؛ سه‌زبانه‌ی بازه با `role="tablist"` و ناوبری کیبورد کامل | `{summary: SummaryView}` |
-| `SourceCards.tsx` | `SourceCards` | شبکه‌ی کارت هر سکو با اسپارک‌لاین ۲۴ساعته؛ هر کارت به `/go/<slug>` می‌رود | `{sources: RailSource[], nowMs: number}` |
-| `AllPlatforms.tsx` | `AllPlatforms` | فهرست متنی همه‌ی سکوها در پاورقی | `{rows: Row[]}` |
-| `FeaturedPost.tsx` | `FeaturedPost` | کارت مقاله‌ی ویژه (اولین پست فهرست) | `{post: PublishedPost}` |
-| `JewelryCalculator.tsx` | `JewelryCalculator` | ماشین‌حساب طلای زینتی (وزن + اجرت٪ + سود٪ + مالیات٪) | `{pricePerGram: number \| null, referenceName: string \| null}` |
-| `LegalNotice.tsx` | `Madde5Bar`, `MADDE5_WARNING_FA` | نوار هشدار قانونی ماده ۵ (نسخه‌ی صفحه‌ی اصلی — `div` با استایل درون‌خطی) | بدون prop |
-| `PopularPosts.tsx` | `PopularPosts` | شبکه‌ی «بیشتر بخوانید» یا «پرخواننده‌ترین» بسته به `rankedByViews` | `{posts: PublishedPost[], rankedByViews?: boolean}` |
-| `Sidebar.tsx` | `Sidebar` | فهرست «تازه‌ترین نوشته‌ها» در ستون کناری | `{posts: PublishedPost[]}` |
-| `SidebarCards.tsx` | `BubbleGauge`, `PriceAlertCard` | دو کارت غیرفعال با نوار مشترک «به زودی فعال می‌شود»؛ آخرین خط `JewelryCalculator` را دوباره صادر می‌کند اما هیچ‌کس از این مسیر نمی‌گیردش | بدون prop |
-| `SiteHeader.tsx` | `SiteHeader` | سربرگ چسبان (`sticky`) با ۴ آیتم ناوبری ثابت و `ThemeToggle` | بدون prop |
-| `ThemeToggle.tsx` | `ThemeToggle` | دکمه‌ی تعویض تم؛ به `prefers-color-scheme` فقط وقتی گوش می‌دهد که ترجیح ذخیره‌شده‌ای نباشد | بدون prop |
-| `home-view.tsx` | `postExcerpt`, `sidebarPosts`, `bottomPosts` | تنها فایل غیرکامپوننتی شاخه: سه تابع خالص کمکی (`maxChars` پیش‌فرض ۱۳۰) | — |
+| `HomePage.tsx` | `HomePage`, `homeHead`, `HomePageData` | The sole compositor for the `/` page; builds `nowMs` from `Date.parse(data.generated_at)`, not `Date.now` | `{data: HomePageData}` with fields `rows, history, referenceHistory, posts, viewCounts, chartPlatforms, generated_at` |
+| `PriceRail.tsx` | `PriceRail` | Horizontal price axis with a 30-second burning wick; marker positions are in the same server-rendered attribute (readable even without JavaScript) | `{rail: RailView, updatedAt, updatedAtDisplay, tick: number, failed: boolean, onRefresh: () => void}` |
+| `MarketSummary.tsx` | `MarketSummary` | The «خلاصه بازار» card; a three-tab range selector with `role="tablist"` and full keyboard navigation | `{summary: SummaryView}` |
+| `SourceCards.tsx` | `SourceCards` | Grid of per-platform cards with a 24-hour sparkline; each card links to `/go/<slug>` | `{sources: RailSource[], nowMs: number}` |
+| `AllPlatforms.tsx` | `AllPlatforms` | Text listing of all platforms in the footer | `{rows: Row[]}` |
+| `FeaturedPost.tsx` | `FeaturedPost` | Featured article card (first post in the list) | `{post: PublishedPost}` |
+| `JewelryCalculator.tsx` | `JewelryCalculator` | Jewelry gold calculator (weight + making-charge% + profit% + tax%) | `{pricePerGram: number \| null, referenceName: string \| null}` |
+| `LegalNotice.tsx` | `Madde5Bar`, `MADDE5_WARNING_FA` | Article 5 legal warning bar (main-page version — a `div` with inline styling) | no props |
+| `PopularPosts.tsx` | `PopularPosts` | Grid titled «بیشتر بخوانید» or «پرخواننده‌ترین» depending on `rankedByViews` | `{posts: PublishedPost[], rankedByViews?: boolean}` |
+| `Sidebar.tsx` | `Sidebar` | The «تازه‌ترین نوشته‌ها» list in the side column | `{posts: PublishedPost[]}` |
+| `SidebarCards.tsx` | `BubbleGauge`, `PriceAlertCard` | Two disabled cards sharing a «به زودی فعال می‌شود» banner; its last line re-exports `JewelryCalculator`, but nothing imports it from this path | no props |
+| `SiteHeader.tsx` | `SiteHeader` | Sticky header (`sticky`) with 4 fixed navigation items and `ThemeToggle` | no props |
+| `ThemeToggle.tsx` | `ThemeToggle` | Theme-toggle button; only listens to `prefers-color-scheme` when there's no stored preference | no props |
+| `home-view.tsx` | `postExcerpt`, `sidebarPosts`, `bottomPosts` | The subtree's only non-component file: three pure helper functions (`maxChars` defaults to 130) | — |
 
-## ۳. `components/content/` — کیت مشترک صفحات محتوا
+## 3. `components/content/` — Shared Content-Page Kit
 
-هیچ ترکیب‌کننده‌ی واحدی ندارد؛ نقطه‌های ورود همان کامپوننت‌هایی‌اند که مستقیم از `routes/`
-صدا زده می‌شوند: `PageShell`، `SlugPageView`، `BlogViews`، `NotFoundPanel`.
+It has no single compositor; the entry points are the same components called directly from
+`routes/`: `PageShell`, `SlugPageView`, `BlogViews`, `NotFoundPanel`.
 
-| فایل | صادرات | نقش | قرارداد داده |
+| File | Exports | Role | Data contract |
 |---|---|---|---|
-| `SlugPageView.tsx` | `SlugPageView`, `slugHead`, `slugJsonLdTags`, `SlugPageData` | دروازه‌ی دوحالته‌ی `/$slug`؛ روی فیلد `kind` بین `AssetPage` و `PlatformPage` سوییچ می‌کند | `{data: SlugPageData}` — یونیون `InstrumentPageData \| PlatformPageData` |
-| `AssetPage.tsx` | `AssetPage`, `groupRows` | جدول مقایسه‌ی همه‌ی سکوها برای یک دارایی، مرتب‌شده از ارزان‌ترین | `{listing: InstrumentListing, rows: Row[], nowMs: number}` |
-| `PlatformPage.tsx` | `PlatformPage` | دوسیه‌ی تک‌سکو: کارمزد، هویت حقوقی، تحویل فیزیکی، نرخ اتحادیه | `{platform, snapshot, updatedAt, hasOutbound, instrumentNames, history, referencePrice, nowMs}` — `instrumentNames` هرگز در بدنه استفاده نمی‌شود (بند ۸) |
-| `PlatformRateCard.tsx` | `PlatformRateCard` | کارت نرخ زنده‌ی سکو با نمودار سه‌بازه‌ای، هاور و شمارش‌معکوس ثانیه‌ای مستقل | `{row: Row, history: PlatformHistoryByRange, nowMs: number}` |
-| `PlatformCalculator.tsx` | `PlatformCalculator` | ماشین‌حساب دوطرفه‌ی وزن↔مبلغ برای یک سکو؛ تنها فایل صفحات عمومی که از `components/ui` استفاده می‌کند (`Input`) | `{row: Row, hasOutbound: boolean}` |
-| `RowParts.tsx` | `Staleness`, `FeeSourceLabel`, `MarketModelBadge`, `ClosedBadges` | چهار جزء نمایشی اتمی مشترک؛ تنها پل `content→tablo` (وارد شده در `tablo/SourceCards`) | props کوچک هرکدام |
-| `BlogViews.tsx` | `BlogIndexView`, `BlogPostView`, `blogIndexHead`, `blogPostHead`, `BLOG_INDEX_TITLE/DESCRIPTION` | هم view و هم head-builder برای فهرست و تک‌پست بلاگ | `{posts}` / `{post}` |
-| `PageShell.tsx` | `PageShell`, `Breadcrumbs` | پوسته‌ی مشترک همه‌ی صفحات غیر از صفحه‌ی اصلی (`/$slug`, `/blog*`, `/mazane-chist`, `/darbare-pishnahad`)؛ خودش `SiteHeader` تابلو را وارد می‌کند | `{children, wide?}` — `wide` عرض `main` را بین ۸۲۰px و ۱۴۰۰px عوض می‌کند؛ فقط `/$slug` آن را `true` می‌دهد |
-| `NotFoundPanel.tsx` | `NotFoundPanel` | پنل ۴۰۴ عمومی، `notFoundComponent` مسیر `/$slug` | `{title?, note?}` |
-| `LegalNotice.tsx` | `Madde5Bar`, `MADDE5_WARNING_FA` | نوار هشدار قانونی — نسخه‌ی صفحات محتوا (`footer` با `border-gold/40`)، markup متفاوت با نسخه‌ی `tablo/` (بند ۸) | بدون prop |
-| `ViewBeacon.tsx` | `ViewBeacon` | بیکن بی‌صدای شمارش بازدید پس از ۳۰۰۰ میلی‌ثانیه ماندگاری؛ در `navigator.webdriver` اصلاً نمی‌فرستد | `{slug: string}` |
+| `SlugPageView.tsx` | `SlugPageView`, `slugHead`, `slugJsonLdTags`, `SlugPageData` | The two-mode gateway for `/$slug`; switches between `AssetPage` and `PlatformPage` based on the `kind` field | `{data: SlugPageData}` — union of `InstrumentPageData \| PlatformPageData` |
+| `AssetPage.tsx` | `AssetPage`, `groupRows` | Comparison table of all platforms for one asset, sorted from cheapest | `{listing: InstrumentListing, rows: Row[], nowMs: number}` |
+| `PlatformPage.tsx` | `PlatformPage` | Single-platform dossier: fee, legal entity, physical delivery, union rate | `{platform, snapshot, updatedAt, hasOutbound, instrumentNames, history, referencePrice, nowMs}` — `instrumentNames` is never used in the body (section 8) |
+| `PlatformRateCard.tsx` | `PlatformRateCard` | Platform's live-rate card with a three-range chart, hover, and an independent per-second countdown | `{row: Row, history: PlatformHistoryByRange, nowMs: number}` |
+| `PlatformCalculator.tsx` | `PlatformCalculator` | Two-way weight↔amount calculator for one platform; the only public-page file that uses `components/ui` (`Input`) | `{row: Row, hasOutbound: boolean}` |
+| `RowParts.tsx` | `Staleness`, `FeeSourceLabel`, `MarketModelBadge`, `ClosedBadges` | Four shared atomic display pieces; the only `content→tablo` bridge (imported in `tablo/SourceCards`) | small props for each |
+| `BlogViews.tsx` | `BlogIndexView`, `BlogPostView`, `blogIndexHead`, `blogPostHead`, `BLOG_INDEX_TITLE/DESCRIPTION` | Both the view and the head-builder for the blog index and a single post | `{posts}` / `{post}` |
+| `PageShell.tsx` | `PageShell`, `Breadcrumbs` | Shared shell for every page except the main page (`/$slug`, `/blog*`, `/mazane-chist`, `/darbare-pishnahad`); it imports Tablo's own `SiteHeader` | `{children, wide?}` — `wide` toggles `main`'s width between 820px and 1400px; only `/$slug` passes `true` |
+| `NotFoundPanel.tsx` | `NotFoundPanel` | Generic 404 panel, the `notFoundComponent` for the `/$slug` route | `{title?, note?}` |
+| `LegalNotice.tsx` | `Madde5Bar`, `MADDE5_WARNING_FA` | Legal warning bar — the content-pages version (a `footer` with `border-gold/40`), markup differs from the `tablo/` version (section 8) | no props |
+| `ViewBeacon.tsx` | `ViewBeacon` | Silent view-count beacon fired after 3000ms of dwell time; doesn't send at all when `navigator.webdriver` is set | `{slug: string}` |
 
-**مستقل از هر دو شاخه:** `components/dashboard-live.tsx` — `DashboardLive({data: LiveDashboard | null})`.
-هیچ چیزی رندر نمی‌کند (`return null`)؛ پس از هر polling موفق مستقیم `document.querySelector` می‌زند
-و گره‌های `data-rail-marker`، `data-source-card`، `data-rail-min/max/spread` و `.rail-anchor` را
-که `PriceRail`/`SourceCards` رندر کرده‌اند وصله می‌زند — تا ترنزیشن ۸۰۰ میلی‌ثانیه‌ای CSS با
-re-mount نمیرد. تنها مصرف‌کننده‌اش `HomePage.tsx` است.
+**Independent of both subtrees:** `components/dashboard-live.tsx` — `DashboardLive({data: LiveDashboard | null})`.
+It renders nothing (`return null`); after every successful poll it calls `document.querySelector`
+directly and patches the `data-rail-marker`, `data-source-card`, `data-rail-min/max/spread`, and
+`.rail-anchor` nodes that `PriceRail`/`SourceCards` rendered — so the 800ms CSS transition doesn't
+die from a re-mount. Its only consumer is `HomePage.tsx`.
 
-## ۴. `components/ui/` — پریمیتیوهای shadcn
+## 4. `components/ui/` — shadcn Primitives
 
-دقیقاً **۴۵ فایل `.tsx`** — کد بالادستی (وندورشده با ابزار shadcn، نه دست‌نویس محصول). فقط
-**۸ ماژول** حداقل یک مصرف‌کننده‌ی بیرون از `components/ui/` دارند:
+Exactly **45 `.tsx` files** — upstream code (vendored via the shadcn CLI, not hand-written
+product code). Only **8 modules** have at least one consumer outside `components/ui/`:
 
-| پریمیتیو | مصرف‌کننده‌ی بیرونی |
+| Primitive | External consumer |
 |---|---|
-| `input` | `content/PlatformCalculator.tsx` (تنها مصرف در صفحات عمومی)، ۴ مسیر `routes/admin/*` |
-| `button` | ۶ مسیر `routes/admin/*` (`index، login، platforms، posts/index، posts/$slug، posts/new`) |
-| `card` | ۳ مسیر `routes/admin/*` (`platforms، posts/*، login`) — `index.tsx` استفاده نمی‌کند |
+| `input` | `content/PlatformCalculator.tsx` (the only use on public pages), 4 `routes/admin/*` paths |
+| `button` | 6 `routes/admin/*` paths (`index, login, platforms, posts/index, posts/$slug, posts/new`) |
+| `card` | 3 `routes/admin/*` paths (`platforms, posts/*, login`) — `index.tsx` doesn't use it |
 | `badge` | `routes/admin/posts/index.tsx`, `routes/admin/posts/$slug.tsx` |
 | `label` | `routes/admin/posts/$slug.tsx`, `routes/admin/posts/new.tsx`, `routes/admin/login.tsx` |
 | `checkbox` | `routes/admin/posts/$slug.tsx` |
 | `switch` | `routes/admin/platforms.tsx` |
 | `textarea` | `routes/admin/posts/$slug.tsx`, `routes/admin/posts/new.tsx` |
 
-**۷ از این ۸** فقط داخل `routes/admin/*` مصرف می‌شوند؛ `input` تنها پریمیتیوی است که پایش به
-صفحات عمومی هم می‌رسد. **۳۷ فایل باقی‌مانده** (`accordion، alert، alert-dialog، aspect-ratio،
-avatar، breadcrumb، calendar، carousel، collapsible، command، context-menu، dialog، drawer،
-dropdown-menu، form، hover-card، input-otp، menubar، navigation-menu، pagination، popover،
-progress، radio-group، resizable، scroll-area، select، separator، sheet، sidebar، skeleton،
-slider، sonner، table، tabs، toggle، toggle-group، tooltip`) هیچ مصرف‌کننده‌ای در کل `src`
-ندارند — نه در محصول، نه در پنل مدیریت.
+**7 of these 8** are consumed only inside `routes/admin/*`; `input` is the only primitive whose
+reach extends to public pages too. **The remaining 37 files** (`accordion, alert, alert-dialog,
+aspect-ratio, avatar, breadcrumb, calendar, carousel, collapsible, command, context-menu, dialog,
+drawer, dropdown-menu, form, hover-card, input-otp, menubar, navigation-menu, pagination, popover,
+progress, radio-group, resizable, scroll-area, select, separator, sheet, sidebar, skeleton,
+slider, sonner, table, tabs, toggle, toggle-group, tooltip`) have no consumer anywhere in `src`
+— not in the product, not in the admin panel.
 
-## ۵. سیستم توکن — `styles.css`
+## 5. Token System — `styles.css`
 
-Tailwind v4 با `@import "tailwindcss" source(none)` + `@source "../src"` + `tw-animate-css`.
+Tailwind v4 with `@import "tailwindcss" source(none)` + `@source "../src"` + `tw-animate-css`.
 
-**روشن/تاریک کاملاً صفت‌محور است**، نه رسانه‌محور: `@custom-variant dark (&:is([data-theme="dark"] *))`
-تنها سازوکار تم در کل فایل است — هیچ بلوک `@media (prefers-color-scheme)` در `styles.css` وجود
-ندارد. تصمیم اولیه‌ی تم (سیستم یا ذخیره‌شده) با یک `<script>` درون‌خطی در `<head>` (پیش از
-`Scripts`، پس از `HeadContent`) گرفته می‌شود که `SERVER_THEME = "light"` سرور را در صورت لزوم
-پیش از اولین رنگ‌آمیزی به `dark` عوض می‌کند؛ `<html>` به همین دلیل `suppressHydrationWarning`
-دارد. کلید ذخیره‌سازی `localStorage`، `tablo:theme` است.
+**Light/dark is entirely attribute-driven**, not media-driven: `@custom-variant dark (&:is([data-theme="dark"] *))`
+is the only theming mechanism in the whole file — there's no `@media (prefers-color-scheme)` block
+anywhere in `styles.css`. The initial theme decision (system or stored) is made by an inline
+`<script>` in `<head>` (before `Scripts`, after `HeadContent`) that flips the server's
+`SERVER_THEME = "light"` to `dark` before the first paint if needed; `<html>` carries
+`suppressHydrationWarning` for exactly this reason. The `localStorage` storage key is `tablo:theme`.
 
-| لایه | جای تعریف | تعداد ورودی |
+| Layer | Defined in | Entry count |
 |---|---|---|
-| پالت خام روشن | `:root` (`color-scheme: light`) | ۶۱ متغیر |
-| بازنویسی تاریک | `[data-theme="dark"]` (`color-scheme: dark`) | ۳۳ متغیر |
-| ثبت در Tailwind | `@theme inline` | ۵۶ ورودی: ۴۵ `--color-*`، ۶ شعاع، ۱ `--font-sans`، ۴ `--shadow-*` |
+| Raw light palette | `:root` (`color-scheme: light`) | 61 variables |
+| Dark overrides | `[data-theme="dark"]` (`color-scheme: dark`) | 33 variables |
+| Registered in Tailwind | `@theme inline` | 56 entries: 45 `--color-*`, 6 radii, 1 `--font-sans`, 4 `--shadow-*` |
 
-از ۶۱ متغیر `:root`، ۲۸ تا در بلوک تاریک بازنویسی **نمی‌شوند** — نه چون فراموش شده‌اند، بلکه چون
-مقدارشان با `var()` به یکی از ۳۰ توکن خامی که واقعاً بازنویسی می‌شوند (`--bg، --ac، --gn، --rd، ...`)
-اشاره می‌کند و به‌خاطر رفتار استاندارد custom-property در CSS، خودبه‌خود مقدار تازه را می‌گیرند؛
-سه تای دیگر (`--radius، --r-el، --r-pill`) ساختاری‌اند و بین دو تم فرق نمی‌کنند.
+Of the 61 `:root` variables, 28 are **not** overridden in the dark block — not because they were
+forgotten, but because their value points, via `var()`, to one of the 30 raw tokens that actually
+do get overridden (`--bg, --ac, --gn, --rd, ...`), and thanks to CSS's standard custom-property
+behavior, they automatically pick up the new value; the other three (`--radius, --r-el, --r-pill`)
+are structural and don't differ between the two themes.
 
-توکن‌های معنایی سازگار با shadcn (لایه‌ی بیرونی، همه با `var()` به پالت خام وصل‌اند):
+shadcn-compatible semantic tokens (the outer layer, all wired to the raw palette via `var()`):
 
-`background، foreground، card، card-foreground، popover، popover-foreground، primary،
-primary-foreground، secondary، secondary-foreground، muted، muted-foreground، accent،
-accent-foreground، destructive، destructive-foreground، border، input، ring` — به‌علاوه‌ی
-`surface، surface-2، gold، gold-soft، positive، positive-soft، negative، negative-soft`
-که مخصوص تابلواند.
+`background, foreground, card, card-foreground, popover, popover-foreground, primary,
+primary-foreground, secondary, secondary-foreground, muted, muted-foreground, accent,
+accent-foreground, destructive, destructive-foreground, border, input, ring` — plus
+`surface, surface-2, gold, gold-soft, positive, positive-soft, negative, negative-soft`,
+which are Tablo-specific.
 
-یک دسته‌ی کوتاه‌نام هم مستقیم به پالت خام وصل است: `tx3، actx، acbg، onac، line2، gn، gnbg،
-gntx، rd، rdbg، rdtx، am، ambg` و پنج رنگ سری `s1..s5`.
+A group of short-named tokens is also wired directly to the raw palette: `tx3, actx, acbg, onac,
+line2, gn, gnbg, gntx, rd, rdbg, rdtx, am, ambg`, plus the five `s1..s5` series colors.
 
-**چهار توکن تعریف‌شده اما بی‌مصرف** (نه در کلاس، نه در `var()`، در هیچ فایل دیگری از `src`):
-`--thumb، --feat، --r-el، --r-pill`.
+**Four tokens defined but unused** (not in a class, not in a `var()`, not in any other file in
+`src`): `--thumb, --feat, --r-el, --r-pill`.
 
-**فونت:** تک `@font-face` — Vazirmatn variable، `/fonts/vazirmatn-variable-33.0.3.woff2`،
-`font-weight: 100 900`، `font-display: swap`. زنجیره‌ی `--font-sans`: `"Vazirmatn", ui-sans-serif,
-system-ui, "Segoe UI", Tahoma, sans-serif`. همان فایل در `__root.tsx` با `rel="preload"` و
-`crossOrigin="anonymous"` پیش‌بارگذاری می‌شود؛ خودمیزبان است (بدون سرور فونت گوگل) — CI حتی
-یک گِرِپ گیت اختصاصی برای این دارد (`docs/03-tech-debt.md`).
+**Font:** a single `@font-face` — Vazirmatn variable, `/fonts/vazirmatn-variable-33.0.3.woff2`,
+`font-weight: 100 900`, `font-display: swap`. The `--font-sans` chain: `"Vazirmatn", ui-sans-serif,
+system-ui, "Segoe UI", Tahoma, sans-serif`. The same file is preloaded in `__root.tsx` with
+`rel="preload"` and `crossOrigin="anonymous"`; it's self-hosted (no Google Fonts server) — CI even
+has a dedicated grep gate for this (`docs/03-tech-debt.md`).
 
-**۸ `@utility` سفارشی:** `num`، `no-scrollbar`، `card-surface`، `transition-smooth`، `rise-in`،
-`glass-surface`، `glow-primary`، `lift-hover`. از این هشت، `glow-primary` در هیچ فایلی از `src`
-استفاده نشده — تنها ارجاعش تعریف خودش است.
+**8 custom `@utility` classes:** `num`, `no-scrollbar`, `card-surface`, `transition-smooth`,
+`rise-in`, `glass-surface`, `glow-primary`, `lift-hover`. Of these eight, `glow-primary` is not
+used in any file in `src` — its only reference is its own definition.
 
-دو زبان بصری کنار هم زندگی می‌کنند: `card-surface` (پس‌زمینه‌ی توپر + سایه، فقط در
-`components/tablo/*`) و `glass-surface` (شفافیت `color-mix` + `backdrop-filter: blur(18px)`،
-پایه‌اش `components/content/*` و `mazane-chist`/`darbare-pishnahad` است، ولی مرز کامل نیست: دو
-فایل `tablo/` هم — `PopularPosts.tsx` و `Sidebar.tsx` — از همین کلاس استفاده می‌کنند).
+Two visual languages coexist side by side: `card-surface` (solid background + shadow, only in
+`components/tablo/*`) and `glass-surface` (`color-mix` transparency + `backdrop-filter: blur(18px)`,
+based mainly in `components/content/*` and `mazane-chist`/`darbare-pishnahad`, though the boundary
+isn't complete: two `tablo/` files — `PopularPosts.tsx` and `Sidebar.tsx` — also use this same
+class).
 
-**سه keyframes سفارشی:** `rail-burn` (۳۰ثانیه‌ای linear infinite — فتیله)، `rail-flash` (۰٫۶ثانیه)،
-`rise-in` (۴۲۰ میلی‌ثانیه). برای `prefers-reduced-motion: reduce` دو تدبیر جداست: بلوک پایه که
-مدت همه‌ی انیمیشن‌ها را به `0.01ms` می‌برد، و بلوکی که فتیله را کاملاً خاموش می‌کند و به‌جایش با
-`[data-rail]::after` متن «هر ۳۰ ثانیه» می‌نشاند.
+**Three custom keyframes:** `rail-burn` (30-second linear infinite — the wick), `rail-flash`
+(0.6s), `rise-in` (420ms). For `prefers-reduced-motion: reduce` there are two separate measures:
+a base block that brings every animation's duration down to `0.01ms`, and a block that turns the
+wick off entirely and instead places the text «هر ۳۰ ثانیه» via `[data-rail]::after`.
 
-## ۶. لایه‌ی `lib/` و مرز سرور/کلاینت
+## 6. The `lib/` Layer and the Server/Client Boundary
 
-`web/src/lib/` مجموعاً **۶۱ فایل TypeScript** در سه سطح:
+`web/src/lib/` has a total of **61 TypeScript files** across three levels:
 
-| زیرشاخه | تعداد فایل | محتوا |
+| Subfolder | File count | Contents |
 |---|---|---|
-| `lib/` (ریشه) | ۳۴ | منطق خالص، تایپ‌ها، قالب‌بندی، و «منبع‌های قابل‌تزریق» — قابل import از کلاینت |
-| `lib/server/` | ۲۱ | I/O واقعی: Postgres (`pg`)، Redis (`ioredis`)، S3، کوکی نشست ادمین، توکن بازتولید |
-| `lib/seo/` | ۶ | `robots.ts، sitemap.ts، cache-headers.ts، edge-cache.ts، admin-headers.ts، admin-security.ts` |
+| `lib/` (root) | 34 | Pure logic, types, formatting, and "injectable sources" — importable from the client |
+| `lib/server/` | 21 | Real I/O: Postgres (`pg`), Redis (`ioredis`), S3, admin session cookie, revalidation token |
+| `lib/seo/` | 6 | `robots.ts, sitemap.ts, cache-headers.ts, edge-cache.ts, admin-headers.ts, admin-security.ts` |
 
-**مرز سرور/کلاینت با دو مکانیزم مستقل اجرا می‌شود:**
+**The server/client boundary is enforced by two independent mechanisms:**
 
-1. **قاعده‌ی دایرکتوری‌محور** در `vite.config.ts` (`tanstackStart({ importProtection })`، با
-   `behavior: "error"`): هر import در گراف کلاینت از مسیری که پوشه‌ی `server/` در آن باشد
-   (`files: ["**/server/**"]`) بیلد را می‌شکند — بدون توجه به اینکه فایل چه چیزی import می‌کند.
-2. **نشانه‌ی درون‌فایلی**: هر ۲۱ فایل `lib/server/` با `import "@tanstack/react-start/server-only";`
-   شروع می‌شوند (رشته‌ی دقیق، نه بسته‌ی بدون‌پیشوند `server-only`) — یک محافظ خودمستندساز که
-   با قاعده‌ی ۱ همپوشانی دارد.
+1. **A directory-based rule** in `vite.config.ts` (`tanstackStart({ importProtection })`, with
+   `behavior: "error"`): any import in the client graph from a path that has a `server/` folder
+   in it (`files: ["**/server/**"]`) breaks the build — regardless of what the file itself
+   imports.
+2. **An in-file marker**: all 21 `lib/server/` files start with
+   `import "@tanstack/react-start/server-only";` (the exact string, not the unprefixed
+   `server-only` package) — a self-documenting guard that overlaps with rule 1.
 
-نتیجه‌ی عملی قاعده‌ی ۱: هر تابع سروری که باید از یک مسیر کلاینتی (مثل `routes/index.tsx`)
-`import` شود، خودش نباید در پوشه‌ی `server/` باشد — حتی اگر کل بدنه‌اش سروری است. به همین
-دلیل `lib/home-data.ts` و `lib/content-data.ts` عمداً **بیرون** از `lib/server/` نشسته‌اند: فایل
-نازکی که فقط `createServerFn(...).handler(...)` را صادر می‌کند و import های سروری‌اش (از
-`./server/*`) را داخل همان بدنه‌ی handler می‌برد؛ کامپایلر Start بدنه را به باندل سرور جدا می‌کند
-و کلاینت فقط خرد RPC می‌گیرد.
+The practical consequence of rule 1: any server function that needs to be `import`ed from a
+client path (like `routes/index.tsx`) must itself not live inside a `server/` folder — even if
+its entire body is server-side. This is why `lib/home-data.ts` and `lib/content-data.ts`
+deliberately sit **outside** `lib/server/`: each is a thin file that only exports
+`createServerFn(...).handler(...)` and carries its server-side imports (from `./server/*`) inside
+that same handler body; the Start compiler splits the body off into the server bundle, and the
+client only gets the RPC stub.
 
-**الگوی «منبع قابل‌تزریق»** در ۵ ماژول `lib/` تکرار می‌شود — `prices.ts، blog.ts، history.ts،
-views.ts، images.ts`: هرکدام یک `setXSource(source)` (برای تست) و یک `setDefaultXSource(factory)`
-(برای ثبت کارخانه‌ی واقعی) صادر می‌کنند؛ خواندن بدون ثبت هیچ‌کدام خطا می‌دهد. ماژول‌های
-`lib/server/*Source*` همان `setDefaultXSource` را با پیاده‌سازی Postgres/Redis واقعی صدا
-می‌زنند، و تست‌ها به‌جایش نسخه‌ی درون‌حافظه‌ای تزریق می‌کنند — همین اجازه می‌دهد ۳۲ سوییت
-vitest بدون بار کردن `ioredis`/`pg` سبز اجرا شوند.
+**The "injectable source" pattern** repeats across 5 `lib/` modules — `prices.ts, blog.ts,
+history.ts, views.ts, images.ts`: each exports a `setXSource(source)` (for tests) and a
+`setDefaultXSource(factory)` (to register the real factory); reading without either being
+registered throws. The `lib/server/*Source*` modules call that same `setDefaultXSource` with the
+real Postgres/Redis implementation, and tests inject an in-memory version instead — this is what
+lets 32 vitest suites run green without ever loading `ioredis`/`pg`.
 
-## ۷. قواعد قالب‌بندی عدد و تاریخ فارسی
+## 7. Persian Number and Date Formatting Rules
 
-هیچ عددی که رندر می‌شود از `Intl.NumberFormat` رد نمی‌شود — `lib/fa-number.ts` پیاده‌سازی
-دستی دارد، چون خروجی `Intl` به نسخه‌ی ICU محیط گره می‌خورد و نسخه‌ی سرور با نسخه‌ی مرورگر
-یکی نیست؛ ناهمخوانی‌اش را ری‌اکت در hydration بی‌صدا ترمیم می‌کند و در هیچ لاگی دیده نمی‌شود.
-**تاریخ‌ها استثنای همین قاعده‌اند** — هنوز روی `Intl.DateTimeFormat("fa-IR")` می‌مانند، چون
-تقویم جلالی را نمی‌شود بدون پیاده‌سازی کامل و پرخطر دستی نوشت و ریسکش کمتر است (تاریخ پست
-ثابت است، هر ۳۰ ثانیه عوض نمی‌شود).
+No number that gets rendered passes through `Intl.NumberFormat` — `lib/fa-number.ts` has a manual
+implementation, because `Intl`'s output is tied to the environment's ICU version, and the
+server's version doesn't match the browser's; React silently patches the mismatch during
+hydration, and it never shows up in any log. **Dates are the exception to this same rule** — they
+still go through `Intl.DateTimeFormat("fa-IR")`, because the Jalali calendar can't be hand-written
+without a complete, high-risk implementation, and the risk is lower here (a post's date is fixed,
+it doesn't change every 30 seconds).
 
-| قاعده | مقدار | منبع |
+| Rule | Value | Source |
 |---|---|---|
-| ارقام | فارسی، نگاشت دستی کاراکتر‌به‌کاراکتر | `fa-number.ts::toPersianDigits` |
-| جداکننده‌ی هزارگان | `٬` (U+066C) | |
-| جداکننده‌ی اعشار | `٫` (U+066B) | |
-| علامت درصد | `٪` (U+066A) | |
-| علامت منفی | `−` (U+2212)، با یک LTR mark (U+200E) پیش از آن | |
-| گرد کردن | نیم‌رو-به-بالا **روی رشته‌ی ده‌دهی نمایشی**، نه مقدار باینری — `formatFaNumber(2.005,{min:2,max:2})` = «۲٫۰۱» | `roundAbsolute`/`incrementDigits` |
-| صفر منفی | `formatFaNumber(-0)` = «۰»، بدون علامت (عمداً واگرا از `Intl`) | |
-| عدد نامعتبر | `NaN`، بی‌نهایت، یا `|x| ≥ 1e21` → رشته‌ی «—» + `console.warn` | |
-| ساعت | `formatFaClock`: افست ثابت `+۰۳:۳۰` (۲۱۰ دقیقه)، بدون `Intl` | |
-| تاریخ/تاریخ‌وساعت | `formatDateFa`/`formatDateTimeFa` روی `Intl.DateTimeFormat("fa-IR", {timeZone:"Asia/Tehran"})` — تنها استثنا | `format.ts` |
-| دقت درصد عمومی | `formatPercentFa`/`formatSignedPercentFa`: حداکثر ۲ رقم اعشار | |
-| دقت درصد کارمزد | `formatPercentPointsFa`: حداکثر ۳ رقم اعشار | |
-| «کهنه» | `STALE_AFTER_MINUTES = 3` (`isStale`: `minutes >= 3`)، پسوند نمایشی « (کهنه)» | `format.ts`/`live-update.ts` |
-| زمان نسبی | کمتر از ۱ دقیقه → «لحظاتی پیش»، وگرنه «{عدد فارسی} دقیقه پیش» | `formatMinutesAgoFa` |
-| ورودی ماشین‌حساب | هم ارقام فارسی هم عربی‌هندی می‌پذیرد؛ `٬`/`,`/فاصله حذف، `٫`→`.`، مقدار `≤ ۰` رد می‌شود | `calculator.ts::parseCalculatorInput` |
-| واژه‌ی «تومان» | `formatToman` فقط عدد می‌دهد؛ واژه در JSX یا در `site-content.ts::toman()` جدا می‌آید | |
+| Digits | Persian, manual character-to-character mapping | `fa-number.ts::toPersianDigits` |
+| Thousands separator | `٬` (U+066C) | |
+| Decimal separator | `٫` (U+066B) | |
+| Percent sign | `٪` (U+066A) | |
+| Negative sign | `−` (U+2212), with an LTR mark (U+200E) before it | |
+| Rounding | Round-half-up **on the displayed decimal string**, not the binary value — `formatFaNumber(2.005,{min:2,max:2})` = «۲٫۰۱» | `roundAbsolute`/`incrementDigits` |
+| Negative zero | `formatFaNumber(-0)` = «۰», no sign (deliberately diverges from `Intl`) | |
+| Invalid number | `NaN`, infinity, or `|x| ≥ 1e21` → the string «—» + `console.warn` | |
+| Clock | `formatFaClock`: fixed offset `+03:30` (210 minutes), no `Intl` | |
+| Date/date-time | `formatDateFa`/`formatDateTimeFa` on `Intl.DateTimeFormat("fa-IR", {timeZone:"Asia/Tehran"})` — the only exception | `format.ts` |
+| General percent precision | `formatPercentFa`/`formatSignedPercentFa`: at most 2 decimal digits | |
+| Fee percent precision | `formatPercentPointsFa`: at most 3 decimal digits | |
+| «کهنه» (stale) | `STALE_AFTER_MINUTES = 3` (`isStale`: `minutes >= 3`), display suffix « (کهنه)» | `format.ts`/`live-update.ts` |
+| Relative time | Less than 1 minute → «لحظاتی پیش», otherwise «{عدد فارسی} دقیقه پیش» | `formatMinutesAgoFa` |
+| Calculator input | Accepts both Persian and Arabic-Indic digits; `٬`/`,`/space stripped, `٫`→`.`, value `≤ 0` is rejected | `calculator.ts::parseCalculatorInput` |
+| The word «تومان» | `formatToman` only returns the number; the word is added separately, in JSX or in `site-content.ts::toman()` | |
 
-## ۸. کامپوننت‌های تکراری یا یتیم
+## 8. Duplicate or Orphaned Components
 
-| مورد | جزئیات |
+| Item | Details |
 |---|---|
-| **`LegalNotice.tsx` دوبار** | هم در `tablo/` هم در `content/`؛ هر دو همان ثابت `MADDE5_WARNING_FA` و همان تابع `Madde5Bar` را صادر می‌کنند و همان `data-legal-notice="madde-5"` + `role="note"` را می‌گذارند (هر دو تست‌شده)، ولی markup فرق دارد: نسخه‌ی `tablo` یک `div` با استایل درون‌خطی روی `--negative`/`--negative-soft`، نسخه‌ی `content` یک `footer` با `border-gold/40 bg-gold-soft/40`. |
-| **نام `Sidebar` تکراری** | `tablo/Sidebar.tsx` (فهرست پست‌های کناری) و `ui/sidebar.tsx` (پریمیتیو shadcn، ۲۳٫۴ کیلوبایت، بزرگ‌ترین فایل `ui/`) هر دو `Sidebar` صادر می‌کنند؛ فقط مسیر import آن‌ها را جدا می‌کند. |
-| **صادرات مرده** | `tablo/SidebarCards.tsx` در آخرین خط `JewelryCalculator` را دوباره صادر می‌کند، ولی هیچ فایلی از این مسیر آن را نمی‌گیرد — `HomePage.tsx` مستقیم از `./JewelryCalculator` import می‌کند. |
-| **prop مرده** | `content/PlatformPage.tsx` پراپ `instrumentNames: Record<string,string>` را می‌گیرد و destructure می‌کند، ولی در کل بدنه‌ی JSX استفاده‌اش نمی‌کند. |
-| **جفت کاملاً یتیم** | `components/ui/sidebar.tsx` و `hooks/use-mobile.tsx` — تنها ارجاع به `use-mobile` در کل `src` همان `sidebar.tsx` است، و هیچ فایلی (نه در `ui/`، نه بیرونش) `ui/sidebar.tsx` را import نمی‌کند. هر دو از هیچ مسیری در `routes/` قابل دسترسی نیستند. |
-| **۳۶ پریمیتیو دیگر `ui/`** | مثل `accordion، carousel، command، dialog، menubar، table، tabs` — هیچ‌کدام مصرف‌کننده‌ای در `src` ندارند (فهرست کامل در بند ۴)؛ از هیچ مسیری قابل دسترسی نیستند، اما برخلاف جفت بالا حداقل بعضی‌شان داخل خودِ `ui/` به هم وصل‌اند (مثلاً `command.tsx` از `dialog.tsx` import می‌کند) — زنجیره‌ای بسته که به هیچ‌جای بیرون `ui/` نمی‌رسد. |
-| **توکن‌های CSS بی‌مصرف** | `--thumb، --feat، --r-el، --r-pill` در `styles.css` تعریف شده‌اند ولی در هیچ کلاس یا `var()` دیگری در `src` استفاده نمی‌شوند (بند ۵). |
-| **`@utility` بی‌مصرف** | `glow-primary` — تنها ارجاعش تعریف خودش در `styles.css` است. |
+| **`LegalNotice.tsx` twice over** | Once in `tablo/`, once in `content/`; both export the same `MADDE5_WARNING_FA` constant and the same `Madde5Bar` function, and both set the same `data-legal-notice="madde-5"` + `role="note"` (both are tested), but the markup differs: the `tablo` version is a `div` with inline styling on `--negative`/`--negative-soft`, the `content` version is a `footer` with `border-gold/40 bg-gold-soft/40`. |
+| **Duplicate `Sidebar` name** | `tablo/Sidebar.tsx` (the sidebar post list) and `ui/sidebar.tsx` (the shadcn primitive, 23.4KB, the largest file in `ui/`) both export `Sidebar`; only their import path tells them apart. |
+| **Dead export** | `tablo/SidebarCards.tsx` re-exports `JewelryCalculator` on its last line, but no file picks it up from this path — `HomePage.tsx` imports directly from `./JewelryCalculator`. |
+| **Dead prop** | `content/PlatformPage.tsx` accepts and destructures the `instrumentNames: Record<string,string>` prop, but never uses it anywhere in the JSX body. |
+| **A fully orphaned pair** | `components/ui/sidebar.tsx` and `hooks/use-mobile.tsx` — the only reference to `use-mobile` in all of `src` is `sidebar.tsx` itself, and no file (neither in `ui/` nor outside it) imports `ui/sidebar.tsx`. Neither is reachable from any `routes/` path. |
+| **The other 36 `ui/` primitives** | Like `accordion, carousel, command, dialog, menubar, table, tabs` — none has a consumer in `src` (full list in section 4); none is reachable from any route, but unlike the pair above, at least some of them are wired to each other inside `ui/` itself (e.g. `command.tsx` imports from `dialog.tsx`) — a closed chain that never reaches anywhere outside `ui/`. |
+| **Unused CSS tokens** | `--thumb, --feat, --r-el, --r-pill` are defined in `styles.css` but aren't used in any other class or `var()` in `src` (section 5). |
+| **Unused `@utility`** | `glow-primary` — its only reference is its own definition in `styles.css`. |

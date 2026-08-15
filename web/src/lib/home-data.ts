@@ -1,10 +1,13 @@
 /**
- * ⚠️ چرا این فایل بیرون از `src/lib/server/` است: پلاگین import-protection
- * تنکستک هر مسیری با پوشه‌ی `server/` را از گراف کلاینت **رد** می‌کند، و این
- * فایل باید از `routes/index.tsx` (که در گراف کلاینت است) import شود.
- * همین‌جا مرز است: بدنه‌ی `handler` را کامپایلر Start به ماژول سمت‌سروری جدا
- * می‌برد و کلاینت فقط خرد RPC را می‌گیرد؛ importهای زیر با آن بدنه می‌روند.
- * الگوی درست برای هر تابع سروری تازه: فایل نازک اینجا، منطق در `server/`.
+ * ⚠️ Why this file lives outside `src/lib/server/`: TanStack's
+ * import-protection plugin **excludes** any path with a `server/` folder
+ * from the client graph, and this file must be imported from
+ * `routes/index.tsx` (which is in the client graph). This is exactly the
+ * boundary: the Start compiler splits the `handler` body off into a
+ * server-side module and the client only gets an RPC stub; the imports
+ * below travel with that body.
+ * The right pattern for any new server function: a thin file here, logic
+ * in `server/`.
  */
 import { createServerFn } from "@tanstack/react-start";
 

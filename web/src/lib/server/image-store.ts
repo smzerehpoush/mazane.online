@@ -1,8 +1,9 @@
 /**
- * ⚠️ کلید/بوکت واقعی آروان اینجا نیست و در هیچ تست/کد نمونه‌ای حدس زده
- * نشده — فقط نام متغیرهای محیطی. این مسیر با پستگرس/ردیس واقعی هم مثل
- * بقیه‌ی سرویس‌ها اجرا می‌شود ولی **تست به آن وصل نیست** (بند طراحی تیکت):
- * فِیک درون‌حافظه‌ای `setImageStore` تزریق می‌شود، نه این فایل.
+ * ⚠️ The real Arvan key/bucket isn't here and isn't guessed at in any
+ * test/sample code — only environment variable names. This route runs
+ * against real Postgres/Redis just like the rest of the services, but
+ * **no test connects to it** (per the ticket's design note): the
+ * in-memory fake `setImageStore` is injected instead, not this file.
  */
 import "@tanstack/react-start/server-only";
 
@@ -25,7 +26,7 @@ const WEBP_QUALITY = 82;
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (value === undefined || value === "") {
-    throw new Error(`متغیر محیطی ${name} تنظیم نشده — انبار عکس در دسترس نیست`);
+    throw new Error(`environment variable ${name} is not set — image store is unavailable`);
   }
   return value;
 }
@@ -50,7 +51,7 @@ async function processAndUpload(slug: string, bytes: Uint8Array): Promise<Upload
   const processed = await sharp(Buffer.from(bytes))
     .resize({ width: MAX_WIDTH, withoutEnlargement: true })
     .webp({ quality: WEBP_QUALITY })
-    // بدون withMetadata(): EXIF/GPS به‌طور پیش‌فرض حذف می‌شود (مزیت حریم خصوصی — بالای فایل).
+    // Without withMetadata(): EXIF/GPS is stripped by default (a privacy benefit).
     .toBuffer({ resolveWithObject: true });
 
   const hash = createHash("sha256").update(processed.data).digest("hex");
@@ -77,11 +78,11 @@ export function createS3ImageStore(): ImageStore {
 }
 
 /**
- * ⚠️ **انحراف عمدی از بند طراحی ** («هیچ دامنه‌ی بیگانه‌ای روی مسیر
- * بحرانی رندر ننشیند»): تصمیم مالک ۲۰۲۶-۰۸-۰۷، تأییدشده ۲۰۲۶-۰۸-۱۰ — نه
- * `cdn.tablo.gold` و نه هیچ زیردامنه‌ی دیگری. پیامدش این است که دامنه‌ی
- * آروان در HTML صفحه دیده می‌شود و اگر روزی آروان را عوض کنید، نشانی همه‌ی
- * عکس‌های قدیمی می‌شکند.
+ * ⚠️ **Deliberate deviation from the design note** ("no foreign domain
+ * sits on the critical render path"): owner's decision 2026-08-07,
+ * confirmed 2026-08-10 — not `cdn.tablo.gold`, nor any other subdomain.
+ * The consequence is that the Arvan domain is visible in the page HTML,
+ * and if you ever switch Arvan providers, every old image URL breaks.
  */
 export function publicImageUrl(objectKey: string): string {
   const endpoint = requiredEnv("TABLO_ARVAN_S3_ENDPOINT").replace(/\/+$/, "");

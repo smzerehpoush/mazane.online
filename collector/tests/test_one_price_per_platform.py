@@ -153,7 +153,7 @@ def test_two_rows_for_one_instrument_is_rejected() -> None:
         fetched_at=FETCHED_AT,
     ).terms
 
-    with pytest.raises(ValueError, match="یک سطر قیمت"):
+    with pytest.raises(ValueError, match="one price row"):
         PlatformSnapshot(
             platform_slug="wallgold",
             quotes=(row(1), row(2)),

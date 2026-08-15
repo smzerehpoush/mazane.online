@@ -1,6 +1,6 @@
--- مهاجرت ۰۰۱ — جدول‌های تاریخچه‌ی گردآورنده (بند ۲.۲ سند معماری).
--- اجرا: در docker-compose.dev.yml به‌صورت خودکار در اولین بوت پستگرس mount می‌شود؛
--- دستی: psql "$TABLO_DATABASE_URL" -f collector/migrations/001_init.sql
+-- Migration 001 — collector history tables (architecture doc section 2.2).
+-- Run: mounted automatically by docker-compose.dev.yml on Postgres's first boot;
+-- manual: psql "$TABLO_DATABASE_URL" -f collector/migrations/001_init.sql
 
 create table if not exists quotes (
     id            bigserial primary key,

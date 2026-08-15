@@ -1,10 +1,11 @@
 /**
- * ⚠️ این مخزن: این ماژول **هیچ عدد قیمتی نمی‌سازد یا تغییر
- * نمی‌دهد** — فقط اسلاگ/رنگ/ترتیب/لینک می‌خواند و می‌نویسد.
- * ⚠️ عضویت نمودار اینجا هرگز به جدول قیمت راه پیدا نمی‌کند —
- * این فایل اصلاً چیزی درباره‌ی جدول قیمت نمی‌داند.
- * ⚠️ نوشتن فقط پستگرس است — پنل هرگز مستقیم به ردیس نمی‌نویسد؛ گردآورنده
- * خودش با تأخیر ~۲۰ ثانیه همگام می‌کند (`collector/src/tablo_collector/settings.py`).
+ * ⚠️ This repository: this module **never creates or changes any price
+ * number** — it only reads and writes slug/color/order/link.
+ * ⚠️ Chart membership here never reaches the price table —
+ * this file knows nothing about the price table at all.
+ * ⚠️ Writes go only to Postgres — the panel never writes directly to
+ * Redis; the collector itself syncs with a ~20 second delay
+ * (`collector/src/tablo_collector/settings.py`).
  */
 import {
   isValidChartColor,
@@ -162,7 +163,7 @@ function logReferralChanges(
   for (const entry of next) {
     const before = previousBySlug.get(entry.slug) ?? null;
     if (before !== entry.referral_url) {
-      console.info(`[platform-settings] لینک معرف ${entry.slug} تغییر کرد — ${changedAt}`);
+      console.info(`[platform-settings] referral link for ${entry.slug} changed — ${changedAt}`);
     }
   }
 }

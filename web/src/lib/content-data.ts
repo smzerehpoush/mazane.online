@@ -25,9 +25,10 @@ export const loadBlogIndex = createServerFn({ method: "GET" }).handler(
 );
 
 /**
- * ⚠️ برخلاف فهرست، خطای پستگرس اینجا قورت داده **نمی‌شود** (قاعده‌ی مستند
- * `lib/blog.ts`): خطای گذرا نباید ۴۰۴ جا بزند، وگرنه گوگل صفحه را از ایندکس
- * می‌اندازد. خطا بالا می‌رود و مرز خطای مسیر ۵۰۰ می‌دهد.
+ * ⚠️ Unlike the listing, the Postgres error here is **not** swallowed (the
+ * rule documented in `lib/blog.ts`): a transient error must not pass itself
+ * off as a 404, or Google will drop the page from its index. The error
+ * propagates and the route's error boundary returns a 500.
  */
 export const loadBlogPost = createServerFn({ method: "GET" })
   .validator((input: { slug: string }) => input)

@@ -19,7 +19,7 @@ export function applyAdminHeaders(response: Response, pathname: string): Respons
       response.headers.set(key, value);
     }
   } catch {
-    // هدر قفل — عمداً بی‌صدا.
+    // Locked header — intentionally silent.
   }
   return response;
 }

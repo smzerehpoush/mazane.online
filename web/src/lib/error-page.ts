@@ -1,6 +1,6 @@
 /**
- * ⚠️ این صفحه جای «قیمت کهنه» نیست: قطع ردیس/پستگرس در لایه‌ی داده به
- * «داده‌ای نیست» ترجمه شده و صفحه ۲۰۰ می‌ماند.
+ * ⚠️ This page is not the place for a "stale price": a Redis/Postgres outage
+ * at the data layer translates to "no data", and the page stays a 200.
  */
 export function renderErrorPage(): string {
   return `<!doctype html>

@@ -80,18 +80,18 @@ function asInstrumentListing(info: CollectorInstrument): InstrumentListing {
   };
 }
 
-describe("رجیستری ایستای وب با رجیستری کد گردآورنده یکی است", () => {
-  it("خودِ استخراج‌کننده واقعاً چیزی برداشته (وگرنه تست تهی سبز می‌شود)", () => {
+describe("the web's static registry matches the collector's code registry", () => {
+  it("the extractor script actually picked something up (otherwise an empty test passes)", () => {
     expect(registry.platforms.length).toBeGreaterThan(1);
     expect(registry.instruments.length).toBeGreaterThan(1);
     expect(Object.keys(registry.adapters).length).toBeGreaterThan(1);
   });
 
-  it("سکوهای قابل نمایش: همان مجموعه، همان ترتیب، همان فراداده", () => {
+  it("listed platforms: same set, same order, same metadata", () => {
     expect(REGISTRY_PLATFORMS).toEqual(listed.map(asListedPlatform));
   });
 
-  it("گلدیکا (PERMISSION_PENDING) در فهرست عمومی وب نیست", () => {
+  it("goldika (PERMISSION_PENDING) is not in the web's public listing", () => {
     const pending = registry.platforms
       .filter((p) => p.data_policy !== "ALLOWED")
       .map((p) => p.slug);
@@ -101,11 +101,11 @@ describe("رجیستری ایستای وب با رجیستری کد گردآور
     }
   });
 
-  it("دارایی‌ها: همان مجموعه و فراداده، با دروازه‌ی انتشار بازساخته", () => {
+  it("instruments: same set and metadata, with the publish gate reconstructed", () => {
     expect(REGISTRY_INSTRUMENTS).toEqual(registry.instruments.map(asInstrumentListing));
   });
 
-  it("کلمات رزرو و صفحات ایستا از گردآورنده عقب نمانده‌اند", () => {
+  it("reserved words and static pages haven't fallen behind the collector", () => {
     for (const word of registry.reserved_words) {
       expect(RESERVED_WORDS.has(word)).toBe(true);
     }

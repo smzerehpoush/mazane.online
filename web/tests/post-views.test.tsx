@@ -36,8 +36,8 @@ function request(body: unknown, method = "POST"): Request {
   });
 }
 
-describe("POST /api/post-view — ثبت بازدید", () => {
-  it("پست منتشرشده را می‌شمارد و ۲۰۴ بدون کش می‌دهد", async () => {
+describe("POST /api/post-view — recording a view", () => {
+  it("counts a published post and returns 204 with no cache", async () => {
     seedBlog([NEW]);
     const counter = seedViewCounter();
 
@@ -48,7 +48,7 @@ describe("POST /api/post-view — ثبت بازدید", () => {
     expect(counter.counts["pe"]).toBe(1);
   });
 
-  it("هر فراخوان یکی اضافه می‌کند", async () => {
+  it("each call adds one", async () => {
     seedBlog([NEW]);
     const counter = seedViewCounter({ pe: 7 });
 
@@ -58,7 +58,7 @@ describe("POST /api/post-view — ثبت بازدید", () => {
     expect(counter.counts["pe"]).toBe(9);
   });
 
-  it("پیش‌نویس و پس‌گرفته شمرده نمی‌شوند — ولی پاسخ همچنان ۲۰۴ است", async () => {
+  it("drafts and retracted posts aren't counted — but the response is still 204", async () => {
     seedBlog([
       post("draft-one", { status: "draft", published_at: null }),
       post("gone", { status: "retracted" }),
@@ -71,7 +71,7 @@ describe("POST /api/post-view — ثبت بازدید", () => {
     expect(counter.counts).toEqual({});
   });
 
-  it("اسلاگ ناموجود ردیف نمی‌سازد و وجود/نبودش را لو نمی‌دهد (۲۰۴، نه ۴۰۴)", async () => {
+  it("a nonexistent slug creates no row and doesn't leak whether it exists (204, not 404)", async () => {
     seedBlog([NEW]);
     const counter = seedViewCounter();
 
@@ -81,7 +81,7 @@ describe("POST /api/post-view — ثبت بازدید", () => {
     expect(counter.counts).toEqual({});
   });
 
-  it("بدنه‌ی نامعتبر و اسلاگ بدشکل ⟸ ۴۰۰", async () => {
+  it("invalid body and malformed slug ⟸ 400", async () => {
     seedBlog([NEW]);
     seedViewCounter();
 
@@ -91,7 +91,7 @@ describe("POST /api/post-view — ثبت بازدید", () => {
     expect((await postViewResponse(request({}))).status).toBe(400);
   });
 
-  it("بدنه‌ی غول‌آسا رد می‌شود بدون اینکه parse شود", async () => {
+  it("an oversized body is rejected without being parsed", async () => {
     seedBlog([NEW]);
     const counter = seedViewCounter();
 
@@ -101,14 +101,14 @@ describe("POST /api/post-view — ثبت بازدید", () => {
     expect(counter.counts).toEqual({});
   });
 
-  it("متد دیگر ⟸ ۴۰۵ با هدر Allow", async () => {
+  it("a different method ⟸ 405 with an Allow header", async () => {
     const response = postViewMethodNotAllowed();
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("POST");
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  it("قطع شمارنده ⟸ باز هم ۲۰۴ (کهنگی، نه خطا)", async () => {
+  it("counter outage ⟸ still 204 (staleness, not error)", async () => {
     seedBlog([NEW]);
     seedBrokenViewCounter();
 
@@ -118,32 +118,32 @@ describe("POST /api/post-view — ثبت بازدید", () => {
   });
 });
 
-describe("ترتیب بر اساس بازدید", () => {
+describe("ordering by popularity", () => {
   const posts: PublishedPost[] = [NEW, MID, OLD].map((p) => ({
     ...p,
     status: "published",
     published_at: p.published_at as string,
   }));
 
-  it("بدون هیچ بازدیدی، ترتیب ورودی (تاریخ) دست‌نخورده می‌ماند", () => {
+  it("with no views at all, the input order (date) stays untouched", () => {
     const counts: ViewCounts = {};
     expect(hasViewData(posts, counts)).toBe(false);
     expect(byPopularity(posts, counts)).toBe(posts);
   });
 
-  it("با بازدید، نزولی بر اساس عدد؛ تساوی با تاریخ شکسته می‌شود", () => {
+  it("with views, descending by count; ties are broken by date", () => {
     const counts: ViewCounts = { alef: 90, be: 5, pe: 90 };
     expect(hasViewData(posts, counts)).toBe(true);
     expect(byPopularity(posts, counts).map((p) => p.slug)).toEqual(["pe", "alef", "be"]);
   });
 
-  it("پستِ بی‌بازدید ته فهرست می‌رود، نه اینکه بیفتد", () => {
+  it("a post with no views sinks to the bottom of the list, it isn't dropped", () => {
     const counts: ViewCounts = { be: 3 };
     expect(byPopularity(posts, counts).map((p) => p.slug)).toEqual(["be", "pe", "alef"]);
   });
 });
 
-describe("صفحه‌ی اصلی — کارت‌های انتهای صفحه", () => {
+describe("home page — the bottom-of-page cards", () => {
   async function render(views?: ViewCounts): Promise<string> {
     const data = await homeData(healthyStore(), {
       posts: [NEW, MID, OLD],
@@ -158,28 +158,28 @@ describe("صفحه‌ی اصلی — کارت‌های انتهای صفحه", (
     return html.slice(start);
   }
 
-  it("بدون داده‌ی بازدید: عنوان خنثی و ترتیب تاریخ", async () => {
+  it("without view data: neutral heading and date order", async () => {
     const section = bottomSection(await render());
     expect(section).toContain("بیشتر بخوانید");
     expect(section).not.toContain("پرخواننده‌ترین");
     expect(section.indexOf("عنوان pe")).toBeLessThan(section.indexOf("عنوان alef"));
   });
 
-  it("با داده‌ی بازدید: عنوان «پرخواننده‌ترین» و ترتیب بازدید", async () => {
+  it("with view data: 'most read' heading and view-count order", async () => {
     const section = bottomSection(await render({ alef: 120, be: 4, pe: 9 }));
     expect(section).toContain("پرخواننده‌ترین نوشته‌ها");
     expect(section).not.toContain("بیشتر بخوانید");
     expect(section.indexOf("عنوان alef")).toBeLessThan(section.indexOf("عنوان pe"));
   });
 
-  it("عدد بازدید هرگز در HTML منتشر نمی‌شود — فقط ترتیب", async () => {
+  it("the view count is never published in the HTML — only the order", async () => {
     const html = await render({ alef: 12345, be: 4, pe: 9 });
     expect(html).not.toContain("12345");
     expect(html).not.toContain("۱۲٬۳۴۵");
     expect(html).not.toContain("بازدید");
   });
 
-  it("شمارنده‌ی قطع ⟸ صفحه رندر می‌شود، با ترتیب تاریخ", async () => {
+  it("counter outage ⟸ the page still renders, in date order", async () => {
     seedBrokenViewCounter();
     const html = await render();
     expect(html).toContain("بیشتر بخوانید");

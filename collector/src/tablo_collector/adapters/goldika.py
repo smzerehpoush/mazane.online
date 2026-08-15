@@ -26,18 +26,18 @@ class GoldikaAdapter:
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         data = (payload or {}).get("data") if isinstance(payload, dict) else None
         if not isinstance(data, dict):
-            raise AdapterError("گلدیکا: بدنه‌ی data در payload پیدا نشد")
+            raise AdapterError("Goldika: data body not found in payload")
 
         raw_price = data.get("mid_price")
         if raw_price is None:
-            raise AdapterError("گلدیکا: قیمت mid_price در payload تهی است")
+            raise AdapterError("Goldika: mid_price is empty in payload")
         try:
             raw_value = Decimal(str(raw_price))
             commission = data["commission"]
             buy_fee = Decimal(str(commission["trade_buy_percent"])) / _HUNDRED
             sell_fee = Decimal(str(commission["trade_sell_percent"])) / _HUNDRED
         except (InvalidOperation, KeyError, TypeError) as exc:
-            raise AdapterError(f"گلدیکا: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Goldika: invalid payload: {exc!r}") from exc
 
         return known_fee_snapshot(
             slug=self.slug,

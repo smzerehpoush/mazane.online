@@ -39,23 +39,23 @@ async def retract_post(
         moment = now if now is not None else datetime.now(UTC)
         await gateway.set_retracted(slug, now=moment)
         outcome = RetractOutcome.RETRACTED
-        log.info("پست %s پس گرفته شد", slug)
+        log.info("post %s retracted", slug)
     else:
         outcome = RetractOutcome.ALREADY_RETRACTED
     revalidated = False
     try:
         revalidated = await revalidate(slug)
     except Exception:
-        log.exception("فراخوان بازتولید وب برای پس‌گیری %s استثنا داد", slug)
+        log.exception("web revalidate call for retraction of %s raised an exception", slug)
     if not revalidated:
-        log.warning("بازتولید وب برای پس‌گیری %s نشد — دوباره اجرا کنید یا صبر کنید تا ISR برسد", slug)
+        log.warning("web revalidate for retraction of %s did not happen — rerun it or wait for ISR to catch up", slug)
     return outcome
 
 
 _MESSAGES = {
-    RetractOutcome.RETRACTED: "پس گرفته شد: 404 + حذف از فهرست و سایت‌مپ",
-    RetractOutcome.ALREADY_RETRACTED: "قبلاً پس گرفته شده بود — بازتولید دوباره شلیک شد",
-    RetractOutcome.NOT_PUBLISHED: "این اسلاگ هنوز پیش‌نویس است — چیزی منتشر نشده که پس گرفته شود",
+    RetractOutcome.RETRACTED: "retracted: 404 + removed from index and sitemap",
+    RetractOutcome.ALREADY_RETRACTED: "already retracted — revalidation fired again",
+    RetractOutcome.NOT_PUBLISHED: "this slug is still a draft — nothing published to retract",
     RetractOutcome.NOT_FOUND: "چنین پستی در جدول posts نیست",
 }
 
@@ -84,7 +84,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
     args = sys.argv[1:]
     if len(args) != 1:
-        print("کاربرد: tablo-retract <slug>", file=sys.stderr)
+        print("usage: tablo-retract <slug>", file=sys.stderr)
         raise SystemExit(2)
     outcome = asyncio.run(_run_retract(args[0]))
     print(f"{args[0]}: {_MESSAGES[outcome]}")

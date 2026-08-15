@@ -31,14 +31,14 @@ class InviAdapter:
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         if not isinstance(payload, dict) or payload.get("symbol") != GOLD_SYMBOL:
-            raise AdapterError("اینوی: payload فریم قیمت GOLD18 نیست")
+            raise AdapterError("Invi: payload is not a GOLD18 price frame")
         price = payload.get("price")
         if price is None:
-            raise AdapterError("اینوی: قیمت در فریم تهی است")
+            raise AdapterError("Invi: price is empty in frame")
         try:
             raw_mid = Decimal(str(price))
         except InvalidOperation as exc:
-            raise AdapterError(f"اینوی: قیمت نامعتبر است: {price!r}") from exc
+            raise AdapterError(f"Invi: price is invalid: {price!r}") from exc
 
         return unknown_fee_snapshot(
             slug=self.slug,

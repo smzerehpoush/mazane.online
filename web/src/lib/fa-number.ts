@@ -1,7 +1,8 @@
 /**
- * ⚠️ هیچ عددی که رندر می‌شود از `Intl` رد نمی‌شود: خروجی `Intl` به نسخه‌ی ICU
- * گره خورده و نسخه‌ی سرور با نسخه‌ی مرورگر یکی نیست؛ ناهمخوانی‌اش را ری‌اکت در
- * hydration بی‌صدا ترمیم می‌کند و در هیچ لاگی دیده نمی‌شود.
+ * ⚠️ No number that gets rendered passes through `Intl`: `Intl`'s output is
+ * tied to the ICU version, and the server's version doesn't match the
+ * browser's; React silently patches the mismatch during hydration, and it
+ * never shows up in any log.
  */
 
 const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
@@ -97,7 +98,7 @@ export function formatFaNumber(value: number, options: FaNumberOptions = {}): st
   const signDisplay = options.signDisplay ?? "auto";
 
   if (!Number.isFinite(value) || Math.abs(value) >= MAX_SAFE_MAGNITUDE) {
-    console.warn(`formatFaNumber: عدد نامعتبر برای نمایش — ${String(value)}`);
+    console.warn(`formatFaNumber: invalid display number — ${String(value)}`);
     return INVALID_PLACEHOLDER;
   }
 
@@ -126,7 +127,7 @@ export function formatFaPercentFromFraction(
   options: FaNumberOptions = {},
 ): string {
   if (!Number.isFinite(fraction)) {
-    console.warn(`formatFaPercentFromFraction: کسر نامعتبر — ${String(fraction)}`);
+    console.warn(`formatFaPercentFromFraction: invalid fraction — ${String(fraction)}`);
     return INVALID_PLACEHOLDER;
   }
   return formatFaNumber(fraction * 100, options) + PERCENT_SIGN;
@@ -141,7 +142,7 @@ const TEHRAN_UTC_OFFSET_MINUTES = 210;
 export function formatFaClock(iso: string): string {
   const ms = Date.parse(iso);
   if (!Number.isFinite(ms)) {
-    console.warn(`formatFaClock: زمان نامعتبر — ${iso}`);
+    console.warn(`formatFaClock: invalid time — ${iso}`);
     return INVALID_PLACEHOLDER;
   }
   const shifted = new Date(ms + TEHRAN_UTC_OFFSET_MINUTES * 60_000);

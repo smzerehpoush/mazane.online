@@ -25,7 +25,7 @@ def literal(node: ast.expr) -> object:
         return node.value
     if isinstance(node, ast.Attribute):
         return node.attr
-    raise SystemExit(f"مقدار غیرمنتظره در رجیستری: {ast.dump(node)}")
+    raise SystemExit(f"unexpected registry value: {ast.dump(node)}")
 
 
 def module_of(path: pathlib.Path) -> ast.Module:
@@ -44,14 +44,14 @@ def assigned_value(module: ast.Module, name: str) -> ast.expr:
         for target in targets:
             if isinstance(target, ast.Name) and target.id == name:
                 if node.value is None:
-                    raise SystemExit(f"{name} مقدار ندارد")
+                    raise SystemExit(f"{name} has no value")
                 return node.value
-    raise SystemExit(f"{name} در ماژول پیدا نشد")
+    raise SystemExit(f"{name} was not found in the module")
 
 
 def calls_in(node: ast.expr) -> list[ast.Call]:
     if not isinstance(node, (ast.Tuple, ast.List)):
-        raise SystemExit("رجیستری تاپل/لیست نیست")
+        raise SystemExit("registry is not a tuple/list")
     return [item for item in node.elts if isinstance(item, ast.Call)]
 
 

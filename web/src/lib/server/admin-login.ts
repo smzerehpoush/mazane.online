@@ -42,7 +42,7 @@ export async function adminLoginResponse(request: Request): Promise<Response> {
   registerSuccessfulLogin();
   const cookie = buildSessionCookie();
   if (cookie === null) {
-    console.error("admin-login: TABLO_ADMIN_SESSION_SECRET تنظیم نشده");
+    console.error("admin-login: TABLO_ADMIN_SESSION_SECRET not set");
     return json({ error: "پیکربندی سرور ناقص است" }, 500);
   }
 

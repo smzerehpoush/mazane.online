@@ -1,6 +1,7 @@
 /**
- * ⚠️ هیچ لاگی اینجا مجاز نیست که مقصد را چاپ کند: `referral_url` حامل کد
- * معرف است و کد نباید به لاگ (یا هر خروجی جز هدر ‎Location‎) نشت کند.
+ * ⚠️ No log here is allowed to print the destination: `referral_url`
+ * carries the referral code, and the code must not leak into logs (or any
+ * output other than the `Location` header).
  */
 import "@tanstack/react-start/server-only";
 

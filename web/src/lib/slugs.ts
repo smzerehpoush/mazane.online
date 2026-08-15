@@ -1,8 +1,9 @@
 /**
- * ⚠️ فهرست از `lib/catalog.ts` می‌آید، نه مستقیم از استور: **هویت صفحه
- * نباید به ردیسِ زنده گره بخورد.** قطع ردیس یعنی کهنگی، پس
- * اسلاگ معتبرِ بی‌داده باید ۲۰۰ بگیرد و فقط جای قیمتش «در دسترس نیست»
- * بنویسد — نه ۴۰۴ی که لبه‌ی آروان هم کشش کند.
+ * ⚠️ The list comes from `lib/catalog.ts`, not straight from the store:
+ * **page identity must never be tied to live Redis.** A Redis outage means
+ * staleness, so a valid slug with no data must get a 200 and just show
+ * "unavailable" in place of its price — not a 404 that Arvan's edge would
+ * even cache.
  */
 import { listInstruments, listPlatforms } from "./catalog";
 import type { InstrumentListing, ListedPlatform } from "./prices";

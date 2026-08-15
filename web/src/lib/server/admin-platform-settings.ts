@@ -1,8 +1,9 @@
 /**
- * ⚠️ این مسیر هیچ عدد قیمتی نمی‌سازد یا تغییر نمی‌دهد —
- * فقط اسلاگ/رنگ/ترتیب/لینک. ⚠️ عضویت نمودار هرگز روی جدول
- * قیمت اثر نمی‌گذارد — این مسیر اصلاً به جدول قیمت دسترسی ندارد. اعتبارسنجی
- * واقعی نشانی معرف (https + هم‌دامنه) در `savePlatformSettings` است، نه اینجا.
+ * ⚠️ This route never creates or changes any price number —
+ * only slug/color/order/link. ⚠️ Chart membership never affects the price
+ * table — this route has no access to the price table at all. Real
+ * validation of the referral URL (https + same-domain) is in
+ * `savePlatformSettings`, not here.
  */
 import "@tanstack/react-start/server-only";
 

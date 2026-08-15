@@ -1,9 +1,10 @@
 /**
- * ⚠️ چرا این لایه اضافه شد: تا پیش از بازطراحی، تنها مصرف‌کننده‌ی پیکربندی
- * `assembleHomeData` بود که خواننده‌اش تزریق می‌شد، پس تست‌ها هرگز به ردیس
- * نمی‌رسیدند. با بازطراحی، ‎/api/prices‎ هم به همین پیکربندی نیاز پیدا کرد
- * (هندسه‌ی محور به فهرست منابع وابسته است) و بدون این درز، تست‌های آن مسیر
- * به ردیس **واقعی** وصل می‌شدند — نقض «تست‌ها بدون سرویس زنده سبز می‌شوند».
+ * ⚠️ Why this layer was added: before the redesign, the only consumer of
+ * the config was `assembleHomeData`, whose reader was injected, so tests
+ * never reached Redis. With the redesign, `/api/prices` also came to need
+ * this same config (axis geometry depends on the list of sources), and
+ * without this seam, that route's tests would connect to **real** Redis —
+ * violating "tests pass green without a live service".
  */
 import type { ChartPlatformConfig } from "./site-content";
 
@@ -29,10 +30,11 @@ export function resetChartConfigSource(): void {
 }
 
 /**
- * ⚠️ بر خلاف `getPlatformSnapshot`، نبودِ منبع ثبت‌شده هم **خطا نیست**:
- * پیکربندی یک ترجیح است نه داده، و فهرست پیش‌فرض کد همیشه جواب معتبری است
- * . این با `lib/prices.ts` فرق دارد که عمداً بلند می‌شکند —
- * آنجا نبودِ منبع یعنی صفحه‌ی خالیِ ۲۰۰ که گوگل ایندکسش می‌کند.
+ * ⚠️ Unlike `getPlatformSnapshot`, a missing registered source is also
+ * **not an error**: config is a preference, not data, and the code's
+ * default list is always a valid answer. This differs from `lib/prices.ts`,
+ * which deliberately fails loudly — there, a missing source means an empty
+ * 200 page that Google indexes.
  */
 export async function getChartPlatforms(): Promise<readonly ChartPlatformConfig[] | undefined> {
   const source =

@@ -61,8 +61,8 @@ export function HomePage({ data }: { data: HomePageData }) {
 
   const live = useLiveDashboard(dashboard.updatedAt);
 
-  // ⚠️ از `generated_at` سرور، نه `Date.now`: برچسب کهنگی باید در رندر سرور و
-  // در hydration یک متن بدهد.
+  // ⚠️ From the server's `generated_at`, not `Date.now`: the staleness label
+  // must produce the same text on server render and on hydration.
   const nowMs = Date.parse(data.generated_at);
   const reference = dashboard.rail.sources.find((source) => source.isReference) ?? null;
   const featuredPost = data.posts[0] ?? null;

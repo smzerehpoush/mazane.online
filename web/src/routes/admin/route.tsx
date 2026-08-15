@@ -1,7 +1,8 @@
 /**
- * ⚠️ `admin/login.tsx` هم زیر همین لایوت است (همان دایرکتوری) — بدون
- * استثنا برای مسیر خودِ لاگین، بررسی نشست هر بار او را هم دوباره به خودش
- * ریدایرکت می‌کرد (حلقه‌ی بی‌پایان). به همین دلیل مسیر ورود صریح رد می‌شود.
+ * ⚠️ `admin/login.tsx` is also under this same layout (same directory) —
+ * without an exception for the login route itself, the session check would
+ * redirect it back to itself every time (infinite loop). That's why the
+ * login route is explicitly skipped.
  */
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 

@@ -22,16 +22,16 @@ class MelligoldAdapter:
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         data = (payload or {}).get("data") if isinstance(payload, dict) else None
         if not isinstance(data, dict):
-            raise AdapterError("ملی‌گلد: بدنه‌ی data در payload پیدا نشد")
+            raise AdapterError("Melligold: data body not found in payload")
 
         price_buy = data.get("price_buy")
         price_sell = data.get("price_sell")
         if price_buy is None or price_sell is None:
-            raise AdapterError("ملی‌گلد: قیمت price_buy/price_sell در payload تهی است")
+            raise AdapterError("Melligold: price_buy/price_sell is empty in payload")
         try:
             raw_mid = (Decimal(str(price_buy)) + Decimal(str(price_sell))) / _TWO
         except InvalidOperation as exc:
-            raise AdapterError(f"ملی‌گلد: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Melligold: invalid payload: {exc!r}") from exc
 
         return unknown_fee_snapshot(
             slug=self.slug,

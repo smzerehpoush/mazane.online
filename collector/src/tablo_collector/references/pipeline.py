@@ -38,7 +38,7 @@ async def collect_reference_round(
         try:
             snapshot = await source.collect(transport, fetched_at)
         except Exception:
-            log.exception("گردآوری مرجع %s شکست خورد — مرجع کهنه می‌ماند", source.slug)
+            log.exception("Reference collection for %s failed — reference stays stale", source.slug)
             continue
         await store.save_reference(snapshot)
         saved.append(snapshot)

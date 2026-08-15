@@ -1,6 +1,6 @@
 /**
- * ⚠️ خودِ این هوک هیچ DOM ای دست نمی‌زند و هیچ چیزی رندر نمی‌کند — فقط
- * وضعیت. نشاندن مقادیر روی گره‌ها کار `DashboardLive` است.
+ * ⚠️ This hook itself never touches the DOM and renders nothing — only
+ * state. Putting values onto nodes is `DashboardLive`'s job.
  */
 import { useEffect, useRef, useState } from "react";
 
@@ -18,13 +18,14 @@ export interface LiveDashboardState {
 const MIN_FIRST_DELAY_MS = 1_000;
 
 /**
- * ⚠️ چرا مهم است: فاز فتیله به `updatedAt` **سرور** قفل است، ولی اگر اولین
- * فچ ۳۰ ثانیه بعد از mount باشد این دو هرگز روی هم نمی‌افتند. صفحه‌ای که ۵
- * ثانیه بعد از `updatedAt` هیدریت شود، فتیله‌اش هر دور ۵ ثانیه **زودتر** از
- * رسیدن داده تمام می‌شود و چون `infinite` است دوباره پر می‌شود — خطا هرگز
- * جبران نمی‌شود و («فتیله دقیقاً هم‌زمان با دریافت داده تمام می‌شود»)
- * برای همیشه نقض می‌ماند. با تنظیم اولین فچ روی باقی‌مانده‌ی همان چرخه، هر دو
- * ساعت روی یک فاز می‌نشینند و بعد از آن هم‌قدم می‌مانند.
+ * ⚠️ Why this matters: the wick's phase is locked to the **server**'s
+ * `updatedAt`, but if the first fetch happens 30 seconds after mount, the
+ * two never line up. A page hydrated 5 seconds after `updatedAt` has its
+ * wick finish 5 seconds **earlier** than the data arrives, every cycle, and
+ * because it's `infinite` it just refills — the error is never corrected,
+ * and ("the wick finishes exactly when the data arrives") stays violated
+ * forever. By setting the first fetch to the remainder of that same cycle,
+ * both clocks land on one phase and stay in step after that.
  */
 export function firstDelayMs(updatedAt: string | null, nowMs: number = Date.now()): number {
   if (updatedAt === null) return POLL_INTERVAL_MS;
@@ -34,10 +35,11 @@ export function firstDelayMs(updatedAt: string | null, nowMs: number = Date.now(
 }
 
 /**
- * ⚠️ `initialUpdatedAt` زمان داده‌ی رندر سرور است و **فقط** فاز اولین فچ را
- * تعیین می‌کند: پولینگ باید با چرخه‌ی گردآورنده همگام شود نه با لحظه‌ی
- * hydration. عمداً از `data` داخلی خوانده نمی‌شود چون تا اولین
- * دریافت موفق، تنها زمانی که داریم همان است.
+ * ⚠️ `initialUpdatedAt` is the server-rendered data's timestamp and
+ * **only** sets the phase of the first fetch: polling must sync with the
+ * collector's cycle, not the moment of hydration. It's deliberately not
+ * read from internal `data`, because until the first successful fetch,
+ * that's the only time we have.
  */
 export function useLiveDashboard(initialUpdatedAt: string | null = null): LiveDashboardState {
   const [data, setData] = useState<LiveDashboard | null>(null);
@@ -53,7 +55,7 @@ export function useLiveDashboard(initialUpdatedAt: string | null = null): LiveDa
     async function poll(): Promise<void> {
       try {
         const response = await fetch("/api/prices", { cache: "no-store" });
-        if (!response.ok) throw new Error(`وضعیت ${response.status}`);
+        if (!response.ok) throw new Error(`status ${response.status}`);
         const payload = (await response.json()) as LivePricesPayload;
         if (cancelled) return;
         if (payload.dashboard !== undefined) {
@@ -92,10 +94,11 @@ export function useLiveDashboard(initialUpdatedAt: string | null = null): LiveDa
       void run();
     }
 
-    // ⚠️ اولین فچ هرگز «همین حالا» نیست — داده‌ی رندر سرور تازه است و فچ
-    // فوری فقط یک درخواست اضافه به مبدأ می‌زند. ولی یک بازه‌ی کامل
-    // هم نیست: روی باقی‌مانده‌ی چرخه‌ی گردآورنده می‌نشیند تا با فتیله هم‌فاز
-    // شود (توضیح `firstDelayMs`).
+    // ⚠️ The first fetch is never "right now" — the server-rendered data is
+    // fresh, and an immediate fetch is just one extra request to origin.
+    // But it isn't a full interval either: it lands on the remainder of the
+    // collector's cycle to stay in phase with the wick (explained in
+    // `firstDelayMs`).
     schedule(firstDelayMs(initialUpdatedAt));
     document.addEventListener("visibilitychange", onVisibilityChange);
 
@@ -104,8 +107,9 @@ export function useLiveDashboard(initialUpdatedAt: string | null = null): LiveDa
       window.clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-    // مقدار سرور است و در طول عمر صفحه عوض نمی‌شود، پس عملاً یک‌بار اجراست؛
-    // اگر روزی عوض شد، ری‌ست تایمر رفتار درست است نه عارضه.
+    // This is the server value and does not change during the page lifetime,
+    // so this effectively runs once; if it ever changes, resetting the timer
+    // is the correct behavior, not a side effect.
   }, [initialUpdatedAt]);
 
   return { data, failed, tick, refreshNow: () => fetchRef.current() };

@@ -18,7 +18,7 @@ function runScript(password: string): { stdout: string; status: number } {
 }
 
 describe("scripts/hash-admin-password.mjs", () => {
-  it("هش تولیدشده با verifyPassword واقعی تأیید می‌شود", () => {
+  it("the generated hash verifies successfully with the real verifyPassword", () => {
     const { stdout, status } = runScript("some-strong-password-۱۲۳۴");
     expect(status).toBe(0);
     const hash = stdout.trim();
@@ -27,7 +27,7 @@ describe("scripts/hash-admin-password.mjs", () => {
     expect(verifyPassword("wrong-password", hash)).toBe(false);
   });
 
-  it("بدون آرگومان با پیام راهنما و کد خروج غیرصفر می‌ایستد", () => {
+  it("with no argument, exits with a help message and a nonzero status code", () => {
     const { status } = runScript("");
     expect(status).not.toBe(0);
   });

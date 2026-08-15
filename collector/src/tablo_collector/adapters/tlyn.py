@@ -25,12 +25,12 @@ class TlynAdapter:
         buy = price.get("buy")
         sell = price.get("sell")
         if buy is None or sell is None:
-            raise AdapterError("طلاین: قیمت buy/sell نماد GOLD18 در payload تهی است")
+            raise AdapterError("Tlyn: buy/sell price of symbol GOLD18 is empty in payload")
         try:
             raw_buy = Decimal(str(buy))
             raw_sell = Decimal(str(sell))
         except InvalidOperation as exc:
-            raise AdapterError(f"طلاین: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Tlyn: invalid payload: {exc!r}") from exc
 
         enabled = gold.get("status") == "enabled"
         return dealer_snapshot(
@@ -49,5 +49,5 @@ class TlynAdapter:
             return next(r for r in rows if r.get("symbol") == GOLD_SYMBOL)
         except (TypeError, KeyError, StopIteration) as exc:
             raise AdapterError(
-                f"طلاین: نماد {GOLD_SYMBOL} در payload پیدا نشد"
+                f"Tlyn: symbol {GOLD_SYMBOL} not found in payload"
             ) from exc

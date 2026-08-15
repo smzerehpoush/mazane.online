@@ -37,8 +37,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("GET /go/<slug> — ریدایرکت معرف", () => {
-  it("سکوی دارای referral_url ⟸ ۳۰۲ به همان، با X-Robots-Tag: noindex", async () => {
+describe("GET /go/<slug> — referral redirect", () => {
+  it("a platform with referral_url ⟸ 302 to it, with X-Robots-Tag: noindex", async () => {
     seedPlatforms();
     const response = await goRedirectResponse("milli");
     expect(response.status).toBe(302);
@@ -48,7 +48,7 @@ describe("GET /go/<slug> — ریدایرکت معرف", () => {
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
   });
 
-  it("سکوی بدون کد معرف ⟸ ۳۰۲ مستقیم به website_url (کدها بعداً می‌رسند)", async () => {
+  it("a platform without a referral code ⟸ 302 straight to website_url (codes arrive later)", async () => {
     seedPlatforms();
     const response = await goRedirectResponse("wallgold");
     expect(response.status).toBe(302);
@@ -56,20 +56,20 @@ describe("GET /go/<slug> — ریدایرکت معرف", () => {
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
   });
 
-  it("اسلاگ ناشناخته ⟸ ۴۰۴", async () => {
+  it("unknown slug ⟸ 404", async () => {
     seedPlatforms();
     const response = await goRedirectResponse("hich-vaght-nabude");
     expect(response.status).toBe(404);
   });
 
-  it("سکوی بدون referral_url و بدون website_url ⟸ ۴۰۴، نه ریدایرکت خالی", async () => {
+  it("a platform with neither referral_url nor website_url ⟸ 404, not an empty redirect", async () => {
     seedPlatforms();
     const response = await goRedirectResponse("bihich");
     expect(response.status).toBe(404);
     expect(response.headers.get("Location")).toBeNull();
   });
 
-  it("ریدایرکت موقتی است (۳۰۲) نه ۳۰۱ — مقصد با رسیدن کد معرف عوض می‌شود", async () => {
+  it("the redirect is temporary (302), not 301 — the destination changes once the referral code arrives", async () => {
     seedPlatforms();
     for (const slug of ["milli", "wallgold"]) {
       const response = await goRedirectResponse(slug);
@@ -77,7 +77,7 @@ describe("GET /go/<slug> — ریدایرکت معرف", () => {
     }
   });
 
-  it("هیچ پاسخی کش نمی‌شود — مقصد با رسیدن کد معرف عوض می‌شود", async () => {
+  it("no response is ever cached — the destination changes once the referral code arrives", async () => {
     seedPlatforms();
     for (const slug of ["milli", "bihich"]) {
       const response = await goRedirectResponse(slug);
@@ -85,7 +85,7 @@ describe("GET /go/<slug> — ریدایرکت معرف", () => {
     }
   });
 
-  it("کد معرف هرگز وارد لاگ نمی‌شود", async () => {
+  it("the referral code never ends up in logs", async () => {
     seedPlatforms();
     const spies = (["log", "info", "warn", "error", "debug"] as const).map((level) =>
       vi.spyOn(console, level).mockImplementation(() => undefined),

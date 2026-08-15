@@ -303,4 +303,4 @@ def test_cli_rejects_unknown_arguments(
         generate_main()
 
     assert excinfo.value.code == 2
-    assert "کاربرد" in capsys.readouterr().err
+    assert "usage" in capsys.readouterr().err

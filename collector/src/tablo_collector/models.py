@@ -49,8 +49,8 @@ class Platform(BaseModel):
     legal_entity: str | None = None
     delivery_note_fa: str | None = None
     referral_url: str | None = None
-    # ⚠️ این دو فیلد هرگز ورودی مرتب‌سازی یا ترتیب نمایش نیستند —
-    # ترتیب فقط از قیمت می‌آید.
+    # ⚠️ These two fields are never inputs to sorting or display order —
+    # order comes only from price.
     referral_param: str | None = None
 
     @property
@@ -88,9 +88,9 @@ class PlatformTerms(BaseModel):
         fees = (self.buy_fee_percent, self.sell_fee_percent, self.round_trip_percent)
         if self.fee_source is FeeSource.UNKNOWN:
             if any(fee is not None for fee in fees):
-                raise ValueError("کارمزد UNKNOWN نباید عدد داشته باشد — عدد ساختگی ممنوع")
+                raise ValueError("UNKNOWN fee must not have a number — fabricated numbers are forbidden")
         elif any(fee is None for fee in fees):
-            raise ValueError("کارمزد API/MANUAL/IMPLIED باید هر سه عدد را داشته باشد")
+            raise ValueError("API/MANUAL/IMPLIED fee must have all three numbers")
         return self
 
 
@@ -107,5 +107,5 @@ class PlatformSnapshot(BaseModel):
     def _one_price_per_instrument(self) -> PlatformSnapshot:
         seen = [quote.instrument for quote in self.quotes]
         if len(seen) != len(set(seen)):
-            raise ValueError(f"{self.platform_slug}: هر دارایی فقط یک سطر قیمت دارد")
+            raise ValueError(f"{self.platform_slug}: each instrument has only one price row")
         return self

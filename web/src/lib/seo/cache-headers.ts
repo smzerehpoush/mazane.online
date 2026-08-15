@@ -44,7 +44,7 @@ export function applyEdgeCacheControl(
   try {
     response.headers.set("cache-control", value);
   } catch {
-    // هدر قفل — عمداً بی‌صدا.
+    // Locked header — intentionally silent.
   }
   return response;
 }

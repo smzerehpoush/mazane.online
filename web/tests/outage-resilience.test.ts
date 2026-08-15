@@ -60,15 +60,15 @@ beforeEach(() => {
   });
 });
 
-describe("قطع ردیس: اسلاگ معتبر ۲۰۰ می‌ماند، ناشناخته ۴۰۴", () => {
-  it("صفحه‌ی هر سکوی رجیستری حل می‌شود و نامش را دارد", async () => {
+describe("Redis outage: valid slugs stay 200, unknown ones stay 404", () => {
+  it("every registry platform slug resolves and has its name", async () => {
     for (const platform of REGISTRY_PLATFORMS) {
       const resolved = await resolveSlug(platform.slug);
       expect(resolved?.kind, platform.slug).toBe("platform");
     }
   });
 
-  it("صفحه‌ی سکو payload کامل با اسنپ‌شات تهی می‌دهد — همان حالت کهنگی", async () => {
+  it("platform page gives a full payload with a null snapshot — the staleness state", async () => {
     const page = await slugPage("wallgold");
     expect(page?.kind).toBe("platform");
     if (page?.kind !== "platform") return;
@@ -78,7 +78,7 @@ describe("قطع ردیس: اسلاگ معتبر ۲۰۰ می‌ماند، ناش
     expect(page.hasOutbound).toBe(true);
   });
 
-  it("صفحه‌ی دارایی منتشرشده حل می‌شود و ردیف سکوهای پشتیبان را دارد", async () => {
+  it("published instrument page resolves and has rows for its supporting platforms", async () => {
     const page = await slugPage("tala-18");
     expect(page?.kind).toBe("instrument");
     if (page?.kind !== "instrument") return;
@@ -89,7 +89,7 @@ describe("قطع ردیس: اسلاگ معتبر ۲۰۰ می‌ماند، ناش
     expect(page.rows.every((row) => row.snapshot === null)).toBe(true);
   });
 
-  it("دارایی با دروازه‌ی بسته و اسلاگ ناشناخته همچنان ۴۰۴ اند", async () => {
+  it("unpublished instrument and unknown slug both still 404", async () => {
     for (const listing of REGISTRY_INSTRUMENTS.filter((item) => !item.published)) {
       expect(await slugPage(listing.slug), listing.slug).toBeNull();
     }
@@ -99,8 +99,8 @@ describe("قطع ردیس: اسلاگ معتبر ۲۰۰ می‌ماند، ناش
   });
 });
 
-describe("قطع ردیس: سایت‌مپ کامل می‌ماند", () => {
-  it("همه‌ی سکوها و دارایی‌های منتشرشده در سایت‌مپ هستند", async () => {
+describe("Redis outage: sitemap stays complete", () => {
+  it("every platform and published instrument is in the sitemap", async () => {
     const entries = buildSitemapEntries({
       posts: [{ ...POST, status: "published", published_at: POST.published_at! }],
       instruments: await listInstruments(),
@@ -120,8 +120,8 @@ describe("قطع ردیس: سایت‌مپ کامل می‌ماند", () => {
   });
 });
 
-describe("قطع پستگرس: سایت‌مپ ناقص منتشر نمی‌شود", () => {
-  it("نسخه‌ی سخت‌گیر خطای استور را قورت نمی‌دهد، ولی نسخه‌ی معمولی می‌دهد", async () => {
+describe("Postgres outage: an incomplete sitemap is never published", () => {
+  it("the strict version doesn't swallow the store error, but the regular version does", async () => {
     const boom = new Error("postgres down");
     setBlogSource({
       listPosts: async () => {
@@ -134,8 +134,8 @@ describe("قطع پستگرس: سایت‌مپ ناقص منتشر نمی‌شو
   });
 });
 
-describe("payload زنده همیشه مقدم بر رجیستری ایستاست", () => {
-  it("سکوی تازه‌ی گردآورنده بدون دیپلوی وب دیده می‌شود", async () => {
+describe("live payload always takes precedence over the static registry", () => {
+  it("a new collector platform is visible without a web deploy", async () => {
     setPriceSource({
       getListedPlatforms: async () => [
         { slug: "sekoye-taze", name_fa: "سکوی تازه", data_policy: "ALLOWED" },
@@ -149,7 +149,7 @@ describe("payload زنده همیشه مقدم بر رجیستری ایستاس�
     expect(await resolveSlug("wallgold")).toBeNull();
   });
 
-  it("دروازه‌ی انتشارِ تازه‌بازشده‌ی گردآورنده بر رجیستری ایستا مقدم است", async () => {
+  it("a newly-opened collector publish gate takes precedence over the static registry", async () => {
     setPriceSource({
       getListedPlatforms: async () => [],
       getSnapshot: async () => null,

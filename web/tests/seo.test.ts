@@ -60,24 +60,24 @@ function entries() {
 }
 
 describe("robots.txt", () => {
-  it("‎/go/‎ برای همه‌ی خزنده‌ها بسته است و بقیه باز", () => {
+  it("/go/ is closed to every crawler, everything else is open", () => {
     const text = renderRobotsTxt();
     expect(text).toContain("User-agent: *");
     expect(text).toContain("Allow: /");
     expect(text).toContain("Disallow: /go/");
   });
 
-  it("‎/admin‎ برای همه‌ی خزنده‌ها بسته است", () => {
+  it("/admin is closed to every crawler", () => {
     expect(renderRobotsTxt()).toContain("Disallow: /admin");
   });
 
-  it("سایت‌مپ را با نشانی مطلق معرفی می‌کند", () => {
+  it("announces the sitemap with an absolute URL", () => {
     expect(renderRobotsTxt()).toContain(`Sitemap: ${SITE_URL}/sitemap.xml`);
   });
 });
 
 describe("sitemap.xml", () => {
-  it("صفحه‌ی اصلی، صفحات ثابت، دارایی منتشرشده، سکوها و پست‌ها را دارد", () => {
+  it("has the home page, static pages, the published instrument, platforms, and posts", () => {
     const paths = entries().map((entry) => entry.path);
     expect(paths).toEqual([
       "/",
@@ -91,27 +91,27 @@ describe("sitemap.xml", () => {
     ]);
   });
 
-  it("دارایی با دروازه‌ی انتشار بسته نمی‌آید", () => {
+  it("an instrument behind the publish gate doesn't appear", () => {
     expect(entries().map((entry) => entry.path)).not.toContain("/noghre-990");
   });
 
-  it("‎/go/‎ هرگز در سایت‌مپ نمی‌آید — در robots بسته است", () => {
+  it("/go/ never appears in the sitemap — it's closed in robots", () => {
     expect(renderSitemapXml(entries())).not.toContain("/go/");
   });
 
-  it("lastmod فقط برای پست بلاگ و از updated_at خودش", () => {
+  it("lastmod only for blog posts, and from their own updated_at", () => {
     const withLastmod = entries().filter((entry) => entry.lastModified !== undefined);
     expect(withLastmod).toEqual([
       { path: "/blog/maliyat-tala-1405", lastModified: "2026-08-03T11:30:00.000Z" },
     ]);
   });
 
-  it("صفحه‌ی اصلی و صفحات قیمتی lastmod ندارند — نوسان قیمت تغییر محتوا نیست", () => {
+  it("the home page and price pages have no lastmod — a price fluctuating isn't a content change", () => {
     const xml = renderSitemapXml([{ path: "/" }, { path: "/milli" }]);
     expect(xml).not.toContain("<lastmod>");
   });
 
-  it("XML معتبر با نشانی‌های مطلق تولید می‌کند", () => {
+  it("produces valid XML with absolute URLs", () => {
     const xml = renderSitemapXml(entries());
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
     expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">');
@@ -120,13 +120,13 @@ describe("sitemap.xml", () => {
     expect(xml.match(/<url>/g)?.length).toBe(entries().length);
   });
 
-  it("نشانی را در XML فرار می‌دهد", () => {
+  it("escapes the URL in the XML", () => {
     const xml = renderSitemapXml([{ path: "/a&b" }]);
     expect(xml).toContain("<loc>https://tablo.gold/a&amp;b</loc>");
   });
 });
 
-describe("سیاست کش لبه (قطعی مبدأ)", () => {
+describe("edge cache policy (origin outage)", () => {
   const base = {
     pathname: "/",
     status: 200,
@@ -135,24 +135,24 @@ describe("سیاست کش لبه (قطعی مبدأ)", () => {
     isServerFn: false,
   };
 
-  it("HTML سالم هدر لبه با stale-if-error می‌گیرد", () => {
+  it("healthy HTML gets an edge header with stale-if-error", () => {
     expect(edgeCacheControlFor(base)).toBe(HTML_EDGE_CACHE_CONTROL);
     expect(HTML_EDGE_CACHE_CONTROL).toContain("stale-if-error=86400");
   });
 
-  it("پاسخ ۵xx هرگز کش نمی‌شود — وگرنه لبه خطا را تکرار می‌کند", () => {
+  it("a 5xx response is never cached — otherwise the edge would repeat the error", () => {
     expect(edgeCacheControlFor({ ...base, status: 500 })).toBe(NO_STORE);
     expect(edgeCacheControlFor({ ...base, status: 503 })).toBe(NO_STORE);
   });
 
-  it("۴۰۴ هرگز s-maxage نمی‌گیرد — no-store می‌گیرد", () => {
+  it("404 never gets s-maxage — it gets no-store", () => {
     const value = edgeCacheControlFor({ ...base, status: 404 });
     expect(value).toBe(NO_STORE);
     expect(value).not.toContain("s-maxage");
     expect(value).not.toContain("stale-while-revalidate");
   });
 
-  it("هیچ پاسخ غیر-۲۰۰ ی سیاست کش HTML نمی‌گیرد", () => {
+  it("no non-200 response gets the HTML cache policy", () => {
     for (const status of [301, 302, 400, 403, 404, 410, 429, 500, 502, 503]) {
       const value = edgeCacheControlFor({ ...base, status });
       expect(value, `status ${status}`).toBe(NO_STORE);
@@ -160,33 +160,33 @@ describe("سیاست کش لبه (قطعی مبدأ)", () => {
     }
   });
 
-  it("۳۰۴ دست‌نخورده می‌ماند", () => {
+  it("304 is left untouched", () => {
     expect(edgeCacheControlFor({ ...base, status: 304 })).toBeNull();
   });
 
-  it("‎/api/‎ و ‎/go/‎ هرگز کش نمی‌شوند", () => {
+  it("/api/ and /go/ are never cached", () => {
     for (const pathname of ["/api/prices", "/api/revalidate-blog", "/go/milli"]) {
       expect(edgeCacheControlFor({ ...base, pathname, contentType: null })).toBe(NO_STORE);
     }
   });
 
-  it("فراخوان تابع سروری هرگز کش نمی‌شود", () => {
+  it("a server function call is never cached", () => {
     expect(edgeCacheControlFor({ ...base, isServerFn: true })).toBe(NO_STORE);
   });
 
-  it("پاسخی که خودش Cache-Control دارد دست‌نخورده می‌ماند", () => {
+  it("a response that already sets its own Cache-Control is left untouched", () => {
     expect(edgeCacheControlFor({ ...base, hasCacheControl: true })).toBeNull();
   });
 
-  it("پاسخ غیر-HTML بدون تصمیم رها می‌شود (دارایی ایستا هدر خودش را دارد)", () => {
+  it("a non-HTML response is left with no decision (a static asset has its own header)", () => {
     expect(
       edgeCacheControlFor({ ...base, pathname: "/x.png", contentType: "image/png" }),
     ).toBeNull();
   });
 });
 
-describe("هدرهای پنل مدیریت", () => {
-  it("‎/admin‎ و هر زیرمسیرش هدر بی‌کش و بدون‌نمایه می‌گیرند", () => {
+describe("admin panel headers", () => {
+  it("/admin and every subpath get no-cache, no-index headers", () => {
     for (const pathname of ["/admin", "/admin/", "/admin/login", "/admin/foo/bar"]) {
       const headers = adminHeadersFor(pathname);
       expect(headers, pathname).not.toBeNull();
@@ -195,13 +195,13 @@ describe("هدرهای پنل مدیریت", () => {
     }
   });
 
-  it("مسیرهای غیرپنل دست‌نخورده می‌مانند", () => {
+  it("non-admin paths are left untouched", () => {
     for (const pathname of ["/", "/blog", "/adminfoo", "/api/prices"]) {
       expect(adminHeadersFor(pathname), pathname).toBeNull();
     }
   });
 
-  it("applyAdminHeaders هدرها را روی پاسخ /admin می‌نشاند", () => {
+  it("applyAdminHeaders sets the headers on an /admin response", () => {
     const response = new Response("<html></html>", {
       headers: { "content-type": "text/html" },
     });
@@ -210,7 +210,7 @@ describe("هدرهای پنل مدیریت", () => {
     expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 
-  it("applyAdminHeaders برای مسیر غیرپنل دست نمی‌زند", () => {
+  it("applyAdminHeaders doesn't touch a non-admin path", () => {
     const response = new Response("ok");
     applyAdminHeaders(response, "/blog");
     expect(response.headers.get("cache-control")).toBeNull();

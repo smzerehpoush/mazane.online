@@ -1,12 +1,13 @@
 /**
- * ⚠️ ارقام از `lib/fa-number.ts` می‌آیند، **نه** از `Intl.NumberFormat`.
- * دلیلش کامل در همان فایل است: خروجی `Intl` به نسخه‌ی ICU گره خورده و
- * نسخه‌ی سرور با نسخه‌ی مرورگر یکی نیست، پس تنها منبع واقعی
- * hydration mismatch همان بود. خروجی بایت‌به‌بایت همان
- * چیزی است که قبلاً بود.
- * ⚠️ تاریخ‌ها هنوز روی `Intl.DateTimeFormat` اند: تقویم جلالی را نمی‌شود
- * بدون یک پیاده‌سازی کامل و پرخطر دستی نوشت، و ریسکش هم از عدد کمتر است
- * (تاریخ انتشار پست ثابت است و هر ۳۰ ثانیه عوض نمی‌شود).
+ * ⚠️ Digits come from `lib/fa-number.ts`, **not** from `Intl.NumberFormat`.
+ * The full reason is in that same file: `Intl`'s output is tied to the ICU
+ * version, and the server's version doesn't match the browser's, so that
+ * was the real source of the hydration mismatch. The output is
+ * byte-for-byte the same as it was before.
+ * ⚠️ Dates still use `Intl.DateTimeFormat`: the Jalali calendar can't be
+ * hand-written without a full and risky manual implementation, and the
+ * risk is lower than with numbers anyway (a post's publish date is fixed
+ * and doesn't change every 30 seconds).
  */
 import { formatFaNumber, formatFaPercentFromFraction, formatFaPercentPoints } from "./fa-number";
 

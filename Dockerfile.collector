@@ -1,16 +1,18 @@
-# Dockerfile.collector — ایمیج تولید گردآورنده (بلیت ۱۱)
+# Dockerfile.collector — production image for the collector (ticket 11)
 #
-# (عمداً بدون ‎# syntax=docker/dockerfile:1‎ — frontend داخلی BuildKit کافی است
-# و directive خارجی یعنی یک pull اضافه از Docker Hub که روی شبکه‌های محدود
-# — از جمله دسترسی ایران به هاب — ساخت را می‌شکند/کند می‌کند.)
+# (Deliberately without `# syntax=docker/dockerfile:1` — BuildKit's built-in
+# frontend is enough, and an external directive means an extra pull from
+# Docker Hub that breaks/slows the build on restricted networks — including
+# Iran's access to the Hub.)
 #
 #   docker build -f Dockerfile.collector -t tablo-collector .
 #
-# context = ریشه‌ی مخزن (فیلترشده با ‎.dockerignore‎ ریشه).
-# ساخت «بیرون از سرور» انجام می‌شود (CI یا لپ‌تاپ با ‎--platform linux/amd64‎)؛
-# سرور ۱ هسته/۲GB فقط ایمیج آماده را اجرا می‌کند (بند ۱۳ سند معماری، تصمیم ۵).
+# context = repo root (filtered by the root `.dockerignore`).
+# The build happens "outside the server" (CI or a laptop with
+# `--platform linux/amd64`); the 1-core/2GB server only runs the finished
+# image (architecture doc section 13, decision 5).
 
-########## مرحله‌ی ساخت: نصب پکیج در venv ایزوله ##########
+########## Build stage: install the package into an isolated venv ##########
 FROM python:3.12-slim AS build
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -21,11 +23,12 @@ RUN python -m venv /opt/venv
 WORKDIR /src
 COPY collector/pyproject.toml ./pyproject.toml
 COPY collector/src ./src
-# نصب غیرقابل‌ویرایش (نه ‎-e‎): venv خودکفا می‌شود و تنها چیزی است که به
-# مرحله‌ی اجرا می‌رود — بدون setuptools cache و بدون سورس اضافه.
+# Non-editable install (not `-e`): the venv becomes self-contained and is the
+# only thing that goes into the runtime stage — no setuptools cache and no
+# extra source.
 RUN /opt/venv/bin/pip install .
 
-########## مرحله‌ی اجرا: فقط venv + healthcheck ##########
+########## Runtime stage: just the venv + healthcheck ##########
 FROM python:3.12-slim
 
 ENV PATH="/opt/venv/bin:$PATH" \
@@ -34,16 +37,17 @@ ENV PATH="/opt/venv/bin:$PATH" \
 COPY --from=build /opt/venv /opt/venv
 COPY ops/collector-healthcheck.py /app/healthcheck.py
 
-# کاربر غیر root — گردآورنده هیچ‌چیزی روی دیسک نمی‌نویسد
+# Non-root user — the collector never writes anything to disk
 RUN useradd --system --uid 10001 --home-dir /nonexistent --shell /usr/sbin/nologin mazane
 USER mazane
 
-# healthcheck: ردیس در دسترس + تازه‌ترین ‎tablo:updated_at:*‎ جوان‌تر از آستانه.
-# منطق و توجیهش (سازگاری با «کهنگی، نه خطا») داخل خود اسکریپت مستند است.
-# start-period سخاوتمندانه: اولین نوبت گردآوری باید کامل شود.
+# healthcheck: Redis reachable + the newest `tablo:updated_at:*` younger than
+# the threshold. The logic and its rationale (consistent with "staleness, not
+# error") are documented in the script itself. Generous start-period: the
+# first collection cycle must be able to finish.
 HEALTHCHECK --interval=60s --timeout=15s --start-period=120s --retries=5 \
     CMD ["python", "/app/healthcheck.py"]
 
-# پیکربندی با متغیرهای محیطی (TABLO_REDIS_URL، TABLO_DATABASE_URL،
-# TABLO_REVALIDATE_URL/TOKEN، TABLO_DAILY_PUBLISH_CAP) — از compose می‌آیند.
+# Configured via environment variables (TABLO_REDIS_URL, TABLO_DATABASE_URL,
+# TABLO_REVALIDATE_URL/TOKEN, TABLO_DAILY_PUBLISH_CAP) — supplied by compose.
 CMD ["tablo-collector"]

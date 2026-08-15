@@ -52,8 +52,8 @@ class RobotsGate:
         if parser is None or parser.can_fetch(self._user_agent, url):
             return True
         log.warning(
-            "robots.txt میزبان، مسیر %s را برای %s بسته است — این fetch رد می‌شود "
-            "(کهنگی همان منبع، نه خطا)",
+            "host's robots.txt disallows path %s for %s — this fetch is rejected "
+            "(staleness for that source, not error)",
             url,
             self._user_agent,
         )
@@ -73,7 +73,7 @@ class RobotsGate:
             response = await self._client.get(robots_url)
         except Exception:
             log.warning(
-                "خواندن %s شکست خورد — باز-به-شکست تا سررسید TTL بعدی",
+                "reading %s failed — fail-open until next TTL expiry",
                 robots_url,
                 exc_info=True,
             )
@@ -86,7 +86,7 @@ class RobotsGate:
         if 400 <= status < 500:
             return None
         log.warning(
-            "پاسخ %s برای %s — باز-به-شکست تا سررسید TTL بعدی (docstring ماژول)",
+            "response %s for %s — fail-open until next TTL expiry (module docstring)",
             status,
             robots_url,
         )

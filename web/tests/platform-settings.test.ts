@@ -25,12 +25,12 @@ function entry(
 }
 
 describe("isValidChartColor", () => {
-  it("#rrggbb با حروف بزرگ یا کوچک را می‌پذیرد", () => {
+  it("accepts #rrggbb in upper or lower case", () => {
     expect(isValidChartColor("#1d6fe0")).toBe(true);
     expect(isValidChartColor("#1D6FE0")).toBe(true);
   });
 
-  it("شکل نادرست را رد می‌کند", () => {
+  it("rejects a malformed shape", () => {
     expect(isValidChartColor("1d6fe0")).toBe(false);
     expect(isValidChartColor("#1d6f")).toBe(false);
     expect(isValidChartColor("red")).toBe(false);
@@ -38,17 +38,17 @@ describe("isValidChartColor", () => {
 });
 
 describe("validatePlatformSettings", () => {
-  it("بین ۲ تا ۶ سکوی فعال با رنگ معتبر و اسلاگ مجاز را می‌پذیرد (null)", () => {
+  it("accepts 2 to 6 active platforms with valid colors and allowed slugs (null)", () => {
     const entries = [entry("wallgold", true, "#e0921d", 0), entry("talasea", true, "#9b8ce8", 1)];
     expect(validatePlatformSettings(entries, LISTED)).toBeNull();
   });
 
-  it(`کمتر از ${MIN_CHART_PLATFORMS} سکوی فعال را رد می‌کند`, () => {
+  it(`rejects fewer than ${MIN_CHART_PLATFORMS} active platforms`, () => {
     const entries = [entry("wallgold", true, "#e0921d", 0)];
     expect(validatePlatformSettings(entries, LISTED)).not.toBeNull();
   });
 
-  it(`بیش از ${MAX_CHART_PLATFORMS} سکوی فعال را رد می‌کند`, () => {
+  it(`rejects more than ${MAX_CHART_PLATFORMS} active platforms`, () => {
     const entries = Array.from({ length: MAX_CHART_PLATFORMS + 1 }, (_, i) =>
       entry(`p${i}`, true, "#123456", i),
     );
@@ -56,7 +56,7 @@ describe("validatePlatformSettings", () => {
     expect(validatePlatformSettings(entries, listed)).not.toBeNull();
   });
 
-  it("رنگ null یا بدشکل روی سکوی فعال را رد می‌کند", () => {
+  it("rejects a null or malformed color on an active platform", () => {
     const withNull = [entry("wallgold", true, null, 0), entry("talasea", true, "#9b8ce8", 1)];
     expect(validatePlatformSettings(withNull, LISTED)).not.toBeNull();
 
@@ -64,7 +64,7 @@ describe("validatePlatformSettings", () => {
     expect(validatePlatformSettings(withBad, LISTED)).not.toBeNull();
   });
 
-  it("رنگ نامعتبر روی سکوی غیرفعال مشکلی ندارد", () => {
+  it("an invalid color on an inactive platform is not a problem", () => {
     const entries = [
       entry("wallgold", true, "#e0921d", 0),
       entry("talasea", true, "#9b8ce8", 1),
@@ -73,7 +73,7 @@ describe("validatePlatformSettings", () => {
     expect(validatePlatformSettings(entries, LISTED)).toBeNull();
   });
 
-  it("اسلاگ ناشناخته/غیرقابل‌نمایش را رد می‌کند — حتی وقتی خاموش است", () => {
+  it("rejects an unknown/unlisted slug — even when it's off", () => {
     const entries = [
       entry("wallgold", true, "#e0921d", 0),
       entry("talasea", true, "#9b8ce8", 1),
@@ -84,12 +84,12 @@ describe("validatePlatformSettings", () => {
 });
 
 describe("normalizePlatformSettings", () => {
-  it("رنگ سکوی فعال را lower می‌کند", () => {
+  it("lowercases an active platform's color", () => {
     const [result] = normalizePlatformSettings([entry("wallgold", true, "#E0921D", 0)]);
     expect(result!.chart_color).toBe("#e0921d");
   });
 
-  it("رنگ/ترتیب سکوی غیرفعال را پاک می‌کند، حتی اگر مقداری داشته باشد", () => {
+  it("clears an inactive platform's color/order, even if it has a value", () => {
     const [result] = normalizePlatformSettings([entry("wallgold", false, "#e0921d", 3)]);
     expect(result).toEqual({
       slug: "wallgold",
@@ -100,19 +100,19 @@ describe("normalizePlatformSettings", () => {
     });
   });
 
-  it("نشانی معرف را trim می‌کند", () => {
+  it("trims the referral URL", () => {
     const [result] = normalizePlatformSettings([
       entry("wallgold", true, "#e0921d", 0, "  https://wallgold.ir/r/mzn  "),
     ]);
     expect(result!.referral_url).toBe("https://wallgold.ir/r/mzn");
   });
 
-  it("نشانی معرف خالی (بعد از trim) را null می‌کند — یعنی حذف override", () => {
+  it("turns an empty referral URL (after trim) into null — meaning the override is removed", () => {
     const [result] = normalizePlatformSettings([entry("wallgold", true, "#e0921d", 0, "   ")]);
     expect(result!.referral_url).toBeNull();
   });
 
-  it("نشانی معرف سکوی غیرفعال هم دست‌نخورده نرمال می‌شود — مستقل از عضویت نمودار", () => {
+  it("an inactive platform's referral URL is normalized untouched too — independent of chart membership", () => {
     const [result] = normalizePlatformSettings([
       entry("wallgold", false, null, null, "https://wallgold.ir/r/mzn"),
     ]);
@@ -123,31 +123,31 @@ describe("normalizePlatformSettings", () => {
 describe("isValidReferralUrl", () => {
   const WEBSITE = "https://wallgold.ir";
 
-  it("همان دامنه‌ی وبسایت رسمی با https را می‌پذیرد", () => {
+  it("accepts the official website's own domain with https", () => {
     expect(isValidReferralUrl("https://wallgold.ir/r/mzn-secret", WEBSITE)).toBe(true);
   });
 
-  it("زیردامنه‌ی وبسایت رسمی را می‌پذیرد", () => {
+  it("accepts a subdomain of the official website", () => {
     expect(isValidReferralUrl("https://app.wallgold.ir/r/mzn-secret", WEBSITE)).toBe(true);
   });
 
-  it("طرح غیر-https را رد می‌کند", () => {
+  it("rejects a non-https scheme", () => {
     expect(isValidReferralUrl("http://wallgold.ir/r/mzn", WEBSITE)).toBe(false);
   });
 
-  it("دامنه‌ی نامرتبط را رد می‌کند", () => {
+  it("rejects an unrelated domain", () => {
     expect(isValidReferralUrl("https://evil.example/r/mzn", WEBSITE)).toBe(false);
   });
 
-  it("دامنه‌ای که فقط با نام سکو تمام می‌شود (بدون نقطه) را رد می‌کند", () => {
+  it("rejects a domain that merely ends with the platform name (no dot)", () => {
     expect(isValidReferralUrl("https://evilwallgold.ir/r/mzn", WEBSITE)).toBe(false);
   });
 
-  it("نشانی بدشکل را رد می‌کند", () => {
+  it("rejects a malformed URL", () => {
     expect(isValidReferralUrl("not-a-url", WEBSITE)).toBe(false);
   });
 
-  it("بدون website_url مستند، هر نشانی‌ای رد می‌شود", () => {
+  it("without a documented website_url, every URL is rejected", () => {
     expect(isValidReferralUrl("https://wallgold.ir/r/mzn", null)).toBe(false);
   });
 });
@@ -159,34 +159,34 @@ describe("validateReferralUrls", () => {
     { slug: "bihich", name_fa: "بی‌هیچ", website_url: null },
   ];
 
-  it("نشانی معرف null (override ندارد) را همیشه می‌پذیرد", () => {
+  it("always accepts a null referral URL (no override)", () => {
     const entries = [entry("wallgold", true, "#e0921d", 0, null)];
     expect(validateReferralUrls(entries, PLATFORMS)).toBeNull();
   });
 
-  it("نشانی معتبرِ هم‌دامنه را می‌پذیرد", () => {
+  it("accepts a valid same-domain URL", () => {
     const entries = [entry("wallgold", true, "#e0921d", 0, "https://wallgold.ir/r/mzn")];
     expect(validateReferralUrls(entries, PLATFORMS)).toBeNull();
   });
 
-  it("طرح ناامن را با پیام روشن رد می‌کند", () => {
+  it("rejects an insecure scheme with a clear message", () => {
     const entries = [entry("wallgold", true, "#e0921d", 0, "http://wallgold.ir/r/mzn")];
     const error = validateReferralUrls(entries, PLATFORMS);
     expect(error).not.toBeNull();
     expect(error).toContain("wallgold");
   });
 
-  it("دامنه‌ی نامرتبط را رد می‌کند", () => {
+  it("rejects an unrelated domain", () => {
     const entries = [entry("talasea", true, "#9b8ce8", 0, "https://wallgold.ir/r/mzn")];
     expect(validateReferralUrls(entries, PLATFORMS)).not.toBeNull();
   });
 
-  it("سکوی بدون website_url مستند را با هر نشانی‌ای رد می‌کند", () => {
+  it("rejects a platform without a documented website_url, no matter the URL", () => {
     const entries = [entry("bihich", false, null, null, "https://bihich.example/r/mzn")];
     expect(validateReferralUrls(entries, PLATFORMS)).not.toBeNull();
   });
 
-  it("پیام خطا هرگز خودِ نشانی معرف را چاپ نمی‌کند", () => {
+  it("the error message never prints the referral URL itself", () => {
     const entries = [entry("wallgold", true, "#e0921d", 0, "http://wallgold.ir/r/SECRET-CODE")];
     const error = validateReferralUrls(entries, PLATFORMS);
     expect(error).not.toBeNull();

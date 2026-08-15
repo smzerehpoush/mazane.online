@@ -77,9 +77,10 @@ function ensureDefaultSource(): void {
 }
 
 /**
- * ⚠️ فهرست سکو و دارایی از `lib/catalog.ts` می‌آید، نه از خودِ استور: قطع
- * ردیس نباید فهرست را تهی کند، وگرنه صفحه‌ها ۴۰۴ و سایت‌مپ ناقص می‌شود
- * . payload زنده همچنان مقدم است.
+ * ⚠️ The list of platforms and instruments comes from `lib/catalog.ts`, not
+ * from the store itself: a Redis outage must not empty the list, or pages
+ * 404 and the sitemap ends up incomplete. The live payload still takes
+ * precedence.
  */
 export async function getListedPlatforms(): Promise<ListedPlatform[]> {
   ensureDefaultSource();

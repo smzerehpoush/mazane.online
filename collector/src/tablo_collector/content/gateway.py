@@ -54,8 +54,8 @@ values ($1, $2, $3, 'draft', null, $4)
 
 _SELECT_ALL_SLUGS = "select slug from posts"
 
-# ⚠️ بدون فیلتر وضعیت: پیش‌نویس و پس‌گرفته هم «پست موجود»اند — مطلب
-# پس‌گرفته نباید با تغییر جزئی برگردد.
+# ⚠️ No status filter: drafts and retracted posts also count as an «existing
+# post» — a retracted piece must not come back with a minor edit.
 _SELECT_ALL_TEXTS = "select slug, body_md from posts"
 
 _COUNT_DRAFTS = "select count(*) as n from posts where status = 'draft'"

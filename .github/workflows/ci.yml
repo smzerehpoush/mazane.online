@@ -1,8 +1,8 @@
-# CI تابلو (بلیت ۱۱)
+# Tablo CI (ticket 11)
 #
-# دو جاب تست/تایپ‌چک روی هر push و PR؛ جاب ساخت ایمیج فقط روی push به main.
-# ساخت ایمیج «فقط» همین‌جا یا روی لپ‌تاپ انجام می‌شود — هرگز روی سرورِ
-# ۱ هسته/۲GB (بند ۱۳ سند معماری، تصمیم ۵).
+# Two test/typecheck jobs on every push and PR; the image-build job only on
+# push to main. Image builds happen "only" here or on a laptop — never on the
+# 1-core/2GB server (architecture doc section 13, decision 5).
 
 name: CI
 
@@ -42,8 +42,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          # همان نسخه‌ی پایه‌ی Dockerfile.web — تفاوت نسخه‌ی نود بین CI و ایمیج
-          # یعنی CI سبز و تولید قرمز.
+          # Same base version as Dockerfile.web — a Node version mismatch
+          # between CI and the image means green CI and a red production.
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
@@ -51,14 +51,16 @@ jobs:
       - name: Install
         run: npm ci
 
-      # اول build: علاوه بر ساخت ایمیج، `src/routeTree.gen.ts` را هم بازتولید
-      # می‌کند، پس تایپ‌چک بعدی درخت مسیرِ تازه را می‌بیند نه نسخه‌ی کامیت‌شده.
+      # Build first: besides producing the image, it also regenerates
+      # `src/routeTree.gen.ts`, so the typecheck that follows sees the fresh
+      # route tree, not the committed one.
       - name: Build
         run: npm run build
 
-      # دروازه‌ی پریست: خروجی باید سرور نود باشد، نه Cloudflare Worker.
-      # همین چک داخل Dockerfile.web هم هست؛ اینجا هست تا خطا در PR دیده شود
-      # نه در جاب ساخت ایمیج که فقط روی main اجرا می‌شود.
+      # Preset gate: the output must be a Node server, not a Cloudflare Worker.
+      # The same check also lives inside Dockerfile.web; it's here too so the
+      # error shows up in the PR, not in the image-build job that only runs
+      # on main.
       - name: Nitro preset must be node-server
         run: |
           grep -q '"preset": "node-server"' .output/nitro.json || {
@@ -67,11 +69,13 @@ jobs:
             exit 1
           }
 
-      # فونت باید خودمیزبان بماند. هر بازگشت به سرورهای فونت گوگل یعنی سایت
-      # برای کاربر ایرانی کند/شکسته می‌شود و یک وابستگی بیرونی برمی‌گردد
-      # (بلیت ۱۱). گرپ روی خروجی بیلد است نه فقط منبع، تا از راه یک بسته هم
-      # برنگردد. الگو ‎//‎ را لازم دارد، پس فقط نشانی واقعی را می‌گیرد و
-      # کامنتی که نام میزبان را توضیحی آورده false-positive نمی‌شود.
+      # The font must stay self-hosted. Any regression back to Google Fonts
+      # servers means the site gets slow/broken for Iranian users and an
+      # external dependency comes back (ticket 11). The grep runs on the
+      # build output, not just the source, so it can't sneak back in through
+      # a package either. The pattern needs `//`, so it only matches the real
+      # URL and a comment that mentions the hostname explanatorily doesn't
+      # false-positive.
       - name: No external font host in the build output
         run: |
           if grep -rIlE "//fonts\.(googleapis|gstatic)\.com" .output/public src; then
@@ -79,9 +83,10 @@ jobs:
             exit 1
           fi
 
-      # قاعده‌ی سخت ۶ قراردادها: باندل کلاینت هیچ ردی از احراز هویت/نشست
-      # پنل مدیریت (بلیت ۲۰) ندارد. گرپ روی خروجی بیلد است تا از راه یک
-      # import اشتباه هم برنگردد — نه فقط منبع.
+      # Contracts hard rule 6: the client bundle carries no trace of
+      # admin-panel auth/session logic (ticket 20). The grep runs on the
+      # build output so it can't sneak back in through a wrong import either
+      # — not just the source.
       - name: No admin-auth secrets in the client bundle
         run: |
           if grep -rIlE "scryptSync|TABLO_ADMIN_PASSWORD_HASH|TABLO_ADMIN_SESSION_SECRET|tablo_admin_session" .output/public; then
@@ -92,26 +97,27 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # شامل تست نگهبان لینک‌های درآمدزا (tests/sponsored-links.test.tsx):
-      # قاعده‌ی سخت ۷ قراردادها — هر لینک خروجی درآمدزا باید از /go/<slug> برود
-      # و rel="sponsored nofollow noopener" داشته باشد. این دروازه هرگز نباید
-      # نرم شود؛ اگر قرمز است باید تست درست شود، نه حذف.
+      # Includes the sponsored-links guard test (tests/sponsored-links.test.tsx):
+      # contracts hard rule 7 — every outbound monetized link must go through
+      # /go/<slug> and carry rel="sponsored nofollow noopener". This gate must
+      # never be softened; if it's red, fix the test, don't remove it.
       - name: Tests
         run: npm test
 
   images:
     name: docker images (build + smoke test)
-    # فقط main: ساخت ایمیج برای PR ها هزینه دارد و خروجی‌اش مصرف نمی‌شود.
+    # main only: building images for PRs costs money and the output isn't used.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [collector, web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
-      # push: false — عمداً. انتخاب رجیستری تصمیم صاحب کسب‌وکار است
-      # (ops/RUNBOOK.md، پیش‌نیاز ۲؛ توصیه: GHCR + ‎docker compose pull‎،
-      # با مسیر جایگزین ‎docker save | ssh docker load‎ اگر GHCR از ایران در
-      # دسترس نبود). بعد از تصمیم: login + push: true + تگ‌گذاری اضافه شود.
+      # push: false — intentional. Choosing a registry is the business
+      # owner's decision (ops/RUNBOOK.md, prerequisite 2; recommendation: GHCR
+      # + `docker compose pull`, with `docker save | ssh docker load` as a
+      # fallback path if GHCR isn't reachable from Iran). Once decided: add
+      # login + push: true + tagging.
       - name: Build collector image
         uses: docker/build-push-action@v6
         with:
@@ -123,7 +129,8 @@ jobs:
           cache-from: type=gha,scope=collector
           cache-to: type=gha,scope=collector,mode=max
 
-      # ‎load: true‎ تا ایمیج در دیمن رانر بماند و بتوانیم واقعاً اجرایش کنیم.
+      # `load: true` so the image stays in the runner's daemon and we can
+      # actually run it.
       - name: Build web image
         uses: docker/build-push-action@v6
         with:
@@ -136,9 +143,10 @@ jobs:
           cache-from: type=gha,scope=web
           cache-to: type=gha,scope=web,mode=max
 
-      # دود-تست واقعی: کانتینر را «بدون ردیس و بدون پستگرس» بالا می‌آوریم.
-      # انتظار ۲۰۰ است، نه ۵۰۰ — قاعده‌ی سخت ۵: قطع منبع کهنگی است نه خطا.
-      # سقف حافظه همان compose.prod.yml تا اگر ایمیج سنگین شد اینجا لو برود.
+      # Real smoke test: bring the container up "without Redis and without
+      # Postgres". We expect 200, not 500 — hard rule 5: a source outage is
+      # staleness, not an error. Same memory cap as compose.prod.yml so it
+      # shows up here if the image gets heavy.
       - name: Smoke test the web image
         run: |
           docker run -d --name tablo-web-ci \
@@ -151,8 +159,8 @@ jobs:
           done
           echo "GET / -> $code"
           [ "$code" = "200" ] || { docker logs tablo-web-ci; exit 1; }
-          # نام فایل از خود مخزن خوانده می‌شود، نه hardcode — ارتقای نسخه‌ی
-          # فونت نباید CI را با پیام گیج‌کننده بشکند.
+          # The filename is read from the repo itself, not hardcoded — a font
+          # version bump shouldn't break CI with a confusing message.
           fontfile=$(basename web/public/fonts/*.woff2)
           font=$(curl -s -o /dev/null -w '%{http_code}' \
             "http://127.0.0.1:3000/fonts/$fontfile")

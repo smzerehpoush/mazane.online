@@ -1,6 +1,6 @@
 /**
- * ⚠️ این مسیر هیچ عدد قیمتی نمی‌سازد یا تغییر نمی‌دهد —
- * فقط اسلاگ/عنوان/متن/وضعیت.
+ * ⚠️ This route never creates or changes any price number —
+ * only slug/title/body/status.
  */
 import "@tanstack/react-start/server-only";
 

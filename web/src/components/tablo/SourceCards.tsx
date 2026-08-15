@@ -1,10 +1,12 @@
 /**
- * ⚠️ **بج درصد اختلاف ندارد**. طرح اولیه روی هر کارت
- * غیرمرجع `−۱٫۲۳٪` می‌گذاشت؛ آن عدد حذف شد و نه اینجا محاسبه می‌شود نه جای
- * دیگر. تنها بج باقی‌مانده «قیمت مرجع» است که یک **برچسب** است نه عدد.
- * ⚠️ هر کارت به ‎/go/<slug>‎ می‌رود با
- * ‎rel="sponsored nofollow noopener"‎ و ‎target="_blank"‎ — هرگز مستقیم به
- * دامنه‌ی سکو. مقصد در `dashboard.ts` ساخته می‌شود و نگهبان CI دارد.
+ * ⚠️ **The badge carries no percent difference.** The initial design put
+ * `−1.23%` on every non-reference card; that number was removed and is
+ * computed neither here nor anywhere else. The only badge left is
+ * "reference price", which is a **label**, not a number.
+ * ⚠️ Every card goes to `/go/<slug>` with
+ * `rel="sponsored nofollow noopener"` and `target="_blank"` — never
+ * straight to the platform's domain. The destination is built in
+ * `dashboard.ts` and is guarded by CI.
  */
 import { Staleness } from "@/components/content/RowParts";
 import type { RailSource } from "@/lib/dashboard";
@@ -54,12 +56,13 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
             </span>
 
             {/*
-             * ⚠️ برچسب کهنگیِ **هر سکو** — نه سطح صفحه. برچسب بالای محور
-             * بیشینه‌ی زمان همه‌ی سکوهاست، پس یک سکوی مرده پشت تازگیِ بقیه
-             * پنهان می‌ماند؛ جدول قدیمی این را به‌ازای هر ردیف داشت و با
-             * حذفش گم شده بود.
-             * `nowMs` از `generated_at` سرور می‌آید نه `Date.now`، پس
-             * هیدریشن واگرا نمی‌شود.
+             * ⚠️ Staleness label per **platform** — not page-level. The
+             * label above the rail is the max age across all platforms, so
+             * one dead platform hides behind the freshness of the rest; the
+             * old table had this per row and it got lost when that was
+             * removed.
+             * `nowMs` comes from the server's `generated_at`, not
+             * `Date.now`, so hydration doesn't diverge.
              */}
             <div className="mb-1.5 text-[10px]">
               <Staleness updatedAt={source.updatedAt} nowMs={nowMs} />

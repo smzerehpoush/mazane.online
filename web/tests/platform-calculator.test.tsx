@@ -14,59 +14,59 @@ import { SlugPageView } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
 import { freshIso, makeSnapshot, seed, slugPageData, type SeededStore } from "./support/seed";
 
-describe("parseCalculatorInput — ورودی رشته‌ای کاربر ⟸ عدد یا null", () => {
-  it("رقم لاتین ساده را می‌پذیرد", () => {
+describe("parseCalculatorInput — user string input ⟸ number or null", () => {
+  it("accepts plain Latin digits", () => {
     expect(parseCalculatorInput("1.5")).toBe(1.5);
     expect(parseCalculatorInput("18704055")).toBe(18704055);
   });
 
-  it("رقم فارسی و جداکننده‌ی اعشار فارسی را می‌پذیرد", () => {
+  it("accepts Persian digits and the Persian decimal separator", () => {
     expect(parseCalculatorInput("۱٫۵")).toBe(1.5);
     expect(parseCalculatorInput("۱۸۷۰۴۰۵۵")).toBe(18704055);
   });
 
-  it("جداکننده‌ی هزارگان فارسی و لاتین را نادیده می‌گیرد", () => {
+  it("ignores Persian and Latin thousands separators", () => {
     expect(parseCalculatorInput("۱۸٬۷۰۴٬۰۵۵")).toBe(18704055);
     expect(parseCalculatorInput("18,704,055")).toBe(18704055);
   });
 
-  it("خالی/فقط‌فاصله ⟸ null، نه صفر", () => {
+  it("empty/whitespace-only ⟸ null, not zero", () => {
     expect(parseCalculatorInput("")).toBeNull();
     expect(parseCalculatorInput("   ")).toBeNull();
   });
 
-  it("نامعتبر (حرف، چند نقطه، منفی) ⟸ null، نه NaN", () => {
+  it("invalid input (letters, multiple dots, negative) ⟸ null, not NaN", () => {
     expect(parseCalculatorInput("abc")).toBeNull();
     expect(parseCalculatorInput("۱.۲.۳")).toBeNull();
     expect(parseCalculatorInput("-5")).toBeNull();
     expect(Number.isNaN(parseCalculatorInput("abc"))).toBe(false);
   });
 
-  it("صفر ⟸ null (وزن/مبلغ صفر چیزی برای نمایش نیست)", () => {
+  it("zero ⟸ null (a zero weight/amount is nothing to display)", () => {
     expect(parseCalculatorInput("0")).toBeNull();
     expect(parseCalculatorInput("۰")).toBeNull();
   });
 });
 
-describe("amountFromWeight / weightFromAmount — تبدیل دوسویه روی یک قیمت واحد", () => {
-  it("وزن ⟸ مبلغ، گرد به نزدیک‌ترین تومان", () => {
+describe("amountFromWeight / weightFromAmount — bidirectional conversion at a single unit price", () => {
+  it("weight ⟸ amount, rounded to the nearest toman", () => {
     expect(amountFromWeight(1, 18704055)).toBe(18704055);
     expect(amountFromWeight(0.5, 18704055)).toBe(9352028);
   });
 
-  it("مبلغ ⟸ وزن، تا چهار رقم اعشار", () => {
+  it("amount ⟸ weight, to four decimal places", () => {
     expect(weightFromAmount(18704055, 18704055)).toBe(1);
     expect(weightFromAmount(9352027.5, 18704055)).toBeCloseTo(0.5, 4);
   });
 
-  it("رفت‌وبرگشت هم‌ارز است: وزن ⟸ مبلغ ⟸ همان وزن", () => {
+  it("a round trip is equivalent: weight ⟸ amount ⟸ the same weight", () => {
     const weight = 2.25;
     const unitPrice = 18530000;
     const amount = amountFromWeight(weight, unitPrice);
     expect(weightFromAmount(amount, unitPrice)).toBeCloseTo(weight, 3);
   });
 
-  it("قیمت واحدِ نامعتبر (صفر/منفی) ⟸ null، نه Infinity/NaN", () => {
+  it("invalid unit price (zero/negative) ⟸ null, not Infinity/NaN", () => {
     expect(weightFromAmount(1000, 0)).toBeNull();
     expect(weightFromAmount(1000, -5)).toBeNull();
   });
@@ -105,8 +105,8 @@ function unknownFeeRow(): Row {
   };
 }
 
-describe("PlatformCalculator — یک حالت برای همه‌ی سکوها", () => {
-  it("دو ورودی دوسویه (وزن، مبلغ) روی «قیمت» سکو، بدون زبانه", () => {
+describe("PlatformCalculator — one shape for every platform", () => {
+  it("two bidirectional inputs (weight, amount) on the platform's 'price', no tabs", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={knownFeeRow()} hasOutbound={true} />,
     );
@@ -117,7 +117,7 @@ describe("PlatformCalculator — یک حالت برای همه‌ی سکوها",
     expect(html).toContain("بدون احتساب کارمزد");
   });
 
-  it("بستن یک سمت شکل ماشین‌حساب را عوض نمی‌کند — عدد یکی است", () => {
+  it("disabling one side doesn't change the calculator's shape — the number is the same", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={knownFeeRow({ sellEnabled: false })} hasOutbound={true} />,
     );
@@ -125,7 +125,7 @@ describe("PlatformCalculator — یک حالت برای همه‌ی سکوها",
     expect(html).toContain("data-calc-weight");
   });
 
-  it("دکمه‌ی «شروع معامله» به /go/<slug> با rel و target کامل می‌رود", () => {
+  it("the 'start trade' button goes to /go/<slug> with full rel and target", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={knownFeeRow()} hasOutbound={true} />,
     );
@@ -135,7 +135,7 @@ describe("PlatformCalculator — یک حالت برای همه‌ی سکوها",
     expect(html).toContain("شروع معامله در طلاسی");
   });
 
-  it("بدون مقصد خروجی، دکمه‌ی مرده نمی‌سازد", () => {
+  it("without an outbound destination, it doesn't render a dead button", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={knownFeeRow()} hasOutbound={false} />,
     );
@@ -144,8 +144,8 @@ describe("PlatformCalculator — یک حالت برای همه‌ی سکوها",
   });
 });
 
-describe("PlatformCalculator — سکوی کارمزد نامعلوم (همان شکل)", () => {
-  it("دقیقاً همان شکل سکوی کارمزدمعلوم — دیگر حالت ویژه‌ای نیست", () => {
+describe("PlatformCalculator — unknown-fee platform (same shape)", () => {
+  it("exactly the same shape as a known-fee platform — no longer a special case", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={unknownFeeRow()} hasOutbound={true} />,
     );
@@ -157,7 +157,7 @@ describe("PlatformCalculator — سکوی کارمزد نامعلوم (همان 
     expect(html).toMatch(/data-calc-amount[^>]*value=""/);
   });
 
-  it("دکمه‌ی شروع معامله اینجا هم می‌آید", () => {
+  it("the start-trade button appears here too", () => {
     const html = renderToStaticMarkup(
       <PlatformCalculator row={unknownFeeRow()} hasOutbound={true} />,
     );
@@ -166,15 +166,15 @@ describe("PlatformCalculator — سکوی کارمزد نامعلوم (همان 
   });
 });
 
-describe("PlatformCalculator — قطع منبع", () => {
-  it("بدون اسنپ‌شات چیزی رندر نمی‌کند", () => {
+describe("PlatformCalculator — source outage", () => {
+  it("renders nothing without a snapshot", () => {
     const row: Row = { platform: PLATFORM, snapshot: null, updatedAt: null };
     const html = renderToStaticMarkup(<PlatformCalculator row={row} hasOutbound={true} />);
     expect(html).toBe("");
   });
 });
 
-describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» مونت شده", () => {
+describe("PlatformPage — the calculator is mounted below 'today's price'", () => {
   function store(): SeededStore {
     const now = freshIso();
     return {
@@ -211,11 +211,11 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
 
   async function renderSlug(slug: string): Promise<string> {
     const data = await slugPageData(slug);
-    if (data === null) throw new Error(`صفحه‌ی ${slug} ۴۰۴ شد`);
+    if (data === null) throw new Error(`Page ${slug} 404'd`);
     return renderToStaticMarkup(<SlugPageView data={data as SlugPageData} />);
   }
 
-  it("سکوی کارمزدمعلوم: ماشین‌حساب بعد از «قیمت امروز» می‌آید", async () => {
+  it("known-fee platform: the calculator comes after 'today's price'", async () => {
     seed(store());
     const html = await renderSlug("talasea");
     const termsIndex = html.indexOf('aria-labelledby="terms-heading"');
@@ -224,7 +224,7 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
     expect(calcIndex).toBeGreaterThan(termsIndex);
   });
 
-  it("سکوی کارمزد نامعلوم هم «قیمت امروز» می‌گیرد و هم ماشین‌حساب", async () => {
+  it("unknown-fee platform gets both 'today's price' and the calculator", async () => {
     seed(store());
     const html = await renderSlug("digikala");
     expect(html).toContain('aria-labelledby="terms-heading"');
@@ -234,14 +234,14 @@ describe("PlatformPage — ماشین‌حساب زیر «قیمت امروز» 
 });
 
 /**
- * ⚠️ این تابع اول داخل `JewelryCalculator.tsx` نوشته شده بود و بی‌تست ماند.
- * جایش `lib/calculator.ts` است، کنار `amountFromWeight` — همان‌جایی که فایل
- * خودش را «تنها دروازه» می‌نامد.
+ * ⚠️ This function was first written inside `JewelryCalculator.tsx` and went
+ * untested. Its place is `lib/calculator.ts`, alongside `amountFromWeight` —
+ * the same file that calls itself the "sole gateway".
  */
-describe("jewelryTotal — مبلغ طلای زینتی", () => {
+describe("jewelryTotal — jewelry gold amount", () => {
   const PRICE = 18_500_000;
 
-  it("بدون هیچ درصدی، فقط وزن × قیمت است", () => {
+  it("with no percentages at all, it's just weight × price", () => {
     expect(
       jewelryTotal({
         weightGrams: 2,
@@ -254,11 +254,12 @@ describe("jewelryTotal — مبلغ طلای زینتی", () => {
   });
 
   /**
-   * ⚠️ ترتیب اعمال مهم است و اشتباه‌گرفتنش خطای ساکت می‌دهد: اجرت روی قیمت
-   * طلا، سود روی **مجموع طلا و اجرت**، و مالیات روی **کل**. اگر هر سه را
-   * جداگانه روی قیمت طلا بزنند، عدد کم‌تر درمی‌آید.
+   * ⚠️ The order of operations matters, and mixing it up fails silently:
+   * wage on the gold price, profit on **the gold+wage total**, and VAT on
+   * **the grand total**. Applying all three separately to the gold price
+   * alone yields a smaller number.
    */
-  it("اجرت روی طلا، سود روی طلا+اجرت، مالیات روی کل", () => {
+  it("wage on gold, profit on gold+wage, VAT on the total", () => {
     const total = jewelryTotal({
       weightGrams: 1,
       pricePerGram: 1_000_000,
@@ -270,7 +271,7 @@ describe("jewelryTotal — مبلغ طلای زینتی", () => {
     expect(total).not.toBe(Math.round(1_000_000 * 1.27));
   });
 
-  it("به نزدیک‌ترین تومان گرد می‌شود", () => {
+  it("rounds to the nearest toman", () => {
     expect(
       Number.isInteger(
         jewelryTotal({
@@ -284,7 +285,7 @@ describe("jewelryTotal — مبلغ طلای زینتی", () => {
     ).toBe(true);
   });
 
-  it("درصد صفر هیچ اثری ندارد (کاربری که فقط وزن زده، قیمت خام می‌بیند)", () => {
+  it("zero percent has no effect (a user who only entered weight sees the raw price)", () => {
     const bare = jewelryTotal({
       weightGrams: 3,
       pricePerGram: PRICE,

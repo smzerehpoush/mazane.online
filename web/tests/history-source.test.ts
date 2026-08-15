@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe("assemble", () => {
-  it("سری هر سکو را صعودی بر ساعت می‌سازد و آخرین عدد را می‌دهد", () => {
+  it("builds each platform's series ascending by hour and gives the latest number", () => {
     const result = assemble(
       ["milli"],
       [
@@ -41,7 +41,7 @@ describe("assemble", () => {
     ]);
   });
 
-  it("تنها یک سمت وجود دارد — ترجیح بین سمت‌ها موضوعش را از دست داد", () => {
+  it("only one side exists — choosing between sides is moot", () => {
     const result = assemble(
       ["wallgold"],
       [row("wallgold", "PRICE", "2026-08-06T10:00:00Z", "18611000")],
@@ -49,7 +49,7 @@ describe("assemble", () => {
     expect(result[0]?.side_used).toBe("PRICE");
     expect(result[0]?.latest).toBe(18611000);
   });
-  it("سکوی بی‌سابقه ردیف خالی می‌گیرد، نه حذف — ترتیب ورودی حفظ می‌شود", () => {
+  it("a platform with no history gets an empty row, not removal — input order is preserved", () => {
     const result = assemble(
       ["milli", "talasea", "tlyn"],
       [row("tlyn", "PRICE", "2026-08-06T10:00:00Z", "18400000")],
@@ -64,7 +64,7 @@ describe("assemble", () => {
     });
   });
 
-  it("هیچ میانگین بین‌سکویی نمی‌سازد — هر عدد به سکوی خودش منتسب است", () => {
+  it("builds no cross-platform average — every number is attributed to its own platform", () => {
     const result = assemble(
       ["milli", "wallgold"],
       [
@@ -76,7 +76,7 @@ describe("assemble", () => {
     expect(result.map((entry) => entry.latest)).toEqual([18000000, 19000000]);
   });
 
-  it("با سطرهای دقیقه‌ای شکل quotes هم درست کار می‌کند — گروه‌بندی به ساعت وابسته نیست", () => {
+  it("also works correctly with minute-level quotes-shaped rows — grouping doesn't depend on the hour", () => {
     const result = assemble(
       ["milli"],
       [
@@ -93,7 +93,7 @@ describe("assemble", () => {
 });
 
 describe("getPlatformHistory", () => {
-  it("منبع تزریق‌شده را می‌خواند", async () => {
+  it("reads the injected source", async () => {
     setHistorySource({
       getPlatformHistory: async () => [
         {
@@ -114,11 +114,11 @@ describe("getPlatformHistory", () => {
     expect(result[0]?.latest).toBe(18500000);
   });
 
-  it("قطع منبع ⟸ نمودار خالی، نه خطا", async () => {
+  it("source outage ⟸ empty chart, not an error", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     setHistorySource({
       getPlatformHistory: async () => {
-        throw new Error("پستگرس در دسترس نیست");
+        throw new Error("Postgres is unavailable");
       },
     });
 
@@ -139,8 +139,8 @@ function pointAt(since: Date, minutesFromSince: number, value: number): HistoryP
   return { hour: new Date(since.getTime() + minutesFromSince * 60_000).toISOString(), value };
 }
 
-describe("resampleHourlyPoints — گام هفتگی/ماهانه", () => {
-  it("هر سطل فقط آخرین نمونه‌ی موجودش را می‌گیرد، نه میانگین", () => {
+describe("resampleHourlyPoints — weekly/monthly step", () => {
+  it("each bucket takes only its latest available sample, not an average", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const points = [
       pointAt(since, 30, 100), // سطل ۰
@@ -154,7 +154,7 @@ describe("resampleHourlyPoints — گام هفتگی/ماهانه", () => {
     expect(result.hasEnoughCoverage).toBe(true);
   });
 
-  it("سطل بی‌نمونه‌ی میانی، آخرین مقدار شناخته‌شده را ادامه می‌دهد (forward-fill)", () => {
+  it("a sample-less bucket in the middle continues the last known value (forward-fill)", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const points = [pointAt(since, 30, 100), pointAt(since, 270, 300)];
 
@@ -167,7 +167,7 @@ describe("resampleHourlyPoints — گام هفتگی/ماهانه", () => {
     ]);
   });
 
-  it("سطل‌های پیش از اولین نمونه‌ی واقعی اصلاً در خروجی نمی‌آیند — نه backfill", () => {
+  it("buckets before the first real sample never appear in the output at all — no backfill", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const points = [pointAt(since, 255, 500)];
 
@@ -177,14 +177,14 @@ describe("resampleHourlyPoints — گام هفتگی/ماهانه", () => {
     expect(result.hasEnoughCoverage).toBe(false);
   });
 
-  it("بدون هیچ نمونه‌ای ⟸ سری خالی، پوشش ناکافی", () => {
+  it("with no samples at all ⟸ empty series, insufficient coverage", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const result = resampleHourlyPoints([], { since, windowHours: 6, stepHours: 2 });
     expect(result.points).toEqual([]);
     expect(result.hasEnoughCoverage).toBe(false);
   });
 
-  it("هفتگی: پنجره‌ی ۱۶۸ ساعته با گام ۲ یعنی ۸۴ سطل — آستانه‌ی پوشش دقیقاً ۴۲ سطل", () => {
+  it("weekly: a 168-hour window with a 2-hour step means 84 buckets — the coverage threshold is exactly 42 buckets", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const enoughPoints: HistoryPoint[] = Array.from({ length: 42 }, (_, i) =>
       pointAt(since, i * 120, 18_000_000 + i),
@@ -201,7 +201,7 @@ describe("resampleHourlyPoints — گام هفتگی/ماهانه", () => {
     expect(notEnough.hasEnoughCoverage).toBe(false);
   });
 
-  it("ماهانه: پنجره‌ی ۷۲۰ ساعته با گام ۸ یعنی ۹۰ سطل — آستانه‌ی پوشش دقیقاً ۴۵ سطل", () => {
+  it("monthly: a 720-hour window with an 8-hour step means 90 buckets — the coverage threshold is exactly 45 buckets", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const enoughPoints: HistoryPoint[] = Array.from({ length: 45 }, (_, i) =>
       pointAt(since, i * 480, 18_000_000 + i),
@@ -218,8 +218,8 @@ describe("resampleHourlyPoints — گام هفتگی/ماهانه", () => {
   });
 });
 
-describe("resampleHourlyPoints — گام ۱۵ دقیقه‌ای روزانه از سطرهای خام", () => {
-  it("هر سطل فقط آخرین نمونه‌ی موجودش را می‌گیرد، نه میانگین", () => {
+describe("resampleHourlyPoints — daily 15-minute step from raw rows", () => {
+  it("each bucket takes only its latest available sample, not an average", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const points = [
       pointAt(since, 3, 100), // سطل ۰
@@ -233,7 +233,7 @@ describe("resampleHourlyPoints — گام ۱۵ دقیقه‌ای روزانه ا
     expect(result.hasEnoughCoverage).toBe(true);
   });
 
-  it("سطل بی‌نمونه‌ی میانی، آخرین مقدار شناخته‌شده را ادامه می‌دهد (forward-fill)", () => {
+  it("a sample-less bucket in the middle continues the last known value (forward-fill)", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const points = [pointAt(since, 5, 100), pointAt(since, 40, 300)];
 
@@ -246,7 +246,7 @@ describe("resampleHourlyPoints — گام ۱۵ دقیقه‌ای روزانه ا
     ]);
   });
 
-  it("روزانه: پنجره‌ی ۲۴ساعته با گام ۱۵ دقیقه یعنی ۹۶ سطل", () => {
+  it("daily: a 24-hour window with a 15-minute step means 96 buckets", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
     const points: HistoryPoint[] = [pointAt(since, 0, 18_500_000)];
 
@@ -256,7 +256,7 @@ describe("resampleHourlyPoints — گام ۱۵ دقیقه‌ای روزانه ا
     expect(result.hasEnoughCoverage).toBe(false);
   });
 
-  it("بدون هیچ نمونه‌ای (پنجره‌ی بیرون از پوشش، یا سکوی بی‌سابقه) ⟸ سری خالی، نه throw", () => {
+  it("with no samples at all (a window outside coverage, or a platform with no history) ⟸ empty series, not a throw", () => {
     const since = new Date("2026-08-06T00:00:00.000Z");
 
     const result = resampleHourlyPoints([], { since, windowHours: 24, stepHours: 15 / 60 });

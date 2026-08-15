@@ -129,8 +129,8 @@ afterEach(() => {
   resetImageStore();
 });
 
-describe("بدون نشست معتبر", () => {
-  it("۴۰۱ می‌دهد و انبار عکس صدا زده نمی‌شود", async () => {
+describe("without a valid session", () => {
+  it("returns 401 and the image store is not called", async () => {
     seedFake(post("akkas"));
     const store = seedImageStore();
     const response = await adminPostImageUploadResponse(
@@ -142,8 +142,8 @@ describe("بدون نشست معتبر", () => {
   });
 });
 
-describe("اسلاگ", () => {
-  it("بدشکل ⟸ ۴۰۴", async () => {
+describe("slug", () => {
+  it("malformed ⟸ 404", async () => {
     seedFake();
     seedImageStore();
     const response = await adminPostImageUploadResponse(
@@ -153,7 +153,7 @@ describe("اسلاگ", () => {
     expect(response.status).toBe(404);
   });
 
-  it("ناموجود ⟸ ۴۰۴", async () => {
+  it("nonexistent ⟸ 404", async () => {
     seedFake();
     const store = seedImageStore();
     const response = await adminPostImageUploadResponse(
@@ -165,8 +165,8 @@ describe("اسلاگ", () => {
   });
 });
 
-describe("متن جایگزین", () => {
-  it("غایب ⟸ ۴۰۰، آپلود صدا زده نمی‌شود", async () => {
+describe("alt text", () => {
+  it("missing ⟸ 400, upload is not called", async () => {
     seedFake(post("akkas"));
     const store = seedImageStore();
     const response = await adminPostImageUploadResponse(
@@ -177,7 +177,7 @@ describe("متن جایگزین", () => {
     expect(store.uploads).toHaveLength(0);
   });
 
-  it("خالی/فقط فاصله ⟸ ۴۰۰", async () => {
+  it("empty/whitespace-only ⟸ 400", async () => {
     seedFake(post("akkas"));
     const store = seedImageStore();
     const response = await adminPostImageUploadResponse(
@@ -189,8 +189,8 @@ describe("متن جایگزین", () => {
   });
 });
 
-describe("فایل", () => {
-  it("غایب ⟸ ۴۰۰", async () => {
+describe("file", () => {
+  it("missing ⟸ 400", async () => {
     seedFake(post("akkas"));
     seedImageStore();
     const response = await adminPostImageUploadResponse(
@@ -200,7 +200,7 @@ describe("فایل", () => {
     expect(response.status).toBe(400);
   });
 
-  it("بزرگ‌تر از سقف با Content-Length ⟸ ۴۱۳ پیش از خواندن بدنه", async () => {
+  it("larger than the limit with Content-Length ⟸ 413 before reading the body", async () => {
     seedFake(post("akkas"));
     const store = seedImageStore();
     const response = await adminPostImageUploadResponse(
@@ -213,7 +213,7 @@ describe("فایل", () => {
     expect(store.uploads).toHaveLength(0);
   });
 
-  it("بزرگ‌تر از سقف بدون Content-Length معتبر ⟸ ۴۱۳ پس از خواندن بافر", async () => {
+  it("larger than the limit without a valid Content-Length ⟸ 413 after reading the buffer", async () => {
     seedFake(post("akkas"));
     const store = seedImageStore();
     const huge = new Uint8Array(8 * 1024 * 1024 + 1);
@@ -226,8 +226,8 @@ describe("فایل", () => {
   });
 });
 
-describe("آپلود موفق", () => {
-  it("۲۰۰ و image_url/alt/width/height روی پست می‌نشیند، پاسخ بی‌کش است", async () => {
+describe("successful upload", () => {
+  it("200, and image_url/alt/width/height are set on the post; the response is uncached", async () => {
     const fake = seedFake(
       post("akkas", { status: "published", updated_at: "2026-08-01T00:00:00.000Z" }),
     );
@@ -251,7 +251,7 @@ describe("آپلود موفق", () => {
     expect(fake.imageChanges).toHaveLength(1);
   });
 
-  it("بایت‌های رسیده به upload همان بایت‌های فایل آپلودی‌اند", async () => {
+  it("the bytes received by upload are exactly the uploaded file's bytes", async () => {
     seedFake(post("akkas"));
     const store = seedImageStore();
     await adminPostImageUploadResponse(
@@ -264,8 +264,8 @@ describe("آپلود موفق", () => {
   });
 });
 
-describe("قطع انبار عکس — کهنگی برای آپلود، نه برای متن پست", () => {
-  it("۵۰۲ می‌دهد", async () => {
+describe("image store outage — staleness for the upload, not for the post text", () => {
+  it("returns 502", async () => {
     seedFake(post("akkas"));
     seedBrokenImageStore();
     const response = await adminPostImageUploadResponse(
@@ -275,7 +275,7 @@ describe("قطع انبار عکس — کهنگی برای آپلود، نه ب�
     expect(response.status).toBe(502);
   });
 
-  it("متن پست دست‌نخورده می‌ماند — هیچ setImage ای صدا زده نمی‌شود", async () => {
+  it("post text remains untouched — setImage is never called", async () => {
     const fake = seedFake(post("akkas", { title_fa: "عنوان اصلی", body_md: "متن اصلی" }));
     seedBrokenImageStore();
     await adminPostImageUploadResponse(
@@ -288,8 +288,8 @@ describe("قطع انبار عکس — کهنگی برای آپلود، نه ب�
   });
 });
 
-describe("متد دیگر", () => {
-  it("۴۰۵ با هدر Allow", () => {
+describe("other method", () => {
+  it("405 with Allow header", () => {
     const response = adminPostImageMethodNotAllowed();
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("POST");

@@ -7,19 +7,19 @@ function fakeFile(): File {
 }
 
 describe("canUploadPostImage", () => {
-  it("فایل غایب ⟸ نادرست", () => {
+  it("missing file ⟸ false", () => {
     expect(canUploadPostImage({ file: null, alt: "توصیف عکس" })).toBe(false);
   });
 
-  it("متن جایگزین خالی ⟸ نادرست", () => {
+  it("empty alt text ⟸ false", () => {
     expect(canUploadPostImage({ file: fakeFile(), alt: "" })).toBe(false);
   });
 
-  it("متن جایگزین فقط فاصله ⟸ نادرست", () => {
+  it("whitespace-only alt text ⟸ false", () => {
     expect(canUploadPostImage({ file: fakeFile(), alt: "   " })).toBe(false);
   });
 
-  it("فایل و متن جایگزین هر دو حاضر ⟸ درست", () => {
+  it("both file and alt text present ⟸ true", () => {
     expect(canUploadPostImage({ file: fakeFile(), alt: "توصیف عکس" })).toBe(true);
   });
 });

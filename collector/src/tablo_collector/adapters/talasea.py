@@ -23,16 +23,16 @@ class TalaseaAdapter:
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
         if not isinstance(payload, dict):
-            raise AdapterError("طلاسی: payload یک شیء JSON نیست")
+            raise AdapterError("Talasea: payload is not a JSON object")
 
         raw_price = payload.get("price")
         if raw_price is None:
-            raise AdapterError("طلاسی: قیمت در payload تهی است")
+            raise AdapterError("Talasea: price is empty in payload")
         try:
             raw_value = Decimal(str(raw_price))
             fee = Decimal(str(payload["fee"]))
         except (InvalidOperation, KeyError) as exc:
-            raise AdapterError(f"طلاسی: payload نامعتبر: {exc!r}") from exc
+            raise AdapterError(f"Talasea: invalid payload: {exc!r}") from exc
 
         return known_fee_snapshot(
             slug=self.slug,

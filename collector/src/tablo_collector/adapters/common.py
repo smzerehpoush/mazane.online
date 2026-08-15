@@ -58,7 +58,7 @@ def _snapshot(
     observed_at: datetime | None = None,
 ) -> PlatformSnapshot:
     if (buy_fee is None) != (sell_fee is None):
-        raise ValueError(f"{slug}: کارمزد یک‌سمته یعنی باگ — یا هر دو، یا هیچ‌کدام")
+        raise ValueError(f"{slug}: a one-sided fee means a bug — either both, or neither")
 
     fees: tuple[Decimal, Decimal, Decimal] | None = (
         None

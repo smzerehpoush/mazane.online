@@ -202,7 +202,7 @@ async def prune_expired_raw(
     victims = [row for row in rows if not row.suppressed and row_key(row) in rolled]
     skipped = sum(1 for row in rows if not row.suppressed) - len(victims)
     if skipped:
-        log.warning("هرس: %s ردیف کهنه بدون تجمیعِ بازه‌شان ماندند", skipped)
+        log.warning("prune: %s stale rows remained without their interval's rollup", skipped)
     if victims:
         await store.delete_raw_rows(victims)
     return len(victims)

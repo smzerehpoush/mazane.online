@@ -206,7 +206,7 @@ async def test_revalidation_failure_does_not_roll_back_publish(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     gateway = FakeContentGateway()
-    revalidate = RecordingRevalidator(exc=RuntimeError("وب در دسترس نیست"))
+    revalidate = RecordingRevalidator(exc=RuntimeError("web is unavailable"))
     await seed_drafts(gateway, 2)
 
     with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
@@ -216,7 +216,7 @@ async def test_revalidation_failure_does_not_roll_back_publish(
     for slug in published:
         post = await gateway.get_post(slug)
         assert post is not None and post.status == "published"
-    assert any("بازتولید" in record.message for record in caplog.records)
+    assert any("revalidate" in record.message for record in caplog.records)
 
 
 async def test_queue_depth_below_five_days_logs_warning(

@@ -1,9 +1,10 @@
 /**
- * ⚠️ طرح این صفحه در ۲۰۲۶-۰۸-۱۱ عوض شد : جدول مقایسه،
- * چیپ‌ها و نمودار خطی حذف شدند و جایشان محور قیمت، کارت‌های منبع و خلاصه
- * بازار آمد. تست‌های ستون‌ها/سرستون‌ها/نشان «ارزان‌ترین» با خودِ جدول رفتند —
- * ولی هر ثابتی که به طراحی وابسته نبود اینجا مانده و روی رابط تازه دوباره
- * بسته شده: قیمت در HTML سروری، کهنگی نه خطا، فیلتر فهرست، و نوار ماده ۵.
+ * ⚠️ This page's design changed on 2026-08-11: the comparison table, chips,
+ * and line chart were removed, replaced by the price axis, source cards, and
+ * market summary. The columns/headers/"cheapest" badge tests went with the
+ * table itself — but every invariant that didn't depend on the design stayed
+ * and was re-wired onto the new interface: prices in the server-rendered
+ * HTML, staleness not error, listing filter, and the Article 5 banner.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -35,42 +36,42 @@ function timeTagPattern(iso: string): RegExp {
 
 function markerOf(html: string, slug: string): string {
   const match = html.match(new RegExp(`<a[^>]*data-rail-marker="${slug}"[\\s\\S]*?</a>`));
-  if (match === null) throw new Error(`نشانگر ${slug} در HTML نیست`);
+  if (match === null) throw new Error(`marker ${slug} not in HTML`);
   return match[0];
 }
 
 function cardOf(html: string, slug: string): string {
   const match = html.match(new RegExp(`<a[^>]*data-source-card="${slug}"[\\s\\S]*?</a>`));
-  if (match === null) throw new Error(`کارت ${slug} در HTML نیست`);
+  if (match === null) throw new Error(`card ${slug} not in HTML`);
   return match[0];
 }
 
 function railPercentOf(html: string, slug: string): number {
   const style = markerOf(html, slug).match(/right:\s*([\d.]+)%/);
-  if (style === null) throw new Error(`نشانگر ${slug} موقعیت ندارد`);
+  if (style === null) throw new Error(`marker ${slug} has no position`);
   return Number(style[1]);
 }
 
-describe("صفحه‌ی اصلی — قیمت‌ها در HTML سروری", () => {
+describe("home page — prices in the server-rendered HTML", () => {
   /**
-   * ⚠️ معیار پذیرش صریح : «با جاوااسکریپت غیرفعال قیمت‌ها دیده شوند».
-   * `renderToStaticMarkup` دقیقاً همان چیزی را می‌دهد که مرورگرِ بی‌جاوااسکریپت
-   * می‌بیند — هیچ افکتی اجرا نشده.
+   * ⚠️ Explicit acceptance criterion: "prices must be visible with
+   * JavaScript disabled". `renderToStaticMarkup` gives exactly what a
+   * JavaScript-less browser sees — no effect has run.
    */
-  it("قیمت هر منبع با ارقام فارسی در همان HTML اولیه است", async () => {
+  it("each source's price is in Persian digits in the initial HTML itself", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("۱۸٬۶۱۱٬۰۰۰");
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
     expect(html).toContain("۱۸٬۵۳۸٬۰۰۰");
   });
 
-  it("موقعیت هر نشانگر در همان صفت style سروری است، نه بعد از hydration", async () => {
+  it("each marker's position is in the server-rendered style attribute itself, not after hydration", async () => {
     const html = await renderHome(healthyStore());
     expect(railPercentOf(html, "wallgold")).toBeGreaterThan(0);
     expect(railPercentOf(html, "milli")).toBeGreaterThan(0);
   });
 
-  it("مسیر اسپارک‌لاین سمت سرور تولید شده و در HTML است", async () => {
+  it("the sparkline path is generated server-side and is in the HTML", async () => {
     const html = await renderHome(healthyStore(), {
       history: [
         {
@@ -87,25 +88,26 @@ describe("صفحه‌ی اصلی — قیمت‌ها در HTML سروری", () =
     expect(cardOf(html, "milli")).toMatch(/<path[^>]*d="M[\d.]+,[\d.]+C/);
   });
 
-  it("هیچ کتابخانه‌ی نموداری در خروجی نیست — SVG دستی است", async () => {
+  it("no charting library is in the output — it's hand-rolled SVG", async () => {
     const html = await renderHome(healthyStore());
     expect(html).not.toContain("recharts");
   });
 });
 
-describe("صفحه‌ی اصلی — محور قیمت", () => {
+describe("home page — price axis", () => {
   /**
-   * ⚠️ «راست = ارزان‌تر». مقدار `right` فاصله از لبه‌ی راست است،
-   * پس ارزان‌ترین باید **کم‌ترین** درصد را داشته باشد. نسخه‌ی اول فرمول سند
-   * را عیناً پیاده کرد و ارزان‌ترین چپ‌ترین افتاد — خلاف زیرعنوان خودِ کارت.
+   * ⚠️ "Right = cheaper." The `right` value is the distance from the right
+   * edge, so the cheapest must have the **lowest** percent. The first
+   * version implemented the doc's formula literally and the cheapest ended
+   * up leftmost — contradicting the card's own subtitle.
    */
-  it("ارزان‌ترین راست‌ترین است (راست = ارزان‌تر)", async () => {
+  it("the cheapest is rightmost (right = cheaper)", async () => {
     const html = await renderHome(healthyStore());
     expect(railPercentOf(html, "talasea")).toBeLessThan(railPercentOf(html, "milli"));
     expect(railPercentOf(html, "milli")).toBeLessThan(railPercentOf(html, "wallgold"));
   });
 
-  it("لنگر «قیمت مرجع» روی موقعیت سکوی مرجع می‌نشیند", async () => {
+  it("the \"reference price\" anchor sits at the reference platform's position", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("قیمت مرجع");
     const anchor = html.match(/data-rail-anchor[^>]*style="right:\s*([\d.]+)%/);
@@ -113,7 +115,7 @@ describe("صفحه‌ی اصلی — محور قیمت", () => {
     expect(Number(anchor?.[1])).toBe(railPercentOf(html, "milli"));
   });
 
-  it("پاورقی محور کمینه، بیشینه و بازه‌ی اختلاف را می‌دهد", async () => {
+  it("the axis footer gives the min, max, and spread", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("گران‌تر · ۱۸٬۶۱۱٬۰۰۰");
     expect(html).toContain("۱۸٬۵۳۰٬۰۰۰ · ارزان‌تر");
@@ -121,10 +123,11 @@ describe("صفحه‌ی اصلی — محور قیمت", () => {
   });
 
   /**
-   * ⚠️ نگهبان، «مورد لبه‌ای که حتماً باید حل شود». بدون کف ۵۰٬۰۰۰،
-   * این دو سکو که ۲٬۰۰۰ تومان فاصله دارند دو سرِ محور را می‌گرفتند.
+   * ⚠️ Guard for "the edge case that absolutely must be handled." Without a
+   * floor of 50,000, these two platforms — only 2,000 toman apart — would
+   * take the two ends of the axis.
    */
-  it("با اختلاف ناچیز، نشانگرها حول مرکز جمع می‌مانند", async () => {
+  it("with a negligible spread, markers stay clustered around the center", async () => {
     const store = healthyStore();
     store.snapshots["wallgold"] = makeSnapshot({
       slug: "wallgold",
@@ -148,49 +151,50 @@ describe("صفحه‌ی اصلی — محور قیمت", () => {
     }
   });
 
-  it("هر نشانگر برچسب دسترس‌پذیری با نام و قیمت دارد", async () => {
+  it("every marker has an accessibility label with name and price", async () => {
     const html = await renderHome(healthyStore());
     expect(markerOf(html, "wallgold")).toContain('aria-label="وال‌گلد — ۱۸٬۶۱۱٬۰۰۰ تومان"');
   });
 });
 
-describe("صفحه‌ی اصلی — کارت‌های منبع", () => {
-  it("فقط کارت سکوی مرجع بج «قیمت مرجع» می‌گیرد", async () => {
+describe("home page — source cards", () => {
+  it("only the reference platform's card gets the \"reference price\" badge", async () => {
     const html = await renderHome(healthyStore());
     expect(cardOf(html, "milli")).toContain("قیمت مرجع");
     expect(cardOf(html, "wallgold")).not.toContain("قیمت مرجع");
   });
 
   /**
-   * ⚠️ نگهبان، : درصد اختلاف نسبت به مرجع حذف شد و نه محاسبه
-   * می‌شود نه نمایش داده. اگر روزی برگردد، این تست باید قرمز شود.
+   * ⚠️ Guard: the diff-percentage relative to the reference was removed —
+   * it's neither computed nor displayed. If it ever comes back, this test
+   * must fail.
    */
-  it("هیچ بج درصد اختلافی روی کارت‌ها نیست", async () => {
+  it("no diff-percentage badge is on the cards", async () => {
     const html = await renderHome(healthyStore());
     expect(html).not.toMatch(/[−+][۰-۹٫]+٪/);
   });
 });
 
-describe("صفحه‌ی اصلی — خلاصه بازار", () => {
-  it("عدد درشت نام سکوی مرجع را کنار خودش دارد", async () => {
+describe("home page — market summary", () => {
+  it("the big number has the reference platform's name next to it", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("قیمت مرجع · میلی · تومان");
   });
 
-  /** ⚠️ خط قرمز حقوقی */
-  it("کلمه‌ی «میانگین» هیچ‌جای صفحه نیست", async () => {
+  /** ⚠️ Legal red line */
+  it("the word \"average\" appears nowhere on the page", async () => {
     const html = await renderHome(healthyStore());
     expect(html).not.toContain("میانگین");
   });
 
-  it("هر سه زبانه‌ی بازه در HTML سروری‌اند تا تعویضشان فچ نزند", async () => {
+  it("all three range tabs are in the server-rendered HTML so switching them never triggers a fetch", async () => {
     const html = await renderHome(healthyStore());
     for (const key of ["DAILY", "WEEKLY", "MONTHLY"]) {
       expect(html, key).toContain(`data-summary-tab="${key}"`);
     }
   });
 
-  it("برچسب زبانه‌ها همان واژگان است، نه واژگان کارت نرخ صفحه‌ی سکو", async () => {
+  it("the tab labels use this page's own vocabulary, not the platform page's rate-card vocabulary", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("۲۴ ساعت اخیر");
     expect(html).toContain("هفته گذشته");
@@ -198,12 +202,13 @@ describe("صفحه‌ی اصلی — خلاصه بازار", () => {
   });
 
   /**
-   * ⚠️ «به‌زودی» در این صفحه معنای تثبیت‌شده دارد: آن را برای
-   * قابلیت‌های ساخته‌نشده (حباب‌سنج، هشدار قیمت) برداشته. بازه‌ای که فقط هنوز
-   * تاریخچه ندارد ساخته‌نشده نیست — و روی نصب تازه هر سه زبانه «به‌زودی»
-   * می‌شدند و کل کارت عرضه‌نشده به‌نظر می‌آمد.
+   * ⚠️ "Coming soon" has a fixed meaning on this page: it's reserved for
+   * features that haven't been built yet (bubble meter, price alert). A
+   * range that just doesn't have history yet isn't unbuilt — and on a fresh
+   * install all three tabs would say "coming soon" and the whole card would
+   * look unshipped.
    */
-  it("زبانه‌ی بی‌داده برچسبش عوض نمی‌شود؛ فقط disabled است", async () => {
+  it("a data-less tab doesn't change its label; it's just disabled", async () => {
     const html = await renderHome(healthyStore(), { history: [] });
     expect(html).toContain("۲۴ ساعت اخیر");
     const tabs = html.match(/<button[^>]*data-summary-tab="[^"]*"[^>]*>/g) ?? [];
@@ -212,42 +217,42 @@ describe("صفحه‌ی اصلی — خلاصه بازار", () => {
   });
 });
 
-describe("صفحه‌ی اصلی — جدول حذف شد", () => {
-  it("هیچ جدول قیمتی در صفحه نیست", async () => {
+describe("home page — the table was removed", () => {
+  it("no price table is on the page", async () => {
     const html = await renderHome(healthyStore());
     expect(html).not.toContain("<table");
   });
 
-  it("همه‌ی سکوهای فهرست از پاصفحه لینک داخلی می‌گیرند", async () => {
+  it("every platform in the listing gets an internal link from the footer", async () => {
     const html = await renderHome(healthyStore());
     for (const platform of LISTED) {
       expect(html, platform.slug).toContain(`data-all-platform="${platform.slug}"`);
     }
   });
 
-  it("در قطع کامل هم فهرست پاصفحه از رجیستری پر می‌شود", async () => {
+  it("even on a total outage, the footer listing is filled from the registry", async () => {
     const html = await renderHome({ listed: [], snapshots: {}, updatedAt: {} });
     for (const platform of REGISTRY_PLATFORMS) {
       expect(html, platform.slug).toContain(`data-all-platform="${platform.slug}"`);
     }
   });
 
-  it("فهرست پاصفحه قیمت و کارمزد ندارد — جدول دوم نیست", async () => {
+  it("the footer listing has no price or fee — it isn't a second table", async () => {
     const html = await renderHome(healthyStore());
     const footer = html.match(/<nav[^>]*all-platforms-heading[\s\S]*?<\/nav>/);
     expect(footer).not.toBeNull();
     expect(footer?.[0]).not.toMatch(/[۰-۹]٬[۰-۹]/);
   });
 
-  it("گلدیکا در استور هست ولی هرگز رندر نمی‌شود (PERMISSION_PENDING)", async () => {
+  it("goldika is in the store but never renders (PERMISSION_PENDING)", async () => {
     const html = await renderHome(healthyStore());
     expect(html).not.toContain("گلدیکا");
     expect(html).not.toContain("goldika");
   });
 });
 
-describe("صفحه‌ی اصلی — کارت‌های غیرفعال", () => {
-  it("حباب‌سنج رندر می‌شود ولی هیچ عددی ادعا نمی‌کند", async () => {
+describe("home page — disabled cards", () => {
+  it("the bubble meter renders but claims no number", async () => {
     const html = await renderHome(healthyStore());
     const card = html.match(/<section[^>]*data-card="bubble"[\s\S]*?<\/section>/);
     expect(card).not.toBeNull();
@@ -256,20 +261,20 @@ describe("صفحه‌ی اصلی — کارت‌های غیرفعال", () => {
     expect(card?.[0]).not.toMatch(/[۰-۹]٬[۰-۹]/);
   });
 
-  it("کارت هشدار قیمت هم غیرفعال است", async () => {
+  it("the price-alert card is disabled too", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("هشدار قیمت");
   });
 
-  it("پوسته‌ی ماشین‌حساب سروررندر است", async () => {
+  it("the calculator shell is server-rendered", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("ماشین حساب طلای زینتی");
     expect(html).toContain("اجرت ساخت (٪)");
   });
 });
 
-describe("صفحه‌ی اصلی — قطع منبع ⟸ کهنگی، نه خطا", () => {
-  it("با مردن یک منبع صفحه رندر می‌شود و بقیه سر جایشان می‌مانند", async () => {
+describe("home page — source outage ⟸ staleness, not error", () => {
+  it("when one source dies the page still renders and the rest stay in place", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
     store.updatedAt["talasea"] = staleIso();
@@ -280,7 +285,7 @@ describe("صفحه‌ی اصلی — قطع منبع ⟸ کهنگی، نه خط�
     expect(cardOf(html, "talasea")).toContain("قیمت در دسترس نیست");
   });
 
-  it("سکوی بی‌قیمت نشانگر محور نمی‌گیرد ولی کارتش می‌ماند", async () => {
+  it("a priceless platform gets no axis marker but its card remains", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
     const html = await renderHome(store);
@@ -288,13 +293,13 @@ describe("صفحه‌ی اصلی — قطع منبع ⟸ کهنگی، نه خط�
     expect(() => cardOf(html, "talasea")).not.toThrow();
   });
 
-  it("قطع کامل هر سه منبع ⟸ صفحه باز هم رندر می‌شود", async () => {
+  it("a total outage of all three sources ⟸ the page still renders", async () => {
     const html = await renderHome({ listed: [], snapshots: {}, updatedAt: {} });
     expect(html).toContain("محور قیمت طلای ۱۸ عیار");
     expect(html).toContain("قیمت در دسترس نیست");
   });
 
-  it("با یک منبع قیمت‌دار محور رسم نمی‌شود ولی صفحه سالم است", async () => {
+  it("with only one priced source, the axis isn't drawn but the page is fine", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
     store.snapshots["wallgold"] = null;
@@ -304,17 +309,18 @@ describe("صفحه‌ی اصلی — قطع منبع ⟸ کهنگی، نه خط�
     expect(html).toContain("برای رسم محور دست‌کم دو سکوی قیمت‌دار لازم است");
   });
 
-  it("سکوی کارمزدنامعلوم عدد خودش را دارد و جدا نمی‌افتد", async () => {
+  it("a platform with an unknown fee still has its own number and isn't left out", async () => {
     const html = await renderHome(storeWithUnknownFee());
     expect(html).toContain("ملی‌گلد");
   });
 
   /**
-   * ⚠️ الزام : سن داده باید در خودِ HTML سروری باشد. پیش
-   * از بازطراحی، هر ردیف جدول برچسب خودش را داشت؛ حالا یک برچسب سطح-صفحه
-   * روی محور است. حذف جدول نباید این را با خودش می‌برد.
+   * ⚠️ Requirement: data age must be in the server-rendered HTML itself.
+   * Before the redesign, every table row had its own label; now there's one
+   * page-level label on the axis. Removing the table must not take this
+   * down with it.
    */
-  it("برچسب «آخرین به‌روزرسانی» با <time datetime> در خود HTML است", async () => {
+  it("the \"last updated\" label with <time datetime> is in the HTML itself", async () => {
     const store = healthyStore();
     const html = await renderHome(store);
     const latest = Object.values(store.updatedAt)
@@ -326,14 +332,14 @@ describe("صفحه‌ی اصلی — قطع منبع ⟸ کهنگی، نه خط�
   });
 });
 
-describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مالک: جعبه‌ی خالی نه)", () => {
-  it("بدون پست، ستون کناری و بخش پایانی اصلاً رندر نمی‌شوند", async () => {
+describe("home page — blog sections (owner's decision: no empty box)", () => {
+  it("with no posts, the sidebar and closing section don't render at all", async () => {
     const html = await renderHome(healthyStore(), { posts: [] });
     expect(html).not.toContain("تازه‌ترین نوشته‌ها");
     expect(html).not.toContain("بیشتر بخوانید");
   });
 
-  it("با دو پست، تازه‌ترین «مقاله ویژه» می‌شود و بقیه در ستون کناری", async () => {
+  it("with two posts, the newest becomes the \"featured article\" and the rest go in the sidebar", async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -361,11 +367,12 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
   });
 
   /**
-   * ⚠️ «ویژه» ادعای سردبیری نیست — بک‌اند پرچم `is_featured` ندارد (سند
-   * شکاف‌ها) و تازه‌ترین پست انتخاب می‌شود. تستِ عدم‌تکرار مهم‌تر از خودِ کارت
-   * است: بدون آن، یک نوشته دو بار در یک سند می‌آمد.
+   * ⚠️ "Featured" isn't an editorial claim — the backend has no
+   * `is_featured` flag (per the gaps doc) and the newest post is selected.
+   * The no-duplication test matters more than the card itself: without it,
+   * a single post would appear twice on one page.
    */
-  it("کارت «مقاله ویژه» با CTA رندر می‌شود و همان پست در ستون کناری تکرار نمی‌شود", async () => {
+  it("the \"featured article\" card renders with a CTA and that same post isn't repeated in the sidebar", async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -389,16 +396,16 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
     expect(html).toContain("مقاله ویژه");
     expect(html).toContain("مطالعه مقاله ←");
 
-    // ⚠️ فقط ستون کناری بررسی می‌شود، نه کل صفحه: هم‌پوشانی «تازه‌ترین‌ها» با
-    // «بیشتر بخوانید» از قبل عمدی است (دو نگاه متفاوت به یک مجموعه)، ولی
-    // مقاله‌ی ویژه نباید در فهرست تازه‌ترین‌ها تکرار شود.
+     // ⚠️ Only the sidebar is checked, not the whole page: overlap between
+     // "latest" and "read more" is already intentional (two different views
+     // over the same set), but the featured article must not repeat in latest.
     const sidebar = html.match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? "";
     expect(sidebar).not.toBe("");
     expect(sidebar).not.toContain("راهنمای کامل خرید طلای زینتی");
     expect(sidebar).toContain('href="/blog/ayar-tala"');
   });
 
-  it("با تنها یک پست، همان پست «مقاله ویژه» است و ستون کناری خالی رندر نمی‌شود", async () => {
+  it("with only one post, that post is the \"featured article\" and the sidebar doesn't render empty", async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -416,7 +423,7 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
     expect(html).not.toContain("تازه‌ترین نوشته‌ها");
   });
 
-  it("پیش‌نویس هرگز به صفحه‌ی اصلی نمی‌رسد", async () => {
+  it("a draft never reaches the home page", async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -432,7 +439,7 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
     expect(html).not.toContain("پیش‌نویس منتشرنشده");
   });
 
-  it("عکس شاخص در ستون کناری و کارت‌های پایانی: img با src/width/height/alt", async () => {
+  it("the featured image in the sidebar and closing cards: img with src/width/height/alt", async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -457,7 +464,7 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
     expect(html).toContain('alt="هزینه‌ی رفت‌وبرگشت طلا"');
   });
 
-  it("پستِ بدون عکس شاخص: نه در ستون کناری نه در کارت‌های پایانی img نیست", async () => {
+  it("a post with no featured image: no img in the sidebar or the closing cards", async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -474,69 +481,74 @@ describe("صفحه‌ی اصلی — بخش‌های بلاگ (تصمیم مال
   });
 });
 
-describe("پوسته‌ی ریشه — فارسی، راست‌به‌چپ، و تم بدون فلش", () => {
+describe("root shell — Persian, right-to-left, and theme with no flash", () => {
   /**
-   * ⚠️ نگهبان سطح کد، نه رندر. `RootShell` از `HeadContent`/`Scripts` استفاده
-   * می‌کند و بدون `RouterProvider` رندر نمی‌شود (تجربی سنجیده شد: «useRouter
-   * must be used inside a RouterProvider»). رندر واقعیِ ‎<html lang="fa"
-   * dir="rtl">‎ با سرور بیلدشده راستی‌آزمایی شد؛ این نگهبان جلوی حذف
-   * بی‌سروصدای همان صفت‌ها را در بازنویسی بعدی می‌گیرد.
-   * ⚠️ الگو عمداً به ترتیب یا فاصله‌ی صفت‌ها حساس نیست: نسخه‌ی قبلی
-   * ‎/<html\s+lang="fa"\s+dir="rtl">/‎ بود و به‌محض اینکه صفت سوم اضافه شد و
-   * پرتیه‌کننده تگ را چندخطی کرد، شکست — بی‌آنکه چیزی واقعاً خراب شده باشد.
+   * ⚠️ A code-level guard, not a render one. `RootShell` uses
+   * `HeadContent`/`Scripts` and doesn't render without a `RouterProvider`
+   * (verified empirically: "useRouter must be used inside a
+   * RouterProvider"). The real render of `<html lang="fa" dir="rtl">` was
+   * verified against the built server; this guard stops those same
+   * attributes from being silently dropped in a future rewrite.
+   * ⚠️ The pattern is deliberately insensitive to attribute order or
+   * spacing: the previous version was `/<html\s+lang="fa"\s+dir="rtl">/`
+   * and broke the moment a third attribute was added and the formatter
+   * wrapped the tag across multiple lines — without anything actually
+   * being broken.
    */
   function rootSource(): string {
     return readFileSync(join(__dirname, "..", "src/routes/__root.tsx"), "utf8");
   }
 
   /**
-   * ⚠️ `<html\s` و نه `<html\b`: خودِ کامنت‌های همین فایل رشته‌ی «‎<html>‎» را
-   * دارند و الگوی آزادتر اول به آن‌ها می‌خورد و تست را با پیام گمراه‌کننده
-   * قرمز می‌کند. داشتن دست‌کم یک صفت، تگ واقعی JSX را از متن کامنت جدا می‌کند.
+   * ⚠️ `<html\s`, not `<html\b`: this very file's own comments contain the
+   * string `<html>`, and the looser pattern would match those first and
+   * fail the test with a misleading message. Requiring at least one
+   * attribute separates the real JSX tag from comment text.
    */
   function htmlTag(): string {
     const match = rootSource().match(/<html\s[^>]*>/);
-    if (match === null) throw new Error("تگ <html> صفت‌دار در پوسته‌ی ریشه نیست");
+    if (match === null) throw new Error("attributed <html> tag not found in root shell");
     return match[0];
   }
 
-  it("پوسته‌ی ریشه lang=fa و dir=rtl دارد", () => {
+  it("the root shell has lang=fa and dir=rtl", () => {
     expect(htmlTag()).toMatch(/lang="fa"/);
     expect(htmlTag()).toMatch(/dir="rtl"/);
   });
 
-  it("تم را سروری و ثابت می‌نویسد و هشدار hydration را روی همان عنصر خاموش می‌کند", () => {
+  it("writes the theme server-side and fixed, and silences the hydration warning on that same element", () => {
     expect(htmlTag()).toMatch(/data-theme=\{SERVER_THEME\}/);
     expect(htmlTag()).toMatch(/suppressHydrationWarning/);
   });
 
   /**
-   * ⚠️ جای اسکریپت تعیین‌کننده است، نه صرفاً وجودش: باید **داخل `<head>`**
-   * باشد تا مرورگر همگام اجرایش کند و صفت پیش از اولین پیکسل بنشیند. اگر
-   * روزی به انتهای `<body>` منتقل شود، فلش سفید برمی‌گردد و هیچ تست دیگری
-   * نمی‌گیردش.
+   * ⚠️ The script's location is what matters, not just its presence: it
+   * must be **inside `<head>`** so the browser runs it synchronously and
+   * the attribute lands before the first pixel. If it's ever moved to the
+   * end of `<body>`, the white flash comes back and no other test would
+   * catch it.
    */
-  it("اسکریپت تشخیص تم درون <head> است، نه در بدنه", () => {
+  it("the theme-detection script is inside <head>, not in the body", () => {
     const head = rootSource().match(/<head>[\s\S]*?<\/head>/);
     expect(head, "بلوک <head> در پوسته‌ی ریشه نیست").not.toBeNull();
     expect(head?.[0]).toContain("THEME_INIT_SCRIPT");
   });
 
-  it("اسکریپت inline همان صفت و کلیدی را می‌نویسد که lib/theme می‌خواند", () => {
+  it("the inline script writes the same attribute and key that lib/theme reads", () => {
     expect(THEME_INIT_SCRIPT).toContain(JSON.stringify(THEME_ATTRIBUTE));
     expect(THEME_INIT_SCRIPT).toContain(JSON.stringify(THEME_STORAGE_KEY));
     expect(THEME_INIT_SCRIPT).toContain("prefers-color-scheme: dark");
   });
 
-  it("سلکتور دارک در styles.css با همان صفت بسته شده", () => {
+  it("the dark selector in styles.css is scoped with that same attribute", () => {
     const css = readFileSync(join(__dirname, "..", "src/styles.css"), "utf8");
     expect(css).toContain(`[${THEME_ATTRIBUTE}="dark"]`);
     expect(css).toMatch(/@custom-variant\s+dark\s+\(&:is\(\[data-theme="dark"\]\s+\*\)\)/);
   });
 });
 
-describe("صفحه‌ی اصلی — نوار ماده ۵ و یادداشت حقوقی", () => {
-  it("صفحه لینک ‎/go/‎ دارد ⟸ نوار ماده ۵ در HTML سروری است", async () => {
+describe("home page — Article 5 banner and legal notice", () => {
+  it("the page has a /go/ link ⟸ the Article 5 banner is in the server-rendered HTML", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain('data-legal-notice="madde-5"');
     expect(html).toContain("معاملات طلای برخط صرفاً با پذیرش ریسک از سوی طرفین انجام می‌شود");
@@ -544,20 +556,21 @@ describe("صفحه‌ی اصلی — نوار ماده ۵ و یادداشت حق
   });
 });
 
-describe("صفحه‌ی اصلی — کهنگی هر سکو روی کارت خودش", () => {
+describe("home page — each platform's staleness on its own card", () => {
   /**
-   * ⚠️ برچسب سطح-صفحه کافی نیست: بیشینه‌ی زمان همه‌ی سکوهاست، پس یک سکوی
-   * مرده پشت تازگیِ بقیه پنهان می‌ماند. جدول قدیمی این را به‌ازای هر ردیف
-   * داشت؛ با حذفش گم شد و بازبینی کد گرفتش.
+   * ⚠️ A page-level label isn't enough: it's the max time across all
+   * platforms, so one dead platform stays hidden behind the freshness of
+   * the rest. The old table had this per row; it got lost when the table
+   * was removed, and code review caught it.
    */
-  it("هر کارت منبع برچسب زمان خودش را در HTML سروری دارد", async () => {
+  it("every source card has its own time label in the server-rendered HTML", async () => {
     const html = await renderHome(healthyStore());
     for (const slug of ["wallgold", "talasea", "milli"]) {
       expect(cardOf(html, slug), slug).toMatch(/<time[^>]*data-live="updated-at"/);
     }
   });
 
-  it("سکوی کهنه روی کارت خودش «کهنه» می‌گیرد، حتی وقتی بقیه تازه‌اند", async () => {
+  it("a stale platform gets \"stale\" on its own card, even when the rest are fresh", async () => {
     const store = healthyStore();
     store.updatedAt["talasea"] = staleIso();
     const html = await renderHome(store);
@@ -565,7 +578,7 @@ describe("صفحه‌ی اصلی — کهنگی هر سکو روی کارت خو
     expect(cardOf(html, "wallgold")).not.toContain("کهنه");
   });
 
-  it("سکوی بی‌سابقه دروغ نمی‌گوید", async () => {
+  it("a platform with no history doesn't lie", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
     store.updatedAt["talasea"] = null;

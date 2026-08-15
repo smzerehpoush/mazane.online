@@ -1,6 +1,6 @@
 /**
- * ⚠️ این صفحه هیچ ارتباطی با جدول قیمت ندارد — عضویت نمودار
- * روی ترتیب/فهرست‌شدن جدول قیمت اثر نمی‌گذارد.
+ * ⚠️ This page has nothing to do with the price table — chart membership
+ * does not affect the price table's ordering/listing.
  */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";

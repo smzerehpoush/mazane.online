@@ -19,16 +19,17 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
-// ⚠️ وجود همین فایل، نصب خودکار CSRF را لغو می‌کند؛ اگر این میان‌افزار برداشته
-// شود، توابع سرور بی‌محافظ در برابر درخواست‌های cross-site می‌مانند.
+// ⚠️ The mere presence of this file cancels the automatic CSRF install; if
+// this middleware is removed, server functions stay unprotected against
+// cross-site requests.
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
-// ⚠️ ترتیب حیاتی است: `edgeCacheMiddleware` باید بیرونی‌ترین بماند تا هدر کش
-// روی ۵۰۰ی errorMiddleware هم بنشیند و لبه خطا را کش نکند؛ و
-// `adminSecurityMiddleware` بلافاصله داخل آن، تا no-store/noindex پنل پیش از
-// تصمیم نهایی کش گذاشته شود.
+// ⚠️ Order is critical: `edgeCacheMiddleware` must stay outermost so its
+// cache header also lands on errorMiddleware's 500 and the edge doesn't
+// cache the error; and `adminSecurityMiddleware` immediately inside it, so
+// the panel's no-store/noindex is set before the final cache decision.
 export const startInstance = createStart(() => ({
   requestMiddleware: [
     edgeCacheMiddleware,
