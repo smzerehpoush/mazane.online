@@ -250,7 +250,7 @@ Note: the existing `collector/.venv` is stale (an old build path,
 cd web
 npm install
 npm run dev      # vite dev — host "::", port 8080
-npm test         # vitest run — of 32 test files, 31 pass and 1 (tokens-sync.test.ts) fails because docs/tokens.css is not in the working tree
+npm test         # vitest run — 31 passing test files
 ```
 
 **Environment variables:**

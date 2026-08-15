@@ -24,10 +24,8 @@ Derive behavior from code/tests/migrations, not from memory or other docs.
 | web | `npm ci` | `npm test` (= `vitest run`) | `npm run typecheck` (= `tsc --noEmit`) | In CI, typecheck runs **after** `npm run build`, because build itself regenerates `src/routeTree.gen.ts`; typechecking the committed version of this file can incorrectly pass/fail. |
 
 Known baseline: collector has 187 green pytest tests + a clean mypy run across 72
-files. web has 534 green vitest tests across 32 suites, with **one pre-existing
-failure**: `tests/tokens-sync.test.ts`, because `docs/tokens.css` isn't in the
-working tree. Don't "fix" this unless explicitly asked to; if the green count
-drops below 534, or another suite also turns red, that's a real bug.
+files. web has 534 green vitest tests across 31 suites. If the green count drops
+below 534, or any suite turns red, that's a real bug.
 
 `web/tests/registry-parity.test.ts` calls a Python script
 (`web/tests/support/dump-collector-registry.py`) via `execFileSync("python3", ...)`

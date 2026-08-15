@@ -10,20 +10,23 @@ source of risk/confusion but currently silent.
 
 | # | Title | Severity | Area |
 |---|---|---|---|
-| 1 | CI is red on main (`tokens-sync.test.ts`) | High | CI/CD |
-| 2 | Three/four names for one product (`mazane` vs. `tablo`) | Medium | Naming |
-| 3 | Platform registry redefined in two languages | Medium | Naming, Data |
-| 4 | Two parallel component trees; duplicated `LegalNotice`; orphaned `dashboard-live.tsx` | Medium | Frontend |
-| 5 | `PostgresStore.save_instruments`/`save_chart_config` are no-op methods | Medium | Storage |
-| 6 | Misaligned triple image/deploy chain | Medium | Deployment |
-| 7 | Panel login rate-limit is global and in a single process's memory | Medium | Operational security |
-| 8 | All explanatory code comments removed in the working tree (uncommitted) | Medium | Repo hygiene |
-| 9 | Three large files in the repo | Low | Maintainability |
-| 10 | 37 of 45 `components/ui/` primitives have no consumers | Low | Frontend |
-| 11 | The `instrumentNames` prop in `PlatformPage` is unused | Low | Frontend |
-| 12 | Registry-parity test depends on `python3` without CI installing it | Low | CI/CD |
-| 13 | `collector-dev.log`, about 600 KB, at the repo root | Low | Repo hygiene |
-| 14 | `collector/.venv` is outdated and points to the repo's old path | Low | Repo hygiene |
+| 1 | Three/four names for one product (`mazane` vs. `tablo`) | Medium | Naming |
+| 2 | Platform registry redefined in two languages | Medium | Naming, Data |
+| 3 | Two parallel component trees; duplicated `LegalNotice`; orphaned `dashboard-live.tsx` | Medium | Frontend |
+| 4 | `PostgresStore.save_instruments`/`save_chart_config` are no-op methods | Medium | Storage |
+| 5 | Misaligned triple image/deploy chain | Medium | Deployment |
+| 6 | Panel login rate-limit is global and in a single process's memory | Medium | Operational security |
+| 7 | All explanatory code comments removed in the working tree (uncommitted) | Medium | Repo hygiene |
+| 8 | Three large files in the repo | Low | Maintainability |
+| 9 | 37 of 45 `components/ui/` primitives have no consumers | Low | Frontend |
+| 10 | The `instrumentNames` prop in `PlatformPage` is unused | Low | Frontend |
+| 11 | Registry-parity test depends on `python3` without CI installing it | Low | CI/CD |
+| 12 | `collector-dev.log`, about 600 KB, at the repo root | Low | Repo hygiene |
+| 13 | `collector/.venv` is outdated and points to the repo's old path | Low | Repo hygiene |
+
+**Fixed (2026-08-15):** The broken `tokens-sync.test.ts` suite was removed after
+`docs/tokens.css` was removed from the repository; `web/src/styles.css` is now the
+only committed implementation source for these runtime CSS variables.
 
 **Fixed (2026-08-13):** The CI security gate was searching for the old cookie name (`mazane_admin_session`) instead of the real one (`tablo_admin_session`) — the grep pattern in `.github/workflows/ci.yml` and its description in `CLAUDE.md` were both corrected.
 
@@ -31,15 +34,7 @@ source of risk/confusion but currently silent.
 
 ## 1. CI/CD and Deployment
 
-### 1.1 CI is red on main — Severity: High
-
-| | |
-|---|---|
-| **Evidence** | `web/tests/tokens-sync.test.ts:14-33` calls `read("docs/tokens.css")` directly in the body of `describe` (line 32). The `docs/` directory exists in the working tree but is empty; the last commit that touched it is `3d507c3 remove docs` (`git log --oneline -1 -- docs`). |
-| **Practical impact** | Reading the file fails with `ENOENT`, and because this call is inside the `describe` body (not inside an `it`), the entire test file blows up during collection — meaning this is one failed suite out of 32 suites, but because of where it fails, the `web` job in CI (`.github/workflows/ci.yml`, `Tests` step) stays red on every push to main and every PR. |
-| **Suggested fix** | Either rebuild `docs/tokens.css` as the source of truth for the color palette and align it with `web/src/styles.css`, or decide that `styles.css` is the sole source of truth and delete/rewrite `tokens-sync.test.ts`. Keeping a failing test on main means every subsequent test failure gets lost in the CI noise. |
-
-### 1.2 Misaligned triple image/deploy chain — Severity: Medium
+### 1.1 Misaligned triple image/deploy chain — Severity: Medium
 
 Three docs/files each tell a different story about where the production image comes from:
 

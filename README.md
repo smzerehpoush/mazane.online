@@ -76,7 +76,7 @@ To run the built output: `npm run build && npm start` (which runs `node .output/
 | Layer | Command | Baseline status |
 | --- | --- | --- |
 | collector | `cd collector && pytest` then `mypy src tests` | 187 passing tests, clean mypy |
-| web | `cd web && npm test` (`vitest run`) | 534 passing tests across 32 suites; exactly one suite (`tokens-sync.test.ts`) is pre-existing broken because `docs/tokens.css` isn't in the working tree |
+| web | `cd web && npm test` (`vitest run`) | 534 passing tests across 31 suites |
 | web | `cd web && npm run typecheck` (`tsc --noEmit`) | — |
 
 CI (`.github/workflows/ci.yml`) runs these same two paths on every push/PR (the `collector` and `web` jobs), plus a third job, `images`, that only runs on push to `main`: it builds the Docker images and runs a smoke test (`GET /` must return 200, with no live Redis/Postgres).
@@ -101,7 +101,7 @@ web/
     routes/         TanStack Router file-based routes (public + /admin + /api)
     lib/            domain logic; lib/server/ is only imported server-side
     components/     tablo/ (main page), content/ (platform/blog pages), ui/ (shadcn)
-  tests/            32 suites
+  tests/            31 suites
 
 ops/                RUNBOOK, healthcheck, Caddy config, Googlebot verification script
 .github/workflows/  CI
