@@ -4,12 +4,26 @@
  * text. Animation, the fuse, and polling are an extra layer that's simply
  * absent with JS off — not that the page goes blank.
  */
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { RailView } from "@/lib/dashboard";
+import { formatFaNumber } from "@/lib/fa-number";
+import { TomanPrice } from "./TomanPrice";
 
+const RAIL_TIMER_SECONDS = 30;
+const RAIL_TIMER_MS = RAIL_TIMER_SECONDS * 1000;
 const STEM_LONG_PX = 38;
 const STEM_SHORT_PX = 10;
+
+export function railCountdownSeconds(updatedAt: string | null, nowMs: number): number {
+  if (updatedAt === null) return RAIL_TIMER_SECONDS;
+  const updatedAtMs = new Date(updatedAt).getTime();
+  if (!Number.isFinite(updatedAtMs)) return RAIL_TIMER_SECONDS;
+  const elapsedMs = nowMs - updatedAtMs;
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return RAIL_TIMER_SECONDS;
+  const remainingMs = RAIL_TIMER_MS - (elapsedMs % RAIL_TIMER_MS);
+  return Math.max(1, Math.min(RAIL_TIMER_SECONDS, Math.ceil(remainingMs / 1000)));
+}
 
 export function PriceRail({
   rail,
@@ -25,6 +39,7 @@ export function PriceRail({
   failed: boolean;
 }) {
   const fuseRef = useRef<HTMLDivElement | null>(null);
+  const [countdown, setCountdown] = useState(RAIL_TIMER_SECONDS);
 
   /** ⚠️ Only after mount: `Date.now` is forbidden in server rendering. */
   useEffect(() => {
@@ -60,13 +75,25 @@ export function PriceRail({
     fuse.style.animationPlayState = "running";
   }, [updatedAt, tick, failed]);
 
+  useEffect(() => {
+    if (updatedAt === null || failed) return;
+
+    function syncCountdown(): void {
+      setCountdown(railCountdownSeconds(updatedAt, Date.now()));
+    }
+
+    syncCountdown();
+    const id = window.setInterval(syncCountdown, 1000);
+    return () => window.clearInterval(id);
+  }, [updatedAt, tick, failed]);
+
   return (
     <section className="card-surface overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4 sm:px-6">
         <div>
           <h2 className="text-[15.5px] font-semibold">محور قیمت طلای ۱۸ عیار</h2>
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-            هرچه راست‌تر، ارزان‌تر · خط طلایی که تمام شود، قیمت‌ها تازه می‌شوند
+            هرچه راست‌تر، گران‌تر · خط طلایی که تمام شود، قیمت‌ها تازه می‌شوند
           </p>
         </div>
         <div className="flex flex-col items-end gap-0.5">
@@ -108,27 +135,19 @@ export function PriceRail({
               <div
                 ref={fuseRef}
                 data-rail-fuse
+                data-rail-countdown={formatFaNumber(countdown)}
                 aria-hidden
                 className="rail-fuse absolute top-[-1px] right-0 h-[3px] rounded-[2px] bg-gold"
               />
             </div>
 
             {rail.referencePercent !== null && (
-              <>
-                <div
-                  aria-hidden
-                  data-rail-anchor
-                  className="rail-anchor absolute top-2 bottom-1.5 w-0 border-r border-dashed border-primary opacity-45"
-                  style={{ right: `${rail.referencePercent}%` }}
-                />
-                <span
-                  data-rail-anchor-label
-                  className="rail-anchor absolute top-0 translate-x-1/2 rounded-[20px] bg-acbg px-2 py-0.5 text-[10.5px] whitespace-nowrap text-actx"
-                  style={{ right: `${rail.referencePercent}%` }}
-                >
-                  قیمت مرجع
-                </span>
-              </>
+              <div
+                aria-hidden
+                data-rail-anchor
+                className="rail-anchor absolute top-2 bottom-1.5 w-0 border-r border-dashed border-primary opacity-45"
+                style={{ right: `${rail.referencePercent}%` }}
+              />
             )}
 
             {rail.sources.map((source) =>
@@ -155,8 +174,17 @@ export function PriceRail({
                     style={{ height: `${source.stemLong ? STEM_LONG_PX : STEM_SHORT_PX}px` }}
                   />
                   <span className="mt-[5px] text-xs whitespace-nowrap">{source.name}</span>
-                  <span data-rail-price className="num text-[11.5px] whitespace-nowrap text-tx3">
-                    {source.priceDisplay}
+                  <span
+                    data-rail-price
+                    className="num text-[11.5px] whitespace-nowrap text-tx3"
+                  >
+                    {source.priceDisplay !== null && (
+                      <TomanPrice
+                        value={source.priceDisplay}
+                        className="inline-flex items-baseline gap-1"
+                        unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground"
+                      />
+                    )}
                   </span>
                 </a>
               ),
@@ -165,16 +193,34 @@ export function PriceRail({
 
           {/*
            * ⚠️ DOM order matters here: in RTL, the **first** child of
-           * `justify-between` sits on the right. "Cheaper" must come on
+           * `justify-between` sits on the right. "Pricier" must come on
            * the right to agree with where the markers are. Swapping these
            * two would make the footnote contradict the rail itself.
-           */}
+          */}
           <div className="mx-5 flex items-center justify-between border-t border-border pt-3 pb-4 text-[11.5px] text-tx3 sm:mx-6">
-            <span data-rail-min>{rail.minDisplay} · ارزان‌تر</span>
+            <span data-rail-max className="inline-flex items-baseline gap-1.5">
+              گران‌تر ·{" "}
+              {rail.maxDisplay !== null && (
+                <TomanPrice
+                  value={rail.maxDisplay}
+                  className="num inline-flex items-baseline gap-1"
+                  unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground"
+                />
+              )}
+            </span>
             <span data-rail-spread className="text-muted-foreground">
               بازه اختلاف {rail.spreadDisplay} تومان
             </span>
-            <span data-rail-max>گران‌تر · {rail.maxDisplay}</span>
+            <span data-rail-min className="inline-flex items-baseline gap-1.5">
+              {rail.minDisplay !== null && (
+                <TomanPrice
+                  value={rail.minDisplay}
+                  className="num inline-flex items-baseline gap-1"
+                  unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground"
+                />
+              )}{" "}
+              · ارزان‌تر
+            </span>
           </div>
         </>
       ) : (

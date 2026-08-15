@@ -25,6 +25,7 @@ export interface HomePageData {
   rows: Row[];
   history: PlatformHistory[];
   referenceHistory: PlatformHistoryByRange;
+  summaryReferenceName: string;
   posts: PublishedPost[];
   viewCounts: ViewCounts;
   chartPlatforms: readonly ChartPlatformConfig[];
@@ -57,6 +58,7 @@ export function HomePage({ data }: { data: HomePageData }) {
     platforms: data.chartPlatforms,
     history: data.history,
     referenceHistory: data.referenceHistory,
+    summaryReferenceName: data.summaryReferenceName,
   });
 
   const live = useLiveDashboard(dashboard.updatedAt);
@@ -81,13 +83,14 @@ export function HomePage({ data }: { data: HomePageData }) {
             <BubbleGauge />
             <JewelryCalculator
               pricePerGram={reference?.priceToman ?? null}
-              referenceName={dashboard.summary.referenceName}
+              referenceName={reference?.name ?? null}
             />
             <PriceAlertCard />
             {latestPosts.length > 0 && <Sidebar posts={latestPosts} />}
           </div>
 
           <div className="order-1 flex min-w-0 flex-col gap-4 min-[1081px]:order-2">
+            <MarketSummary summary={dashboard.summary} />
             <PriceRail
               rail={dashboard.rail}
               updatedAt={live.data?.updated_at ?? dashboard.updatedAt}
@@ -95,7 +98,6 @@ export function HomePage({ data }: { data: HomePageData }) {
               tick={live.tick}
               failed={live.failed}
             />
-            <MarketSummary summary={dashboard.summary} />
             <SourceCards sources={dashboard.rail.sources} nowMs={nowMs} />
             {featuredPost !== null && <FeaturedPost post={featuredPost} />}
           </div>

@@ -16,6 +16,7 @@ import {
   RATE_CARD_RANGES,
   UNION_RATE_INSTRUMENT,
   UNION_RATE_REFERENCE_SLUG,
+  UNION_RATE_SOURCE_NAME,
   type ChartPlatformConfig,
 } from "./site-content";
 import type { SlugResolution } from "./slugs";
@@ -36,8 +37,6 @@ export interface HomeReaders {
 
 export async function assembleHomeData(read: HomeReaders): Promise<HomePageData> {
   const chartPlatforms = chartSeriesConfig(await read.getChartPlatforms?.());
-  const referenceSlug =
-    (chartPlatforms.find((platform) => platform.is_reference) ?? chartPlatforms[0])?.slug ?? null;
 
   const [rows, history, posts, viewCounts, referenceRanges] = await Promise.all([
     read.fetchRows(),
@@ -48,18 +47,17 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     }),
     read.listPublishedPosts(),
     read.getViewCounts?.() ?? Promise.resolve<ViewCounts>({}),
-    referenceSlug === null
-      ? Promise.resolve<PlatformHistory[][]>([])
-      : Promise.all(
-          RATE_CARD_RANGES.map((range) =>
-            read.getPlatformHistory({
-              platformSlugs: [referenceSlug],
-              instrument: HOME_INSTRUMENT,
-              hours: range.hours,
-              ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
-            }),
-          ),
-        ),
+    Promise.all(
+      RATE_CARD_RANGES.map((range) =>
+        read.getPlatformHistory({
+          platformSlugs: [UNION_RATE_REFERENCE_SLUG],
+          instrument: UNION_RATE_INSTRUMENT,
+          hours: range.hours,
+          kind: "REFERENCE",
+          ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
+        }),
+      ),
+    ),
   ]);
 
   const referenceHistory: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
@@ -71,6 +69,7 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     rows: rows.map((row) => ({ ...row, platform: withoutReferral(row.platform) })),
     history,
     referenceHistory,
+    summaryReferenceName: UNION_RATE_SOURCE_NAME,
     posts,
     viewCounts,
     chartPlatforms,

@@ -26,7 +26,7 @@
  * difference allowed, **average forbidden**.
  * ⚠️ **No cross-platform average is ever constructed** and no percentage
  * difference between two platforms is ever computed. The market summary
- * shows the **reference platform**'s number, under its own name.
+ * shows the named reference source's number under its own name.
  */
 import { formatFaClock, formatFaNumber } from "./fa-number";
 import { formatSignedPercentFa } from "./format";
@@ -82,13 +82,9 @@ export interface RailView {
   hasRail: boolean;
 }
 
-/**
- * ⚠️ **This formula is deliberately the inverse of what's documented**,
- * and the reason is a mistake in the doc and example themselves:
- */
 function railPercentOf(price: number, min: number, span: number): number {
   const ratio = span === 0 ? 0.5 : (price - min) / span;
-  return Number((RAIL_START_PERCENT + ratio * RAIL_USABLE_PERCENT).toFixed(3));
+  return Number((RAIL_START_PERCENT + (1 - ratio) * RAIL_USABLE_PERCENT).toFixed(3));
 }
 
 export function railScale(prices: readonly number[]): { min: number; span: number } {
@@ -202,6 +198,7 @@ export interface DashboardInput {
   platforms: readonly ChartPlatformConfig[];
   history: readonly PlatformHistory[];
   referenceHistory: PlatformHistoryByRange;
+  summaryReferenceName?: string;
 }
 
 const SPARK_WIDTH = 100;
@@ -280,7 +277,7 @@ export function buildDashboard(input: DashboardInput): DashboardView {
       hasRail: prices.length >= 2,
     },
     summary: {
-      referenceName: referenceSource?.name ?? null,
+      referenceName: input.summaryReferenceName ?? referenceSource?.name ?? null,
       ranges: RATE_CARD_RANGES.map((range) =>
         summaryOf(
           { key: range.key, label: HOME_SUMMARY_RANGE_LABELS[range.key] },

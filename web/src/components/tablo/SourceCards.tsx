@@ -1,8 +1,7 @@
 /**
  * ⚠️ **The badge carries no percent difference.** The initial design put
  * `−1.23%` on every non-reference card; that number was removed and is
- * computed neither here nor anywhere else. The only badge left is
- * "reference price", which is a **label**, not a number.
+ * computed neither here nor anywhere else.
  * ⚠️ Every card goes to `/go/<slug>` with
  * `rel="sponsored nofollow noopener"` and `target="_blank"` — never
  * straight to the platform's domain. The destination is built in
@@ -10,6 +9,7 @@
  */
 import { Staleness } from "@/components/content/RowParts";
 import type { RailSource } from "@/lib/dashboard";
+import { TomanPrice } from "./TomanPrice";
 
 export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: number }) {
   return (
@@ -40,20 +40,18 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
             </span>
 
             <div data-source-price className="num text-base font-semibold tracking-[-0.3px]">
-              {source.priceDisplay ?? (
+              {source.priceDisplay === null ? (
                 <span className="text-[12.5px] font-normal text-muted-foreground">
                   قیمت در دسترس نیست
                 </span>
+              ) : (
+                <TomanPrice
+                  value={source.priceDisplay}
+                  className="inline-flex items-baseline gap-1"
+                  unitClassName="text-[10px] font-normal tracking-normal text-muted-foreground"
+                />
               )}
             </div>
-
-            <span className="my-1.5 mb-2.5 flex h-[18px] items-center">
-              {source.isReference && (
-                <span className="rounded-[20px] bg-acbg px-[7px] py-px text-[10.5px] text-actx">
-                  قیمت مرجع
-                </span>
-              )}
-            </span>
 
             {/*
              * ⚠️ Staleness label per **platform** — not page-level. The

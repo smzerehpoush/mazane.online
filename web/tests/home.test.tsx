@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { HomePage } from "../src/components/tablo/HomePage";
+import { railCountdownSeconds } from "../src/components/tablo/PriceRail";
 import { REGISTRY_PLATFORMS } from "../src/lib/registry";
 import { THEME_ATTRIBUTE, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "../src/lib/theme";
 import {
@@ -44,6 +45,10 @@ function cardOf(html: string, slug: string): string {
   const match = html.match(new RegExp(`<a[^>]*data-source-card="${slug}"[\\s\\S]*?</a>`));
   if (match === null) throw new Error(`card ${slug} not in HTML`);
   return match[0];
+}
+
+function removedReferenceLabel(): string {
+  return ["قیمت", "مرجع"].join(" ");
 }
 
 function railPercentOf(html: string, slug: string): number {
@@ -95,30 +100,35 @@ describe("home page — prices in the server-rendered HTML", () => {
 });
 
 describe("home page — price axis", () => {
-  /**
-   * ⚠️ "Right = cheaper." The `right` value is the distance from the right
-   * edge, so the cheapest must have the **lowest** percent. The first
-   * version implemented the doc's formula literally and the cheapest ended
-   * up leftmost — contradicting the card's own subtitle.
-   */
-  it("the cheapest is rightmost (right = cheaper)", async () => {
+  it("renders the market summary above the price axis", async () => {
     const html = await renderHome(healthyStore());
-    expect(railPercentOf(html, "talasea")).toBeLessThan(railPercentOf(html, "milli"));
-    expect(railPercentOf(html, "milli")).toBeLessThan(railPercentOf(html, "wallgold"));
+    expect(html.indexOf("خلاصه بازار")).toBeLessThan(html.indexOf("محور قیمت طلای ۱۸ عیار"));
   });
 
-  it("the \"reference price\" anchor sits at the reference platform's position", async () => {
+  /**
+   * ⚠️ "Right = pricier." The `right` value is the distance from the right
+   * edge, so the most expensive source must have the **lowest** percent.
+   */
+  it("the most expensive is rightmost (right = pricier)", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain("قیمت مرجع");
+    expect(railPercentOf(html, "wallgold")).toBeLessThan(railPercentOf(html, "milli"));
+    expect(railPercentOf(html, "milli")).toBeLessThan(railPercentOf(html, "talasea"));
+  });
+
+  it("the reference anchor sits at the reference platform's position without a visible label", async () => {
+    const html = await renderHome(healthyStore());
     const anchor = html.match(/data-rail-anchor[^>]*style="right:\s*([\d.]+)%/);
     expect(anchor).not.toBeNull();
     expect(Number(anchor?.[1])).toBe(railPercentOf(html, "milli"));
+    expect(html).not.toContain("data-rail-anchor-label");
   });
 
   it("the axis footer gives the min, max, and spread", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain("گران‌تر · ۱۸٬۶۱۱٬۰۰۰");
-    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰ · ارزان‌تر");
+    expect(html).toContain("گران‌تر ·");
+    expect(html).toContain("۱۸٬۶۱۱٬۰۰۰");
+    expect(html).toContain("۱۸٬۵۳۰٬۰۰۰");
+    expect(html).toContain("· ارزان‌تر");
     expect(html).toContain("بازه اختلاف ۸۱٬۰۰۰ تومان");
   });
 
@@ -158,10 +168,10 @@ describe("home page — price axis", () => {
 });
 
 describe("home page — source cards", () => {
-  it("only the reference platform's card gets the \"reference price\" badge", async () => {
+  it("source cards do not render a reference badge", async () => {
     const html = await renderHome(healthyStore());
-    expect(cardOf(html, "milli")).toContain("قیمت مرجع");
-    expect(cardOf(html, "wallgold")).not.toContain("قیمت مرجع");
+    expect(cardOf(html, "milli")).not.toContain(removedReferenceLabel());
+    expect(cardOf(html, "wallgold")).not.toContain(removedReferenceLabel());
   });
 
   /**
@@ -176,9 +186,51 @@ describe("home page — source cards", () => {
 });
 
 describe("home page — market summary", () => {
-  it("the big number has the reference platform's name next to it", async () => {
+  it("gives the chart the wide column next to the current price", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain("قیمت مرجع · میلی · تومان");
+    expect(html).toContain("data-summary-layout");
+    expect(html).toContain("sm:grid-cols-[minmax(210px,0.7fr)_minmax(0,2.3fr)]");
+    expect(html).toContain("sm:gap-3");
+    expect(html).toContain("data-summary-chart");
+  });
+
+  it("the big number comes from the union reference, not the chart reference platform", async () => {
+    const html = await renderHome(healthyStore(), {
+      history: [
+        {
+          platform_slug: "talair",
+          points: [
+            { hour: "2026-08-15T10:00:00.000Z", value: 18_520_000 },
+            { hour: "2026-08-15T11:00:00.000Z", value: 18_559_700 },
+          ],
+          latest: 18_559_700,
+          side_used: "PRICE",
+        },
+      ],
+    });
+    expect(html).toContain("۱۸٬۵۵۹٬۷۰۰");
+    expect(html).toContain("قیمت مرجع اتحادیه طلا");
+    expect(html).not.toContain("میلی · تومان");
+  });
+
+  it("renders toman as a smaller unit beside summary and source prices", async () => {
+    const html = await renderHome(healthyStore(), {
+      history: [
+        {
+          platform_slug: "talair",
+          points: [
+            { hour: "2026-08-15T10:00:00.000Z", value: 18_520_000 },
+            { hour: "2026-08-15T11:00:00.000Z", value: 18_559_700 },
+          ],
+          latest: 18_559_700,
+          side_used: "PRICE",
+        },
+      ],
+    });
+    expect(html).toContain("text-[13px]");
+    expect(html).toContain("text-[10px]");
+    expect(html).toMatch(/۱۸٬۵۵۹٬۷۰۰[\s\S]*?تومان/);
+    expect(cardOf(html, "wallgold")).toMatch(/۱۸٬۶۱۱٬۰۰۰[\s\S]*?تومان/);
   });
 
   /** ⚠️ Legal red line */
@@ -305,6 +357,11 @@ describe("home page — source outage ⟸ staleness, not error", () => {
     expect(html).not.toContain("data-rail-refresh");
   });
 
+  it("the price axis timer marker starts with the 30-second count inside it", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain('data-rail-countdown="۳۰"');
+  });
+
   it("with only one priced source, the axis isn't drawn but the page is fine", async () => {
     const store = healthyStore();
     store.snapshots["talasea"] = null;
@@ -335,6 +392,18 @@ describe("home page — source outage ⟸ staleness, not error", () => {
       .at(-1) as string;
     expect(html).toContain("آخرین به‌روزرسانی");
     expect(html).toMatch(timeTagPattern(latest));
+  });
+});
+
+describe("home page — price axis countdown", () => {
+  it("decrements from 30 to 1 in the same 30-second cycle as the fuse", () => {
+    const updatedAt = "2026-08-15T13:00:00.000Z";
+    const at = (seconds: number) => new Date("2026-08-15T13:00:00.000Z").getTime() + seconds * 1000;
+
+    expect(railCountdownSeconds(updatedAt, at(0))).toBe(30);
+    expect(railCountdownSeconds(updatedAt, at(1))).toBe(29);
+    expect(railCountdownSeconds(updatedAt, at(29))).toBe(1);
+    expect(railCountdownSeconds(updatedAt, at(30))).toBe(30);
   });
 });
 

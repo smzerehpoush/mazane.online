@@ -137,7 +137,10 @@ describe("dashboard hooks in the server-rendered HTML", () => {
     ] as const) {
       expect(html, slug).toContain(`data-rail-marker="${slug}"`);
       const marker = html.match(new RegExp(`<a[^>]*data-rail-marker="${slug}"[\\s\\S]*?</a>`));
-      expect(marker?.[0], slug).toMatch(new RegExp(`data-rail-price[^>]*>${price}</span>`));
+      expect(marker?.[0], slug).toMatch(
+        new RegExp(`data-rail-price[\\s\\S]*data-price-value[^>]*>${price}</span>`),
+      );
+      expect(marker?.[0], slug).toMatch(/data-price-unit[^>]*>تومان<\/span>/);
     }
   });
 

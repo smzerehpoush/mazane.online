@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { HistoryQuery } from "../src/lib/history";
 import { assembleHomeData } from "../src/lib/page-data";
 import { chartSeriesConfig, type ChartPlatformConfig } from "../src/lib/site-content";
 import { healthyStore, homeData } from "./support/seed";
@@ -43,18 +44,34 @@ describe("assembleHomeData — chartPlatforms from panel settings", () => {
     expect(references[0]?.slug).toBe("milli");
   });
 
-  it("the history query is built with the same override's slugs", async () => {
-    const captured: string[][] = [];
+  it("the platform axis and the market summary use separate history sources", async () => {
+    const captured: Array<{
+      platformSlugs: string[];
+      instrument: string;
+      kind: HistoryQuery["kind"] | undefined;
+    }> = [];
     await assembleHomeData({
       fetchRows: async () => [],
       getPlatformHistory: async (query) => {
-        captured.push(query.platformSlugs);
+        captured.push({
+          platformSlugs: query.platformSlugs,
+          instrument: query.instrument,
+          kind: query.kind,
+        });
         return [];
       },
       listPublishedPosts: async () => [],
       getChartPlatforms: async () => OVERRIDE,
     });
-    expect(captured[0]).toEqual(["wallgold", "talasea", "milli"]);
-    expect(captured.slice(1)).toEqual([["milli"], ["milli"], ["milli"]]);
+    expect(captured[0]).toEqual({
+      platformSlugs: ["wallgold", "talasea", "milli"],
+      instrument: "GOLD_18K",
+      kind: undefined,
+    });
+    expect(captured.slice(1)).toEqual([
+      { platformSlugs: ["talair"], instrument: "GOLD_18K_TOMAN", kind: "REFERENCE" },
+      { platformSlugs: ["talair"], instrument: "GOLD_18K_TOMAN", kind: "REFERENCE" },
+      { platformSlugs: ["talair"], instrument: "GOLD_18K_TOMAN", kind: "REFERENCE" },
+    ]);
   });
 });

@@ -238,17 +238,24 @@
 }
 
 .rail-fuse::after {
-  content: "";
+  content: attr(data-rail-countdown);
   position: absolute;
-  left: -3px;
-  top: -2.5px;
-  width: 8px;
-  height: 8px;
+  left: -12px;
+  top: -10.5px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
   border-radius: 50%;
   background: var(--gold);
   box-shadow:
     0 0 0 3px color-mix(in oklab, var(--gold) 25%, transparent),
     0 0 10px 2px color-mix(in oklab, var(--gold) 35%, transparent);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 @keyframes rail-burn {

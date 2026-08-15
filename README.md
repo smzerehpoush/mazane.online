@@ -76,7 +76,7 @@ To run the built output: `npm run build && npm start` (which runs `node .output/
 | Layer | Command | Baseline status |
 | --- | --- | --- |
 | collector | `cd collector && pytest` then `mypy src tests` | 187 passing tests, clean mypy |
-| web | `cd web && npm test` (`vitest run`) | 535 passing tests across 31 suites |
+| web | `cd web && npm test` (`vitest run`) | 537 passing tests across 31 suites |
 | web | `cd web && npm run typecheck` (`tsc --noEmit`) | — |
 
 CI (`.github/workflows/ci.yml`) runs these same two paths on every push/PR (the `collector` and `web` jobs), plus a third job, `images`, that only runs on push to `main`: it builds the Docker images and runs a smoke test (`GET /` must return 200, with no live Redis/Postgres).

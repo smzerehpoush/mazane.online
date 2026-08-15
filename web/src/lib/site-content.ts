@@ -147,6 +147,7 @@ export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
 ];
 
 export const UNION_RATE_REFERENCE_SLUG = "talair";
+export const UNION_RATE_SOURCE_NAME = "قیمت مرجع اتحادیه طلا";
 export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
 
 /**

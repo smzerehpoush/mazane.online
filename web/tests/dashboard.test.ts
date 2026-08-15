@@ -78,7 +78,7 @@ function input(overrides: Partial<DashboardInput> = {}): DashboardInput {
 }
 
 describe("axis geometry", () => {
-  it("the cheapest is rightmost and the most expensive is leftmost (RTL)", () => {
+  it("the most expensive is rightmost and the cheapest is leftmost (RTL)", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 19_000_000), row("b", 18_000_000)],
@@ -86,9 +86,9 @@ describe("axis geometry", () => {
       }),
     );
     const [expensive, cheap] = rail.sources;
-    // ⚠️ `right` is the distance from the right edge: cheapest is 4% (flush against the right).
-    expect(cheap?.railPercent).toBe(4);
-    expect(expensive?.railPercent).toBe(96);
+    // ⚠️ `right` is the distance from the right edge: pricier is 4% (flush against the right).
+    expect(expensive?.railPercent).toBe(4);
+    expect(cheap?.railPercent).toBe(96);
   });
 
   it("the marker never goes outside the 4%–96% range", () => {

@@ -20,7 +20,7 @@ const SQL = `
    where kind = 'REFERENCE'
      and source_slug = $1
      and instrument = $2
-     and side = 'MID'
+     and side = 'PRICE'
    order by hour_start desc
    limit 1
 `;

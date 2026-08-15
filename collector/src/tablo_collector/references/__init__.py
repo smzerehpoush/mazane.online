@@ -15,6 +15,7 @@ from ..models import Side
 
 class ReferenceInstrument(StrEnum):
     GOLD_18K_TOMAN = "GOLD_18K_TOMAN"
+    XAU = "XAU"
 
 
 class ReferenceQuote(BaseModel):

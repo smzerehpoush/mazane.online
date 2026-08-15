@@ -79,7 +79,7 @@ export function slugHead(data: SlugPageData | undefined) {
     data.kind === "instrument"
       ? ([
           `قیمت ${data.listing.name_fa} در سکوهای آنلاین — تابلو`,
-          `مقایسه‌ی قیمت مؤثر خرید و فروش ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران — با احتساب کارمزد و قیمت مرجع هر سکو.`,
+          `مقایسه‌ی قیمت مؤثر خرید و فروش ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران — با احتساب کارمزد هر سکو.`,
           data.listing.slug,
         ] as const)
       : ([

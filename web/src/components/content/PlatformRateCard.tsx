@@ -244,7 +244,7 @@ export function PlatformRateCard({
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="rate-card-heading" className="text-base font-semibold sm:text-lg">
-          قیمت مرجع سکو
+          قیمت سکو
         </h2>
 
         <div

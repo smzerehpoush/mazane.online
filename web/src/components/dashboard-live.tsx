@@ -33,6 +33,18 @@ function setText(root: ParentNode, selector: string, value: string | null): void
   if (element !== null && element.textContent !== value) element.textContent = value;
 }
 
+function setPriceText(root: ParentNode, selector: string, value: string | null): void {
+  if (value === null) return;
+  const element = root.querySelector<HTMLElement>(selector);
+  if (element === null) return;
+  const valueElement = element.querySelector<HTMLElement>("[data-price-value]");
+  if (valueElement !== null) {
+    if (valueElement.textContent !== value) valueElement.textContent = value;
+    return;
+  }
+  if (element.textContent !== value) element.textContent = value;
+}
+
 export function DashboardLive({ data }: { data: LiveDashboard | null }) {
   const previousPrices = useRef(new Map<string, number>());
 
@@ -48,14 +60,14 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
         marker.style.right = `${source.rail_percent}%`;
         const stem = marker.querySelector<HTMLElement>("[data-rail-stem]");
         if (stem !== null) stem.style.height = `${source.stem_long ? 38 : 10}px`;
-        setText(marker, "[data-rail-price]", source.price_display);
+        setPriceText(marker, "[data-rail-price]", source.price_display);
       }
 
       const card = document.querySelector<HTMLElement>(
         `[data-source-card="${CSS.escape(source.slug)}"]`,
       );
       if (card === null) continue;
-      setText(card, "[data-source-price]", source.price_display);
+      setPriceText(card, "[data-source-price]", source.price_display);
 
       // ⚠️ This card's staleness label must **age** with the passage of time,
       // otherwise a platform that has stopped working keeps its number and
@@ -103,11 +115,11 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
 
     const max = document.querySelector<HTMLElement>("[data-rail-max]");
     if (max !== null && data.max_display !== null) {
-      max.textContent = `گران‌تر · ${data.max_display}`;
+      setPriceText(max, "[data-price-value]", data.max_display);
     }
     const min = document.querySelector<HTMLElement>("[data-rail-min]");
     if (min !== null && data.min_display !== null) {
-      min.textContent = `${data.min_display} · ارزان‌تر`;
+      setPriceText(min, "[data-price-value]", data.min_display);
     }
     const spread = document.querySelector<HTMLElement>("[data-rail-spread]");
     if (spread !== null && data.spread_display !== null) {

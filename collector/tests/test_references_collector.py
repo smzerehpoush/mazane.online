@@ -11,7 +11,11 @@ from tablo_collector.pipeline import AdapterError
 from tablo_collector.platforms import PLATFORMS
 from tablo_collector.references import ReferenceInstrument
 from tablo_collector.references.pipeline import REFERENCE_SOURCES, collect_reference_round
-from tablo_collector.references.talair import TALAIR_ENDPOINT, TalairReference
+from tablo_collector.references.talair import (
+    TALAIR_BANNER_ENDPOINT,
+    TALAIR_ENDPOINT,
+    TalairReference,
+)
 from tablo_collector.store.memory import InMemoryStore
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -26,9 +30,11 @@ class FakeTransport:
     def __init__(self, get_responses: dict[str, Any], post_responses: dict[str, Any]) -> None:
         self._get = get_responses
         self._post = post_responses
+        self.get_urls: list[str] = []
         self.post_data: list[dict[str, str]] = []
 
     async def get_text(self, url: str, *, headers: Any = None) -> str:
+        self.get_urls.append(url)
         value = self._get[url]
         if isinstance(value, Exception):
             raise value
@@ -44,30 +50,68 @@ class FakeTransport:
 
 def full_transport() -> FakeTransport:
     return FakeTransport(
-        get_responses={TALAIR_ENDPOINT: json.dumps(talair_payload())},
+        get_responses={
+            TALAIR_ENDPOINT: json.dumps(talair_payload()),
+            TALAIR_BANNER_ENDPOINT: json.dumps(
+                {"price": {"ounce": "<span>۴,۳۷۶.۱۶</span>"}, "banner": []}
+            ),
+        },
         post_responses={},
     )
 
 
 async def test_talair_fixture_is_stored_with_attribution_and_x1_scale() -> None:
     store = InMemoryStore()
+    transport = full_transport()
 
     await collect_reference_round(
-        (TalairReference(),), full_transport(), store, now=FETCHED_AT
+        (TalairReference(),), transport, store, now=FETCHED_AT
     )
 
+    assert TALAIR_BANNER_ENDPOINT in transport.get_urls
     stored = await store.get_reference("talair")
     assert stored is not None
     assert stored.name_fa == "طلا دات‌آی‌آر"
     assert stored.source_url == "https://www.tala.ir/"
     assert stored.fetched_at == FETCHED_AT
 
+    assert [q.instrument for q in stored.quotes] == [
+        ReferenceInstrument.GOLD_18K_TOMAN,
+        ReferenceInstrument.XAU,
+    ]
+    quotes = {quote.instrument: quote for quote in stored.quotes}
+    gold_quote = quotes[ReferenceInstrument.GOLD_18K_TOMAN]
+    assert gold_quote.value == Decimal("18559700")
+    assert gold_quote.side is Side.PRICE
+    assert gold_quote.raw_scale == Decimal("1")
+    assert gold_quote.value == gold_quote.raw_value * gold_quote.raw_scale
+    ounce_quote = quotes[ReferenceInstrument.XAU]
+    assert ounce_quote.value == Decimal("4376.16")
+    assert ounce_quote.side is Side.PRICE
+    assert ounce_quote.raw_scale == Decimal("1")
+
+
+async def test_talair_empty_banner_keeps_gold_reference() -> None:
+    store = InMemoryStore()
+
+    await collect_reference_round(
+        (
+            TalairReference(),
+        ),
+        FakeTransport(
+            get_responses={
+                TALAIR_ENDPOINT: json.dumps(talair_payload()),
+                TALAIR_BANNER_ENDPOINT: json.dumps({"banner": []}),
+            },
+            post_responses={},
+        ),
+        store,
+        now=FETCHED_AT,
+    )
+
+    stored = await store.get_reference("talair")
+    assert stored is not None
     assert [q.instrument for q in stored.quotes] == [ReferenceInstrument.GOLD_18K_TOMAN]
-    quote = stored.quotes[0]
-    assert quote.value == Decimal("18559700")
-    assert quote.side is Side.PRICE
-    assert quote.raw_scale == Decimal("1")
-    assert quote.value == quote.raw_value * quote.raw_scale
 
 
 async def test_talair_broken_gold_18k_means_stale_reference_not_bad_data() -> None:

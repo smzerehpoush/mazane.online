@@ -2,7 +2,7 @@
  * ⚠️ **This card is not an average.** The initial design wanted a
  * "five-source average"; a cross-platform average is a legal red line and
  * is never computed or published. All four numbers and the series itself
- * belong to the **reference platform**, and the label under the big number
+ * belong to the named **reference source**, and the label under the big number
  * names it explicitly —
  * ⚠️ Data for **all three ranges** comes from the server
  * (`assembleHomeData`), so switching tabs does no fetch at all and just
@@ -15,6 +15,7 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 
 import type { SummaryRange, SummaryView } from "@/lib/dashboard";
 import type { HistoryRange } from "@/lib/history";
+import { TomanPrice } from "./TomanPrice";
 
 function nextEnabledIndex(start: number, direction: 1 | -1, ranges: SummaryRange[]): number {
   const count = ranges.length;
@@ -119,26 +120,40 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
         </div>
       </div>
 
-      <div className="mt-4.5 grid items-center gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+      <div
+        data-summary-layout
+        className="mt-4.5 grid items-center gap-6 sm:grid-cols-[minmax(210px,0.7fr)_minmax(0,2.3fr)] sm:gap-3"
+      >
         <div>
           <div
             data-summary-current
             className="num text-[31px] leading-[1.25] font-semibold tracking-[-0.8px] text-primary"
           >
-            {active.currentDisplay ?? "—"}
+            {active.currentDisplay === null ? (
+              "—"
+            ) : (
+              <TomanPrice
+                value={active.currentDisplay}
+                className="inline-flex items-baseline gap-1.5"
+                unitClassName="text-[13px] font-normal tracking-normal text-muted-foreground"
+              />
+            )}
           </div>
           <div className="mt-0.5 text-[15px]">قیمت ۱ گرم طلای ۱۸ عیار</div>
           {/* ⚠️ Naming the owner of the number is mandatory — */}
-          <div className="text-[12.5px] text-tx3">
-            قیمت مرجع · {summary.referenceName ?? "—"} · تومان
-          </div>
+          <div className="text-[12.5px] text-tx3">{summary.referenceName ?? "—"}</div>
         </div>
 
         {active.area.line === null ? (
-          <div aria-hidden className="h-[108px] w-full rounded-[10px] bg-surface" />
+          <div
+            aria-hidden
+            data-summary-chart
+            className="h-[108px] w-full rounded-[10px] bg-surface"
+          />
         ) : (
           <svg
             aria-hidden
+            data-summary-chart
             viewBox="0 0 320 108"
             preserveAspectRatio="none"
             className="block h-[108px] w-full"
@@ -166,7 +181,15 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
       <div className="mt-4.5 grid grid-cols-3 gap-2 border-t border-border pt-3.5">
         <div className="min-w-0">
           <b data-summary-low className="num block text-[13px] font-semibold sm:text-[15.5px]">
-            {active.low?.valueDisplay ?? "—"}
+            {active.low === null ? (
+              "—"
+            ) : (
+              <TomanPrice
+                value={active.low.valueDisplay}
+                className="inline-flex items-baseline gap-1"
+                unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground sm:text-[10px]"
+              />
+            )}
           </b>
           <span className="block text-[11px] text-tx3 sm:text-xs">
             پایین‌ترین
@@ -175,7 +198,15 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
         </div>
         <div className="min-w-0">
           <b data-summary-high className="num block text-[13px] font-semibold sm:text-[15.5px]">
-            {active.high?.valueDisplay ?? "—"}
+            {active.high === null ? (
+              "—"
+            ) : (
+              <TomanPrice
+                value={active.high.valueDisplay}
+                className="inline-flex items-baseline gap-1"
+                unitClassName="text-[9px] font-normal tracking-normal text-muted-foreground sm:text-[10px]"
+              />
+            )}
           </b>
           <span className="block text-[11px] text-tx3 sm:text-xs">
             بالاترین

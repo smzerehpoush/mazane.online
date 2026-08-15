@@ -18,6 +18,7 @@ export interface HistoryQuery {
   instrument: string;
   hours: number;
   stepHours?: number;
+  kind?: "PLATFORM" | "REFERENCE";
 }
 
 export type HistoryRange = "DAILY" | "WEEKLY" | "MONTHLY";

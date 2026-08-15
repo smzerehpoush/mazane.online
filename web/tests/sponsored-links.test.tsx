@@ -241,9 +241,9 @@ describe("sorting takes no input from referral fields", () => {
     const html = renderToStaticMarkup(<HomePage data={await homeData(store)} />);
 
     // ⚠️ "Order" in the new layout means **position on the axis** (right =
-    // cheaper, and `right` is the distance from the right edge). Milli has
+    // pricier, and `right` is the distance from the right edge). Milli has
     // a referral code and is the most expensive here — it must sit
-    // furthest left, i.e. the **largest** percentage. If commission ever
+    // furthest right, i.e. the **smallest** percentage. If commission ever
     // enters the geometry, this is where it turns red.
     const percentOf = (slug: string): number => {
       const marker = html.match(
@@ -252,8 +252,8 @@ describe("sorting takes no input from referral fields", () => {
       if (marker === null) throw new Error(`Marker ${slug} is not in the HTML`);
       return Number(marker[1]);
     };
-    expect(percentOf("talasea")).toBeLessThan(percentOf("wallgold"));
-    expect(percentOf("wallgold")).toBeLessThan(percentOf("milli"));
+    expect(percentOf("milli")).toBeLessThan(percentOf("wallgold"));
+    expect(percentOf("wallgold")).toBeLessThan(percentOf("talasea"));
   });
 
   it("the asset page has the same order too — the referral code has no effect on grouping", async () => {
