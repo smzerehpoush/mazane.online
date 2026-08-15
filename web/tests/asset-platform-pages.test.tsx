@@ -137,6 +137,9 @@ describe("flat slug resolver", () => {
       expect(await resolveSlug(word)).toBeNull();
       expect(await slugPageData(word)).toBeNull();
     }
+    expect(isReservedSlug("sekeh")).toBe(true);
+    expect(await resolveSlug("sekeh")).toBeNull();
+    expect(await slugPageData("sekeh")).toBeNull();
   });
 
   it("asset slug ⟸ instrument, platform slug ⟸ platform, unknown ⟸ 404", async () => {
@@ -210,7 +213,7 @@ describe("publish gate — a single-platform asset gets no page", () => {
 });
 
 describe("asset page — /tala-18", () => {
-  it("h1 is in Persian, and each platform shows its own \"price\" and both fees", async () => {
+  it('h1 is in Persian, and each platform shows its own "price" and both fees', async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
 
@@ -225,7 +228,7 @@ describe("asset page — /tala-18", () => {
     expect(html).not.toContain("مؤثر");
   });
 
-  it("rows are sorted ascending by \"price\"", async () => {
+  it('rows are sorted ascending by "price"', async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
     expect(html.indexOf('data-platform="daric"')).toBeLessThan(
@@ -260,7 +263,7 @@ describe("asset page — /tala-18", () => {
     expect(daric).toContain("کهنه");
   });
 
-  it("the price column is explicitly explained as \"belonging to that platform\", and the head has a flat canonical", async () => {
+  it('the price column is explicitly explained as "belonging to that platform", and the head has a flat canonical', async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
     expect(html).toContain("هیچ میانگین بین‌سکویی");
@@ -307,7 +310,7 @@ describe("platform page — /talasea and /wallgold", () => {
     expect(html).not.toContain("قیمت‌های این سکو");
   });
 
-  it("undocumented metadata is honestly shown as \"not recorded\", not fabricated", async () => {
+  it('undocumented metadata is honestly shown as "not recorded", not fabricated', async () => {
     seed(assetStore());
     const html = await renderSlug("wallgold");
     expect(html).toContain("ثبت نشده است");
@@ -367,8 +370,8 @@ describe("platform page — /talasea and /wallgold", () => {
   });
 });
 
-describe("the \"today's price\" section of the platform page — known/unknown fee", () => {
-  it("the \"price\" card has the Persian date in the title and an explicit note that the fee isn't included", async () => {
+describe('the "today\'s price" section of the platform page — known/unknown fee', () => {
+  it('the "price" card has the Persian date in the title and an explicit note that the fee isn\'t included', async () => {
     const store = assetStore();
     seed(store);
     const html = await renderSlug("talasea");
@@ -384,7 +387,7 @@ describe("the \"today's price\" section of the platform page — known/unknown f
     expect(html).not.toContain("تک‌قیمتی");
   });
 
-  it("unknown fee ⟸ the section still appears, with the price and an \"unknown\" fee", async () => {
+  it('unknown fee ⟸ the section still appears, with the price and an "unknown" fee', async () => {
     seed(assetStore());
     const html = await renderSlug("digikala");
 
@@ -396,7 +399,7 @@ describe("the \"today's price\" section of the platform page — known/unknown f
     expect(html).toContain("سکو کارمزدش را اعلام نکرده است");
   });
 
-  it("the \"this platform's prices\" table (QuotesSection) no longer exists — neither for known nor unknown fee", async () => {
+  it('the "this platform\'s prices" table (QuotesSection) no longer exists — neither for known nor unknown fee', async () => {
     seed(assetStore());
     const known = await renderSlug("talasea");
     const unknown = await renderSlug("digikala");
@@ -411,7 +414,7 @@ describe("the \"today's price\" section of the platform page — known/unknown f
   });
 });
 
-describe("the \"union rate\" bar on the platform page (ticket 33)", () => {
+describe('the "union rate" bar on the platform page (ticket 33)', () => {
   it("with a seeded reference price, the bar renders with its label, the 18k number, and its read time", async () => {
     seed(assetStore());
     seedHistory([]);
@@ -467,7 +470,7 @@ describe("the platform page's rate card — PlatformRateCard", () => {
     expect(html).not.toContain("میانگین خرید و فروش این سکو");
   });
 
-  it("unknown fee ⟸ the \"this platform's quoted price\" label, driven by hasUnknownFee, not a manual list", async () => {
+  it('unknown fee ⟸ the "this platform\'s quoted price" label, driven by hasUnknownFee, not a manual list', async () => {
     const store = assetStore();
     const now = freshIso();
     store.listed = [
@@ -560,7 +563,7 @@ function rateCardSection(html: string): string {
 }
 
 describe("the live countdown and staleness label on the rate card", () => {
-  it("with fresh data, both the \"last updated\" label and the 30-second countdown render", async () => {
+  it('with fresh data, both the "last updated" label and the 30-second countdown render', async () => {
     seed(assetStore());
     seedHistory([]);
     const html = await renderSlug("talasea");
@@ -614,7 +617,7 @@ describe("the rate card's period tab bar — daily/weekly/monthly", () => {
     expect(dailyTab).not.toContain('disabled=""');
   });
 
-  it("sufficient weekly coverage ⟸ the weekly tab is active and clickable; insufficient monthly coverage ⟸ \"coming soon\" and disabled", async () => {
+  it('sufficient weekly coverage ⟸ the weekly tab is active and clickable; insufficient monthly coverage ⟸ "coming soon" and disabled', async () => {
     seed(assetStore());
     seedHistoryByQuery((query) => {
       if (query.stepHours === 2) {

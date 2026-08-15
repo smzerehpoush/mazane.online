@@ -164,6 +164,7 @@ Eight final tables:
 | `/$slug` | Platform or asset page; `resolveSlug` determines which (`SlugPageData` is two-state) |
 | `/blog` | List of published posts |
 | `/blog/$slug` | A single post's page |
+| `/sekeh` | Static/data page for Imam, half, and quarter coin prices |
 | `/mazane-chist` | Static page, "مظنه چیست" |
 | `/robots.txt` | Generated in code (`lib/seo/robots.ts`) |
 | `/sitemap.xml` | XML; deliberately returns 503 with an empty body on blog-source error |

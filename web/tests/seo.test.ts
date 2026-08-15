@@ -82,6 +82,7 @@ describe("sitemap.xml", () => {
     expect(paths).toEqual([
       "/",
       "/blog",
+      "/sekeh",
       "/mazane-chist",
       "/tala-18",
       "/milli",

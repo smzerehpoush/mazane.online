@@ -110,6 +110,11 @@ def test_real_registry_has_all_public_slugs_and_no_collisions() -> None:
         assert registry.kind_of(word) is None
 
 
+def test_static_page_slugs_are_registered() -> None:
+    assert STATIC_PAGE_SLUGS == ("sekeh",)
+    assert PUBLIC_SLUGS.kind_of("sekeh") is SlugKind.STATIC_PAGE
+
+
 def test_duplicate_slug_is_rejected() -> None:
     registry = SlugRegistry()
     registry.register("tala-18", SlugKind.INSTRUMENT)

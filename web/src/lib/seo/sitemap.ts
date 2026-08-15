@@ -7,11 +7,7 @@ export interface SitemapEntry {
   lastModified?: string;
 }
 
-const STATIC_PATHS: readonly string[] = [
-  "/",
-  "/blog",
-  "/mazane-chist",
-];
+const STATIC_PATHS: readonly string[] = ["/", "/blog", "/sekeh", "/mazane-chist"];
 
 export interface SitemapInput {
   posts: readonly PublishedPost[];

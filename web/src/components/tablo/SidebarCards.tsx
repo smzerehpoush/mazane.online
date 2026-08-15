@@ -108,9 +108,6 @@ export function CoinPriceCard({ coins }: { coins: CoinPricesView }) {
     <section data-card="coin-prices" className="card-surface px-5 py-4 sm:px-6">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[15.5px] font-semibold">قیمت سکه</h2>
-        <span className="rounded-full bg-gold-soft px-2.5 py-1 text-[11.5px] font-medium text-gold">
-          طلا دات‌آی‌آر
-        </span>
       </div>
       <div className="mt-3.5 grid gap-2.5">
         {coins.map((coin) => (

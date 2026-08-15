@@ -14,6 +14,7 @@ import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SekehRouteImport } from './routes/sekeh'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
@@ -59,6 +60,11 @@ const MazaneChistRoute = MazaneChistRouteImport.update({
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
   id: '/robots.txt',
   path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SekehRoute = SekehRouteImport.update({
+  id: '/sekeh',
+  path: '/sekeh',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/$slug': typeof SlugRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
@@ -203,6 +210,7 @@ export interface FileRoutesByTo {
   '/$slug': typeof SlugRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/$slug': typeof SlugRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/robots.txt': typeof RobotsDottxtRoute
+  '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/mazane-chist'
     | '/robots.txt'
+    | '/sekeh'
     | '/sitemap.xml'
     | '/admin/login'
     | '/admin/platforms'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/mazane-chist'
     | '/robots.txt'
+    | '/sekeh'
     | '/sitemap.xml'
     | '/admin/login'
     | '/admin/platforms'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/mazane-chist'
     | '/robots.txt'
+    | '/sekeh'
     | '/sitemap.xml'
     | '/admin/login'
     | '/admin/platforms'
@@ -346,6 +358,7 @@ export interface RootRouteChildren {
   SlugRoute: typeof SlugRoute
   MazaneChistRoute: typeof MazaneChistRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SekehRoute: typeof SekehRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminLogoutRoute: typeof ApiAdminLogoutRoute
@@ -394,6 +407,13 @@ declare module '@tanstack/react-router' {
       path: '/robots.txt'
       fullPath: '/robots.txt'
       preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sekeh': {
+      id: '/sekeh'
+      path: '/sekeh'
+      fullPath: '/sekeh'
+      preLoaderRoute: typeof SekehRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -601,6 +621,7 @@ const rootRouteChildren: RootRouteChildren = {
   SlugRoute: SlugRoute,
   MazaneChistRoute: MazaneChistRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
+  SekehRoute: SekehRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminLogoutRoute: ApiAdminLogoutRoute,

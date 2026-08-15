@@ -35,7 +35,7 @@ flowchart LR
         Rhome["/"]
         Rslug["/$slug"]
         Rblog["/blog ,/blog/$slug"]
-        Rstatic["/mazane-chist"]
+        Rstatic["/sekeh ,/mazane-chist"]
         Radmin["/admin/*"]
     end
 
@@ -111,7 +111,7 @@ It has no single compositor; the entry points are the same components called dir
 | `PlatformCalculator.tsx` | `PlatformCalculator` | Two-way weight↔amount calculator for one platform; the only public-page file that uses `components/ui` (`Input`) | `{row: Row, hasOutbound: boolean}` |
 | `RowParts.tsx` | `Staleness`, `FeeSourceLabel`, `MarketModelBadge`, `ClosedBadges` | Four shared atomic display pieces; the only `content→tablo` bridge (imported in `tablo/SourceCards`) | small props for each |
 | `BlogViews.tsx` | `BlogIndexView`, `BlogPostView`, `blogIndexHead`, `blogPostHead`, `BLOG_INDEX_TITLE/DESCRIPTION` | Both the view and the head-builder for the blog index and a single post | `{posts}` / `{post}` |
-| `PageShell.tsx` | `PageShell`, `Breadcrumbs` | Shared shell for every page except the main page (`/$slug`, `/blog*`, `/mazane-chist`); it imports Tablo's own `SiteHeader` | `{children, wide?}` — `wide` toggles `main`'s width between 820px and 1400px; only `/$slug` passes `true` |
+| `PageShell.tsx` | `PageShell`, `Breadcrumbs` | Shared shell for every page except the main page (`/$slug`, `/blog*`, `/sekeh`, `/mazane-chist`); it imports Tablo's own `SiteHeader` | `{children, wide?}` — `wide` toggles `main`'s width between 820px and 1400px; `/$slug` and `/sekeh` pass `true` |
 | `NotFoundPanel.tsx` | `NotFoundPanel` | Generic 404 panel, the `notFoundComponent` for the `/$slug` route | `{title?, note?}` |
 | `LegalNotice.tsx` | `Madde5Bar`, `MADDE5_WARNING_FA` | Legal warning bar — the content-pages version (a `footer` with `border-gold/40`), markup differs from the `tablo/` version (section 8) | no props |
 | `ViewBeacon.tsx` | `ViewBeacon` | Silent view-count beacon fired after 3000ms of dwell time; doesn't send at all when `navigator.webdriver` is set | `{slug: string}` |
@@ -195,7 +195,7 @@ used in any file in `src` — its only reference is its own definition.
 
 Two visual languages coexist side by side: `card-surface` (solid background + shadow, only in
 `components/tablo/*`) and `glass-surface` (`color-mix` transparency + `backdrop-filter: blur(18px)`,
-based mainly in `components/content/*` and `mazane-chist`, though the boundary
+based mainly in `components/content/*`, `sekeh`, and `mazane-chist`, though the boundary
 isn't complete: two `tablo/` files — `PopularPosts.tsx` and `Sidebar.tsx` — also use this same
 class).
 

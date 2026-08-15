@@ -18,7 +18,7 @@ export const RESERVED_WORDS: ReadonlySet<string> = new Set([
   "about",
 ]);
 
-export const STATIC_PAGE_SLUGS: ReadonlySet<string> = new Set(["mazane-chist"]);
+export const STATIC_PAGE_SLUGS: ReadonlySet<string> = new Set(["mazane-chist", "sekeh"]);
 
 export type SlugResolution =
   | { kind: "instrument"; listing: InstrumentListing }

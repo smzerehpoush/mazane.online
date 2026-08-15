@@ -10,6 +10,7 @@ export const brand = {
 
 export const nav = [
   { label: "طلای ۱۸ عیار", href: "/tala-18" },
+  { label: "قیمت سکه", href: "/sekeh" },
   { label: "بلاگ", href: "/blog" },
   { label: "مظنه چیست", href: "/mazane-chist" },
 ] as const;

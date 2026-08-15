@@ -19,6 +19,7 @@ import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
 import { MazaneChist, mazaneChistHead } from "../src/routes/mazane-chist";
+import { sekehHead } from "../src/routes/sekeh";
 import {
   freshIso,
   homeData,
@@ -445,8 +446,8 @@ describe("BreadcrumbList", () => {
     ]);
   });
 
-  it("Static pages (blog index, mazane-chist) have it too", () => {
-    for (const head of [blogIndexHead(), mazaneChistHead()]) {
+  it("Static pages (blog index, sekeh, mazane-chist) have it too", () => {
+    for (const head of [blogIndexHead(), sekehHead(), mazaneChistHead()]) {
       const breadcrumb = findByType(jsonLdBlocks(head), "BreadcrumbList");
       expect(breadcrumb).toBeDefined();
       const items = (breadcrumb as Record<string, unknown>)["itemListElement"] as Record<
