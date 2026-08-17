@@ -14,6 +14,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { HomePage } from "../src/components/tablo/HomePage";
 import { railCountdownSeconds } from "../src/components/tablo/PriceRail";
+import { currentVatPercent } from "../src/lib/calculator";
+import { formatFaNumber } from "../src/lib/fa-number";
 import { REGISTRY_PLATFORMS } from "../src/lib/registry";
 import { THEME_ATTRIBUTE, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "../src/lib/theme";
 import {
@@ -450,6 +452,25 @@ describe("home page — disabled cards", () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain("ماشین حساب طلای زینتی");
     expect(html).toContain("اجرت ساخت (٪)");
+  });
+
+  it("the calculator names the law behind the VAT figure", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain("data-calculator-source");
+    expect(html).toContain("بند (ب) ماده (۲۶) قانون مالیات بر ارزش افزوده");
+    expect(html).toContain("اصل طلا معاف است");
+  });
+
+  it("the VAT field is pre-filled with the statutory rate for the current year", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain(`value="${formatFaNumber(currentVatPercent())}"`);
+    expect(currentVatPercent()).toBe(10);
+  });
+
+  it("no copy presents the seller's profit as an official or legally set figure", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain("سود (٪)");
+    expect(html).not.toMatch(/سود[^<]{0,40}(رسمی|قانونی|مصوب)/);
   });
 });
 

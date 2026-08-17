@@ -33,6 +33,9 @@ function AdminHomePage() {
         <Button asChild variant="secondary">
           <Link to="/admin/platforms">تنظیمات نمودار</Link>
         </Button>
+        <Button asChild variant="secondary">
+          <Link to="/admin/clicks">کلیک‌های معرف</Link>
+        </Button>
       </div>
       <Button variant="outline" onClick={() => void onLogout()} disabled={pending}>
         {pending ? "در حال خروج…" : "خروج"}

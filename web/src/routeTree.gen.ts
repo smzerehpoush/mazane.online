@@ -19,12 +19,14 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SekehRouteImport } from './routes/sekeh'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminClicksRouteImport } from './routes/admin/clicks'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminPlatformsRouteImport } from './routes/admin/platforms'
 import { Route as ApiAdminLoginRouteImport } from './routes/api/admin-login'
 import { Route as ApiAdminLogoutRouteImport } from './routes/api/admin-logout'
 import { Route as ApiAdminPlatformSettingsRouteImport } from './routes/api/admin-platform-settings'
 import { Route as ApiAdminPostsRouteImport } from './routes/api/admin-posts'
+import { Route as ApiAdminReferralClicksRouteImport } from './routes/api/admin-referral-clicks'
 import { Route as ApiPostViewRouteImport } from './routes/api/post-view'
 import { Route as ApiPricesRouteImport } from './routes/api/prices'
 import { Route as ApiRevalidateBlogRouteImport } from './routes/api/revalidate-blog'
@@ -89,6 +91,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminClicksRoute = AdminClicksRouteImport.update({
+  id: '/clicks',
+  path: '/clicks',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -118,6 +125,11 @@ const ApiAdminPlatformSettingsRoute =
 const ApiAdminPostsRoute = ApiAdminPostsRouteImport.update({
   id: '/api/admin-posts',
   path: '/api/admin-posts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminReferralClicksRoute = ApiAdminReferralClicksRouteImport.update({
+  id: '/api/admin-referral-clicks',
+  path: '/api/admin-referral-clicks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPostViewRoute = ApiPostViewRouteImport.update({
@@ -198,12 +210,14 @@ export interface FileRoutesByFullPath {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
+  '/api/admin-referral-clicks': typeof ApiAdminReferralClicksRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -228,12 +242,14 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
+  '/api/admin-referral-clicks': typeof ApiAdminReferralClicksRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -260,12 +276,14 @@ export interface FileRoutesById {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
+  '/api/admin-referral-clicks': typeof ApiAdminReferralClicksRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -293,12 +311,14 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
+    | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
     | '/api/admin-posts'
+    | '/api/admin-referral-clicks'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -323,12 +343,14 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
+    | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
     | '/api/admin-posts'
+    | '/api/admin-referral-clicks'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -354,12 +376,14 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
+    | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
     | '/api/admin-posts'
+    | '/api/admin-referral-clicks'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -390,6 +414,7 @@ export interface RootRouteChildren {
   ApiAdminLogoutRoute: typeof ApiAdminLogoutRoute
   ApiAdminPlatformSettingsRoute: typeof ApiAdminPlatformSettingsRoute
   ApiAdminPostsRoute: typeof ApiAdminPostsRouteWithChildren
+  ApiAdminReferralClicksRoute: typeof ApiAdminReferralClicksRoute
   ApiPostViewRoute: typeof ApiPostViewRoute
   ApiPricesRoute: typeof ApiPricesRoute
   ApiRevalidateBlogRoute: typeof ApiRevalidateBlogRoute
@@ -470,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/clicks': {
+      id: '/admin/clicks'
+      path: '/clicks'
+      fullPath: '/admin/clicks'
+      preLoaderRoute: typeof AdminClicksRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/login'
@@ -510,6 +542,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin-posts'
       fullPath: '/api/admin-posts'
       preLoaderRoute: typeof ApiAdminPostsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin-referral-clicks': {
+      id: '/api/admin-referral-clicks'
+      path: '/api/admin-referral-clicks'
+      fullPath: '/api/admin-referral-clicks'
+      preLoaderRoute: typeof ApiAdminReferralClicksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/post-view': {
@@ -607,6 +646,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteRouteChildren {
+  AdminClicksRoute: typeof AdminClicksRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminPlatformsRoute: typeof AdminPlatformsRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -616,6 +656,7 @@ interface AdminRouteRouteChildren {
 }
 
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminClicksRoute: AdminClicksRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminPlatformsRoute: AdminPlatformsRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -669,6 +710,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAdminLogoutRoute: ApiAdminLogoutRoute,
   ApiAdminPlatformSettingsRoute: ApiAdminPlatformSettingsRoute,
   ApiAdminPostsRoute: ApiAdminPostsRouteWithChildren,
+  ApiAdminReferralClicksRoute: ApiAdminReferralClicksRoute,
   ApiPostViewRoute: ApiPostViewRoute,
   ApiPricesRoute: ApiPricesRoute,
   ApiRevalidateBlogRoute: ApiRevalidateBlogRoute,

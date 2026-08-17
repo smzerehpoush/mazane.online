@@ -1,20 +1,31 @@
 import { useState } from "react";
 
-import { jewelryTotal, parseCalculatorInput } from "@/lib/calculator";
+import { currentVatPercent, jewelryTotal, parseCalculatorInput } from "@/lib/calculator";
 import { formatFaNumber } from "@/lib/fa-number";
 
 interface Field {
   key: string;
   label: string;
-  initial: string;
 }
 
 const FIELDS: readonly Field[] = [
-  { key: "weight", label: "وزن (گرم)", initial: "" },
-  { key: "wage", label: "اجرت ساخت (٪)", initial: "" },
-  { key: "profit", label: "سود (٪)", initial: "" },
-  { key: "vat", label: "مالیات بر ارزش افزوده (٪)", initial: "" },
+  { key: "weight", label: "وزن (گرم)" },
+  { key: "wage", label: "اجرت ساخت (٪)" },
+  { key: "profit", label: "سود (٪)" },
+  { key: "vat", label: "مالیات بر ارزش افزوده (٪)" },
 ];
+
+function initialValues(): Record<string, string> {
+  return {
+    weight: "",
+    wage: "",
+    profit: "",
+    vat: formatFaNumber(currentVatPercent()),
+  };
+}
+
+const VAT_NOTE =
+  "مالیات بر ارزش افزوده فقط روی اجرت و سود حساب می‌شود و اصل طلا معاف است: بند (ب) ماده (۲۶) قانون مالیات بر ارزش افزوده مصوب ۱۴۰۰. نرخ آن از سال ۱۴۰۴ ده درصد است؛ بند «خ» تبصره (۱) قانون بودجه.";
 
 export function JewelryCalculator({
   pricePerGram,
@@ -23,9 +34,7 @@ export function JewelryCalculator({
   pricePerGram: number | null;
   referenceName: string | null;
 }) {
-  const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(FIELDS.map((field) => [field.key, field.initial])),
-  );
+  const [values, setValues] = useState<Record<string, string>>(initialValues);
 
   const weight = parseCalculatorInput(values["weight"] ?? "");
   const percent = (key: string): number => parseCalculatorInput(values[key] ?? "") ?? 0;
@@ -75,9 +84,13 @@ export function JewelryCalculator({
       {pricePerGram !== null && referenceName !== null && (
         <p className="mt-2.5 text-[11px] leading-5 text-tx3">
           بر پایه‌ی نرخ مرجع هر گرم طلای ۱۸ عیار در {referenceName}. اجرت روی قیمت طلا، سود روی
-          مجموع طلا و اجرت، و مالیات روی کل حساب می‌شود.
+          مجموع طلا و اجرت، و مالیات روی اجرت و سود حساب می‌شود.
         </p>
       )}
+
+      <p data-calculator-source className="mt-2 text-[11px] leading-5 text-tx3">
+        {VAT_NOTE}
+      </p>
     </section>
   );
 }

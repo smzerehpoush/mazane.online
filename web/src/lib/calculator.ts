@@ -46,6 +46,33 @@ export function weightFromAmount(amountToman: number, unitPriceToman: number): n
   return Math.round(grams * 10_000) / 10_000;
 }
 
+const VAT_PERCENT_FROM_JALALI_YEAR = [
+  { fromYear: 1400, percent: 9 },
+  { fromYear: 1404, percent: 10 },
+] as const;
+
+export function vatPercentForJalaliYear(jalaliYear: number): number {
+  const [earliest] = VAT_PERCENT_FROM_JALALI_YEAR;
+  let percent: number = earliest.percent;
+  for (const bracket of VAT_PERCENT_FROM_JALALI_YEAR) {
+    if (jalaliYear >= bracket.fromYear) percent = bracket.percent;
+  }
+  return percent;
+}
+
+const jalaliYearFormatter = new Intl.DateTimeFormat("en-US-u-ca-persian", {
+  year: "numeric",
+  timeZone: "Asia/Tehran",
+});
+
+export function currentJalaliYear(nowMs: number = Date.now()): number {
+  return Number(jalaliYearFormatter.format(new Date(nowMs)).replace(/\D/g, ""));
+}
+
+export function currentVatPercent(nowMs: number = Date.now()): number {
+  return vatPercentForJalaliYear(currentJalaliYear(nowMs));
+}
+
 /**
  * ⚠️ **This is not a violation, for the same reason stated at the top of
  * this file**: that rule says the web must not construct or derive a
@@ -56,6 +83,9 @@ export function weightFromAmount(amountToman: number, unitPriceToman: number): n
  * ⚠️ Deliberately placed here and not inside a component: this file is the
  * "only gate" for the calculator's arithmetic and has its own test. A
  * formula living inside a `.tsx` would stay untested.
+ * ⚠️ VAT is charged on wage + profit only, never on the gold principal,
+ * which Article 26(b) of the VAT Act (1400/03/02) exempts — collapsing this
+ * into a `total * (1 + vat)` chain overstates the result by roughly 7%.
  */
 export function jewelryTotal(options: {
   weightGrams: number;
@@ -66,7 +96,8 @@ export function jewelryTotal(options: {
 }): number {
   const { weightGrams, pricePerGram, wagePercent, profitPercent, vatPercent } = options;
   const gold = weightGrams * pricePerGram;
-  const withWage = gold * (1 + wagePercent / 100);
-  const withProfit = withWage * (1 + profitPercent / 100);
-  return Math.round(withProfit * (1 + vatPercent / 100));
+  const wage = gold * (wagePercent / 100);
+  const profit = (gold + wage) * (profitPercent / 100);
+  const vat = (wage + profit) * (vatPercent / 100);
+  return Math.round(gold + wage + profit + vat);
 }

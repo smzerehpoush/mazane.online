@@ -125,6 +125,11 @@ breaks web. [collector/src/tablo_collector/store/redis_store.py:1-20]
 | `tablo:instruments` | No TTL | `save_instruments` | `price-source.ts` |
 | `tablo:reference:{slug}` | 900 seconds (`DEFAULT_REFERENCE_TTL_SECONDS`) | `save_reference` | Not read; web's reference rate comes from Postgres (`hourly_rollups`) |
 | `tablo:chart_config` | No TTL | `save_chart_config` (from `settings_sync_loop`) | `chart-config-source.ts` |
+| `tablo:go_clicks:{YYYY-MM-DD}` | 120 days | web itself — `referral-click-counter.ts`, on each `/go/<slug>` hit | `referral-click-counter.ts` (admin panel only) |
+
+The last row is the one key web writes rather than reads: a hash whose field
+is the platform slug and whose value is that Tehran-day's referral-click
+count. The destination URL never appears in the key or the value.
 
 A suppressed snapshot (`suppressed=True`) is never written to Redis at all —
 `RedisStore.save_snapshot` returns early; that same snapshot is inserted

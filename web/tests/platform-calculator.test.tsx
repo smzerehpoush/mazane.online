@@ -4,8 +4,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { PlatformCalculator } from "../src/components/content/PlatformCalculator";
 import {
   amountFromWeight,
+  currentJalaliYear,
+  currentVatPercent,
   jewelryTotal,
   parseCalculatorInput,
+  vatPercentForJalaliYear,
   weightFromAmount,
 } from "../src/lib/calculator";
 import type { ListedPlatform } from "../src/lib/prices";
@@ -256,10 +259,11 @@ describe("jewelryTotal — jewelry gold amount", () => {
   /**
    * ⚠️ The order of operations matters, and mixing it up fails silently:
    * wage on the gold price, profit on **the gold+wage total**, and VAT on
-   * **the grand total**. Applying all three separately to the gold price
-   * alone yields a smaller number.
+   * **wage + profit only** — Article 26(b) of the VAT Act exempts the gold
+   * principal. Applying all three separately to the gold price alone, or
+   * running VAT over the grand total, both yield a different number.
    */
-  it("wage on gold, profit on gold+wage, VAT on the total", () => {
+  it("wage on gold, profit on gold+wage, VAT on wage+profit only", () => {
     const total = jewelryTotal({
       weightGrams: 1,
       pricePerGram: 1_000_000,
@@ -267,8 +271,54 @@ describe("jewelryTotal — jewelry gold amount", () => {
       profitPercent: 7,
       vatPercent: 10,
     });
-    expect(total).toBe(1_294_700);
+    expect(total).toBe(1_194_700);
     expect(total).not.toBe(Math.round(1_000_000 * 1.27));
+    expect(total).not.toBe(Math.round(1_000_000 * 1.1 * 1.07 * 1.1));
+  });
+
+  it("the worked example from the issue: 5g, 20% wage, 7% profit, 10% VAT ⟸ ×1.3124", () => {
+    const total = jewelryTotal({
+      weightGrams: 5,
+      pricePerGram: 10_000_000,
+      wagePercent: 20,
+      profitPercent: 7,
+      vatPercent: 10,
+    });
+    const gold = 5 * 10_000_000;
+    const wage = gold * 0.2;
+    const profit = (gold + wage) * 0.07;
+    const vat = (wage + profit) * 0.1;
+
+    expect(gold + wage + profit + vat).toBe(65_620_000);
+    expect(total).toBe(65_620_000);
+    expect(total).toBe(Math.round(gold * 1.3124));
+    expect(total).not.toBe(Math.round(gold * 1.4124));
+  });
+
+  it("VAT never touches the gold principal: with no wage and no profit there is no VAT", () => {
+    expect(
+      jewelryTotal({
+        weightGrams: 4,
+        pricePerGram: PRICE,
+        wagePercent: 0,
+        profitPercent: 0,
+        vatPercent: 10,
+      }),
+    ).toBe(4 * PRICE);
+  });
+
+  it("raising VAT moves the total by the VAT of wage+profit, not of the whole invoice", () => {
+    const base = {
+      weightGrams: 1,
+      pricePerGram: 1_000_000,
+      wagePercent: 10,
+      profitPercent: 7,
+    };
+    const withoutVat = jewelryTotal({ ...base, vatPercent: 0 });
+    const withVat = jewelryTotal({ ...base, vatPercent: 10 });
+
+    expect(withoutVat).toBe(1_177_000);
+    expect(withVat - withoutVat).toBe(17_700);
   });
 
   it("rounds to the nearest toman", () => {
@@ -294,5 +344,35 @@ describe("jewelryTotal — jewelry gold amount", () => {
       vatPercent: 0,
     });
     expect(bare).toBe(amountFromWeight(3, PRICE));
+  });
+});
+
+describe("VAT rate — a statutory rate that changes by Jalali year", () => {
+  it("9% for 1400–1403, 10% from 1404 onwards", () => {
+    expect(vatPercentForJalaliYear(1400)).toBe(9);
+    expect(vatPercentForJalaliYear(1403)).toBe(9);
+    expect(vatPercentForJalaliYear(1404)).toBe(10);
+    expect(vatPercentForJalaliYear(1405)).toBe(10);
+  });
+
+  it("a year past the table keeps the last known rate rather than falling to zero", () => {
+    expect(vatPercentForJalaliYear(1410)).toBe(10);
+  });
+
+  it("a year before the act keeps the earliest known rate", () => {
+    expect(vatPercentForJalaliYear(1399)).toBe(9);
+  });
+
+  it("the Jalali year is read from an injected instant, not from the wall clock", () => {
+    expect(currentJalaliYear(Date.parse("2023-06-15T00:00:00Z"))).toBe(1402);
+    expect(currentJalaliYear(Date.parse("2025-01-15T00:00:00Z"))).toBe(1403);
+    expect(currentJalaliYear(Date.parse("2025-06-15T00:00:00Z"))).toBe(1404);
+    expect(currentJalaliYear(Date.parse("2026-08-18T00:00:00Z"))).toBe(1405);
+  });
+
+  it("the default rate follows that year across the 1403 ⟸ 1404 change", () => {
+    expect(currentVatPercent(Date.parse("2025-01-15T00:00:00Z"))).toBe(9);
+    expect(currentVatPercent(Date.parse("2025-06-15T00:00:00Z"))).toBe(10);
+    expect(currentVatPercent(Date.parse("2026-08-18T00:00:00Z"))).toBe(10);
   });
 });

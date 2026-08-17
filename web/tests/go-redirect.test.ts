@@ -1,7 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ListedPlatform } from "../src/lib/prices";
 import { setPriceSource } from "../src/lib/prices";
+import {
+  resetReferralClickSource,
+  setReferralClickSource,
+  type ReferralClickSource,
+} from "../src/lib/referral-clicks";
 import { goRedirectResponse } from "../src/lib/server/go-redirect";
 
 const REFERRAL_CODE = "MZN-SECRET-4242";
@@ -33,7 +38,29 @@ function seedPlatforms(): void {
   });
 }
 
+let written: unknown[][] = [];
+
+function spySource(): ReferralClickSource {
+  return {
+    async increment(...args) {
+      written.push(args);
+    },
+    async read(days) {
+      const byDay: Record<string, Record<string, number>> = {};
+      for (const day of days) byDay[day] = {};
+      return byDay;
+    },
+  };
+}
+
+beforeEach(() => {
+  written = [];
+  resetReferralClickSource();
+  setReferralClickSource(spySource());
+});
+
 afterEach(() => {
+  resetReferralClickSource();
   vi.restoreAllMocks();
 });
 
@@ -85,12 +112,72 @@ describe("GET /go/<slug> — referral redirect", () => {
     }
   });
 
+  it("a served redirect is counted once, keyed on the slug", async () => {
+    seedPlatforms();
+    await goRedirectResponse("milli");
+    await goRedirectResponse("milli");
+    await goRedirectResponse("wallgold");
+
+    expect(written.map((args) => args[0])).toEqual(["milli", "milli", "wallgold"]);
+  });
+
+  it("a 404 is never counted — an unknown route param cannot mint a counter key", async () => {
+    seedPlatforms();
+    await goRedirectResponse("hich-vaght-nabude");
+    await goRedirectResponse("bihich");
+    await goRedirectResponse("../../etc/passwd");
+
+    expect(written).toEqual([]);
+  });
+
+  it("neither the referral URL nor the referral code ever reaches the store", async () => {
+    seedPlatforms();
+    for (const slug of ["milli", "wallgold", "bihich", "hich-vaght-nabude"]) {
+      await goRedirectResponse(slug);
+    }
+
+    const serialized = JSON.stringify(written);
+    expect(serialized).not.toContain(REFERRAL_CODE);
+    expect(serialized).not.toContain("referralCode");
+    expect(serialized).not.toContain("milli.gold");
+    expect(serialized).not.toContain("wallgold.ir");
+    expect(serialized).not.toContain("http");
+  });
+
+  it("a store outage still returns the 302 — the click is lost, the visitor is not", async () => {
+    seedPlatforms();
+    setReferralClickSource({
+      increment: async () => {
+        throw new Error("redis down");
+      },
+      read: async () => {
+        throw new Error("redis down");
+      },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const response = await goRedirectResponse("milli");
+    expect(response.status).toBe(302);
+    expect(response.headers.get("Location")).toBe(
+      `https://milli.gold/app/sign-up?referralCode=${REFERRAL_CODE}`,
+    );
+  });
+
   it("the referral code never ends up in logs", async () => {
     seedPlatforms();
     const spies = (["log", "info", "warn", "error", "debug"] as const).map((level) =>
       vi.spyOn(console, level).mockImplementation(() => undefined),
     );
 
+    await goRedirectResponse("milli");
+    setReferralClickSource({
+      increment: async () => {
+        throw new Error("redis down");
+      },
+      read: async () => {
+        throw new Error("redis down");
+      },
+    });
     await goRedirectResponse("milli");
 
     for (const spy of spies) {
