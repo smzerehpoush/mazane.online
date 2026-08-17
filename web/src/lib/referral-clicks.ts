@@ -11,14 +11,7 @@
  * module's arguments.
  */
 
-const DAY_MS = 86_400_000;
-
-/**
- * ⚠️ Fixed +03:30, not `Intl`: Iran abolished DST in 2022, so the Tehran
- * offset is a constant and a day bucket can be derived arithmetically —
- * which keeps the bucket independent of the runtime's ICU version.
- */
-const TEHRAN_OFFSET_MS = 12_600_000;
+import { tehranDay, tehranDayWindow } from "./tehran-day";
 
 export const REFERRAL_CLICK_WINDOW_DAYS = 14;
 
@@ -68,18 +61,14 @@ function source(): ReferralClickSource | null {
 }
 
 export function referralClickDay(nowMs: number): string {
-  return new Date(nowMs + TEHRAN_OFFSET_MS).toISOString().slice(0, 10);
+  return tehranDay(nowMs);
 }
 
 export function referralClickDays(
   nowMs: number,
   windowDays: number = REFERRAL_CLICK_WINDOW_DAYS,
 ): string[] {
-  const days: string[] = [];
-  for (let back = windowDays - 1; back >= 0; back -= 1) {
-    days.push(referralClickDay(nowMs - back * DAY_MS));
-  }
-  return days;
+  return tehranDayWindow(nowMs, windowDays);
 }
 
 export async function recordReferralClick(

@@ -1,7 +1,9 @@
 import { useState } from "react";
 
+import { CALC_TOOL_JEWELRY } from "@/lib/calc-events";
 import { currentVatPercent, jewelryTotal, parseCalculatorInput } from "@/lib/calculator";
 import { formatFaNumber } from "@/lib/fa-number";
+import { useCalcEvents } from "@/lib/use-calc-events";
 
 interface Field {
   key: string;
@@ -34,7 +36,8 @@ export function JewelryCalculator({
   pricePerGram: number | null;
   referenceName: string | null;
 }) {
-  const [values, setValues] = useState<Record<string, string>>(initialValues);
+  const [initial] = useState<Record<string, string>>(initialValues);
+  const [values, setValues] = useState<Record<string, string>>(initial);
 
   const weight = parseCalculatorInput(values["weight"] ?? "");
   const percent = (key: string): number => parseCalculatorInput(values[key] ?? "") ?? 0;
@@ -49,6 +52,8 @@ export function JewelryCalculator({
           profitPercent: percent("profit"),
           vatPercent: percent("vat"),
         });
+
+  useCalcEvents({ tool: CALC_TOOL_JEWELRY, initial, values, hasResult: total !== null });
 
   return (
     <section data-card="calculator" className="card-surface px-5 py-4 sm:px-6">

@@ -22,11 +22,13 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminClicksRouteImport } from './routes/admin/clicks'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as AdminPlatformsRouteImport } from './routes/admin/platforms'
+import { Route as ApiAdminCalcEventsRouteImport } from './routes/api/admin-calc-events'
 import { Route as ApiAdminLoginRouteImport } from './routes/api/admin-login'
 import { Route as ApiAdminLogoutRouteImport } from './routes/api/admin-logout'
 import { Route as ApiAdminPlatformSettingsRouteImport } from './routes/api/admin-platform-settings'
 import { Route as ApiAdminPostsRouteImport } from './routes/api/admin-posts'
 import { Route as ApiAdminReferralClicksRouteImport } from './routes/api/admin-referral-clicks'
+import { Route as ApiCalcEventRouteImport } from './routes/api/calc-event'
 import { Route as ApiPostViewRouteImport } from './routes/api/post-view'
 import { Route as ApiPricesRouteImport } from './routes/api/prices'
 import { Route as ApiRevalidateBlogRouteImport } from './routes/api/revalidate-blog'
@@ -106,6 +108,11 @@ const AdminPlatformsRoute = AdminPlatformsRouteImport.update({
   path: '/platforms',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const ApiAdminCalcEventsRoute = ApiAdminCalcEventsRouteImport.update({
+  id: '/api/admin-calc-events',
+  path: '/api/admin-calc-events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminLoginRoute = ApiAdminLoginRouteImport.update({
   id: '/api/admin-login',
   path: '/api/admin-login',
@@ -130,6 +137,11 @@ const ApiAdminPostsRoute = ApiAdminPostsRouteImport.update({
 const ApiAdminReferralClicksRoute = ApiAdminReferralClicksRouteImport.update({
   id: '/api/admin-referral-clicks',
   path: '/api/admin-referral-clicks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCalcEventRoute = ApiCalcEventRouteImport.update({
+  id: '/api/calc-event',
+  path: '/api/calc-event',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPostViewRoute = ApiPostViewRouteImport.update({
@@ -213,11 +225,13 @@ export interface FileRoutesByFullPath {
   '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
+  '/api/admin-calc-events': typeof ApiAdminCalcEventsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
   '/api/admin-referral-clicks': typeof ApiAdminReferralClicksRoute
+  '/api/calc-event': typeof ApiCalcEventRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -245,11 +259,13 @@ export interface FileRoutesByTo {
   '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
+  '/api/admin-calc-events': typeof ApiAdminCalcEventsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
   '/api/admin-referral-clicks': typeof ApiAdminReferralClicksRoute
+  '/api/calc-event': typeof ApiCalcEventRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -279,11 +295,13 @@ export interface FileRoutesById {
   '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
+  '/api/admin-calc-events': typeof ApiAdminCalcEventsRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
   '/api/admin-logout': typeof ApiAdminLogoutRoute
   '/api/admin-platform-settings': typeof ApiAdminPlatformSettingsRoute
   '/api/admin-posts': typeof ApiAdminPostsRouteWithChildren
   '/api/admin-referral-clicks': typeof ApiAdminReferralClicksRoute
+  '/api/calc-event': typeof ApiCalcEventRoute
   '/api/post-view': typeof ApiPostViewRoute
   '/api/prices': typeof ApiPricesRoute
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
@@ -314,11 +332,13 @@ export interface FileRouteTypes {
     | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
+    | '/api/admin-calc-events'
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
     | '/api/admin-posts'
     | '/api/admin-referral-clicks'
+    | '/api/calc-event'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -346,11 +366,13 @@ export interface FileRouteTypes {
     | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
+    | '/api/admin-calc-events'
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
     | '/api/admin-posts'
     | '/api/admin-referral-clicks'
+    | '/api/calc-event'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -379,11 +401,13 @@ export interface FileRouteTypes {
     | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
+    | '/api/admin-calc-events'
     | '/api/admin-login'
     | '/api/admin-logout'
     | '/api/admin-platform-settings'
     | '/api/admin-posts'
     | '/api/admin-referral-clicks'
+    | '/api/calc-event'
     | '/api/post-view'
     | '/api/prices'
     | '/api/revalidate-blog'
@@ -410,11 +434,13 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SekehRoute: typeof SekehRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiAdminCalcEventsRoute: typeof ApiAdminCalcEventsRoute
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminLogoutRoute: typeof ApiAdminLogoutRoute
   ApiAdminPlatformSettingsRoute: typeof ApiAdminPlatformSettingsRoute
   ApiAdminPostsRoute: typeof ApiAdminPostsRouteWithChildren
   ApiAdminReferralClicksRoute: typeof ApiAdminReferralClicksRoute
+  ApiCalcEventRoute: typeof ApiCalcEventRoute
   ApiPostViewRoute: typeof ApiPostViewRoute
   ApiPricesRoute: typeof ApiPricesRoute
   ApiRevalidateBlogRoute: typeof ApiRevalidateBlogRoute
@@ -516,6 +542,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPlatformsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/api/admin-calc-events': {
+      id: '/api/admin-calc-events'
+      path: '/api/admin-calc-events'
+      fullPath: '/api/admin-calc-events'
+      preLoaderRoute: typeof ApiAdminCalcEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin-login': {
       id: '/api/admin-login'
       path: '/api/admin-login'
@@ -549,6 +582,13 @@ declare module '@tanstack/react-router' {
       path: '/api/admin-referral-clicks'
       fullPath: '/api/admin-referral-clicks'
       preLoaderRoute: typeof ApiAdminReferralClicksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calc-event': {
+      id: '/api/calc-event'
+      path: '/api/calc-event'
+      fullPath: '/api/calc-event'
+      preLoaderRoute: typeof ApiCalcEventRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/post-view': {
@@ -706,11 +746,13 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SekehRoute: SekehRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiAdminCalcEventsRoute: ApiAdminCalcEventsRoute,
   ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminLogoutRoute: ApiAdminLogoutRoute,
   ApiAdminPlatformSettingsRoute: ApiAdminPlatformSettingsRoute,
   ApiAdminPostsRoute: ApiAdminPostsRouteWithChildren,
   ApiAdminReferralClicksRoute: ApiAdminReferralClicksRoute,
+  ApiCalcEventRoute: ApiCalcEventRoute,
   ApiPostViewRoute: ApiPostViewRoute,
   ApiPricesRoute: ApiPricesRoute,
   ApiRevalidateBlogRoute: ApiRevalidateBlogRoute,

@@ -126,10 +126,21 @@ breaks web. [collector/src/tablo_collector/store/redis_store.py:1-20]
 | `tablo:reference:{slug}` | 900 seconds (`DEFAULT_REFERENCE_TTL_SECONDS`) | `save_reference` | Not read; web's reference rate comes from Postgres (`hourly_rollups`) |
 | `tablo:chart_config` | No TTL | `save_chart_config` (from `settings_sync_loop`) | `chart-config-source.ts` |
 | `tablo:go_clicks:{YYYY-MM-DD}` | 120 days | web itself — `referral-click-counter.ts`, on each `/go/<slug>` hit | `referral-click-counter.ts` (admin panel only) |
+| `tablo:calc_events:{YYYY-MM-DD}` | 120 days | web itself — `calc-event-counter.ts`, on a `POST /api/calc-event` beacon | `calc-event-counter.ts` (admin panel only) |
 
-The last row is the one key web writes rather than reads: a hash whose field
-is the platform slug and whose value is that Tehran-day's referral-click
-count. The destination URL never appears in the key or the value.
+The last two rows are the only keys web writes rather than reads, and both are
+hashes bucketed by the Tehran day (`lib/tehran-day.ts`).
+
+`tablo:go_clicks:*` has one field per platform slug, holding that day's
+referral-click count. The destination URL never appears in the key or the value.
+
+`tablo:calc_events:*` has one field per `{tool}:{event}` pair —
+`jewelry:calc_start`, `jewelry:calc_complete` — holding that day's count. A
+tool arriving later is a new field in the same key, so no migration is
+involved; the write path accepts only a slug listed in `CALC_TOOLS`
+(`lib/calc-events.ts`), because the tool name comes from the browser. Nothing
+the visitor types into a calculator is ever part of the key, the field or the
+value: the beacon's whole payload is `{tool, event}`.
 
 A suppressed snapshot (`suppressed=True`) is never written to Redis at all —
 `RedisStore.save_snapshot` returns early; that same snapshot is inserted
@@ -185,6 +196,7 @@ Eight final tables:
 | `/admin/posts/` | List of posts |
 | `/admin/posts/new` | Create a post |
 | `/admin/posts/$slug` | Edit a post |
+| `/admin/clicks` | Measurement: referral clicks per platform, and calculator start/complete events per tool |
 
 ### API
 
@@ -199,7 +211,10 @@ Eight final tables:
 | `/api/admin-posts/$slug/publish` | POST | Manual publish |
 | `/api/admin-posts/$slug/retract` | POST | Retract |
 | `/api/admin-posts/$slug/image` | POST | Upload the featured image (upload only, no delete) |
+| `/api/admin-referral-clicks` | GET | Per-platform, per-day referral-click report for the admin panel |
+| `/api/admin-calc-events` | GET | Per-tool, per-day calculator start/complete report for the admin panel |
 | `/api/post-view` | POST | Records a view from the browser (after staying on the page for 3 seconds) |
+| `/api/calc-event` | POST | Beacon from the browser; body is `{tool, event}` and nothing else, always 204 |
 | `/api/revalidate-blog` | POST | Token-gated; the collector calls it after `tablo-retract` |
 
 Every `routes/api/*` route and `routes/go/$slug.ts` has only

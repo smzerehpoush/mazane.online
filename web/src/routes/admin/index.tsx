@@ -34,7 +34,7 @@ function AdminHomePage() {
           <Link to="/admin/platforms">تنظیمات نمودار</Link>
         </Button>
         <Button asChild variant="secondary">
-          <Link to="/admin/clicks">کلیک‌های معرف</Link>
+          <Link to="/admin/clicks">آمار</Link>
         </Button>
       </div>
       <Button variant="outline" onClick={() => void onLogout()} disabled={pending}>
