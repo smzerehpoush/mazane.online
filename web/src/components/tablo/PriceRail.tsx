@@ -104,6 +104,11 @@ export function PriceRail({
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">
             هرچه راست‌تر، گران‌تر · خط طلایی که تمام شود، قیمت‌ها تازه می‌شوند
           </p>
+          {rail.referencePercent !== null && rail.referenceName !== null && (
+            <p data-rail-reference className="mt-0.5 text-[12.5px] text-muted-foreground">
+              خط‌چین عمودی: نرخ مرجع {rail.referenceName}
+            </p>
+          )}
         </div>
         <div className="flex flex-col items-end gap-0.5">
           {updatedAt !== null && (

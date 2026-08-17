@@ -74,8 +74,8 @@ export function JewelryCalculator({
 
       {pricePerGram !== null && referenceName !== null && (
         <p className="mt-2.5 text-[11px] leading-5 text-tx3">
-          بر پایه‌ی قیمت هر گرم طلای ۱۸ عیار در {referenceName}. اجرت روی قیمت طلا، سود روی مجموع
-          طلا و اجرت، و مالیات روی کل حساب می‌شود.
+          بر پایه‌ی نرخ مرجع هر گرم طلای ۱۸ عیار در {referenceName}. اجرت روی قیمت طلا، سود روی
+          مجموع طلا و اجرت، و مالیات روی کل حساب می‌شود.
         </p>
       )}
     </section>

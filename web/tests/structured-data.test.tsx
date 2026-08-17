@@ -224,6 +224,24 @@ describe("trust pages", () => {
     expect(html).toContain("/methodology");
   });
 
+  /**
+   * ⚠️ The revenue disclosure is a commitment, not decoration: it names the
+   * commission, states that ordering is independent of it, and names the
+   * neutral reference source. `tests/ranking-neutrality.test.tsx` is what
+   * keeps the middle claim true; this test keeps the claim itself on the page
+   * and inside the FAQ JSON-LD.
+   */
+  it("about page discloses the commission, the ordering rule, and the neutral reference", () => {
+    const head = aboutHead();
+    const html = renderToStaticMarkup(<AboutPage />);
+    expect(html).toContain("تابلو چطور درآمد دارد؟");
+    expect(html).toContain("تابلو کمیسیون دریافت می‌کند");
+    expect(html).toContain("کمیسیون در ترتیب نمایش سکوها اثری ندارد");
+    expect(html).toContain("نرخ مرجع صفحه‌ی اصلی از tala.ir خوانده می‌شود، نه از یکی از سکوها");
+    expect(rawJsonLd(head)).toContain("تابلو چطور درآمد دارد؟");
+    expect(rawJsonLd(head)).toContain("کمیسیون در ترتیب نمایش اثری ندارد");
+  });
+
   it("methodology page has a canonical URL, breadcrumbs, visible FAQ, and FAQPage JSON-LD", () => {
     const head = methodologyHead();
     const html = renderToStaticMarkup(<MethodologyPage />);

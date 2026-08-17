@@ -13,10 +13,10 @@ import {
   HOME_CHART_HOURS,
   OUNCE_REFERENCE_INSTRUMENT,
   HOME_INSTRUMENT,
+  MARKET_REFERENCE_SOURCE_NAME,
   RATE_CARD_RANGES,
   UNION_RATE_INSTRUMENT,
   UNION_RATE_REFERENCE_SLUG,
-  UNION_RATE_SOURCE_NAME,
   USD_REFERENCE_INSTRUMENT,
   type ChartPlatformConfig,
 } from "./site-content";
@@ -103,7 +103,10 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
     rows: rows.map((row) => ({ ...row, platform: withoutReferral(row.platform) })),
     history,
     referenceHistory,
-    summaryReferenceName: UNION_RATE_SOURCE_NAME,
+    reference: {
+      name: MARKET_REFERENCE_SOURCE_NAME,
+      priceToman: bubbleReferences[0]?.value ?? null,
+    },
     posts,
     viewCounts,
     chartPlatforms,

@@ -129,12 +129,38 @@ describe("home page — price axis", () => {
     expect(railPercentOf(html, "milli")).toBeLessThan(railPercentOf(html, "talasea"));
   });
 
-  it("the reference anchor sits at the reference platform's position without a visible label", async () => {
-    const html = await renderHome(healthyStore());
+  /**
+   * ⚠️ The anchor used to sit on milli's marker. It now marks the neutral
+   * tala.ir reference price, and the card says so in words — the anchor
+   * itself still carries no floating label on the axis.
+   */
+  it("the anchor marks the neutral reference price and the card names its source", async () => {
+    const html = await renderHome(healthyStore(), {
+      referencePrices: [
+        {
+          reference_slug: "talair",
+          instrument: "GOLD_18K_TOMAN",
+          value: 18_560_000,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+    });
     const anchor = html.match(/data-rail-anchor[^>]*style="right:\s*([\d.]+)%/);
     expect(anchor).not.toBeNull();
-    expect(Number(anchor?.[1])).toBe(railPercentOf(html, "milli"));
+    const anchorPercent = Number(anchor?.[1]);
+    for (const slug of ["wallgold", "talasea", "milli"]) {
+      expect(anchorPercent, slug).not.toBe(railPercentOf(html, slug));
+    }
+    expect(html).toContain("خط‌چین عمودی: نرخ مرجع tala.ir");
     expect(html).not.toContain("data-rail-anchor-label");
+  });
+
+  /** ⚠️ Staleness, not error: no reference reading ⟸ no anchor, no 5xx. */
+  it("without a reference reading the anchor and its caption disappear, and the axis still renders", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain("محور قیمت طلای ۱۸ عیار");
+    expect(html).not.toContain("data-rail-anchor");
+    expect(html).not.toContain("data-rail-reference");
   });
 
   it("the axis footer gives only the visible min and max prices", async () => {
@@ -225,7 +251,7 @@ describe("home page — market summary", () => {
     expect(html).toContain("data-summary-chart");
   });
 
-  it("the big number comes from the union reference, not the chart reference platform", async () => {
+  it("the big number comes from the neutral tala.ir reference, and names it", async () => {
     const html = await renderHome(healthyStore(), {
       history: [
         {
@@ -240,7 +266,7 @@ describe("home page — market summary", () => {
       ],
     });
     expect(html).toContain("۱۸٬۵۵۹٬۷۰۰");
-    expect(html).toContain("قیمت مرجع اتحادیه طلا");
+    expect(html).toMatch(/data-summary-reference="true"[^>]*>مرجع: tala\.ir</);
     expect(html).not.toContain("میلی · تومان");
   });
 

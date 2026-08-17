@@ -24,6 +24,8 @@ unless stated otherwise.
 | Quote | `BaseModel` (frozen) | One raw price row for a `(platform_slug, instrument)` |
 | PlatformTerms | `BaseModel` (frozen) | The fee and open/closed status for that same round |
 | PlatformSnapshot | `BaseModel` (frozen) | A platform's `Quote`s for one round + `terms` + the `suppressed` flag |
+| ReferenceInstrument | `StrEnum`, six members | `GOLD_18K_TOMAN`, `XAU`, `USD_TOMAN`, `SEKEH_EMAMI_TOMAN`, `SEKEH_HALF_TOMAN`, `SEKEH_QUARTER_TOMAN` |
+| Reference | Source object + frozen `ReferenceSnapshot` | A neutral, non-platform market source — registry in `references/pipeline.py` |
 
 ---
 
@@ -218,6 +220,57 @@ averaging the best bid/ask of a live order book, not from a quoted rate.
 relationship `ORDER_BOOK ⇒ MANUAL/zero` holds only for daric, by virtue of it
 being the sole consumer of `order_book_snapshot`, not as a general rule
 encoded in the models.
+
+---
+
+## Reference — a neutral source, never a platform
+
+A **reference** is a market number that Tablo reads but does not sell against.
+Its defining property is negative: a reference is *not* a platform. The
+distinction is carried by separate types, a separate table, and a separate
+collection round — nothing about it is a naming convention.
+
+| Axis | Platform | Reference |
+|---|---|---|
+| Model | `Platform` / `Quote` / `PlatformSnapshot` (`models.py`) | `ReferenceQuote` / `ReferenceSnapshot` (`references/__init__.py`) |
+| Registry | `PLATFORMS` (`platforms.py`) | `REFERENCE_SOURCES` (`references/pipeline.py`) |
+| Storage | `quotes`, `platform_terms` | `reference_quotes` (`004_references.sql`) |
+| History | `hourly_rollups` with `kind = 'PLATFORM'` | `hourly_rollups` with `kind = 'REFERENCE'` (`011_retention.sql`) |
+| Instruments | `Instrument` (four members) | `ReferenceInstrument` (six members) |
+| Revenue | may carry `referral_url` / `referral_param` | has neither, and no `/go/<slug>` route |
+| Public listing | in `tablo:listed` when `is_listed` | never — it is not in `PLATFORMS` at all |
+| Sanity check | votes in `median_outliers` | never votes; has no `suppressed` flag |
+
+The only registered source today is `TalairReference`
+(`references/talair.py`): slug `talair`, `source_url = "https://www.tala.ir/"`,
+producing `GOLD_18K_TOMAN` from the `gold_18k` field plus `XAU`, `USD_TOMAN`
+and the three coin instruments from the banner endpoint. The file header of
+`references/__init__.py` states the rule directly:
+
+> "Not a platform price reference: it never becomes a comparison-table row, a referral link, `PLATFORMS`, the public listing (`tablo:listed`), or a median/sanity-check vote."
+
+**Why the neutrality matters, and where it is consumed.** In the web layer the
+reference is the yardstick the home page measures platforms against: the
+dashed anchor on the price axis (`RailView.referencePercent`), the number and
+series in the market summary, the jewelry calculator's base price, the bubble
+gauge, and the coin card — all of them read `talair`, through
+`UNION_RATE_REFERENCE_SLUG` in `web/src/lib/site-content.ts`. Because that same
+page ranks revenue-bearing platforms, a reference that was itself a platform
+would mean the yardstick and the measured are the same party. Until the
+tala.ir switch the constant was a platform slug (`milli`), and that is exactly
+the shape this entry exists to forbid.
+
+**What a reference is not**:
+- It is not a "correct" or official price. It is one named source's number,
+  always published with its source named to the reader («مرجع: tala.ir»), never
+  as a rate Tablo announces.
+- It is not a platform row: it has no marker on the axis, no source card, no
+  `/go/` link, and no fee data — `ReferenceQuote` has no `PlatformTerms`
+  counterpart.
+- It is not a required input. A reference outage degrades to a hidden element
+  or a staleness label, never to an error — `collect_reference_round` logs
+  "reference stays stale" and moves on, and `web/src/lib/reference-price.ts`
+  returns `null` on any store failure.
 
 ---
 

@@ -13,7 +13,7 @@ import { SourceCards } from "@/components/tablo/SourceCards";
 import { bottomPosts, sidebarPosts } from "@/components/tablo/home-view";
 import type { BubbleView } from "@/lib/bubble";
 import type { CoinPricesView } from "@/lib/coin-prices";
-import { buildDashboard } from "@/lib/dashboard";
+import { buildDashboard, type DashboardReference } from "@/lib/dashboard";
 import type { PublishedPost } from "@/lib/blog";
 import type { PlatformHistory, PlatformHistoryByRange } from "@/lib/history";
 import type { Row } from "@/lib/rows";
@@ -27,7 +27,7 @@ export interface HomePageData {
   rows: Row[];
   history: PlatformHistory[];
   referenceHistory: PlatformHistoryByRange;
-  summaryReferenceName: string;
+  reference: DashboardReference;
   posts: PublishedPost[];
   viewCounts: ViewCounts;
   chartPlatforms: readonly ChartPlatformConfig[];
@@ -62,7 +62,7 @@ export function HomePage({ data }: { data: HomePageData }) {
     platforms: data.chartPlatforms,
     history: data.history,
     referenceHistory: data.referenceHistory,
-    summaryReferenceName: data.summaryReferenceName,
+    reference: data.reference,
   });
 
   const live = useLiveDashboard(dashboard.updatedAt);
@@ -70,7 +70,6 @@ export function HomePage({ data }: { data: HomePageData }) {
   // ⚠️ From the server's `generated_at`, not `Date.now`: the staleness label
   // must produce the same text on server render and on hydration.
   const nowMs = Date.parse(data.generated_at);
-  const reference = dashboard.rail.sources.find((source) => source.isReference) ?? null;
   const featuredPost = data.posts[0] ?? null;
   const latestPosts = sidebarPosts(featuredPost === null ? data.posts : data.posts.slice(1));
   const morePosts = bottomPosts(data.posts, data.viewCounts);
@@ -93,8 +92,8 @@ export function HomePage({ data }: { data: HomePageData }) {
             <BubbleGauge bubble={bubble} />
             <CoinPriceCard coins={coinPrices} />
             <JewelryCalculator
-              pricePerGram={reference?.priceToman ?? null}
-              referenceName={reference?.name ?? null}
+              pricePerGram={data.reference.priceToman}
+              referenceName={data.reference.name}
             />
             {latestPosts.length > 0 && <Sidebar posts={latestPosts} />}
           </div>

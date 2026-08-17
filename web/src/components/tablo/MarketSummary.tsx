@@ -141,7 +141,9 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
           </div>
           <div className="mt-0.5 text-[15px]">قیمت ۱ گرم طلای ۱۸ عیار</div>
           {/* ⚠️ Naming the owner of the number is mandatory — */}
-          <div className="text-[12.5px] text-tx3">{summary.referenceName ?? "—"}</div>
+          <div data-summary-reference className="text-[12.5px] text-tx3">
+            {summary.referenceName === null ? "—" : `مرجع: ${summary.referenceName}`}
+          </div>
         </div>
 
         {active.area.line === null ? (

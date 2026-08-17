@@ -49,7 +49,6 @@ export interface RailSource {
   slug: string;
   name: string;
   color: string;
-  isReference: boolean;
   priceToman: number | null;
   priceDisplay: string | null;
   railPercent: number | null;
@@ -73,18 +72,42 @@ export interface RailSource {
   priceFromHistory: boolean;
 }
 
+/**
+ * ⚠️ The reference is **not** one of `sources`: it is a neutral, non-platform
+ * feed (`UNION_RATE_REFERENCE_SLUG`). It has no marker, no `/go/` link and no
+ * card — only the dashed anchor and the name under the summary's number. If it
+ * ever becomes a platform again, the axis starts measuring the market against
+ * a seller.
+ */
 export interface RailView {
   sources: RailSource[];
   maxDisplay: string | null;
   minDisplay: string | null;
   spreadDisplay: string | null;
+  referenceName: string | null;
   referencePercent: number | null;
   hasRail: boolean;
 }
 
+export interface DashboardReference {
+  name: string;
+  priceToman: number | null;
+}
+
+/**
+ * ⚠️ Clamped, because the reference price is not one of the platform prices
+ * the scale was built from: a reference outside the platform range would
+ * otherwise place the anchor outside the drawn axis. Platform markers are
+ * always inside `[min, min+span]`, so the clamp never moves them.
+ */
 function railPercentOf(price: number, min: number, span: number): number {
   const ratio = span === 0 ? 0.5 : (price - min) / span;
-  return Number((RAIL_START_PERCENT + (1 - ratio) * RAIL_USABLE_PERCENT).toFixed(3));
+  const percent = RAIL_START_PERCENT + (1 - ratio) * RAIL_USABLE_PERCENT;
+  const bounded = Math.min(
+    RAIL_START_PERCENT + RAIL_USABLE_PERCENT,
+    Math.max(RAIL_START_PERCENT, percent),
+  );
+  return Number(bounded.toFixed(3));
 }
 
 export function railScale(prices: readonly number[]): { min: number; span: number } {
@@ -198,7 +221,7 @@ export interface DashboardInput {
   platforms: readonly ChartPlatformConfig[];
   history: readonly PlatformHistory[];
   referenceHistory: PlatformHistoryByRange;
-  summaryReferenceName?: string;
+  reference?: DashboardReference;
 }
 
 const SPARK_WIDTH = 100;
@@ -244,7 +267,6 @@ export function buildDashboard(input: DashboardInput): DashboardView {
       slug: item.platform.slug,
       name: item.name,
       color: item.platform.color,
-      isReference: item.platform.is_reference === true,
       priceToman: item.price,
       priceDisplay,
       railPercent: item.price === null ? null : railPercentOf(item.price, min, span),
@@ -263,7 +285,7 @@ export function buildDashboard(input: DashboardInput): DashboardView {
     };
   });
 
-  const referenceSource = sources.find((source) => source.isReference) ?? null;
+  const referencePrice = input.reference?.priceToman ?? null;
   const updatedAt = latestUpdatedAt(input.rows);
 
   return {
@@ -273,11 +295,15 @@ export function buildDashboard(input: DashboardInput): DashboardView {
       minDisplay: prices.length > 0 ? formatFaNumber(Math.min(...prices)) : null,
       spreadDisplay:
         prices.length > 0 ? formatFaNumber(Math.max(...prices) - Math.min(...prices)) : null,
-      referencePercent: referenceSource?.railPercent ?? null,
+      referenceName: input.reference?.name ?? null,
+      referencePercent:
+        prices.length === 0 || referencePrice === null
+          ? null
+          : railPercentOf(referencePrice, min, span),
       hasRail: prices.length >= 2,
     },
     summary: {
-      referenceName: input.summaryReferenceName ?? referenceSource?.name ?? null,
+      referenceName: input.reference?.name ?? null,
       ranges: RATE_CARD_RANGES.map((range) =>
         summaryOf(
           { key: range.key, label: HOME_SUMMARY_RANGE_LABELS[range.key] },

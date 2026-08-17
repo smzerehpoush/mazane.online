@@ -192,10 +192,16 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       setTomanText(document, `[data-coin-price="${CSS.escape(coin.key)}"]`, coin.priceDisplay);
     }
 
-    if (data.reference_percent !== null) {
-      for (const anchor of document.querySelectorAll<HTMLElement>(".rail-anchor")) {
-        anchor.style.right = `${data.reference_percent}%`;
+    // ⚠️ A reference outage hides the anchor instead of freezing it: a dashed
+    // line left at its last position claims a reference price that is no
+    // longer being read.
+    for (const anchor of document.querySelectorAll<HTMLElement>(".rail-anchor")) {
+      if (data.reference_percent === null) {
+        anchor.style.display = "none";
+        continue;
       }
+      anchor.style.display = "";
+      anchor.style.right = `${data.reference_percent}%`;
     }
 
     // ⚠️ The "last updated" label is deliberately **not** written here: it

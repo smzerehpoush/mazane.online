@@ -31,22 +31,7 @@ export interface ChartPlatformConfig {
   slug: string;
   name_fa: string;
   color: string;
-  /**
-   * ⚠️ Never comes from the panel payload and is always set in
-   * `chartSeriesConfig`; explained there.
-   */
-  is_reference?: boolean;
 }
-
-/**
- * ⚠️ This should be an admin-panel setting (owner's decision, 2026-08-11:
- * "I pick a price as reference in the admin panel"). Today it's a code
- * constant because `platform_settings` has no `is_reference` column and
- * the backend isn't touched at this stage. The gap is logged in
- * `api-gaps.md`; once the column exists, this constant alone hands off to
- * the read value and no consumer changes.
- */
-export const REFERENCE_PLATFORM_SLUG = "milli";
 
 const CHART_PLATFORMS: readonly ChartPlatformConfig[] = [
   { slug: "milli", name_fa: "میلی", color: "#1d6fe0" },
@@ -82,31 +67,7 @@ export function isValidChartPlatformList(list: readonly ChartPlatformConfig[]): 
 export function chartSeriesConfig(
   override?: readonly ChartPlatformConfig[],
 ): readonly ChartPlatformConfig[] {
-  const list =
-    override !== undefined && isValidChartPlatformList(override) ? override : CHART_PLATFORMS;
-  return withReference(list);
-}
-
-/**
- * ⚠️ Why here and not in the data: the panel payload (`tablo:chart_config`)
- * doesn't have this field. If we put the flag only on `CHART_PLATFORMS`,
- * the moment the owner changed the list from the panel, the reference
- * platform would silently disappear and the axis would lose its anchor —
- * exactly the kind of breakage that only shows up in production.
- */
-function withReference(list: readonly ChartPlatformConfig[]): readonly ChartPlatformConfig[] {
-  if (list.length === 0) return list;
-  const hasReference = list.some((platform) => platform.slug === REFERENCE_PLATFORM_SLUG);
-  if (!hasReference) {
-    console.warn(
-      `reference platform "${REFERENCE_PLATFORM_SLUG}" is not in the display list — first list item became the reference`,
-    );
-  }
-  const referenceSlug = hasReference ? REFERENCE_PLATFORM_SLUG : list[0]?.slug;
-  return list.map((platform) => ({
-    ...platform,
-    is_reference: platform.slug === referenceSlug,
-  }));
+  return override !== undefined && isValidChartPlatformList(override) ? override : CHART_PLATFORMS;
 }
 
 export function parseChartConfigPayload(
@@ -151,8 +112,16 @@ export const RATE_CARD_RANGES: readonly RateCardRangeConfig[] = [
   { key: "MONTHLY", label: "ماهانه", hours: 24 * 31, stepHours: 8 },
 ];
 
+/**
+ * ⚠️ The market reference must stay a **non-platform** source. It anchors the
+ * price axis and names the number in the market summary, so a slug that also
+ * earns revenue (anything with a `referral_param`, i.e. any row of
+ * `CHART_PLATFORMS`) would turn the yardstick into a seller. `talair` is a
+ * reference feed: it never enters `tablo:listed`, never gets a `/go/` link,
+ * and never votes in the median sanity check.
+ */
 export const UNION_RATE_REFERENCE_SLUG = "talair";
-export const UNION_RATE_SOURCE_NAME = "قیمت مرجع اتحادیه طلا";
+export const MARKET_REFERENCE_SOURCE_NAME = "tala.ir";
 export const UNION_RATE_INSTRUMENT = "GOLD_18K_TOMAN";
 export const OUNCE_REFERENCE_INSTRUMENT = "XAU";
 export const USD_REFERENCE_INSTRUMENT = "USD_TOMAN";

@@ -32,16 +32,24 @@ describe("assembleHomeData — chartPlatforms from panel settings", () => {
   });
 
   /**
-   * ⚠️ The reference-platform flag lands on **any** list, not just the code
-   * default. If it only applied to `CHART_PLATFORMS`, the first time the
-   * list owner changed it from the panel, the axis anchor would silently
-   * vanish.
+   * ⚠️ The chart list used to be rewritten on the way out so that one of its
+   * platforms carried a reference flag. The anchor now comes from the neutral
+   * `talair` feed, so no platform in the list — from the code default or from
+   * the panel — may carry any reference marking of its own.
    */
-  it("the reference platform is flagged on the panel override too", async () => {
+  it("no platform in the list is marked as the reference, whatever the list's origin", async () => {
+    for (const override of [undefined, OVERRIDE]) {
+      const data = await homeData(healthyStore(), { chartPlatforms: override });
+      for (const platform of data.chartPlatforms) {
+        expect(Object.keys(platform)).toEqual(["slug", "name_fa", "color"]);
+      }
+    }
+  });
+
+  it("the chart's reference series is the talair feed, not a platform", async () => {
     const data = await homeData(healthyStore(), { chartPlatforms: OVERRIDE });
-    const references = data.chartPlatforms.filter((platform) => platform.is_reference);
-    expect(references).toHaveLength(1);
-    expect(references[0]?.slug).toBe("milli");
+    expect(data.reference.name).toBe("tala.ir");
+    expect(data.chartPlatforms.map((platform) => platform.slug)).not.toContain("talair");
   });
 
   it("the platform axis and the market summary use separate history sources", async () => {

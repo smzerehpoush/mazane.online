@@ -10,6 +10,7 @@ import { NO_STORE } from "../seo/cache-headers";
 import {
   chartSeriesConfig,
   COIN_PRICE_INSTRUMENTS,
+  MARKET_REFERENCE_SOURCE_NAME,
   OUNCE_REFERENCE_INSTRUMENT,
   UNION_RATE_INSTRUMENT,
   UNION_RATE_REFERENCE_SLUG,
@@ -56,6 +57,10 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
     platforms,
     history: [],
     referenceHistory: { DAILY: null, WEEKLY: null, MONTHLY: null },
+    reference: {
+      name: MARKET_REFERENCE_SOURCE_NAME,
+      priceToman: marketReference?.value ?? null,
+    },
   });
 
   return {

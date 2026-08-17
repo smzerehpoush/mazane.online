@@ -8,6 +8,7 @@ import {
   MIN_RAIL_SPREAD_TOMAN,
   railScale,
   type DashboardInput,
+  type DashboardReference,
 } from "../src/lib/dashboard";
 import type { PlatformHistory, PlatformHistoryByRange } from "../src/lib/history";
 import type { Row } from "../src/lib/rows";
@@ -15,8 +16,8 @@ import type { ChartPlatformConfig } from "../src/lib/site-content";
 
 const EMPTY_RANGES: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
 
-function platform(slug: string, isReference = false): ChartPlatformConfig {
-  return { slug, name_fa: slug, color: "#123456", is_reference: isReference };
+function platform(slug: string): ChartPlatformConfig {
+  return { slug, name_fa: slug, color: "#123456" };
 }
 
 function row(slug: string, price: number | null, updatedAt: string | null = null): Row {
@@ -70,7 +71,7 @@ function history(slug: string, values: number[]): PlatformHistory {
 function input(overrides: Partial<DashboardInput> = {}): DashboardInput {
   return {
     rows: [row("milli", 18_600_000), row("wallgold", 18_500_000)],
-    platforms: [platform("milli", true), platform("wallgold")],
+    platforms: [platform("milli"), platform("wallgold")],
     history: [],
     referenceHistory: EMPTY_RANGES,
     ...overrides,
@@ -82,7 +83,7 @@ describe("axis geometry", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 19_000_000), row("b", 18_000_000)],
-        platforms: [platform("a", true), platform("b")],
+        platforms: [platform("a"), platform("b")],
       }),
     );
     const [expensive, cheap] = rail.sources;
@@ -95,7 +96,7 @@ describe("axis geometry", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_000_000), row("b", 18_400_000), row("c", 19_000_000)],
-        platforms: [platform("a", true), platform("b"), platform("c")],
+        platforms: [platform("a"), platform("b"), platform("c")],
       }),
     );
     for (const source of rail.sources) {
@@ -113,7 +114,7 @@ describe("axis geometry", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_601_000), row("b", 18_599_000)],
-        platforms: [platform("a", true), platform("b")],
+        platforms: [platform("a"), platform("b")],
       }),
     );
     for (const source of rail.sources) {
@@ -136,7 +137,7 @@ describe("axis geometry", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_100_000), row("b", 18_200_000), row("c", 18_300_000)],
-        platforms: [platform("a", true), platform("b"), platform("c")],
+        platforms: [platform("a"), platform("b"), platform("c")],
       }),
     );
     expect(rail.sources.map((s) => s.stemLong)).toEqual([false, true, false]);
@@ -146,7 +147,7 @@ describe("axis geometry", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("a", 18_600_000), row("b", 18_500_000)],
-        platforms: [platform("a", true), platform("b")],
+        platforms: [platform("a"), platform("b")],
       }),
     );
     expect(rail.maxDisplay).toBe("۱۸٬۶۰۰٬۰۰۰");
@@ -155,27 +156,70 @@ describe("axis geometry", () => {
   });
 });
 
-describe("reference platform", () => {
-  it("the anchor sits at the reference platform's position", () => {
+/**
+ * ⚠️ The reference used to be the milli platform. It is now a neutral
+ * non-platform feed (tala.ir): a revenue-bearing platform cannot be the
+ * yardstick the same page measures its competitors against.
+ */
+describe("market reference — neutral and non-platform", () => {
+  const TALAIR: DashboardReference = { name: "tala.ir", priceToman: 18_550_000 };
+
+  it("the anchor sits at the reference price's own position, not on a platform marker", () => {
     const { rail } = buildDashboard(
       input({
-        rows: [row("milli", 18_000_000), row("wallgold", 19_000_000)],
-        platforms: [platform("milli", true), platform("wallgold")],
+        rows: [row("milli", 18_600_000), row("wallgold", 18_500_000)],
+        platforms: [platform("milli"), platform("wallgold")],
+        reference: TALAIR,
       }),
     );
-    const reference = rail.sources.find((s) => s.slug === "milli");
-    expect(reference?.isReference).toBe(true);
-    expect(rail.referencePercent).toBe(reference?.railPercent);
+    expect(rail.referencePercent).toBe(50);
+    expect(rail.sources.map((s) => s.railPercent)).not.toContain(rail.referencePercent);
   });
 
-  it("only one source carries the reference flag", () => {
-    const { rail } = buildDashboard(input());
-    expect(rail.sources.filter((s) => s.isReference)).toHaveLength(1);
+  it("the reference is not one of the sources — no marker, no card, no /go/ link", () => {
+    const { rail } = buildDashboard(input({ reference: TALAIR }));
+    expect(rail.sources.map((s) => s.slug)).not.toContain("talair");
+    expect(rail.referenceName).toBe("tala.ir");
   });
 
-  it("the market summary carries the reference platform's name", () => {
-    const { summary } = buildDashboard(input());
-    expect(summary.referenceName).toBe("نام milli");
+  it("no platform row carries a reference flag any more", () => {
+    const { rail } = buildDashboard(input({ reference: TALAIR }));
+    for (const source of rail.sources) {
+      expect(Object.keys(source)).not.toContain("isReference");
+    }
+  });
+
+  it("the market summary names the reference source", () => {
+    const { summary } = buildDashboard(input({ reference: TALAIR }));
+    expect(summary.referenceName).toBe("tala.ir");
+  });
+
+  /**
+   * ⚠️ Staleness, not error: a reference outage must never promote a platform
+   * back into the anchor position, and must never break the axis.
+   */
+  it("a missing reference hides the anchor instead of falling back to a platform", () => {
+    const { rail } = buildDashboard(input({ reference: { name: "tala.ir", priceToman: null } }));
+    expect(rail.referencePercent).toBeNull();
+    expect(rail.hasRail).toBe(true);
+    expect(rail.sources).toHaveLength(2);
+  });
+
+  it("with no reference at all the axis still draws, just without an anchor", () => {
+    const { rail, summary } = buildDashboard(input());
+    expect(rail.referencePercent).toBeNull();
+    expect(rail.referenceName).toBeNull();
+    expect(summary.referenceName).toBeNull();
+    expect(rail.hasRail).toBe(true);
+  });
+
+  it("a reference price outside the platform range stays inside the drawn axis", () => {
+    const above = buildDashboard(
+      input({ reference: { name: "tala.ir", priceToman: 30_000_000 } }),
+    );
+    const below = buildDashboard(input({ reference: { name: "tala.ir", priceToman: 1_000 } }));
+    expect(above.rail.referencePercent).toBe(4);
+    expect(below.rail.referencePercent).toBe(96);
   });
 });
 
@@ -189,7 +233,7 @@ describe("no cross-platform number", () => {
     const { rail, summary } = buildDashboard(
       input({
         rows: [row("milli", prices[0]!), row("wallgold", prices[1]!)],
-        platforms: [platform("milli", true), platform("wallgold")],
+        platforms: [platform("milli"), platform("wallgold")],
         referenceHistory: { ...EMPTY_RANGES, DAILY: history("milli", prices) },
       }),
     );
@@ -263,7 +307,7 @@ describe("staleness and empty states", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_600_000), row("wallgold", null)],
-        platforms: [platform("milli", true), platform("wallgold")],
+        platforms: [platform("milli"), platform("wallgold")],
       }),
     );
     expect(rail.sources).toHaveLength(2);
@@ -276,7 +320,7 @@ describe("staleness and empty states", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_600_000), row("wallgold", null)],
-        platforms: [platform("milli", true), platform("wallgold")],
+        platforms: [platform("milli"), platform("wallgold")],
         history: [history("wallgold", [18_400_000, 18_450_000])],
       }),
     );
@@ -287,7 +331,7 @@ describe("staleness and empty states", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", null), row("wallgold", null)],
-        platforms: [platform("milli", true), platform("wallgold")],
+        platforms: [platform("milli"), platform("wallgold")],
       }),
     );
     expect(rail.hasRail).toBe(false);
@@ -299,7 +343,7 @@ describe("staleness and empty states", () => {
     const { rail } = buildDashboard(
       input({
         rows: [row("milli", 18_600_000), row("wallgold", null)],
-        platforms: [platform("milli", true), platform("wallgold")],
+        platforms: [platform("milli"), platform("wallgold")],
       }),
     );
     expect(rail.hasRail).toBe(false);
@@ -353,7 +397,7 @@ describe("accessibility", () => {
 
   it("a priceless platform's label doesn't lie", () => {
     const { rail } = buildDashboard(
-      input({ rows: [row("milli", null)], platforms: [platform("milli", true)] }),
+      input({ rows: [row("milli", null)], platforms: [platform("milli")] }),
     );
     expect(rail.sources[0]?.ariaLabel).toBe("نام milli — قیمتی ثبت نشده است");
   });
