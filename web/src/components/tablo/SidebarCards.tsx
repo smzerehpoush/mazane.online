@@ -2,14 +2,6 @@ import type { BubbleView } from "@/lib/bubble";
 import type { CoinPricesView } from "@/lib/coin-prices";
 import { JewelryCalculator } from "@/components/tablo/JewelryCalculator";
 
-function ComingSoonBar() {
-  return (
-    <div className="mt-3 rounded-[10px] bg-ambg px-3 py-2.5 text-center text-[12.5px] text-am">
-      به زودی فعال می‌شود
-    </div>
-  );
-}
-
 function BubbleValue({
   label,
   value,
@@ -133,18 +125,6 @@ export function CoinPriceCard({ coins }: { coins: CoinPricesView }) {
           </div>
         ))}
       </div>
-    </section>
-  );
-}
-
-export function PriceAlertCard() {
-  return (
-    <section data-card="alert" className="card-surface px-5 py-4 sm:px-6">
-      <h2 className="text-[15.5px] font-semibold">هشدار قیمت</h2>
-      <p className="mt-2 text-[12.5px] text-muted-foreground">
-        قیمت دلخواه خود را تنظیم کنید. هر زمان که نرخ طلا به آن رسید، به شما اطلاع می‌دهیم.
-      </p>
-      <ComingSoonBar />
     </section>
   );
 }

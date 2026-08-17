@@ -165,22 +165,24 @@ def is_listed(self) -> bool:
     return self.data_policy == DataPolicy.ALLOWED
 ```
 
-Of the fourteen platforms in the `PLATFORMS` registry (`platforms.py:7-118`),
-thirteen have `data_policy=ALLOWED`, and exactly one — **goldika** — has
-`data_policy=PERMISSION_PENDING`:
+All fourteen platforms in the `PLATFORMS` registry (`platforms.py:7-118`)
+have `data_policy=ALLOWED`. **goldika** was the last `PERMISSION_PENDING`
+entry; it moved to `ALLOWED` once Goldika's written permission arrived
+(recorded in `ops/RUNBOOK.md`, section 13):
 
 | data_policy | Platform count | Practical meaning |
 |---|---|---|
-| `ALLOWED` | 13 | `is_listed=True` — in `tablo:listed`, in the public listing, in `supporting_platform_slugs` |
-| `PERMISSION_PENDING` | 1 (goldika) | Crawled and stored, but never listed publicly |
+| `ALLOWED` | 14 | `is_listed=True` — in `tablo:listed`, in the public listing, in `supporting_platform_slugs` |
+| `PERMISSION_PENDING` | 0 | Crawled and stored, but never listed publicly |
 | `RESTRICTED` | 0 | Defined in the enum and the database CHECK, but no platform has it today |
 | `BLOCKED` | 0 | Same — defined, unused in the current registry |
 
-Even so, goldika isn't hidden away: its adapter is instantiated in
-`main.run()` and takes a snapshot, which is stored in both Postgres and Redis
-(`tablo:current:goldika`) — only `tablo:listed` and the public page exclude
-it, and `build_listings` doesn't count it in `supporting_platform_slugs`
-either, since that also filters on `platform.is_listed`.
+A platform that is *not* `ALLOWED` is still crawled: its adapter is
+instantiated in `main.run()` and takes a snapshot, which is stored in both
+Postgres and Redis (`tablo:current:<slug>`) — only `tablo:listed` and the
+public page exclude it, and `build_listings` doesn't count it in
+`supporting_platform_slugs` either, since that also filters on
+`platform.is_listed`.
 
 **What this is not**: `DataPolicy` is a legal/permissions decision, not a
 signal of data quality or staleness. An `ALLOWED` platform can still be

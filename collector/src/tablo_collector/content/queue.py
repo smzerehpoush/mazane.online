@@ -17,6 +17,25 @@ log = logging.getLogger("mazane.collector.content")
 
 QUEUE_TARGET_DAYS = 14
 QUEUE_ALERT_DAYS = 5
+DEFAULT_DAILY_PUBLISH_CAP = 2
+
+
+def daily_publish_cap_from_env() -> int:
+    raw = os.environ.get("TABLO_DAILY_PUBLISH_CAP")
+    if raw is None:
+        return DEFAULT_DAILY_PUBLISH_CAP
+    try:
+        cap = int(raw)
+        if cap < 1:
+            raise ValueError(raw)
+    except ValueError:
+        log.warning(
+            "TABLO_DAILY_PUBLISH_CAP=%r is invalid — defaulting to %s",
+            raw,
+            DEFAULT_DAILY_PUBLISH_CAP,
+        )
+        return DEFAULT_DAILY_PUBLISH_CAP
+    return cap
 
 
 class QueueDepth(NamedTuple):

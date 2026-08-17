@@ -45,7 +45,7 @@ export function FeeSourceLabel({ terms }: { terms: PlatformTerms }) {
     );
   }
   if (terms.fee_source === "UNKNOWN") {
-    return <span>نامشخص — سکو کارمزدش را اعلام نکرده است</span>;
+    return <span>این سکو کارمزدش را عمومی اعلام نکرده است</span>;
   }
   return <span>از API سکو</span>;
 }

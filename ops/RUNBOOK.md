@@ -211,7 +211,9 @@ Based on `.env.example`. Notes:
   shows up in the collector's log. With the migration off Next.js there's no
   more page-level cache at the origin either: a new post is seen at most 60
   seconds later in the worst case (the edge's `s-maxage` window).
-- `TABLO_DAILY_PUBLISH_CAP` is the blog's daily publish cap (default 2 — decision 16).
+- `TABLO_DAILY_PUBLISH_CAP` (default 2 — decision 16) no longer caps anything:
+  publishing is human-only through the admin panel. It is the assumed daily
+  editorial pace the collector uses to express the draft queue's depth in days.
 - `TABLO_WEB_PORT` (default 3300) must not collide with Padelyar's ports —
   check on the server: `ss -ltn | grep 3300`.
 - If the "no registry" path was chosen, set `TABLO_IMAGE_*` to the loaded
@@ -551,3 +553,20 @@ again (the images stay on the server).
 - [ ] 8 👤 External monitoring active on `/` and `/robots.txt`
 - [ ] 9 First run of `verify-googlebot.py` done and a weekly schedule set up
 - [ ] 10 👤 Search Console TXT confirmed
+
+---
+
+## 13. Platform listing permissions
+
+A platform is publicly listed only while its `data_policy` in
+`collector/src/tablo_collector/platforms.py` is `ALLOWED`. Whenever a policy is
+raised to `ALLOWED` on the strength of a written permission, the permission
+document itself must be findable — record it in the table below before the
+deploy that publishes the platform.
+
+| Platform | Policy | Permission | Where the document is filed |
+|---|---|---|---|
+| goldika | `ALLOWED` | Written permission granted by Goldika; confirmed by 👤 | 👤 **TODO** — fill in the location of the permission document (shared drive path / email thread / ticket link) |
+
+Every other listed platform is published on the basis of its own publicly
+available data, with no separate permission document.

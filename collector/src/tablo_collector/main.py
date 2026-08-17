@@ -35,8 +35,7 @@ from .adapters.tlyn import TlynAdapter
 from .adapters.wallgold import WallgoldAdapter
 from .adapters.zarafza import ZarafzaAdapter
 from .content.gateway import PostgresContentGateway
-from .content.publisher import daily_publish_cap_from_env, drain_pass
-from .content.revalidate import revalidator_from_env
+from .content.queue import check_queue_depth, daily_publish_cap_from_env
 from .models import Platform
 from .pipeline import collect_round
 from .platforms import PLATFORMS
@@ -57,7 +56,7 @@ from .ws import FeedCache, ReconnectingFeedClient, compose_fetch
 POLL_INTERVAL_SECONDS = 30
 REFERENCE_POLL_INTERVAL_SECONDS = 120
 RETENTION_INTERVAL_SECONDS = 3600
-CONTENT_DRAIN_INTERVAL_SECONDS = 900
+CONTENT_QUEUE_INTERVAL_SECONDS = 900
 SETTINGS_SYNC_INTERVAL_SECONDS = 20
 USER_AGENT = "TabloBot/0.1 (+https://tablo.gold/about)"
 HTTP_TIMEOUT_SECONDS = 15
@@ -220,26 +219,23 @@ async def run() -> None:
                 elapsed = time.monotonic() - started
                 await asyncio.sleep(max(0.0, RETENTION_INTERVAL_SECONDS - elapsed))
 
-        revalidate_blog = revalidator_from_env(client)
-
-        async def content_loop() -> None:
+        async def content_queue_loop() -> None:
             while True:
                 started = time.monotonic()
                 try:
-                    published, depth = await drain_pass(
-                        content_gateway, revalidate_blog, daily_cap=daily_publish_cap
+                    depth = await check_queue_depth(
+                        content_gateway, daily_cap=daily_publish_cap
                     )
                     log.info(
-                        "Content publish round: %s published; queue depth %.1f days (%s drafts ÷ cap %s)",
-                        list(published) if published else "none",
+                        "Content queue round: depth %.1f days (%s drafts ÷ cap %s); publishing is human-only via the admin panel",
                         depth.days,
                         depth.drafts,
                         depth.daily_cap,
                     )
                 except Exception:
-                    log.exception("Content publish round failed")
+                    log.exception("Content queue round failed")
                 elapsed = time.monotonic() - started
-                await asyncio.sleep(max(0.0, CONTENT_DRAIN_INTERVAL_SECONDS - elapsed))
+                await asyncio.sleep(max(0.0, CONTENT_QUEUE_INTERVAL_SECONDS - elapsed))
 
         async def settings_sync_loop() -> None:
             listed_platforms = tuple(p for p in PLATFORMS if p.is_listed)
@@ -262,7 +258,7 @@ async def run() -> None:
             platform_loop(),
             reference_loop(),
             retention_loop(),
-            content_loop(),
+            content_queue_loop(),
             settings_sync_loop(),
             daric_feed.run(),
             invi_feed.run(),

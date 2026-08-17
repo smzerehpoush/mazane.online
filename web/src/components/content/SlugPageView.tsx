@@ -79,12 +79,12 @@ export function slugHead(data: SlugPageData | undefined) {
     data.kind === "instrument"
       ? ([
           `قیمت ${data.listing.name_fa} در سکوهای آنلاین — تابلو`,
-          `مقایسه‌ی قیمت مؤثر خرید و فروش ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران — با احتساب کارمزد هر سکو.`,
+          `قیمت اعلامی ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران، همراه با کارمزد خرید و فروش هر سکو؛ کارمزد جدا از قیمت می‌آید، نه پخته در آن.`,
           data.listing.slug,
         ] as const)
       : ([
           `${data.platform.name_fa} — شرایط، کارمزد و قیمت‌ها — تابلو`,
-          `شرایط تجاری ${data.platform.name_fa}: کارمزد خرید و فروش با منبع، تحویل فیزیکی، هویت حقوقی و قیمت‌های مؤثر لحظه‌ای.`,
+          `شرایط تجاری ${data.platform.name_fa}: قیمت اعلامی لحظه‌ای پیش از کارمزد، کارمزد خرید و فروش با ذکر منبع، هویت حقوقی و تحویل فیزیکی.`,
           data.platform.slug,
         ] as const);
 

@@ -4,10 +4,11 @@ import logging
 import pytest
 
 from tablo_collector.content.gateway import ContentGateway, PostRow
-from tablo_collector.content.publisher import drain_pass, publish_due
 from tablo_collector.content.queue import (
+    DEFAULT_DAILY_PUBLISH_CAP,
     QUEUE_ALERT_DAYS,
     check_queue_depth,
+    daily_publish_cap_from_env,
     enqueue_draft,
 )
 from tablo_collector.content.retract import RetractOutcome, retract_post
@@ -18,7 +19,6 @@ from tablo_collector.slugs import (
 )
 
 BASE = datetime(2026, 8, 6, 9, 30, 0, tzinfo=UTC)
-NEXT_DAY = BASE + timedelta(days=1)
 
 
 class FakeContentGateway:
@@ -46,20 +46,6 @@ class FakeContentGateway:
 
     async def draft_count(self) -> int:
         return sum(1 for p in self.posts.values() if p.status == "draft")
-
-    async def published_count_since(self, since: datetime) -> int:
-        return sum(
-            1
-            for p in self.posts.values()
-            if p.published_at is not None and p.published_at >= since
-        )
-
-    async def oldest_drafts(self, limit: int) -> tuple[PostRow, ...]:
-        drafts = sorted(
-            (p for p in self.posts.values() if p.status == "draft"),
-            key=lambda p: (p.updated_at, p.slug),
-        )
-        return tuple(drafts[:limit])
 
     async def get_post(self, slug: str) -> PostRow | None:
         return self.posts.get(slug)
@@ -121,102 +107,42 @@ async def seed_drafts(gateway: FakeContentGateway, count: int) -> list[str]:
     return slugs
 
 
-async def test_cap_limits_publishes_to_two_per_day_with_twenty_drafts() -> None:
+async def test_the_collector_has_no_automatic_publish_path() -> None:
+    import tablo_collector.content as content
+
+    assert not hasattr(content, "publish_due")
+    assert not hasattr(content, "drain_pass")
+    assert not hasattr(ContentGateway, "set_published")
+
+
+async def test_queue_check_leaves_every_draft_a_draft() -> None:
     gateway = FakeContentGateway()
-    revalidate = RecordingRevalidator()
-    await seed_drafts(gateway, 20)
+    slugs = await seed_drafts(gateway, 3)
 
-    published = await publish_due(gateway, revalidate, now=BASE, daily_cap=2)
-    assert published == ("post-00", "post-01")
+    depth = await check_queue_depth(gateway, daily_cap=2)
 
-    assert await publish_due(gateway, revalidate, now=BASE + timedelta(minutes=15), daily_cap=2) == ()
-    assert await publish_due(gateway, revalidate, now=BASE + timedelta(hours=10), daily_cap=2) == ()
-
-    assert await publish_due(gateway, revalidate, now=NEXT_DAY, daily_cap=2) == (
-        "post-02",
-        "post-03",
-    )
-    assert await gateway.draft_count() == 16
-
-
-async def test_publish_picks_oldest_drafts_first() -> None:
-    gateway = FakeContentGateway()
-    for index, (slug, minutes) in enumerate((("newest", 30), ("oldest", 0), ("middle", 10))):
-        await enqueue_draft(
-            gateway,
-            slug=slug,
-            title_template=slug,
-            body_template=unique_body(index),
-            now=BASE - timedelta(hours=1) + timedelta(minutes=minutes),
-        )
-
-    published = await publish_due(gateway, RecordingRevalidator(), now=BASE, daily_cap=2)
-
-    assert published == ("oldest", "middle")
-
-
-async def test_already_published_today_counts_against_cap() -> None:
-    gateway = FakeContentGateway()
-    await seed_drafts(gateway, 5)
-    await gateway.set_published("post-00", published_at=BASE - timedelta(hours=2))
-
-    published = await publish_due(gateway, RecordingRevalidator(), now=BASE, daily_cap=2)
-
-    assert published == ("post-01",)
-
-
-async def test_retraction_does_not_refund_todays_budget() -> None:
-    gateway = FakeContentGateway()
-    revalidate = RecordingRevalidator()
-    await seed_drafts(gateway, 5)
-    await publish_due(gateway, revalidate, now=BASE, daily_cap=2)
-    await retract_post(gateway, revalidate, "post-00", now=BASE + timedelta(hours=1))
-
-    published = await publish_due(
-        gateway, revalidate, now=BASE + timedelta(hours=2), daily_cap=2
-    )
-
-    assert published == ()
-
-
-async def test_published_at_is_publish_moment_not_enqueue_moment() -> None:
-    gateway = FakeContentGateway()
-    await seed_drafts(gateway, 1)
-
-    await publish_due(gateway, RecordingRevalidator(), now=BASE, daily_cap=2)
-
-    post = await gateway.get_post("post-00")
-    assert post is not None
-    assert post.status == "published"
-    assert post.published_at == BASE
-    assert post.updated_at == BASE
-
-
-async def test_publish_fires_revalidation_per_published_slug() -> None:
-    gateway = FakeContentGateway()
-    revalidate = RecordingRevalidator()
-    await seed_drafts(gateway, 3)
-
-    await publish_due(gateway, revalidate, now=BASE, daily_cap=2)
-
-    assert revalidate.calls == ["post-00", "post-01"]
-
-
-async def test_revalidation_failure_does_not_roll_back_publish(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    gateway = FakeContentGateway()
-    revalidate = RecordingRevalidator(exc=RuntimeError("web is unavailable"))
-    await seed_drafts(gateway, 2)
-
-    with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
-        published = await publish_due(gateway, revalidate, now=BASE, daily_cap=2)
-
-    assert published == ("post-00", "post-01")
-    for slug in published:
+    assert depth.drafts == 3
+    for slug in slugs:
         post = await gateway.get_post(slug)
-        assert post is not None and post.status == "published"
-    assert any("revalidate" in record.message for record in caplog.records)
+        assert post is not None
+        assert post.status == "draft"
+        assert post.published_at is None
+
+
+def test_daily_publish_cap_falls_back_to_the_default_on_a_bad_value(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.delenv("TABLO_DAILY_PUBLISH_CAP", raising=False)
+    assert daily_publish_cap_from_env() == DEFAULT_DAILY_PUBLISH_CAP
+
+    monkeypatch.setenv("TABLO_DAILY_PUBLISH_CAP", "7")
+    assert daily_publish_cap_from_env() == 7
+
+    for bad in ("0", "-1", "roozi-do-ta"):
+        monkeypatch.setenv("TABLO_DAILY_PUBLISH_CAP", bad)
+        with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
+            assert daily_publish_cap_from_env() == DEFAULT_DAILY_PUBLISH_CAP
+    assert any(record.levelno == logging.WARNING for record in caplog.records)
 
 
 async def test_queue_depth_below_five_days_logs_warning(
@@ -244,18 +170,6 @@ async def test_queue_depth_at_or_above_threshold_is_quiet(
 
     assert depth.days == QUEUE_ALERT_DAYS == 5
     assert not caplog.records
-
-
-async def test_drain_pass_publishes_then_reports_depth() -> None:
-    gateway = FakeContentGateway()
-    revalidate = RecordingRevalidator()
-    await seed_drafts(gateway, 6)
-
-    published, depth = await drain_pass(gateway, revalidate, now=BASE, daily_cap=2)
-
-    assert published == ("post-00", "post-01")
-    assert depth.drafts == 4
-    assert depth.days == 2.0
 
 
 async def test_retract_flips_status_and_fires_revalidation() -> None:

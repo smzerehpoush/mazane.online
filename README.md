@@ -12,7 +12,7 @@ flowchart RL
     subgraph collector["collector (Python/asyncio)"]
         direction TB
         C1["platform_loop 30s / reference_loop 120s"]
-        C2["retention_loop 3600s / content_loop 900s"]
+        C2["retention_loop 3600s / content_queue_loop 900s"]
         C3["settings_sync_loop 20s"]
     end
     Redis[(Redis — current price)]
@@ -87,7 +87,7 @@ CI (`.github/workflows/ci.yml`) runs these same two paths on every push/PR (the 
 collector/
   src/tablo_collector/
     adapters/       14 platform adapters (one file each)
-    content/        blog content queue/generator/publisher
+    content/        blog draft queue, gate, retraction (publishing is admin-only)
     references/     reference price source (talair)
     store/          Redis / Postgres / in-memory (Store protocol)
     main.py         seven main-loop coroutines

@@ -9,7 +9,7 @@ from tablo_collector.instruments import (
     InstrumentListing,
     build_listings,
 )
-from tablo_collector.models import Instrument
+from tablo_collector.models import DataPolicy, Instrument
 from tablo_collector.pipeline import collect_round
 from tablo_collector.platforms import PLATFORMS
 from tablo_collector.slugs import (
@@ -50,7 +50,6 @@ async def test_round_publishes_instruments_payload_with_gate_status() -> None:
     assert gold.unit_fa == "گرم"
     assert gold.purity == "750"
     assert gold.supporting_platform_slugs == KNOWN_FEE_LISTED + UNKNOWN_FEE_LISTED
-    assert "goldika" not in gold.supporting_platform_slugs
     assert gold.published is True
 
     for instrument in (Instrument.ABSHODE_MITHQAL, Instrument.SILVER_990, Instrument.XAU):
@@ -69,9 +68,17 @@ def test_publish_gate_requires_at_least_two_listed_platforms() -> None:
     assert single.supporting_platform_slugs == ("wallgold",)
     assert single.published is False
 
-    with_goldika = gold(build_listings([by_slug["wallgold"], by_slug["goldika"]], PLATFORMS))
-    assert with_goldika.supporting_platform_slugs == ("wallgold",)
-    assert with_goldika.published is False
+    pending_talasea = tuple(
+        p.model_copy(update={"data_policy": DataPolicy.PERMISSION_PENDING})
+        if p.slug == "talasea"
+        else p
+        for p in PLATFORMS
+    )
+    with_pending = gold(
+        build_listings([by_slug["wallgold"], by_slug["talasea"]], pending_talasea)
+    )
+    assert with_pending.supporting_platform_slugs == ("wallgold",)
+    assert with_pending.published is False
 
     two = gold(build_listings([by_slug["wallgold"], by_slug["talasea"]], PLATFORMS))
     assert two.supporting_platform_slugs == ("wallgold", "talasea")

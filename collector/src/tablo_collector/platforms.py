@@ -32,6 +32,13 @@ PLATFORMS: tuple[Platform, ...] = (
         referral_param="referralCode",
     ),
     Platform(
+        slug="goldika",
+        name_fa="گلدیکا",
+        data_policy=DataPolicy.ALLOWED,
+        name_en="Goldika",
+        website_url="https://goldika.ir",
+    ),
+    Platform(
         slug="technogold",
         name_fa="تکنوگلد",
         data_policy=DataPolicy.ALLOWED,
@@ -107,13 +114,6 @@ PLATFORMS: tuple[Platform, ...] = (
         data_policy=DataPolicy.ALLOWED,
         name_en="Invi",
         website_url="https://invi.ir",
-    ),
-    Platform(
-        slug="goldika",
-        name_fa="گلدیکا",
-        data_policy=DataPolicy.PERMISSION_PENDING,
-        name_en="Goldika",
-        website_url="https://goldika.ir",
     ),
 )
 

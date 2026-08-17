@@ -185,7 +185,7 @@ export function AssetPage({
 
       <p className="mt-6 text-[12px]">
         <a href="/" className="transition-smooth text-primary hover:underline">
-          بازگشت به جدول مقایسه
+          بازگشت به مقایسه‌ی قیمت سکوها
         </a>
       </p>
 

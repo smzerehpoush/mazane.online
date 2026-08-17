@@ -69,7 +69,7 @@ not cumulative.  [collector/src/tablo_collector/main.py:57-61, 108-269]
 | `platform_loop` | 30 seconds | `collect_round` over the 14 adapters: fetch, parse, median check (`sanity.median_outliers`), `save_snapshot` for each platform, then `save_platforms` + `save_instruments` |
 | `reference_loop` | 120 seconds | `collect_reference_round` over `REFERENCE_SOURCES` (talair only) with `RobotsCheckedTransport` |
 | `retention_loop` | 3600 seconds | `retention_pass(history_store)` over Postgres: hourly aggregation, duplicate compaction, pruning of expired raw rows |
-| `content_loop` | 900 seconds | `drain_pass`: publishing queued drafts up to the daily cap + calling the web `revalidate_blog` |
+| `content_queue_loop` | 900 seconds | `check_queue_depth`: warns when the draft queue drops below `QUEUE_ALERT_DAYS` of runway. It never publishes — publishing is human-only through the admin panel |
 | `settings_sync_loop` | 20 seconds | reading `platform_settings`, building `chart_config` and writing it to the store, updating the platform registry with the referral-URL override |
 
 In addition, two persistent WebSocket clients (not timed loops) with
@@ -87,10 +87,9 @@ The User-Agent for every HTTP fetch is the string
 ## 1.4 The 14 platforms
 
 The order of the `PLATFORMS` tuple is the same order as the public listing.
-Only `goldika` has the `PERMISSION_PENDING` policy (crawled and stored,
-never shown publicly, since `is_listed` is solely a function of
-`data_policy == ALLOWED`); only `daric` has the `ORDER_BOOK` market model,
-the rest stay at the default `OTC`.
+Every platform is `ALLOWED` today, so all 14 are listed publicly —
+`is_listed` is solely a function of `data_policy == ALLOWED`. Only `daric`
+has the `ORDER_BOOK` market model, the rest stay at the default `OTC`.
 [collector/src/tablo_collector/platforms.py:7-127]
 
 | # | slug | Persian name | Data policy | Market model |
@@ -98,17 +97,17 @@ the rest stay at the default `OTC`.
 | 1 | `wallgold` | وال‌گلد | ALLOWED | OTC |
 | 2 | `talasea` | طلاسی | ALLOWED | OTC |
 | 3 | `milli` | میلی | ALLOWED | OTC |
-| 4 | `technogold` | تکنوگلد | ALLOWED | OTC |
-| 5 | `tlyn` | طلاین | ALLOWED | OTC |
-| 6 | `ecogold` | اکوگلد | ALLOWED | OTC |
-| 7 | `zarafza` | زرافزا | ALLOWED | OTC |
-| 8 | `baazar` | بازر | ALLOWED | OTC |
-| 9 | `daric` | داریک | ALLOWED | **ORDER_BOOK** |
-| 10 | `melligold` | ملی‌گلد | ALLOWED | OTC |
-| 11 | `digikala` | دیجی‌کالا | ALLOWED | OTC |
-| 12 | `hamrahgold` | همراه‌گلد | ALLOWED | OTC |
-| 13 | `invi` | اینوی | ALLOWED | OTC |
-| 14 | `goldika` | گلدیکا | **PERMISSION_PENDING** | OTC |
+| 4 | `goldika` | گلدیکا | ALLOWED | OTC |
+| 5 | `technogold` | تکنوگلد | ALLOWED | OTC |
+| 6 | `tlyn` | طلاین | ALLOWED | OTC |
+| 7 | `ecogold` | اکوگلد | ALLOWED | OTC |
+| 8 | `zarafza` | زرافزا | ALLOWED | OTC |
+| 9 | `baazar` | بازر | ALLOWED | OTC |
+| 10 | `daric` | داریک | ALLOWED | **ORDER_BOOK** |
+| 11 | `melligold` | ملی‌گلد | ALLOWED | OTC |
+| 12 | `digikala` | دیجی‌کالا | ALLOWED | OTC |
+| 13 | `hamrahgold` | همراه‌گلد | ALLOWED | OTC |
+| 14 | `invi` | اینوی | ALLOWED | OTC |
 
 All 14 adapters declare exactly one instrument: `Instrument.GOLD_18K`.
 [collector/src/tablo_collector/adapters/*.py]
@@ -196,7 +195,7 @@ Eight final tables:
 | `/api/admin-posts/$slug/retract` | POST | Retract |
 | `/api/admin-posts/$slug/image` | POST | Upload the featured image (upload only, no delete) |
 | `/api/post-view` | POST | Records a view from the browser (after staying on the page for 3 seconds) |
-| `/api/revalidate-blog` | POST | Token-gated; the collector calls it after every publish |
+| `/api/revalidate-blog` | POST | Token-gated; the collector calls it after `tablo-retract` |
 
 Every `routes/api/*` route and `routes/go/$slug.ts` has only
 `server.handlers` and no `component` — this is what lets it be pruned from
@@ -261,7 +260,7 @@ npm test         # vitest run — 31 passing test files
 | `TABLO_DATABASE_URL` | `postgresql://mazane:mazane@127.0.0.1:5432/mazane` | collector (`main.py`, `content/queue.py`, `content/retract.py`); web `blog-source.ts` (`pgPool`) |
 | `TABLO_REVALIDATE_URL` | `http://127.0.0.1:3000/api/revalidate-blog` | collector `content/revalidate.py` |
 | `TABLO_REVALIDATE_TOKEN` | No default (empty ⟸ collector never revalidates; web always returns 401) | collector `content/revalidate.py`; web `revalidate-blog.ts` |
-| `TABLO_DAILY_PUBLISH_CAP` | `2` (invalid value/less than 1 ⟸ falls back to 2 with a warning) | collector `content/publisher.py` |
+| `TABLO_DAILY_PUBLISH_CAP` | `2` (invalid value/less than 1 ⟸ falls back to 2 with a warning) | collector `content/queue.py` — only the divisor that turns the draft count into days of runway; it caps nothing, because nothing publishes automatically |
 | `TABLO_ADMIN_PASSWORD_HASH` | No default; its absence means fail-closed (login is always rejected) | web `admin-session.ts` |
 | `TABLO_ADMIN_SESSION_SECRET` | No default; its absence means fail-closed (session is always invalid) | web `admin-session.ts` |
 | `TABLO_ARVAN_S3_ENDPOINT` | Required (its absence ⟸ error, image upload fails with 502) | web `image-store.ts` |

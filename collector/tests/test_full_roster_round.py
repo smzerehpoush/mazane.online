@@ -63,6 +63,7 @@ KNOWN_FEE_LISTED = (
     "wallgold",
     "talasea",
     "milli",
+    "goldika",
     "technogold",
     "tlyn",
     "ecogold",
@@ -124,7 +125,6 @@ async def test_listed_payload_keeps_platforms_registry_order() -> None:
 
     listed = await store.get_listed_platforms()
     assert tuple(p.slug for p in listed) == KNOWN_FEE_LISTED + UNKNOWN_FEE_LISTED
-    assert "goldika" not in {p.slug for p in listed}
 
 
 async def test_listed_payload_shape_carries_market_model() -> None:

@@ -17,7 +17,9 @@ WALLGOLD = Platform(slug="wallgold", name_fa="وال‌گلد", data_policy=Data
 TALASEA = Platform(slug="talasea", name_fa="طلاسی", data_policy=DataPolicy.ALLOWED)
 MILLI = Platform(slug="milli", name_fa="میلی", data_policy=DataPolicy.ALLOWED)
 TLYN = Platform(slug="tlyn", name_fa="طلاین", data_policy=DataPolicy.ALLOWED)
-GOLDIKA = Platform(slug="goldika", name_fa="گلدیکا", data_policy=DataPolicy.PERMISSION_PENDING)
+PENDING = Platform(
+    slug="dar-entezar", name_fa="در انتظار مجوز", data_policy=DataPolicy.PERMISSION_PENDING
+)
 
 LISTED = (WALLGOLD, TALASEA, MILLI, TLYN)
 
@@ -92,7 +94,7 @@ def test_malformed_color_is_dropped() -> None:
 def test_unlisted_or_unknown_slug_is_dropped() -> None:
     rows = (
         row("wallgold"),
-        row("goldika"),
+        row("dar-entezar"),
         row("no-such-platform"),
     )
     config = chart_config_from_settings(rows, LISTED)
@@ -163,11 +165,11 @@ def test_referral_override_preserves_registry_order() -> None:
 
 
 def test_referral_override_applies_regardless_of_listing_status() -> None:
-    full_registry = LISTED + (GOLDIKA,)
-    rows = (row("goldika", referral_url="https://goldika.example/r/x"),)
+    full_registry = LISTED + (PENDING,)
+    rows = (row("dar-entezar", referral_url="https://dar-entezar.example/r/x"),)
     merged = platforms_with_referral_overrides(rows, full_registry)
-    goldika = next(p for p in merged if p.slug == "goldika")
-    assert goldika.referral_url == "https://goldika.example/r/x"
+    pending = next(p for p in merged if p.slug == "dar-entezar")
+    assert pending.referral_url == "https://dar-entezar.example/r/x"
 
 
 async def test_referral_override_reaches_listed_platforms_via_save_platforms() -> None:

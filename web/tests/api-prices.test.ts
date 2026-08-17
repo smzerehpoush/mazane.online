@@ -18,7 +18,7 @@ describe("GET /api/prices", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
-  it("returns exactly the listed platforms — goldika never appears, even though it's in the store", async () => {
+  it("returns exactly the listed platforms — a store-only platform never appears in the payload", async () => {
     const store = healthyStore();
     seed(store);
     expect(store.snapshots["goldika"]).not.toBeNull();

@@ -15,11 +15,13 @@ import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import type { ReferencePrice } from "@/lib/reference-price";
 import { priceToman, type Row } from "@/lib/rows";
 
-const NOT_RECORDED = "ثبت نشده است";
-const UNKNOWN = "نامشخص";
-
 const PRICE_EXPLANATION_FA =
   "این عدد قیمت اعلامی همین سکوست، پیش از کارمزد. آنچه می‌پردازید یا می‌گیرید، به کارمزد خرید و فروش زیر بستگی دارد.";
+
+const FEES_UNDISCLOSED_FA = "این سکو کارمزدش را عمومی اعلام نکرده است";
+const FEE_UNDISCLOSED_FA = "این سکو اعلام نکرده است";
+const LEGAL_ENTITY_UNKNOWN_FA = "هنوز نمی‌دانیم این سکو زیر نام کدام شرکت ثبت شده است";
+const DELIVERY_UNKNOWN_FA = "تحویل فیزیکی این سکو را هنوز بررسی نکرده‌ایم";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -73,6 +75,12 @@ function TermsSection({
   const price = priceToman(row);
   const minOrder = terms.min_order_toman ?? null;
   const dateLabel = updatedAt === null ? null : formatDateFa(updatedAt);
+  const fees = [
+    { label: "کارمزد خرید", percent: terms.buy_fee_percent },
+    { label: "کارمزد فروش", percent: terms.sell_fee_percent },
+    { label: "هزینه‌ی رفت‌وبرگشت", percent: terms.round_trip_percent },
+  ];
+  const anyFeeDisclosed = fees.some((fee) => fee.percent !== null);
 
   return (
     <section aria-labelledby="terms-heading" className="glass-surface px-5 py-5 sm:px-6">
@@ -89,27 +97,27 @@ function TermsSection({
       </p>
 
       <dl className="mt-3">
-        <Field label="کارمزد خرید">
-          {terms.buy_fee_percent === null ? UNKNOWN : formatPercentPointsFa(terms.buy_fee_percent)}
-        </Field>
-        <Field label="کارمزد فروش">
-          {terms.sell_fee_percent === null
-            ? UNKNOWN
-            : formatPercentPointsFa(terms.sell_fee_percent)}
-        </Field>
-        <Field label="هزینه‌ی رفت‌وبرگشت">
-          {terms.round_trip_percent === null
-            ? UNKNOWN
-            : formatPercentPointsFa(terms.round_trip_percent)}
-        </Field>
-        <Field label="منبع کارمزد">
-          <FeeSourceLabel terms={terms} />
-        </Field>
-        <Field label="حداقل سفارش">
-          <span data-min-order>
-            {minOrder === null ? NOT_RECORDED : `${formatToman(Number(minOrder))} تومان`}
-          </span>
-        </Field>
+        {anyFeeDisclosed ? (
+          <>
+            {fees.map((fee) => (
+              <Field key={fee.label} label={fee.label}>
+                {fee.percent === null
+                  ? FEE_UNDISCLOSED_FA
+                  : formatPercentPointsFa(fee.percent)}
+              </Field>
+            ))}
+            <Field label="منبع کارمزد">
+              <FeeSourceLabel terms={terms} />
+            </Field>
+          </>
+        ) : (
+          <Field label="کارمزد">{FEES_UNDISCLOSED_FA}</Field>
+        )}
+        {minOrder === null ? null : (
+          <Field label="حداقل سفارش">
+            <span data-min-order>{`${formatToman(Number(minOrder))} تومان`}</span>
+          </Field>
+        )}
       </dl>
     </section>
   );
@@ -191,17 +199,17 @@ export function PlatformPage({
         </h2>
         <dl className="mt-3">
           <Field label="هویت حقوقی">
-            <span data-legal-entity>{platform.legal_entity ?? NOT_RECORDED}</span>
+            <span data-legal-entity>{platform.legal_entity ?? LEGAL_ENTITY_UNKNOWN_FA}</span>
           </Field>
           <Field label="تحویل فیزیکی">
-            <span data-delivery-note>{platform.delivery_note_fa ?? NOT_RECORDED}</span>
+            <span data-delivery-note>{platform.delivery_note_fa ?? DELIVERY_UNKNOWN_FA}</span>
           </Field>
         </dl>
       </section>
 
       <p className="mt-6 text-[12px]">
         <a href="/" className="transition-smooth text-primary hover:underline">
-          بازگشت به جدول مقایسه
+          بازگشت به مقایسه‌ی قیمت سکوها
         </a>
       </p>
 

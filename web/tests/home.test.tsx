@@ -327,7 +327,7 @@ describe("home page — the table was removed", () => {
     expect(footer?.[0]).not.toMatch(/[۰-۹]٬[۰-۹]/);
   });
 
-  it("goldika is in the store but never renders (PERMISSION_PENDING)", async () => {
+  it("a platform in the store but absent from the listed payload never renders", async () => {
     const html = await renderHome(healthyStore());
     expect(html).not.toContain("گلدیکا");
     expect(html).not.toContain("goldika");

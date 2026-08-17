@@ -113,7 +113,7 @@ async def test_dead_source_does_not_break_the_round() -> None:
     assert await store.get_snapshot("wallgold") is not None
 
 
-async def test_goldika_is_stored_but_never_listed() -> None:
+async def test_goldika_is_stored_and_publicly_listed() -> None:
     store = InMemoryStore()
 
     await collect_round(
@@ -122,6 +122,5 @@ async def test_goldika_is_stored_but_never_listed() -> None:
 
     assert await store.get_snapshot("goldika") is not None
     listed = await store.get_listed_platforms()
-    assert "goldika" not in {p.slug for p in listed}
-    assert {"wallgold", "talasea", "milli"} <= {p.slug for p in listed}
+    assert {"wallgold", "talasea", "milli", "goldika"} <= {p.slug for p in listed}
     assert all(p.is_listed for p in listed)

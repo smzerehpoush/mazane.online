@@ -9,7 +9,7 @@ import { breadcrumbJsonLd, jsonLdString } from "@/lib/structured-data";
 
 export const BLOG_INDEX_TITLE = "بلاگ تابلو";
 export const BLOG_INDEX_DESCRIPTION =
-  "تحلیل‌های داده‌محور از کارمزد، قیمت مؤثر و هزینه‌ی رفت‌وبرگشت طلای آنلاین.";
+  "تحلیل‌های داده‌محور از کارمزد خرید و فروش و هزینه‌ی رفت‌وبرگشت در سکوهای طلای آنلاین.";
 
 export function blogIndexHead() {
   return {

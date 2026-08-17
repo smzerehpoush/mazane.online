@@ -94,7 +94,6 @@ describe("Redis outage: valid slugs stay 200, unknown ones stay 404", () => {
       expect(await slugPage(listing.slug), listing.slug).toBeNull();
     }
     expect(await slugPage("no-such-thing")).toBeNull();
-    expect(await slugPage("goldika")).toBeNull();
     expect(await slugPage("blog")).toBeNull();
   });
 });

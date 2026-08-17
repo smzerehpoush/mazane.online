@@ -323,10 +323,13 @@ describe("platform page — /talasea and /wallgold", () => {
     expect(html).not.toContain("قیمت‌های این سکو");
   });
 
-  it('undocumented metadata is honestly shown as "not recorded", not fabricated', async () => {
+  it("undocumented metadata is stated as our own gap in a full sentence, not a bare placeholder", async () => {
     seed(assetStore());
     const html = await renderSlug("wallgold");
-    expect(html).toContain("ثبت نشده است");
+    expect(html).toContain("هنوز نمی‌دانیم این سکو زیر نام کدام شرکت ثبت شده است");
+    expect(html).toContain("تحویل فیزیکی این سکو را هنوز بررسی نکرده‌ایم");
+    expect(html).not.toContain(">ثبت نشده است<");
+    expect(html).not.toContain("حداقل سفارش");
   });
 
   it("open/closed and staleness badges are also on the platform page", async () => {
@@ -400,16 +403,17 @@ describe('the "today\'s price" section of the platform page — known/unknown fe
     expect(html).not.toContain("تک‌قیمتی");
   });
 
-  it('unknown fee ⟸ the section still appears, with the price and an "unknown" fee', async () => {
+  it("unknown fee ⟸ the section still appears, with the price and one honest sentence instead of empty fee rows", async () => {
     seed(assetStore());
     const html = await renderSlug("digikala");
 
     expect(html).toContain("دیجی‌کالا");
     expect(html).toContain("قیمت هر گرم (پیش از کارمزد)");
     expect(html).toContain("۱۸٬۴۰۰٬۰۰۰");
-    expect(html).toContain("کارمزد خرید");
-    expect(html).toContain("نامشخص");
-    expect(html).toContain("سکو کارمزدش را اعلام نکرده است");
+    expect(html).toContain("این سکو کارمزدش را عمومی اعلام نکرده است");
+    expect(html).not.toContain("نامشخص");
+    expect(html).not.toContain(">کارمزد خرید<");
+    expect(html).not.toContain(">کارمزد فروش<");
   });
 
   it('the "this platform\'s prices" table (QuotesSection) no longer exists — neither for known nor unknown fee', async () => {

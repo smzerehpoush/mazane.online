@@ -1,7 +1,3 @@
-/**
- * ⚠️ This is editorial text, carried over verbatim from ‎app/mazane-chist/page.tsx‎
- * of the previous Next app; do not rewrite.
- */
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Breadcrumbs, PageShell } from "@/components/content/PageShell";
@@ -81,15 +77,15 @@ export function MazaneChist() {
           تابلو خودش هیچ نرخ مظنه یا میانگین بازاری اعلام نمی‌کند؛ هر عدد این سایت
           قیمت اعلامی یک سکوی مشخص در لحظه‌ی مشخص است. کاری که می‌کنیم مقایسه است:{" "}
           <strong className="font-semibold text-foreground">
-            قیمت مؤثر خرید و فروش
+            قیمت اعلامی هر گرم طلای ۱۸ عیار
           </strong>{" "}
-          طلای آب‌شده در سکوهای آنلاین — با احتساب کارمزد هر سکو، نه قیمت اسمی — کنار هم،
-          تا ببینید برای یک گرم طلا واقعاً چقدر می‌پردازید.
+          در سکوهای آنلاین، کنار هم و پیش از کارمزد. کارمزد خرید و فروش هر سکو را جدا
+          می‌آوریم، تا ببینید هر کدام روی همان قیمت چه چیزی برمی‌دارد.
         </p>
 
         <p className="mt-8 text-[12px]">
           <a href="/" className="transition-smooth text-primary hover:underline">
-            جدول مقایسه‌ی قیمت مؤثر سکوها
+            قیمت لحظه‌ای طلا در سکوهای آنلاین
           </a>
         </p>
       </article>

@@ -91,14 +91,14 @@ describe("the web's static registry matches the collector's code registry", () =
     expect(REGISTRY_PLATFORMS).toEqual(listed.map(asListedPlatform));
   });
 
-  it("goldika (PERMISSION_PENDING) is not in the web's public listing", () => {
+  it("a platform outside ALLOWED never reaches the web's public listing", () => {
     const pending = registry.platforms
       .filter((p) => p.data_policy !== "ALLOWED")
       .map((p) => p.slug);
-    expect(pending).toContain("goldika");
     for (const slug of pending) {
       expect(REGISTRY_PLATFORMS.map((p) => p.slug)).not.toContain(slug);
     }
+    expect(REGISTRY_PLATFORMS.every((p) => p.data_policy === "ALLOWED")).toBe(true);
   });
 
   it("instruments: same set and metadata, with the publish gate reconstructed", () => {
