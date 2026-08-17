@@ -1,9 +1,16 @@
 import { ThemeToggle } from "@/components/tablo/ThemeToggle";
-import { brand, nav } from "@/lib/site-content";
+import { brand, MAIN_LANDMARK_ID, nav, skipToContentLabel } from "@/lib/site-content";
 
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/70 backdrop-blur-xl">
+      <a
+        href={`#${MAIN_LANDMARK_ID}`}
+        data-skip-link
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-4 focus:z-50 focus:rounded-full focus:border focus:border-primary focus:bg-background focus:px-4 focus:py-2 focus:text-[13px] focus:font-medium focus:text-primary"
+      >
+        {skipToContentLabel}
+      </a>
       <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:flex sm:justify-between sm:gap-4 sm:px-8 sm:py-3">
         <a href="/" className="order-1 flex min-h-11 items-center gap-2.5">
           <span className="grid size-10 place-items-center rounded-[14px] border border-gold/35 bg-surface shadow-soft">

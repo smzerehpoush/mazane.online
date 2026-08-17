@@ -15,6 +15,17 @@ export const nav = [
   { label: "مظنه چیست", href: "/mazane-chist" },
 ] as const;
 
+/**
+ * ⚠️ The skip-link and the `<main>` it targets are two different files
+ * (`SiteHeader.tsx` and `PageShell.tsx`/`HomePage.tsx`). They only stay wired
+ * together because both read this id from here; a hardcoded copy on either
+ * side turns the skip-link into a link to nowhere, and nothing but a manual
+ * keyboard test would catch it.
+ */
+export const MAIN_LANDMARK_ID = "main-content";
+
+export const skipToContentLabel = "رفتن به محتوای اصلی";
+
 export const footerLinks = [
   { label: "درباره تابلو", href: "/about" },
   { label: "روش محاسبه قیمت‌ها", href: "/methodology" },

@@ -17,6 +17,7 @@ import { railCountdownSeconds } from "../src/components/tablo/PriceRail";
 import { currentVatPercent } from "../src/lib/calculator";
 import { formatFaNumber } from "../src/lib/fa-number";
 import { REGISTRY_PLATFORMS } from "../src/lib/registry";
+import { MAIN_LANDMARK_ID } from "../src/lib/site-content";
 import { THEME_ATTRIBUTE, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "../src/lib/theme";
 import {
   freshIso,
@@ -112,6 +113,18 @@ describe("home page — mobile header", () => {
     expect(header).toContain("size-11");
     expect(header).not.toContain("overflow-x-auto");
     expect(header).not.toContain("no-scrollbar");
+  });
+});
+
+describe("home page — landmark and skip link", () => {
+  it("the skip link in the header targets the home page's own main landmark", async () => {
+    const html = await renderHome(healthyStore());
+    const skip = html.indexOf(`href="#${MAIN_LANDMARK_ID}"`);
+    const landmark = html.indexOf(`<main id="${MAIN_LANDMARK_ID}"`);
+    expect(skip).toBeGreaterThan(-1);
+    expect(landmark).toBeGreaterThan(-1);
+    expect(skip).toBeLessThan(landmark);
+    expect(html).toContain("رفتن به محتوای اصلی");
   });
 });
 
@@ -293,7 +306,7 @@ describe("home page — market summary", () => {
   });
 
   /** ⚠️ Legal red line */
-  it("the word \"average\" appears nowhere on the page", async () => {
+  it('the word "average" appears nowhere on the page', async () => {
     const html = await renderHome(healthyStore());
     expect(html).not.toContain("میانگین");
   });
@@ -469,8 +482,11 @@ describe("home page — disabled cards", () => {
 
   it("no copy presents the seller's profit as an official or legally set figure", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain("سود (٪)");
-    expect(html).not.toMatch(/سود[^<]{0,40}(رسمی|قانونی|مصوب)/);
+    expect(html).toContain("data-calculator-profit-note");
+    expect(html).toMatch(/نرخ‌نامه‌ای اعلام نشده|عرف بازار/);
+    for (const claim of ["سود رسمی", "سود قانونی", "سود مصوب", "نرخ مصوب سود"]) {
+      expect(html).not.toContain(claim);
+    }
   });
 });
 
@@ -532,7 +548,7 @@ describe("home page — source outage ⟸ staleness, not error", () => {
    * page-level label on the axis. Removing the table must not take this
    * down with it.
    */
-  it("the \"last updated\" label with <time datetime> is in the HTML itself", async () => {
+  it('the "last updated" label with <time datetime> is in the HTML itself', async () => {
     const store = healthyStore();
     const html = await renderHome(store);
     const latest = Object.values(store.updatedAt)
@@ -563,7 +579,7 @@ describe("home page — blog sections (owner's decision: no empty box)", () => {
     expect(html).not.toContain("بیشتر بخوانید");
   });
 
-  it("with two posts, the newest becomes the \"featured article\" and the rest go in the sidebar", async () => {
+  it('with two posts, the newest becomes the "featured article" and the rest go in the sidebar', async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -596,7 +612,7 @@ describe("home page — blog sections (owner's decision: no empty box)", () => {
    * The no-duplication test matters more than the card itself: without it,
    * a single post would appear twice on one page.
    */
-  it("the \"featured article\" card renders with a CTA and that same post isn't repeated in the sidebar", async () => {
+  it('the "featured article" card renders with a CTA and that same post isn\'t repeated in the sidebar', async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -620,16 +636,16 @@ describe("home page — blog sections (owner's decision: no empty box)", () => {
     expect(html).toContain("مقاله ویژه");
     expect(html).toContain("مطالعه مقاله ←");
 
-     // ⚠️ Only the sidebar is checked, not the whole page: overlap between
-     // "latest" and "read more" is already intentional (two different views
-     // over the same set), but the featured article must not repeat in latest.
+    // ⚠️ Only the sidebar is checked, not the whole page: overlap between
+    // "latest" and "read more" is already intentional (two different views
+    // over the same set), but the featured article must not repeat in latest.
     const sidebar = html.match(/<aside[\s\S]*?<\/aside>/)?.[0] ?? "";
     expect(sidebar).not.toBe("");
     expect(sidebar).not.toContain("راهنمای کامل خرید طلای زینتی");
     expect(sidebar).toContain('href="/blog/ayar-tala"');
   });
 
-  it("with only one post, that post is the \"featured article\" and the sidebar doesn't render empty", async () => {
+  it('with only one post, that post is the "featured article" and the sidebar doesn\'t render empty', async () => {
     const html = await renderHome(healthyStore(), {
       posts: [
         {
@@ -794,7 +810,7 @@ describe("home page — each platform's staleness on its own card", () => {
     }
   });
 
-  it("a stale platform gets \"stale\" on its own card, even when the rest are fresh", async () => {
+  it('a stale platform gets "stale" on its own card, even when the rest are fresh', async () => {
     const store = healthyStore();
     store.updatedAt["talasea"] = staleIso();
     const html = await renderHome(store);

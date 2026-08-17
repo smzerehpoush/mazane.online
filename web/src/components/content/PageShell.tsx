@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/tablo/SiteHeader";
-import { footerLinks, legalNote } from "@/lib/site-content";
+import { footerLinks, legalNote, MAIN_LANDMARK_ID } from "@/lib/site-content";
 
 export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
@@ -17,7 +17,9 @@ export function PageShell({ children, wide = false }: { children: ReactNode; wid
       <SiteHeader />
 
       <main
-        className={`mx-auto w-full px-4 py-6 sm:px-8 sm:py-8 ${
+        id={MAIN_LANDMARK_ID}
+        tabIndex={-1}
+        className={`mx-auto w-full px-4 py-6 outline-none sm:px-8 sm:py-8 ${
           wide ? "max-w-[1400px]" : "max-w-[820px]"
         }`}
       >

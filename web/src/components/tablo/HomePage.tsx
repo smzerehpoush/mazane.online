@@ -20,7 +20,7 @@ import type { Row } from "@/lib/rows";
 import { useLiveDashboard } from "@/lib/use-live-dashboard";
 import { hasViewData, type ViewCounts } from "@/lib/views";
 import { SITE_URL } from "@/lib/site";
-import { brand, legalNote, type ChartPlatformConfig } from "@/lib/site-content";
+import { brand, legalNote, MAIN_LANDMARK_ID, type ChartPlatformConfig } from "@/lib/site-content";
 import { organizationWebSiteJsonLd } from "@/lib/structured-data";
 
 export interface HomePageData {
@@ -82,7 +82,11 @@ export function HomePage({ data }: { data: HomePageData }) {
     <div className="relative min-h-screen bg-background">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-[1340px] px-4 pt-4.5 pb-8 sm:px-[22px]">
+      <main
+        id={MAIN_LANDMARK_ID}
+        tabIndex={-1}
+        className="mx-auto w-full max-w-[1340px] px-4 pt-4.5 pb-8 outline-none sm:px-[22px]"
+      >
         <h1 className="mb-4 text-[26px] leading-[1.35] font-black tracking-[-0.4px] text-foreground sm:text-[36px]">
           قبل از خرید طلا، تابلو رو ببین
         </h1>

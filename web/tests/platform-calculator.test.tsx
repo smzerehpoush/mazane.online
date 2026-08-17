@@ -2,15 +2,18 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { PlatformCalculator } from "../src/components/content/PlatformCalculator";
+import { JewelryCalculator, JewelryResult } from "../src/components/tablo/JewelryCalculator";
 import {
   amountFromWeight,
   currentJalaliYear,
   currentVatPercent,
+  jewelryBreakdown,
   jewelryTotal,
   parseCalculatorInput,
   vatPercentForJalaliYear,
   weightFromAmount,
 } from "../src/lib/calculator";
+import { formatFaPercentPoints } from "../src/lib/fa-number";
 import type { ListedPlatform } from "../src/lib/prices";
 import type { Row } from "../src/lib/rows";
 import { SlugPageView } from "../src/components/content/SlugPageView";
@@ -344,6 +347,256 @@ describe("jewelryTotal — jewelry gold amount", () => {
       vatPercent: 0,
     });
     expect(bare).toBe(amountFromWeight(3, PRICE));
+  });
+});
+
+describe("jewelryBreakdown — the four lines behind the total", () => {
+  it("the worked example, verifiable with a pencil: 5g × 10,000,000 at 20% / 7% / 10%", () => {
+    const breakdown = jewelryBreakdown({
+      weightGrams: 5,
+      pricePerGram: 10_000_000,
+      wagePercent: 20,
+      profitPercent: 7,
+      vatPercent: 10,
+    });
+
+    expect(breakdown.gold).toBe(50_000_000);
+    expect(breakdown.wage).toBe(10_000_000);
+    expect(breakdown.profit).toBe(4_200_000);
+    expect(breakdown.vat).toBe(1_420_000);
+    expect(breakdown.total).toBe(65_620_000);
+    expect(breakdown.extraCostPercent).toBeCloseTo(31.24, 10);
+  });
+
+  const SUMMABLE = [
+    { weightGrams: 5, pricePerGram: 10_000_000, wagePercent: 20, profitPercent: 7, vatPercent: 10 },
+    {
+      weightGrams: 1,
+      pricePerGram: 18_530_000,
+      wagePercent: 12.5,
+      profitPercent: 7,
+      vatPercent: 10,
+    },
+    {
+      weightGrams: 1.337,
+      pricePerGram: 18_500_000,
+      wagePercent: 8.5,
+      profitPercent: 7,
+      vatPercent: 10,
+    },
+    {
+      weightGrams: 0.0031,
+      pricePerGram: 18_704_055,
+      wagePercent: 17.5,
+      profitPercent: 3,
+      vatPercent: 9,
+    },
+    { weightGrams: 3, pricePerGram: 18_500_000, wagePercent: 0, profitPercent: 0, vatPercent: 0 },
+  ];
+
+  it("the four lines always add up to the total, exactly", () => {
+    for (const input of SUMMABLE) {
+      const { gold, wage, profit, vat, total } = jewelryBreakdown(input);
+      expect(gold + wage + profit + vat).toBe(total);
+    }
+  });
+
+  it("every line is a whole toman, so nothing is rounded twice on screen", () => {
+    for (const input of SUMMABLE) {
+      const { gold, wage, profit, vat, total } = jewelryBreakdown(input);
+      for (const line of [gold, wage, profit, vat, total])
+        expect(Number.isInteger(line)).toBe(true);
+    }
+  });
+
+  it("the total is the sum of the rounded lines, not the rounding of the exact sum", () => {
+    const input = {
+      weightGrams: 1,
+      pricePerGram: 18_530_000,
+      wagePercent: 12.5,
+      profitPercent: 7,
+      vatPercent: 10,
+    };
+    const { gold, wage, profit, vat, total } = jewelryBreakdown(input);
+
+    expect([gold, wage, profit, vat]).toEqual([18_530_000, 2_316_250, 1_459_238, 377_549]);
+    expect(total).toBe(22_683_037);
+    expect(Math.round(18_530_000 + 2_316_250 + 1_459_237.5 + 377_548.75)).toBe(22_683_036);
+    expect(total).not.toBe(22_683_036);
+  });
+
+  it("the headline percent is derived from the lines on screen, not from a parallel sum", () => {
+    for (const input of SUMMABLE) {
+      const { gold, total, extraCostPercent } = jewelryBreakdown(input);
+      expect(extraCostPercent).toBeCloseTo(((total - gold) / gold) * 100, 10);
+    }
+  });
+
+  it("VAT never touches the gold principal: no wage and no profit means a zero VAT line", () => {
+    const breakdown = jewelryBreakdown({
+      weightGrams: 4,
+      pricePerGram: 18_500_000,
+      wagePercent: 0,
+      profitPercent: 0,
+      vatPercent: 10,
+    });
+    expect(breakdown.vat).toBe(0);
+    expect(breakdown.total).toBe(breakdown.gold);
+    expect(breakdown.extraCostPercent).toBe(0);
+  });
+
+  it("without a gold value there is nothing to be a percentage of ⟸ null, not Infinity", () => {
+    const breakdown = jewelryBreakdown({
+      weightGrams: 2,
+      pricePerGram: 0,
+      wagePercent: 20,
+      profitPercent: 7,
+      vatPercent: 10,
+    });
+    expect(breakdown.extraCostPercent).toBeNull();
+  });
+
+  it("jewelryTotal keeps its signature and stays the breakdown's total", () => {
+    for (const input of SUMMABLE) {
+      expect(jewelryTotal(input)).toBe(jewelryBreakdown(input).total);
+    }
+  });
+});
+
+/**
+ * ⚠️ One decimal, and the rounding is done by `formatFaNumber` on the decimal
+ * string. `Math.round(percent * 10) / 10` inside the module would be wrong on
+ * the half-cases — `31.15 * 10` is `311.49999999999994` in binary floating
+ * point and would round down to 31.1.
+ */
+describe("the headline percent — how it is rounded for display", () => {
+  function headline(input: Parameters<typeof jewelryBreakdown>[0]): string {
+    const { extraCostPercent } = jewelryBreakdown(input);
+    if (extraCostPercent === null) throw new Error("no headline percent for this input");
+    return formatFaPercentPoints(extraCostPercent, { maximumFractionDigits: 1 });
+  }
+
+  it("one decimal place, in Persian digits", () => {
+    expect(
+      headline({
+        weightGrams: 5,
+        pricePerGram: 10_000_000,
+        wagePercent: 20,
+        profitPercent: 7,
+        vatPercent: 10,
+      }),
+    ).toBe("۳۱٫۲٪");
+  });
+
+  it("a trailing zero is dropped rather than shown as ۳۱٫۰٪", () => {
+    expect(
+      headline({
+        weightGrams: 5,
+        pricePerGram: 10_000_000,
+        wagePercent: 20,
+        profitPercent: 7,
+        vatPercent: 9,
+      }),
+    ).toBe("۳۱٪");
+  });
+
+  it("a whole percentage stays whole", () => {
+    expect(
+      headline({
+        weightGrams: 2,
+        pricePerGram: 18_500_000,
+        wagePercent: 10,
+        profitPercent: 0,
+        vatPercent: 0,
+      }),
+    ).toBe("۱۰٪");
+  });
+
+  it("binary floating point never leaks a long tail into the label", () => {
+    expect(
+      headline({
+        weightGrams: 1,
+        pricePerGram: 18_530_000,
+        wagePercent: 12.5,
+        profitPercent: 7,
+        vatPercent: 10,
+      }),
+    ).toBe("۲۲٫۴٪");
+  });
+});
+
+describe("JewelryResult — the breakdown a visitor actually reads", () => {
+  const BREAKDOWN = jewelryBreakdown({
+    weightGrams: 5,
+    pricePerGram: 10_000_000,
+    wagePercent: 20,
+    profitPercent: 7,
+    vatPercent: 10,
+  });
+
+  it("names all four lines in Persian", () => {
+    const html = renderToStaticMarkup(<JewelryResult breakdown={BREAKDOWN} />);
+    expect(html).toContain("ارزش طلای خام");
+    expect(html).toContain("اجرت ساخت");
+    expect(html).toContain("سود فروشنده");
+    expect(html).toContain("مالیات بر ارزش افزوده");
+  });
+
+  it("prints each line's amount in Persian digits, and the total below them", () => {
+    const html = renderToStaticMarkup(<JewelryResult breakdown={BREAKDOWN} />);
+    expect(html).toContain("۵۰٬۰۰۰٬۰۰۰");
+    expect(html).toContain("۱۰٬۰۰۰٬۰۰۰");
+    expect(html).toContain("۴٬۲۰۰٬۰۰۰");
+    expect(html).toContain("۱٬۴۲۰٬۰۰۰");
+    expect(html).toContain("۶۵٬۶۲۰٬۰۰۰");
+  });
+
+  it("the headline is the extra cost against the raw gold", () => {
+    const html = renderToStaticMarkup(<JewelryResult breakdown={BREAKDOWN} />);
+    expect(html).toContain("هزینه‌ی اضافه نسبت به طلای خام");
+    expect(html).toContain("۳۱٫۲٪");
+  });
+
+  it("no inputs yet means one dash, not a column of them", () => {
+    const html = renderToStaticMarkup(<JewelryResult breakdown={null} />);
+    expect(html).toContain("data-calculator-total");
+    expect(html).toContain("—");
+    expect(html).not.toContain("data-calculator-breakdown");
+    expect(html).not.toContain("data-calculator-extra-cost");
+    expect(html).not.toContain("ارزش طلای خام");
+  });
+});
+
+/**
+ * ⚠️ Research on the wage/profit question (#90) found no published rate for
+ * the seller's profit — the 7% figure is press attribution to a former head of
+ * the Tehran gold union, and a board member of another branch is on record
+ * that it is custom and not law. Only VAT may carry a legal citation here.
+ */
+describe("JewelryCalculator — what the page is allowed to claim about each percentage", () => {
+  it("VAT keeps its statutory citation", () => {
+    const html = renderToStaticMarkup(
+      <JewelryCalculator pricePerGram={18_500_000} referenceName="میلی" />,
+    );
+    expect(html).toContain("بند (ب) ماده (۲۶) قانون مالیات بر ارزش افزوده");
+  });
+
+  it("the seller's profit is presented as market custom, with no rate behind it", () => {
+    const html = renderToStaticMarkup(
+      <JewelryCalculator pricePerGram={18_500_000} referenceName="میلی" />,
+    );
+    expect(html).toContain("data-calculator-profit-note");
+    expect(html).toContain("برای سود فروشنده نرخ‌نامه‌ای اعلام نشده است");
+    expect(html).toContain("عرف بازار است");
+  });
+
+  it("no percentage is prefilled for wage or profit, and none is called official", () => {
+    const html = renderToStaticMarkup(
+      <JewelryCalculator pricePerGram={18_500_000} referenceName="میلی" />,
+    );
+    expect(html).not.toContain("۷٪");
+    expect(html).not.toContain("اتحادیه");
+    expect(html).not.toMatch(/سود[^<]{0,40}(رسمی|قانونی|مصوب)/);
   });
 });
 

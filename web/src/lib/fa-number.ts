@@ -24,6 +24,24 @@ export interface FaNumberOptions {
   signDisplay?: "auto" | "exceptZero";
 }
 
+const ARABIC_INDIC_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+
+const LATIN_NUMERAL_MAP: ReadonlyMap<string, string> = new Map<string, string>([
+  ...[...PERSIAN_DIGITS].map((char, index): [string, string] => [char, String(index)]),
+  ...[...ARABIC_INDIC_DIGITS].map((char, index): [string, string] => [char, String(index)]),
+  [GROUP_SEPARATOR, ","],
+  [DECIMAL_SEPARATOR, "."],
+  [PERCENT_SIGN, "%"],
+  [MINUS_SIGN, "-"],
+  [LTR_MARK, ""],
+]);
+
+export function toLatinNumerals(text: string): string {
+  let out = "";
+  for (const char of text) out += LATIN_NUMERAL_MAP.get(char) ?? char;
+  return out;
+}
+
 function toPersianDigits(latin: string): string {
   let out = "";
   for (const char of latin) {
