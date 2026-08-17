@@ -4,25 +4,28 @@ import { brand, nav } from "@/lib/site-content";
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-8">
-        <a href="/" className="flex items-center gap-2.5">
+      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:flex sm:justify-between sm:gap-4 sm:px-8 sm:py-3">
+        <a href="/" className="order-1 flex min-h-11 items-center gap-2.5">
           <span className="grid size-10 place-items-center rounded-[14px] border border-gold/35 bg-surface shadow-soft">
             <img src="/tablo-logo-mark.png" alt="" className="size-8 object-contain" />
           </span>
           <span className="whitespace-nowrap text-sm font-bold sm:text-base">{brand.name}</span>
         </a>
-        <div className="flex min-w-0 items-center gap-2">
-          <nav className="no-scrollbar flex items-center gap-1 overflow-x-auto">
-            {nav.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                className="transition-smooth shrink-0 rounded-full px-3 py-1.5 text-[11px] text-muted-foreground hover:bg-surface-2 hover:text-primary sm:text-xs"
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
+        <nav
+          aria-label="ناوبری اصلی"
+          className="order-3 col-span-2 grid min-w-0 grid-cols-2 gap-2 min-[430px]:grid-cols-4 sm:order-2 sm:col-auto sm:flex sm:w-auto sm:items-center sm:gap-1"
+        >
+          {nav.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              className="transition-smooth flex min-h-11 items-center justify-center rounded-full border border-border/60 bg-surface/70 px-3 py-2 text-center text-[12px] whitespace-nowrap text-muted-foreground hover:bg-surface-2 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none sm:min-h-9 sm:border-transparent sm:bg-transparent sm:py-1.5 sm:text-xs"
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div className="order-2 sm:order-3">
           <ThemeToggle />
         </div>
       </div>

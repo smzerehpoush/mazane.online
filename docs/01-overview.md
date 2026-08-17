@@ -7,7 +7,7 @@ a background service (the collector) fetches the 18-karat gold price from 14
 trading platforms every 30 seconds, normalizes them, runs a cross-platform
 median check over them, and stores them in Redis (for live display)
 and Postgres (for history and archive); a web app shows that same data on
-the home page, on each platform/asset page, and on an LLM-generated blog,
+the home page, on each platform/asset page, and on a manually curated blog,
 and links out to platforms for referral revenue via `/go/<slug>`. For domain
 terms (Quote, PlatformSnapshot, PlatformTerms, being listed, etc.) see
 [docs/04-domain.md](./04-domain.md).
@@ -258,7 +258,7 @@ npm test         # vitest run — 31 passing test files
 | Variable | Code default | Read in |
 |---|---|---|
 | `TABLO_REDIS_URL` | `redis://127.0.0.1:6379/0` | collector `main.py`; web `price-source.ts`, `chart-config-source.ts` |
-| `TABLO_DATABASE_URL` | `postgresql://mazane:mazane@127.0.0.1:5432/mazane` | collector (`main.py`, `content/queue.py`, `content/retract.py`, `content/generator.py`); web `blog-source.ts` (`pgPool`) |
+| `TABLO_DATABASE_URL` | `postgresql://mazane:mazane@127.0.0.1:5432/mazane` | collector (`main.py`, `content/queue.py`, `content/retract.py`); web `blog-source.ts` (`pgPool`) |
 | `TABLO_REVALIDATE_URL` | `http://127.0.0.1:3000/api/revalidate-blog` | collector `content/revalidate.py` |
 | `TABLO_REVALIDATE_TOKEN` | No default (empty ⟸ collector never revalidates; web always returns 401) | collector `content/revalidate.py`; web `revalidate-blog.ts` |
 | `TABLO_DAILY_PUBLISH_CAP` | `2` (invalid value/less than 1 ⟸ falls back to 2 with a warning) | collector `content/publisher.py` |

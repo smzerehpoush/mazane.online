@@ -57,7 +57,7 @@ def _reject_digits(template: str, *, where: str) -> None:
     if offender is not None:
         raise DigitOutsideSlotError(
             f"digit {offender.group(0)!r} outside slot in {where} — "
-            "no digit is accepted from the model (decision 16)"
+            "no digit is accepted from draft templates"
         )
 
 
@@ -89,7 +89,7 @@ def validate_draft(
     if not data_ok:
         raise DataGapError(
             "the referenced period has a data gap for the referenced platforms — "
-            "post will not be generated/queued (decision 16)"
+            "post will not be queued"
         )
     _reject_digits(template, where="body")
     rendered = render_draft(template, slots)

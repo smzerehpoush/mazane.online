@@ -44,14 +44,13 @@ goes red; CI also has no `setup-python`, so if the runner genuinely lacks
 | Any client-side import from `**/server/**` or `server-only` must break the build | `importProtection` with `behavior: "error"` in `web/vite.config.ts` |
 | SQL migrations are always forward-only | The `collector/migrations/` folder has no down files; Postgres runs `*.sql` in lexicographic order only on the first boot of an empty volume — copying a migration file to the server doesn't mean it gets run |
 
-## The "no fabricated numbers" rule
+## The draft-template numbers rule
 
-The LLM content-generation path (`collector/src/tablo_collector/content/gate.py`)
+The manual draft enqueue path (`collector/src/tablo_collector/content/gate.py`)
 accepts no digit — Persian, Arabic-Indic, or Latin — outside a `{{slot}}`
 placeholder; the pattern `_ANY_DIGIT = re.compile(r"\d")` runs against the text
-with slots redacted, and any remaining digit raises `DigitOutsideSlotError`. If
-you're working on the content generator, every number must be filled from real
-data through a slot, never from the model's free-form text.
+with slots redacted, and any remaining digit raises `DigitOutsideSlotError`.
+Every number in a queued draft template must be filled through a slot.
 
 ## "Staleness, not error"
 

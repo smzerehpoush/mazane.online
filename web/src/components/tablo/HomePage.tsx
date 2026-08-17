@@ -6,7 +6,7 @@ import { Madde5Bar } from "@/components/tablo/LegalNotice";
 import { MarketSummary } from "@/components/tablo/MarketSummary";
 import { PopularPosts } from "@/components/tablo/PopularPosts";
 import { PriceRail } from "@/components/tablo/PriceRail";
-import { BubbleGauge, CoinPriceCard, PriceAlertCard } from "@/components/tablo/SidebarCards";
+import { BubbleGauge, CoinPriceCard } from "@/components/tablo/SidebarCards";
 import { Sidebar } from "@/components/tablo/Sidebar";
 import { SiteHeader } from "@/components/tablo/SiteHeader";
 import { SourceCards } from "@/components/tablo/SourceCards";
@@ -84,6 +84,10 @@ export function HomePage({ data }: { data: HomePageData }) {
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-[1340px] px-4 pt-4.5 pb-8 sm:px-[22px]">
+        <h1 className="mb-4 text-[26px] leading-[1.35] font-black tracking-[-0.4px] text-foreground sm:text-[36px]">
+          قبل از خرید طلا، تابلو رو ببین
+        </h1>
+
         <div className="grid items-start gap-4 min-[1081px]:grid-cols-[360px_minmax(0,1fr)]">
           <div className="order-2 flex flex-col gap-4 min-[1081px]:order-1">
             <BubbleGauge bubble={bubble} />
@@ -92,7 +96,6 @@ export function HomePage({ data }: { data: HomePageData }) {
               pricePerGram={reference?.priceToman ?? null}
               referenceName={reference?.name ?? null}
             />
-            <PriceAlertCard />
             {latestPosts.length > 0 && <Sidebar posts={latestPosts} />}
           </div>
 

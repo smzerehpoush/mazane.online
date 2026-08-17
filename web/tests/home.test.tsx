@@ -99,6 +99,20 @@ describe("home page — prices in the server-rendered HTML", () => {
   });
 });
 
+describe("home page — mobile header", () => {
+  it("navigation links and the theme toggle meet mobile touch-target sizing without hidden horizontal scroll", async () => {
+    const html = await renderHome(healthyStore());
+    const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
+
+    expect(header).toContain('aria-label="ناوبری اصلی"');
+    expect(header).toContain("grid-cols-2");
+    expect(header).toContain("min-h-11");
+    expect(header).toContain("size-11");
+    expect(header).not.toContain("overflow-x-auto");
+    expect(header).not.toContain("no-scrollbar");
+  });
+});
+
 describe("home page — price axis", () => {
   it("renders the market summary above the price axis", async () => {
     const html = await renderHome(healthyStore());
@@ -400,9 +414,10 @@ describe("home page — disabled cards", () => {
     expect(card?.[0]).toContain("تومان");
   });
 
-  it("the price-alert card is disabled too", async () => {
+  it("the price-alert card is hidden for now", async () => {
     const html = await renderHome(healthyStore());
-    expect(html).toContain("هشدار قیمت");
+    expect(html).not.toContain("هشدار قیمت");
+    expect(html).not.toContain("قیمت دلخواه خود را تنظیم کنید");
   });
 
   it("the calculator shell is server-rendered", async () => {

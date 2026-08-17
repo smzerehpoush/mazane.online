@@ -59,7 +59,7 @@ async def check_queue_depth(gateway: ContentGateway, *, daily_cap: int) -> Queue
     if days < QUEUE_ALERT_DAYS:
         log.warning(
             "content queue depth is %.1f days (%s drafts ÷ %s per-day cap) — "
-            "below the %s-day threshold; target is %s days. The local generator should fill the queue.",
+            "below the %s-day threshold; target is %s days. Add manual drafts before the queue runs dry.",
             days,
             drafts,
             daily_cap,

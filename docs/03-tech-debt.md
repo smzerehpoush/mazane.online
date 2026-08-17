@@ -159,18 +159,17 @@ flowchart LR
 | **Practical impact** | As long as this state isn't committed, nothing is lost — the history of "whys" is still available via `git show HEAD:<path>`. But any reader who only reads the on-disk files (not git) sees no design rationale beyond the raw code logic, and if these changes are ever recorded with `git add -A && git commit` or similar, this volume of in-code documentation is permanently removed from the current HEAD (though it remains in history). |
 | **Suggested fix** | Before any commit on this working tree, either selectively restore the "why" comments (not the obvious "what" explanations), or, if the removal is intentional and final, record that decision explicitly in the corresponding commit message so it isn't lost in history. |
 
-### 6.2 Three large files in the repo — Severity: Low
+### 6.2 Large files in the repo — Severity: Low
 
 | File | Lines | Note |
 |---|---|---|
 | `web/src/components/ui/sidebar.tsx` | 744 | As noted in 4.2, this file is both the largest and completely dead |
-| `collector/src/tablo_collector/content/generator.py` | 476 | Live and heavily used; contains all five `TOPIC_BUILDER`s (fee comparison, minimum order, etc.), prompt builders, and the Gemini client in one file |
 | `collector/src/tablo_collector/store/postgres_store.py` | 450 | Live; implements both `Store` and `RetentionStore` in a single class (`PostgresStore`) |
 
 | | |
 |---|---|
-| **Practical impact** | Maintainability only; nothing in tests or CI trips over these. `generator.py` and `postgres_store.py` each combine several responsibilities (prompt building + content generation + CLI; or price CRUD + retention + settings) in one file. |
-| **Suggested fix** | `sidebar.tsx` should be removed per 4.2. `generator.py` could move `TOPIC_BUILDERS` into a separate module; `postgres_store.py` could move the `RetentionStore` portion into its own file (e.g. `postgres_retention.py`), since its protocols are already defined separately (`Store` vs. `RetentionStore`). |
+| **Practical impact** | Maintainability only; nothing in tests or CI trips over these. `postgres_store.py` combines price CRUD, retention, and settings in one file. |
+| **Suggested fix** | `sidebar.tsx` should be removed per 4.2. `postgres_store.py` could move the `RetentionStore` portion into its own file (e.g. `postgres_retention.py`), since its protocols are already defined separately (`Store` vs. `RetentionStore`). |
 
 ### 6.3 `collector-dev.log`, about 600 KB, at the repo root — Severity: Low
 
@@ -184,6 +183,6 @@ flowchart LR
 
 | | |
 |---|---|
-| **Evidence** | `collector/.venv/pyvenv.cfg` → `command = .../python3.14 -m venv /Users/mahdiyar/w/mazane.online/collector/.venv` — the build path still points to the repo's old name (`mazane.online`) and a different Python version (3.14; the project requires `>=3.12`). The scripts installed in `collector/.venv/bin/` also still carry the old names: `mazane-collector`, `mazane-enqueue`, `mazane-generate`, `mazane-retract` (which in the current `pyproject.toml` are named `tablo-collector`/`tablo-enqueue`/`tablo-generate`/`tablo-retract` respectively). |
+| **Evidence** | `collector/.venv/pyvenv.cfg` → `command = .../python3.14 -m venv /Users/mahdiyar/w/mazane.online/collector/.venv` — the build path still points to the repo's old name (`mazane.online`) and a different Python version (3.14; the project requires `>=3.12`). The scripts installed in `collector/.venv/bin/` also still carry old names such as `mazane-collector`, `mazane-enqueue`, and `mazane-retract` (which in the current `pyproject.toml` are named `tablo-collector`/`tablo-enqueue`/`tablo-retract` respectively). |
 | **Practical impact** | Activating this venv and running its Python directly is misleading because the installed package isn't in sync with the current code; that's exactly why both CI (`.github/workflows/ci.yml`, `collector` job) and `CLAUDE.md` declare the primary path as `pip install -e ".[dev]"` followed by `pytest` (not this venv) — `PYTHONPATH=src pytest` is documented only as a fallback path if the install fails. Nothing breaks in CI because CI never sees this directory at all. |
 | **Suggested fix** | Delete `collector/.venv` and rebuild it with `python3.12 -m venv .venv && pip install -e ".[dev]"`, or explicitly document that developers should always use `PYTHONPATH=src` and ignore the venv. |

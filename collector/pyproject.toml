@@ -24,11 +24,8 @@ dev = [
 
 [project.scripts]
 tablo-collector = "tablo_collector.main:main"
-# بلیت ۱۳ — خط لوله‌ی محتوا: صف کردن دستی پیش‌نویس و پس‌گیری تک‌فرمانی.
 tablo-enqueue = "tablo_collector.content.queue:main"
 tablo-retract = "tablo_collector.content.retract:main"
-# بلیت ۱۴ — مولد محتوای لپ‌تاپ (جمینای): کوئری داده ⟸ دروازه ⟸ صف.
-tablo-generate = "tablo_collector.content.generator:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
