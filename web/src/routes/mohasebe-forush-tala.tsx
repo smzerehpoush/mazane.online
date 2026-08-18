@@ -7,6 +7,7 @@ import {
   useSellBackForm,
 } from "@/components/tablo/SellBackCalculator";
 import { loadSellBackPageData, type SellBackPageData } from "@/lib/sell-back-page-data";
+import { TOOLS_HUB_LINK } from "@/lib/tools";
 import {
   toolPageHead,
   type ToolByline,
@@ -125,7 +126,7 @@ const RELATED: ToolRelatedLinks = {
     { href: "/mohasebe-tala", label: "ماشین‌حساب طلای زینتی" },
     { href: "/mazane-chist", label: "مظنه چیست؟" },
   ],
-  hub: { href: "/abzarha", label: "همه‌ی ابزارهای تابلو" },
+  hub: TOOLS_HUB_LINK,
 };
 
 export function sellBackHead() {

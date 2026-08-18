@@ -17,7 +17,7 @@ import { railCountdownSeconds } from "../src/components/tablo/PriceRail";
 import { currentVatPercent } from "../src/lib/calculator";
 import { formatFaNumber } from "../src/lib/fa-number";
 import { REGISTRY_PLATFORMS } from "../src/lib/registry";
-import { MAIN_LANDMARK_ID } from "../src/lib/site-content";
+import { hero, homeActions, MAIN_LANDMARK_ID, nav, trustItems } from "../src/lib/site-content";
 import { THEME_ATTRIBUTE, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "../src/lib/theme";
 import {
   freshIso,
@@ -108,11 +108,92 @@ describe("home page — mobile header", () => {
     const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
 
     expect(header).toContain('aria-label="ناوبری اصلی"');
-    expect(header).toContain("grid-cols-2");
+    expect(header).toContain("grid-cols-3");
     expect(header).toContain("min-h-11");
     expect(header).toContain("size-11");
     expect(header).not.toContain("overflow-x-auto");
     expect(header).not.toContain("no-scrollbar");
+  });
+
+  /**
+   * ⚠️ The nav grew to five items; a fifth pill squeezed into the same row
+   * would shrink the tap area below 44px, which is the audit finding this
+   * grid exists to fix. The row count may change, the `min-h-11` may not.
+   */
+  it("every nav item keeps its own 44px tap target, however many there are", async () => {
+    const html = await renderHome(healthyStore());
+    const navBlock = html.match(/<nav[^>]*aria-label="ناوبری اصلی"[\s\S]*?<\/nav>/)?.[0] ?? "";
+    const links = [...navBlock.matchAll(/<a\b[^>]*>/g)].map(([tag]) => tag);
+
+    expect(links.length).toBe(nav.length);
+    expect(links.length).toBeGreaterThan(4);
+    for (const link of links) expect(link, link).toContain("min-h-11");
+  });
+});
+
+describe("home page — hero", () => {
+  it("the H1 asks about buying or selling and sends the reader to calculate", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain(hero.title);
+    expect(html).toContain("حساب کنید");
+  });
+
+  /** ⚠️ Identity decision: tablo is a decision assistant, not a price board. */
+  it("the H1 no longer sells looking at prices", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).not.toContain("قبل از خرید طلا، تابلو رو ببین");
+    expect(hero.title).not.toContain("ببین");
+  });
+
+  it("the subtitle says plainly what tablo does not do", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain(hero.subtitle);
+    expect(hero.subtitle).toContain("نه طلا می‌فروشد");
+  });
+});
+
+describe("home page — action cards", () => {
+  it("every card is in the server-rendered HTML with its own destination", async () => {
+    const html = await renderHome(healthyStore());
+    for (const action of homeActions) {
+      expect(html, action.href).toContain(`data-home-action="${action.href}"`);
+      expect(html, action.href).toContain(action.title);
+    }
+  });
+
+  /**
+   * ⚠️ The invoice checker hasn't been built. A fourth card pointing at it
+   * would be the "coming soon" promise this page removed once already, so
+   * the list is derived from the tools that exist — no card is written by
+   * hand, and none can outlive its page.
+   */
+  it("no card is rendered for a tool that hasn't shipped", async () => {
+    const html = await renderHome(healthyStore());
+    const cards = html.match(/data-home-action="[^"]*"/g) ?? [];
+    expect(cards.length).toBe(homeActions.length);
+    expect(html).not.toContain("بررسی فاکتور");
+    expect(html).not.toContain("/faktor-sanj");
+  });
+});
+
+describe("home page — trust section", () => {
+  it("answers the three questions and links out of the footer-only pages", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain("data-home-trust");
+    for (const item of trustItems) {
+      expect(html, item.question).toContain(item.question);
+      expect(html, item.question).toContain(item.answer);
+      expect(html, item.question).toContain(`href="${item.href}"`);
+    }
+    expect(html).toContain('href="/methodology"');
+    expect(html).toContain('href="/about"');
+  });
+
+  /** ⚠️ Nobody reviews these pages yet; the section says so instead of naming one. */
+  it("the reviewer question is answered honestly, with no invented person", async () => {
+    const html = await renderHome(healthyStore());
+    expect(html).toContain("چه کسی بررسی می‌کند؟");
+    expect(html).toContain("فعلاً هیچ بازبین مستقلی");
   });
 });
 

@@ -20,7 +20,17 @@ import type { Row } from "@/lib/rows";
 import { useLiveDashboard } from "@/lib/use-live-dashboard";
 import { hasViewData, type ViewCounts } from "@/lib/views";
 import { SITE_URL } from "@/lib/site";
-import { brand, legalNote, MAIN_LANDMARK_ID, type ChartPlatformConfig } from "@/lib/site-content";
+import {
+  brand,
+  hero,
+  homeActions,
+  homeActionsLabel,
+  legalNote,
+  MAIN_LANDMARK_ID,
+  trustHeading,
+  trustItems,
+  type ChartPlatformConfig,
+} from "@/lib/site-content";
 import { organizationWebSiteJsonLd } from "@/lib/structured-data";
 
 export interface HomePageData {
@@ -87,9 +97,32 @@ export function HomePage({ data }: { data: HomePageData }) {
         tabIndex={-1}
         className="mx-auto w-full max-w-[1340px] px-4 pt-4.5 pb-8 outline-none sm:px-[22px]"
       >
-        <h1 className="mb-4 text-[26px] leading-[1.35] font-black tracking-[-0.4px] text-foreground sm:text-[36px]">
-          قبل از خرید طلا، تابلو رو ببین
+        <h1 className="text-[26px] leading-[1.35] font-black tracking-[-0.4px] text-foreground sm:text-[36px]">
+          {hero.title}
         </h1>
+        <p className="mt-2.5 max-w-[68ch] text-[13.5px] leading-7 text-muted-foreground sm:text-[15px] sm:leading-8">
+          {hero.subtitle}
+        </p>
+
+        <nav
+          data-home-actions
+          aria-label={homeActionsLabel}
+          className="mt-4 mb-4 grid gap-3 sm:grid-cols-3"
+        >
+          {homeActions.map((action) => (
+            <a
+              key={action.href}
+              href={action.href}
+              data-home-action={action.href}
+              className="transition-smooth flex min-h-11 flex-col rounded-[18px] border border-border bg-surface px-4 py-3.5 hover:border-primary/40"
+            >
+              <span className="text-[14px] font-bold text-foreground">{action.title}</span>
+              <span className="mt-1.5 text-[12.5px] leading-6 text-muted-foreground">
+                {action.body}
+              </span>
+            </a>
+          ))}
+        </nav>
 
         <div className="grid items-start gap-4 min-[1081px]:grid-cols-[360px_minmax(0,1fr)]">
           <div className="order-2 flex flex-col gap-4 min-[1081px]:order-1">
@@ -121,6 +154,29 @@ export function HomePage({ data }: { data: HomePageData }) {
             <PopularPosts posts={morePosts} rankedByViews={rankedByViews} />
           </div>
         )}
+
+        <section data-home-trust aria-labelledby="home-trust-heading" className="mt-10">
+          <h2 id="home-trust-heading" className="text-lg font-semibold text-foreground">
+            {trustHeading}
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {trustItems.map((item) => (
+              <div
+                key={item.question}
+                className="flex flex-col rounded-[18px] border border-border bg-surface p-4"
+              >
+                <h3 className="text-[14px] font-bold text-foreground">{item.question}</h3>
+                <p className="mt-2 text-[12.5px] leading-7 text-foreground/78">{item.answer}</p>
+                <a
+                  href={item.href}
+                  className="transition-smooth mt-3 text-[12.5px] text-primary hover:underline"
+                >
+                  {item.linkLabel}
+                </a>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="mt-8">
           <Madde5Bar />

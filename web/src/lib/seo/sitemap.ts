@@ -14,6 +14,7 @@ const STATIC_PATHS: readonly string[] = [
   "/mazane-chist",
   "/about",
   "/methodology",
+  "/abzarha",
   "/mohasebe-tala",
   "/mohasebe-forush-tala",
 ];

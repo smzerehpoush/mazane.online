@@ -1,5 +1,6 @@
 import { formatFaNumber } from "./fa-number";
 import type { HistoryRange } from "./history";
+import { TOOLS, TOOLS_HUB_PATH } from "./tools";
 
 export const brand = {
   name: "تابلو",
@@ -9,6 +10,7 @@ export const brand = {
 } as const;
 
 export const nav = [
+  { label: "ابزارها", href: TOOLS_HUB_PATH },
   { label: "طلای ۱۸ عیار", href: "/tala-18" },
   { label: "قیمت سکه", href: "/sekeh" },
   { label: "بلاگ", href: "/blog" },
@@ -30,6 +32,67 @@ export const footerLinks = [
   { label: "درباره تابلو", href: "/about" },
   { label: "روش محاسبه قیمت‌ها", href: "/methodology" },
 ] as const;
+
+export const hero = {
+  title: "طلا می‌خرید یا می‌فروشید؟ اول حساب کنید",
+  subtitle:
+    "بابت طلای نو چقدر می‌دهید و بابت طلای دست‌دوم چقدر می‌گیرید، جزءبه‌جزء. تابلو نه طلا می‌فروشد و نه سیگنال خرید و فروش می‌دهد.",
+} as const;
+
+export interface HomeAction {
+  href: string;
+  title: string;
+  body: string;
+}
+
+/**
+ * ⚠️ The tool cards are derived from `TOOLS`, never written out here: a card
+ * whose page hasn't shipped yet would be a link to a 404, and the home page
+ * is the one place where nothing checks a hand-written href.
+ */
+export const homeActions: readonly HomeAction[] = [
+  ...TOOLS.map((tool) => ({ href: tool.href, title: tool.action, body: tool.summary })),
+  {
+    href: "/tala-18",
+    title: "مقایسه‌ی سکوها",
+    body: "نرخ هر گرم طلای ۱۸ عیار در سکوهای مختلف کنار هم، همراه با کارمزد و زمان ثبت هر عدد.",
+  },
+];
+
+export const homeActionsLabel = "ابزارهای تابلو";
+
+export interface TrustItem {
+  question: string;
+  answer: string;
+  href: string;
+  linkLabel: string;
+}
+
+export const trustHeading = "منبع داده، مسئولیت محتوا و درآمد تابلو";
+
+export const trustItems: readonly TrustItem[] = [
+  {
+    question: "داده از کجا می‌آید؟",
+    answer:
+      "نرخ مرجع از tala.ir خوانده می‌شود که خودش سکوی خرید و فروش نیست. نرخ هر سکو هم به نام خودش و با زمان ثبت همان عدد نوشته می‌شود.",
+    href: "/methodology",
+    linkLabel: "روش محاسبه و بروزرسانی قیمت‌ها",
+  },
+  {
+    question: "چه کسی بررسی می‌کند؟",
+    answer:
+      "فعلاً هیچ بازبین مستقلی. مسئولیت فرمول‌ها و منبع‌های هر صفحه با تابلو است و تا وقتی کسی این بازبینی را نپذیرد، اسمی هم روی صفحه‌ها نوشته نمی‌شود.",
+    href: "/about",
+    linkLabel: "درباره تابلو",
+  },
+  {
+    question: "تابلو چطور درآمد دارد؟",
+    answer:
+      "از لینک‌های معرفی. اگر از مسیر خروجی تابلو وارد سایت یک سکو شوید و آنجا ثبت‌نام یا خرید کنید، برای بخشی از سکوها کمیسیون پرداخت می‌شود. این کمیسیون در ترتیب نمایش سکوها اثری ندارد.",
+    href: "/about",
+    linkLabel: "توضیح کامل درآمد تابلو",
+  },
+];
 
 export const legalNote =
   "قیمت‌ها متعلق به سکوهای نام‌برده است و هر ۳۰ ثانیه به‌روزرسانی می‌شود. تابلو معامله‌گر یا مشاور سرمایه‌گذاری نیست.";

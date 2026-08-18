@@ -20,13 +20,13 @@ export function SiteHeader() {
         </a>
         <nav
           aria-label="ناوبری اصلی"
-          className="order-3 col-span-2 grid min-w-0 grid-cols-2 gap-2 min-[430px]:grid-cols-4 sm:order-2 sm:col-auto sm:flex sm:w-auto sm:items-center sm:gap-1"
+          className="order-3 col-span-2 grid min-w-0 grid-cols-3 gap-2 min-[500px]:grid-cols-5 sm:order-2 sm:col-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-1"
         >
           {nav.map((item) => (
             <a
               key={item.label}
               href={item.href}
-              className="transition-smooth flex min-h-11 items-center justify-center rounded-full border border-border/60 bg-surface/70 px-3 py-2 text-center text-[12px] whitespace-nowrap text-muted-foreground hover:bg-surface-2 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none sm:min-h-9 sm:border-transparent sm:bg-transparent sm:py-1.5 sm:text-xs"
+              className="transition-smooth flex min-h-11 items-center justify-center rounded-full border border-border/60 bg-surface/70 px-2.5 py-2 text-center text-[12px] whitespace-nowrap text-muted-foreground hover:bg-surface-2 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none sm:min-h-9 sm:border-transparent sm:bg-transparent sm:px-3 sm:py-1.5 sm:text-xs"
             >
               {item.label}
             </a>

@@ -1,5 +1,6 @@
 import type { JewelryBreakdown } from "./calculator";
 import { formatFaNumber, formatFaPercentPoints } from "./fa-number";
+import { TOOLS_HUB_LINK } from "./tools";
 import type {
   ToolByline,
   ToolFaqList,
@@ -123,7 +124,7 @@ export const JEWELRY_TOOL_RELATED: ToolRelatedLinks = {
     { href: "/mohasebe-forush-tala", label: "ماشین‌حساب فروش طلای دست‌دوم" },
     { href: "/mazane-chist", label: "مظنه چیست؟" },
   ],
-  hub: { href: "/abzarha", label: "همه‌ی ابزارهای تابلو" },
+  hub: TOOLS_HUB_LINK,
 };
 
 export function jewelryInterpretation(breakdown: JewelryBreakdown | null): string | null {

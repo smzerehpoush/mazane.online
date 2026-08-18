@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AbzarhaRouteImport } from './routes/abzarha'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
 import { Route as MethodologyRouteImport } from './routes/methodology'
@@ -58,6 +59,11 @@ const SlugRoute = SlugRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AbzarhaRoute = AbzarhaRouteImport.update({
+  id: '/abzarha',
+  path: '/abzarha',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
@@ -229,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
   '/about': typeof AboutRoute
+  '/abzarha': typeof AbzarhaRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
   '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
   '/about': typeof AboutRoute
+  '/abzarha': typeof AbzarhaRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
   '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteRouteWithChildren
   '/$slug': typeof SlugRoute
   '/about': typeof AboutRoute
+  '/abzarha': typeof AbzarhaRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
   '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
@@ -342,6 +351,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/$slug'
     | '/about'
+    | '/abzarha'
     | '/mazane-chist'
     | '/methodology'
     | '/mohasebe-forush-tala'
@@ -378,6 +388,7 @@ export interface FileRouteTypes {
     | '/'
     | '/$slug'
     | '/about'
+    | '/abzarha'
     | '/mazane-chist'
     | '/methodology'
     | '/mohasebe-forush-tala'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/$slug'
     | '/about'
+    | '/abzarha'
     | '/mazane-chist'
     | '/methodology'
     | '/mohasebe-forush-tala'
@@ -453,6 +465,7 @@ export interface RootRouteChildren {
   AdminRouteRoute: typeof AdminRouteRouteWithChildren
   SlugRoute: typeof SlugRoute
   AboutRoute: typeof AboutRoute
+  AbzarhaRoute: typeof AbzarhaRoute
   MazaneChistRoute: typeof MazaneChistRoute
   MethodologyRoute: typeof MethodologyRoute
   MohasebeForushTalaRoute: typeof MohasebeForushTalaRoute
@@ -496,6 +509,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/abzarha': {
+      id: '/abzarha'
+      path: '/abzarha'
+      fullPath: '/abzarha'
+      preLoaderRoute: typeof AbzarhaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -781,6 +801,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRouteRoute: AdminRouteRouteWithChildren,
   SlugRoute: SlugRoute,
   AboutRoute: AboutRoute,
+  AbzarhaRoute: AbzarhaRoute,
   MazaneChistRoute: MazaneChistRoute,
   MethodologyRoute: MethodologyRoute,
   MohasebeForushTalaRoute: MohasebeForushTalaRoute,
