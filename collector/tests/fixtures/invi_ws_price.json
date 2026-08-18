@@ -1,4 +1,33 @@
 {
-  "symbol": "GOLD18",
-  "price": 18529000
+  "message": {
+    "markets": [
+      {
+        "type": "newprice",
+        "title": "طلا",
+        "market": "goldirr",
+        "change": "0",
+        "close": "185290",
+        "open": "185290",
+        "max_price": "185290",
+        "bid_price": "185290",
+        "ask_price": "185290",
+        "min_price": "185290",
+        "total": "0",
+        "volume": "0",
+        "volume_quote": "0",
+        "base_asset": "GOLD",
+        "quote_asset": "IRR",
+        "quantity_filter_step_size": "1"
+      },
+      {
+        "type": "newprice",
+        "title": "نقره",
+        "market": "slvrirr",
+        "change": "0",
+        "close": "2100",
+        "base_asset": "SLVR",
+        "quote_asset": "IRR"
+      }
+    ]
+  }
 }

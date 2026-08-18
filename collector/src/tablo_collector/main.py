@@ -27,7 +27,12 @@ from .adapters.digikala import DigikalaAdapter
 from .adapters.ecogold import EcogoldAdapter
 from .adapters.goldika import GoldikaAdapter
 from .adapters.hamrahgold import HamrahgoldAdapter
-from .adapters.invi import INVI_WS_ENDPOINT, InviAdapter, decode_invi_message
+from .adapters.invi import (
+    INVI_SUBSCRIBE_MESSAGE,
+    INVI_WS_ENDPOINT,
+    InviAdapter,
+    decode_invi_message,
+)
 from .adapters.melligold import MelligoldAdapter
 from .adapters.milli import MilliAdapter
 from .adapters.talasea import TalaseaAdapter
@@ -95,11 +100,17 @@ def _invi_connector() -> Any:
     # guess: same UA, same IP, only the missing Origin differed between a
     # 403 and a 101. A browser sends this automatically; a bare client does
     # not, so it must be set explicitly here.
+    #
+    # ⚠️ The socket also pushes nothing until this exact SUBSCRIBE frame is
+    # sent — reverse-engineered from invi.ir's own bundle (react-use-websocket
+    # fires it on open), confirmed live: no message arrived in 16s without it,
+    # a real "goldirr" market frame arrived within 1s with it.
     @asynccontextmanager
     async def connect() -> AsyncIterator[AsyncIterator[str]]:
         async with websockets.connect(
             INVI_WS_ENDPOINT, user_agent_header=USER_AGENT, origin=INVI_ORIGIN
         ) as connection:
+            await connection.send(INVI_SUBSCRIBE_MESSAGE)
             yield _text_messages(connection)
 
     return connect

@@ -26,6 +26,12 @@ def load_fixture() -> Any:
     return json.loads((FIXTURES / "invi_ws_price.json").read_text(encoding="utf-8"))
 
 
+def decoded_gold_frame() -> Any:
+    decoded = decode_invi_message(json.dumps(load_fixture()))
+    assert decoded is not None
+    return decoded
+
+
 def make_fetcher(payload: Any) -> Any:
     async def fetch_json(url: str) -> Any:
         assert url == INVI_WS_ENDPOINT
@@ -39,7 +45,9 @@ def make_fetcher(payload: Any) -> Any:
 async def test_fixture_frame_is_stored_mid_only_with_unknown_fee() -> None:
     store = InMemoryStore()
 
-    await collect_once(InviAdapter(), make_fetcher(load_fixture()), store, now=FETCHED_AT)
+    await collect_once(
+        InviAdapter(), make_fetcher(decoded_gold_frame()), store, now=FETCHED_AT
+    )
 
     stored = await store.get_snapshot("invi")
     assert stored is not None
@@ -48,8 +56,8 @@ async def test_fixture_frame_is_stored_mid_only_with_unknown_fee() -> None:
     assert [q.side for q in stored.quotes] == [Side.PRICE]
     quote = stored.quotes[0]
     assert quote.instrument == Instrument.GOLD_18K
-    assert quote.raw_value == Decimal("18529000")
-    assert quote.raw_scale == Decimal("1")
+    assert quote.raw_value == Decimal("185290")
+    assert quote.raw_scale == Decimal("100")
     assert quote.price_toman == 18529000
 
     assert stored.terms.fee_source == FeeSource.UNKNOWN
@@ -58,16 +66,27 @@ async def test_fixture_frame_is_stored_mid_only_with_unknown_fee() -> None:
     assert stored.terms.round_trip_percent is None
 
 
+def test_decoder_picks_the_gold_market_out_of_the_full_markets_array() -> None:
+    decoded = decode_invi_message(json.dumps(load_fixture()))
+    assert decoded is not None
+    assert decoded["market"] == "goldirr"
+    assert decoded["close"] == "185290"
+
+
 def test_decoder_ignores_unrelated_frames_instead_of_erroring() -> None:
     assert decode_invi_message("نه-JSON") is None
     assert decode_invi_message(json.dumps({"type": "ping"})) is None
     assert decode_invi_message(json.dumps({"symbol": "SILVER", "price": 1})) is None
-    assert decode_invi_message(json.dumps(load_fixture())) == load_fixture()
+    silver_only: dict[str, Any] = {"message": {"markets": [{"market": "slvrirr", "close": "2100"}]}}
+    assert decode_invi_message(json.dumps(silver_only)) is None
+    empty_markets: dict[str, Any] = {"message": {"markets": []}}
+    assert decode_invi_message(json.dumps(empty_markets)) is None
+    not_a_list: dict[str, Any] = {"message": {"markets": "goldirr"}}
+    assert decode_invi_message(json.dumps(not_a_list)) is None
 
 
 async def test_null_price_raises_and_stores_nothing() -> None:
-    payload = load_fixture()
-    payload["price"] = None
+    payload = {**decoded_gold_frame(), "close": None}
     store = InMemoryStore()
 
     with pytest.raises(AdapterError):

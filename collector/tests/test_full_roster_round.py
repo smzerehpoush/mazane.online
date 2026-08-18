@@ -9,7 +9,11 @@ from tablo_collector.adapters.digikala import DIGIKALA_ENDPOINT, DigikalaAdapter
 from tablo_collector.adapters.ecogold import ECOGOLD_ENDPOINT, EcogoldAdapter
 from tablo_collector.adapters.goldika import GOLDIKA_ENDPOINT, GoldikaAdapter
 from tablo_collector.adapters.hamrahgold import HAMRAHGOLD_ENDPOINT, HamrahgoldAdapter
-from tablo_collector.adapters.invi import INVI_WS_ENDPOINT, InviAdapter
+from tablo_collector.adapters.invi import (
+    INVI_WS_ENDPOINT,
+    InviAdapter,
+    decode_invi_message,
+)
 from tablo_collector.adapters.melligold import MELLIGOLD_ENDPOINT, MelligoldAdapter
 from tablo_collector.adapters.milli import MILLI_ENDPOINT, MilliAdapter
 from tablo_collector.adapters.talasea import TALASEA_ENDPOINT, TalaseaAdapter
@@ -79,7 +83,17 @@ LISTED_SLUGS = KNOWN_FEE_LISTED + UNKNOWN_FEE_LISTED
 def make_fetcher() -> Any:
     async def fetch_json(url: str) -> Any:
         name = FIXTURE_BY_ENDPOINT[url]
-        return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+        raw = (FIXTURES / name).read_text(encoding="utf-8")
+        # ⚠️ invi is WS-based: production caches decode_invi_message's output,
+        # never the raw envelope. Every other adapter here is REST, where
+        # fetch_json's return value already IS the parse() payload — decoding
+        # invi's fixture here keeps this harness honest about that difference
+        # instead of feeding parse() a shape it never actually sees live.
+        if url == INVI_WS_ENDPOINT:
+            decoded = decode_invi_message(raw)
+            assert decoded is not None
+            return decoded
+        return json.loads(raw)
 
     return fetch_json
 

@@ -10,7 +10,8 @@ from ..pipeline import AdapterError
 from .common import unknown_fee_snapshot
 
 INVI_WS_ENDPOINT = "wss://invi.ir/ws"
-GOLD_SYMBOL = "GOLD18"
+INVI_SUBSCRIBE_MESSAGE = json.dumps({"channel": "markets", "model": "all", "request": "SUBSCRIBE"})
+GOLD_MARKET = "goldirr"
 
 
 def decode_invi_message(raw: str) -> Any | None:
@@ -18,8 +19,14 @@ def decode_invi_message(raw: str) -> Any | None:
         message = json.loads(raw)
     except ValueError:
         return None
-    if isinstance(message, dict) and message.get("symbol") == GOLD_SYMBOL:
-        return message
+    if not isinstance(message, dict):
+        return None
+    markets = message.get("message", {}).get("markets")
+    if not isinstance(markets, list):
+        return None
+    for entry in markets:
+        if isinstance(entry, dict) and entry.get("market") == GOLD_MARKET:
+            return entry
     return None
 
 
@@ -27,18 +34,21 @@ class InviAdapter:
     slug = "invi"
     instruments: tuple[Instrument, ...] = (Instrument.GOLD_18K,)
     endpoint = INVI_WS_ENDPOINT
-    scale = Decimal("1")
+    # ⚠️ invi's "close" is in the same hundred-toman raw unit milli.py uses —
+    # confirmed against a live frame against the tala.ir reference at the
+    # same moment, not assumed from the field name.
+    scale = Decimal("100")
 
     def parse(self, payload: Any, fetched_at: datetime) -> PlatformSnapshot:
-        if not isinstance(payload, dict) or payload.get("symbol") != GOLD_SYMBOL:
-            raise AdapterError("Invi: payload is not a GOLD18 price frame")
-        price = payload.get("price")
+        if not isinstance(payload, dict) or payload.get("market") != GOLD_MARKET:
+            raise AdapterError("Invi: payload is not a goldirr market frame")
+        price = payload.get("close")
         if price is None:
-            raise AdapterError("Invi: price is empty in frame")
+            raise AdapterError("Invi: close is empty in frame")
         try:
             raw_mid = Decimal(str(price))
         except InvalidOperation as exc:
-            raise AdapterError(f"Invi: price is invalid: {price!r}") from exc
+            raise AdapterError(f"Invi: close is invalid: {price!r}") from exc
 
         return unknown_fee_snapshot(
             slug=self.slug,
