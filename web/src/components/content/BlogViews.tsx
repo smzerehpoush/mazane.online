@@ -1,6 +1,8 @@
 import { Breadcrumbs } from "@/components/content/PageShell";
+import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
 import { ViewBeacon } from "@/components/content/ViewBeacon";
 import type { PublishedPost } from "@/lib/blog";
+import { relatedLinksForPost } from "@/lib/clusters";
 import { formatDateFa } from "@/lib/format";
 import { postImageAsset } from "@/lib/images";
 import { excerptFa, renderMarkdown } from "@/lib/markdown";
@@ -206,6 +208,8 @@ export function BlogPostView({ post }: { post: PublishedPost }) {
           />
         ) : null}
         <div className={`mt-6 ${PROSE}`}>{renderMarkdown(post.body_md)}</div>
+
+        <RelatedLinksBlock links={relatedLinksForPost(post)} className="mt-9" />
       </article>
 
       <p className="mt-6 text-[12px]">

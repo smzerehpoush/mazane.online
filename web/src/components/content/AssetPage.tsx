@@ -1,6 +1,8 @@
 import { GoldPriceBody, GoldPriceCard } from "@/components/content/GoldPriceToday";
 import { Madde5Bar } from "@/components/content/LegalNotice";
+import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
 import { ClosedBadges, MarketModelBadge, Staleness } from "@/components/content/RowParts";
+import { relatedLinksForPath } from "@/lib/clusters";
 import { formatPercentPointsFa, formatToman } from "@/lib/format";
 import { GOLD_PRICE_QUESTION, type GoldPriceView } from "@/lib/gold-price";
 import type { InstrumentListing } from "@/lib/prices";
@@ -187,6 +189,11 @@ export function AssetPage({
       </section>
 
       {goldPrice === null ? null : <GoldPriceBody />}
+
+      <RelatedLinksBlock
+        links={relatedLinksForPath(`/${listing.slug}`)}
+        className="glass-surface mt-6 px-5 py-5 sm:px-6"
+      />
 
       <p className="mt-6 text-[12px]">
         <a href="/" className="transition-smooth text-primary hover:underline">

@@ -1,12 +1,11 @@
 import type { JewelryBreakdown } from "./calculator";
+import { relatedLinksForPath, type RelatedLinks } from "./clusters";
 import { formatFaNumber, formatFaPercentPoints } from "./fa-number";
-import { TOOLS_HUB_LINK } from "./tools";
 import type {
   ToolByline,
   ToolFaqList,
   ToolFormula,
   ToolPageIdentity,
-  ToolRelatedLinks,
   ToolSourceList,
 } from "./tool-page";
 
@@ -119,13 +118,7 @@ export const JEWELRY_TOOL_BYLINE: ToolByline = {
   updatedAt: "2026-08-18",
 };
 
-export const JEWELRY_TOOL_RELATED: ToolRelatedLinks = {
-  tools: [
-    { href: "/mohasebe-forush-tala", label: "ماشین‌حساب فروش طلای دست‌دوم" },
-    { href: "/mazane-chist", label: "مظنه چیست؟" },
-  ],
-  hub: TOOLS_HUB_LINK,
-};
+export const JEWELRY_TOOL_RELATED: RelatedLinks = relatedLinksForPath(JEWELRY_TOOL_PATH);
 
 export function jewelryInterpretation(breakdown: JewelryBreakdown | null): string | null {
   if (breakdown === null || breakdown.extraCostPercent === null) return null;

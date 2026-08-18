@@ -36,11 +36,6 @@ export interface ToolByline {
   updatedAt: string;
 }
 
-export interface ToolRelatedLinks {
-  tools: readonly [InternalLink, InternalLink];
-  hub: InternalLink;
-}
-
 export interface ToolPageIdentity {
   path: string;
   title: string;
@@ -61,11 +56,6 @@ export type ToolFaqList =
   | readonly [FaqItem, FaqItem, FaqItem, FaqItem, FaqItem, FaqItem, FaqItem, FaqItem];
 
 export type ToolSourceList = readonly [ToolSourceNote, ...ToolSourceNote[]];
-
-export const GOLD_18K_LINK: InternalLink = {
-  href: "/tala-18",
-  label: "قیمت طلای ۱۸ عیار",
-};
 
 export const TOOL_FAQ_MIN = 5;
 export const TOOL_FAQ_MAX = 8;

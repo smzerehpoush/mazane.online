@@ -1,11 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Breadcrumbs, PageShell } from "@/components/content/PageShell";
+import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
+import { relatedLinksForPath } from "@/lib/clusters";
 import type { CoinPriceKey } from "@/lib/coin-prices";
 import { formatDateTimeFa } from "@/lib/format";
 import { loadSekehData, type SekehPageData } from "@/lib/sekeh-data";
 import { SITE_URL } from "@/lib/site";
 import { breadcrumbJsonLd } from "@/lib/structured-data";
+
+export const SEKEH_PATH = "/sekeh";
 
 const TITLE = "قیمت سکه امامی، نیم سکه و ربع سکه — تابلو";
 const DESCRIPTION =
@@ -162,6 +166,11 @@ export function SekehPage({ data }: { data: SekehPageData }) {
           </ul>
         </div>
       </section>
+
+      <RelatedLinksBlock
+        links={relatedLinksForPath(SEKEH_PATH)}
+        className="card-surface mt-5 px-5 py-5 sm:px-6"
+      />
     </PageShell>
   );
 }

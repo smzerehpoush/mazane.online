@@ -1,16 +1,15 @@
 import type { ReactNode } from "react";
 
 import { Breadcrumbs, PageShell } from "@/components/content/PageShell";
+import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
+import type { RelatedLinks } from "@/lib/clusters";
 import { formatDateFa } from "@/lib/format";
 import type { FaqItem } from "@/lib/structured-data";
 import {
-  GOLD_18K_LINK,
-  type InternalLink,
   type ToolByline,
   type ToolFaqList,
   type ToolFormula,
   type ToolPageIdentity,
-  type ToolRelatedLinks,
   type ToolSourceList,
 } from "@/lib/tool-page";
 
@@ -25,7 +24,6 @@ const HEADINGS = {
   example: "مثال",
   faq: "پرسش‌های پرتکرار",
   sources: "منبع‌ها",
-  related: "صفحه‌های مرتبط",
 } as const;
 
 const BYLINE_LABELS = {
@@ -45,7 +43,7 @@ export interface ToolPageProps {
   faq: ToolFaqList;
   sources: ToolSourceList;
   byline: ToolByline;
-  related: ToolRelatedLinks;
+  related: RelatedLinks;
 }
 
 function BridgeBox() {
@@ -184,32 +182,6 @@ function BylineBlock({ byline }: { byline: ToolByline }) {
   );
 }
 
-function RelatedBlock({ related }: { related: ToolRelatedLinks }) {
-  const links: readonly InternalLink[] = [
-    related.tools[0],
-    related.tools[1],
-    related.hub,
-    GOLD_18K_LINK,
-  ];
-  return (
-    <nav data-tool-part="related" aria-label={HEADINGS.related} className="mt-8">
-      <h2 className="text-lg font-semibold text-foreground">{HEADINGS.related}</h2>
-      <ul className="mt-3 flex flex-wrap gap-2 text-[13px]">
-        {links.map((link) => (
-          <li key={link.href}>
-            <a
-              href={link.href}
-              className="transition-smooth inline-flex rounded-full border border-border bg-surface px-3.5 py-1.5 text-foreground/80 hover:border-primary/40 hover:text-primary"
-            >
-              {link.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
-
 export function ToolPage(props: ToolPageProps) {
   const faq: readonly FaqItem[] = props.faq;
 
@@ -249,7 +221,7 @@ export function ToolPage(props: ToolPageProps) {
         <FaqBlock faq={faq} />
         <SourcesBlock sources={props.sources} />
         <BylineBlock byline={props.byline} />
-        <RelatedBlock related={props.related} />
+        <RelatedLinksBlock links={props.related} toolPart="related" />
       </article>
     </PageShell>
   );

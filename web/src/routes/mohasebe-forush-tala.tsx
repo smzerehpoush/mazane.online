@@ -6,15 +6,14 @@ import {
   SellBackResult,
   useSellBackForm,
 } from "@/components/tablo/SellBackCalculator";
+import { relatedLinksForPath, type RelatedLinks } from "@/lib/clusters";
 import { loadSellBackPageData, type SellBackPageData } from "@/lib/sell-back-page-data";
-import { TOOLS_HUB_LINK } from "@/lib/tools";
 import {
   toolPageHead,
   type ToolByline,
   type ToolFaqList,
   type ToolFormula,
   type ToolPageIdentity,
-  type ToolRelatedLinks,
   type ToolSourceList,
 } from "@/lib/tool-page";
 
@@ -121,13 +120,7 @@ const BYLINE: ToolByline = {
   updatedAt: "2026-08-18",
 };
 
-const RELATED: ToolRelatedLinks = {
-  tools: [
-    { href: "/mohasebe-tala", label: "ماشین‌حساب طلای زینتی" },
-    { href: "/mazane-chist", label: "مظنه چیست؟" },
-  ],
-  hub: TOOLS_HUB_LINK,
-};
+const RELATED: RelatedLinks = relatedLinksForPath(SELL_BACK_PATH);
 
 export function sellBackHead() {
   return toolPageHead({ identity: IDENTITY, faq: FAQ, byline: BYLINE });

@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Breadcrumbs, PageShell } from "@/components/content/PageShell";
+import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
+import { relatedLinksForPath } from "@/lib/clusters";
 import { SITE_URL } from "@/lib/site";
 import { breadcrumbJsonLd } from "@/lib/structured-data";
+
+export const MAZANE_CHIST_PATH = "/mazane-chist";
 
 const TITLE = "مظنه چیست؟ مظنه یا مضنه؟ — تابلو";
 const DESCRIPTION =
@@ -83,11 +87,7 @@ export function MazaneChist() {
           می‌آوریم، تا ببینید هر کدام روی همان قیمت چه چیزی برمی‌دارد.
         </p>
 
-        <p className="mt-8 text-[12px]">
-          <a href="/" className="transition-smooth text-primary hover:underline">
-            قیمت لحظه‌ای طلا در سکوهای آنلاین
-          </a>
-        </p>
+        <RelatedLinksBlock links={relatedLinksForPath(MAZANE_CHIST_PATH)} className="mt-9" />
       </article>
     </PageShell>
   );

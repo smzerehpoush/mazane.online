@@ -3,12 +3,14 @@ import type { ReactNode } from "react";
 import { Madde5Bar } from "@/components/content/LegalNotice";
 import { PlatformCalculator } from "@/components/content/PlatformCalculator";
 import { PlatformRateCard } from "@/components/content/PlatformRateCard";
+import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
 import {
   ClosedBadges,
   FeeSourceLabel,
   MarketModelBadge,
   Staleness,
 } from "@/components/content/RowParts";
+import { relatedLinksForPath } from "@/lib/clusters";
 import { formatDateTimeFa, formatDateFa, formatPercentPointsFa, formatToman } from "@/lib/format";
 import type { PlatformHistoryByRange } from "@/lib/history";
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
@@ -206,6 +208,11 @@ export function PlatformPage({
           </Field>
         </dl>
       </section>
+
+      <RelatedLinksBlock
+        links={relatedLinksForPath(`/${platform.slug}`)}
+        className="glass-surface mt-6 px-5 py-5 sm:px-6"
+      />
 
       <p className="mt-6 text-[12px]">
         <a href="/" className="transition-smooth text-primary hover:underline">

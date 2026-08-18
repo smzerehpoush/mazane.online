@@ -117,10 +117,14 @@ const PROPS: ToolPageProps = {
   sources: SOURCES,
   byline: BYLINE,
   related: {
+    cluster: "jewelry",
+    heading: "همین فاکتور را از زاویه‌های دیگر ببینید",
+    lead: "اجرت و مالیات فقط بخشی از عددی است که پرداخته‌اید.",
     tools: [
       { href: "/mohasebe-forush-tala", label: "ماشین‌حساب فروش طلای دست‌دوم" },
       { href: "/faktor-sanj", label: "فاکتورسنج طلا" },
     ],
+    anchor: { href: "/tala-18", label: "قیمت طلای ۱۸ عیار" },
     hub: { href: "/abzarha", label: "همه‌ی ابزارهای تابلو" },
   },
 };
