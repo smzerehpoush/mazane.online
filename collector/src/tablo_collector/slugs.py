@@ -10,7 +10,13 @@ RESERVED_WORDS = frozenset(
     {"blog", "go", "api", "sitemap.xml", "robots.txt", "_next", "about"}
 )
 
-STATIC_PAGE_SLUGS: tuple[str, ...] = ("sekeh", "methodology")
+STATIC_PAGE_SLUGS: tuple[str, ...] = (
+    "mazane-chist",
+    "sekeh",
+    "methodology",
+    "mohasebe-tala",
+    "mohasebe-forush-tala",
+)
 
 _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 

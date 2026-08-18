@@ -14,6 +14,8 @@ const STATIC_PATHS: readonly string[] = [
   "/mazane-chist",
   "/about",
   "/methodology",
+  "/mohasebe-tala",
+  "/mohasebe-forush-tala",
 ];
 
 export interface SitemapInput {

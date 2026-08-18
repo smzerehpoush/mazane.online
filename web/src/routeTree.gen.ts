@@ -15,6 +15,8 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
 import { Route as MethodologyRouteImport } from './routes/methodology'
+import { Route as MohasebeForushTalaRouteImport } from './routes/mohasebe-forush-tala'
+import { Route as MohasebeTalaRouteImport } from './routes/mohasebe-tala'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SekehRouteImport } from './routes/sekeh'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -71,6 +73,16 @@ const MazaneChistRoute = MazaneChistRouteImport.update({
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
   path: '/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MohasebeForushTalaRoute = MohasebeForushTalaRouteImport.update({
+  id: '/mohasebe-forush-tala',
+  path: '/mohasebe-forush-tala',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MohasebeTalaRoute = MohasebeTalaRouteImport.update({
+  id: '/mohasebe-tala',
+  path: '/mohasebe-tala',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -219,6 +231,8 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
+  '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
+  '/mohasebe-tala': typeof MohasebeTalaRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -253,6 +267,8 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
+  '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
+  '/mohasebe-tala': typeof MohasebeTalaRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -289,6 +305,8 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
+  '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
+  '/mohasebe-tala': typeof MohasebeTalaRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -326,6 +344,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/mazane-chist'
     | '/methodology'
+    | '/mohasebe-forush-tala'
+    | '/mohasebe-tala'
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
@@ -360,6 +380,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/mazane-chist'
     | '/methodology'
+    | '/mohasebe-forush-tala'
+    | '/mohasebe-tala'
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
@@ -395,6 +417,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/mazane-chist'
     | '/methodology'
+    | '/mohasebe-forush-tala'
+    | '/mohasebe-tala'
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
@@ -431,6 +455,8 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   MazaneChistRoute: typeof MazaneChistRoute
   MethodologyRoute: typeof MethodologyRoute
+  MohasebeForushTalaRoute: typeof MohasebeForushTalaRoute
+  MohasebeTalaRoute: typeof MohasebeTalaRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SekehRoute: typeof SekehRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -491,6 +517,20 @@ declare module '@tanstack/react-router' {
       path: '/methodology'
       fullPath: '/methodology'
       preLoaderRoute: typeof MethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mohasebe-forush-tala': {
+      id: '/mohasebe-forush-tala'
+      path: '/mohasebe-forush-tala'
+      fullPath: '/mohasebe-forush-tala'
+      preLoaderRoute: typeof MohasebeForushTalaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mohasebe-tala': {
+      id: '/mohasebe-tala'
+      path: '/mohasebe-tala'
+      fullPath: '/mohasebe-tala'
+      preLoaderRoute: typeof MohasebeTalaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -743,6 +783,8 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   MazaneChistRoute: MazaneChistRoute,
   MethodologyRoute: MethodologyRoute,
+  MohasebeForushTalaRoute: MohasebeForushTalaRoute,
+  MohasebeTalaRoute: MohasebeTalaRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SekehRoute: SekehRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

@@ -27,12 +27,15 @@ export type CalcEvent = (typeof CALC_EVENTS)[number];
 
 export const CALC_TOOL_JEWELRY = "jewelry";
 
-export const CALC_TOOLS = [CALC_TOOL_JEWELRY] as const;
+export const CALC_TOOL_SELLBACK = "sellback";
+
+export const CALC_TOOLS = [CALC_TOOL_JEWELRY, CALC_TOOL_SELLBACK] as const;
 
 export type CalcTool = (typeof CALC_TOOLS)[number];
 
 export const CALC_TOOL_NAMES_FA: Readonly<Record<string, string>> = {
   [CALC_TOOL_JEWELRY]: "ماشین‌حساب طلای زینتی",
+  [CALC_TOOL_SELLBACK]: "ماشین‌حساب فروش طلای دست‌دوم",
 };
 
 /**
@@ -41,9 +44,16 @@ export const CALC_TOOL_NAMES_FA: Readonly<Record<string, string>> = {
  * answer into the price of a *piece of jewelry* rather than the price of a
  * gram of gold; `profit` and `vat` stay optional because VAT is pre-filled
  * from statute and many invoices fold the profit into the wage.
+ *
+ * ⚠️ For the sell-back tool the pair is `weight` and `deduction`: with the
+ * deduction left empty the page shows the ceiling — the raw gold value — which
+ * is not the answer the visitor came for. `purity` is excluded because it
+ * arrives pre-filled at 18k and a visitor who never touches it has still
+ * answered the question.
  */
 export const CALC_REQUIRED_INPUTS: Readonly<Record<CalcTool, readonly string[]>> = {
   [CALC_TOOL_JEWELRY]: ["weight", "wage"],
+  [CALC_TOOL_SELLBACK]: ["weight", "deduction"],
 };
 
 /**

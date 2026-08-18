@@ -8,14 +8,15 @@ import {
   type JewelryBreakdown,
 } from "@/lib/calculator";
 import { formatFaNumber, formatFaPercentPoints } from "@/lib/fa-number";
+import { JEWELRY_TOOL_PATH } from "@/lib/jewelry-tool";
 import { useCalcEvents } from "@/lib/use-calc-events";
 
-interface Field {
+export interface JewelryField {
   key: string;
   label: string;
 }
 
-const FIELDS: readonly Field[] = [
+export const JEWELRY_FIELDS: readonly JewelryField[] = [
   { key: "weight", label: "وزن (گرم)" },
   { key: "wage", label: "اجرت ساخت (٪)" },
   { key: "profit", label: "سود (٪)" },
@@ -33,11 +34,13 @@ const BREAKDOWN_LINES: readonly { key: MoneyLine; label: string }[] = [
 
 const EXTRA_COST_LABEL = "هزینه‌ی اضافه نسبت به طلای خام";
 
-const VAT_NOTE =
+export const JEWELRY_VAT_NOTE =
   "مالیات بر ارزش افزوده فقط روی اجرت و سود حساب می‌شود و اصل طلا معاف است: بند (ب) ماده (۲۶) قانون مالیات بر ارزش افزوده مصوب ۱۴۰۰. نرخ آن از سال ۱۴۰۴ ده درصد است؛ بند «خ» تبصره (۱) قانون بودجه.";
 
-const PROFIT_NOTE =
+export const JEWELRY_PROFIT_NOTE =
   "برای سود فروشنده نرخ‌نامه‌ای اعلام نشده است؛ این عدد عرف بازار است و از فروشنده‌ای تا فروشنده‌ی دیگر فرق می‌کند. عدد فاکتور خودتان را وارد کنید.";
+
+const FULL_PAGE_LINK_LABEL = "صفحه‌ی کامل: فرمول، مثال و پرسش‌های پرتکرار";
 
 function initialValues(): Record<string, string> {
   return {
@@ -45,6 +48,39 @@ function initialValues(): Record<string, string> {
     wage: "",
     profit: "",
     vat: formatFaNumber(currentVatPercent()),
+  };
+}
+
+export interface JewelryCalculatorState {
+  values: Record<string, string>;
+  setValue: (key: string, value: string) => void;
+  breakdown: JewelryBreakdown | null;
+}
+
+export function useJewelryCalculator(pricePerGram: number | null): JewelryCalculatorState {
+  const [initial] = useState<Record<string, string>>(initialValues);
+  const [values, setValues] = useState<Record<string, string>>(initial);
+
+  const weight = parseCalculatorInput(values["weight"] ?? "");
+  const percent = (key: string): number => parseCalculatorInput(values[key] ?? "") ?? 0;
+
+  const breakdown =
+    weight === null || pricePerGram === null
+      ? null
+      : jewelryBreakdown({
+          weightGrams: weight,
+          pricePerGram,
+          wagePercent: percent("wage"),
+          profitPercent: percent("profit"),
+          vatPercent: percent("vat"),
+        });
+
+  useCalcEvents({ tool: CALC_TOOL_JEWELRY, initial, values, hasResult: breakdown !== null });
+
+  return {
+    values,
+    setValue: (key, value) => setValues((previous) => ({ ...previous, [key]: value })),
+    breakdown,
   };
 }
 
@@ -97,31 +133,14 @@ export function JewelryCalculator({
   pricePerGram: number | null;
   referenceName: string | null;
 }) {
-  const [initial] = useState<Record<string, string>>(initialValues);
-  const [values, setValues] = useState<Record<string, string>>(initial);
-
-  const weight = parseCalculatorInput(values["weight"] ?? "");
-  const percent = (key: string): number => parseCalculatorInput(values[key] ?? "") ?? 0;
-
-  const breakdown =
-    weight === null || pricePerGram === null
-      ? null
-      : jewelryBreakdown({
-          weightGrams: weight,
-          pricePerGram,
-          wagePercent: percent("wage"),
-          profitPercent: percent("profit"),
-          vatPercent: percent("vat"),
-        });
-
-  useCalcEvents({ tool: CALC_TOOL_JEWELRY, initial, values, hasResult: breakdown !== null });
+  const { values, setValue, breakdown } = useJewelryCalculator(pricePerGram);
 
   return (
     <section data-card="calculator" className="card-surface px-5 py-4 sm:px-6">
       <h2 className="text-[15.5px] font-semibold">ماشین حساب طلای زینتی</h2>
 
       <div className="mt-3.5 space-y-2.5">
-        {FIELDS.map((field) => (
+        {JEWELRY_FIELDS.map((field) => (
           <label
             key={field.key}
             className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-[13px] focus-within:border-primary"
@@ -130,9 +149,7 @@ export function JewelryCalculator({
             <input
               inputMode="decimal"
               value={values[field.key] ?? ""}
-              onChange={(event) =>
-                setValues((previous) => ({ ...previous, [field.key]: event.target.value }))
-              }
+              onChange={(event) => setValue(field.key, event.target.value)}
               className="num w-20 bg-transparent text-left outline-none"
               dir="ltr"
             />
@@ -150,11 +167,21 @@ export function JewelryCalculator({
       )}
 
       <p data-calculator-source className="mt-2 text-[11px] leading-5 text-tx3">
-        {VAT_NOTE}
+        {JEWELRY_VAT_NOTE}
       </p>
 
       <p data-calculator-profit-note className="mt-2 text-[11px] leading-5 text-tx3">
-        {PROFIT_NOTE}
+        {JEWELRY_PROFIT_NOTE}
+      </p>
+
+      <p className="mt-2.5 text-[11.5px] leading-5">
+        <a
+          data-calculator-full-page
+          href={JEWELRY_TOOL_PATH}
+          className="transition-smooth text-primary hover:underline"
+        >
+          {FULL_PAGE_LINK_LABEL}
+        </a>
       </p>
     </section>
   );

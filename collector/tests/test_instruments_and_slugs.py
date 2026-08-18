@@ -118,9 +118,22 @@ def test_real_registry_has_all_public_slugs_and_no_collisions() -> None:
 
 
 def test_static_page_slugs_are_registered() -> None:
-    assert STATIC_PAGE_SLUGS == ("sekeh", "methodology")
-    assert PUBLIC_SLUGS.kind_of("sekeh") is SlugKind.STATIC_PAGE
-    assert PUBLIC_SLUGS.kind_of("methodology") is SlugKind.STATIC_PAGE
+    assert STATIC_PAGE_SLUGS == (
+        "mazane-chist",
+        "sekeh",
+        "methodology",
+        "mohasebe-tala",
+        "mohasebe-forush-tala",
+    )
+    for slug in STATIC_PAGE_SLUGS:
+        assert PUBLIC_SLUGS.kind_of(slug) is SlugKind.STATIC_PAGE
+
+
+def test_a_tool_page_slug_cannot_be_taken_by_a_future_platform() -> None:
+    registry = build_registry()
+    for slug in STATIC_PAGE_SLUGS:
+        with pytest.raises(SlugCollisionError):
+            registry.register(slug, SlugKind.PLATFORM)
 
 
 def test_duplicate_slug_is_rejected() -> None:

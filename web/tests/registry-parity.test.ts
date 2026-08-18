@@ -105,12 +105,8 @@ describe("the web's static registry matches the collector's code registry", () =
     expect(REGISTRY_INSTRUMENTS).toEqual(registry.instruments.map(asInstrumentListing));
   });
 
-  it("reserved words and static pages haven't fallen behind the collector", () => {
-    for (const word of registry.reserved_words) {
-      expect(RESERVED_WORDS.has(word)).toBe(true);
-    }
-    for (const slug of registry.static_page_slugs) {
-      expect(STATIC_PAGE_SLUGS.has(slug)).toBe(true);
-    }
+  it("reserved words and static pages match the collector in both directions", () => {
+    expect([...RESERVED_WORDS].sort()).toEqual([...registry.reserved_words].sort());
+    expect([...STATIC_PAGE_SLUGS].sort()).toEqual([...registry.static_page_slugs].sort());
   });
 });

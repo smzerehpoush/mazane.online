@@ -86,6 +86,8 @@ describe("sitemap.xml", () => {
       "/mazane-chist",
       "/about",
       "/methodology",
+      "/mohasebe-tala",
+      "/mohasebe-forush-tala",
       "/tala-18",
       "/milli",
       "/wallgold",
