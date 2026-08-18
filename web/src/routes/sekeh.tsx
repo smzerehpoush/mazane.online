@@ -5,6 +5,7 @@ import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
 import { relatedLinksForPath } from "@/lib/clusters";
 import type { CoinPriceKey } from "@/lib/coin-prices";
 import { formatDateTimeFa } from "@/lib/format";
+import { OG_SEKEH_KEY, ogImageAlt, ogImageMeta } from "@/lib/og";
 import { loadSekehData, type SekehPageData } from "@/lib/sekeh-data";
 import { SITE_URL } from "@/lib/site";
 import { breadcrumbJsonLd } from "@/lib/structured-data";
@@ -38,6 +39,7 @@ export function sekehHead() {
       { property: "og:title", content: TITLE },
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "article" },
+      ...ogImageMeta({ key: OG_SEKEH_KEY, alt: ogImageAlt("قیمت سکه امامی") }),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/sekeh` }],
     scripts: [

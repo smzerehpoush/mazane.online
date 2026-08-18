@@ -13,6 +13,7 @@ PLATFORM_FIELDS = (
     "name_en",
     "website_url",
     "legal_entity",
+    "founded_year_jalali",
     "delivery_note_fa",
 )
 PLATFORM_DEFAULTS: dict[str, object] = {"market_model": "OTC"}
@@ -60,6 +61,20 @@ def entries(call: ast.Call, fields: tuple[str, ...], defaults: dict[str, object]
     return {field: given.get(field, defaults.get(field)) for field in fields}
 
 
+def model_fields(module: ast.Module, class_name: str) -> list[str]:
+    for node in ast.walk(module):
+        if not isinstance(node, ast.ClassDef) or node.name != class_name:
+            continue
+        return [
+            statement.target.id
+            for statement in node.body
+            if isinstance(statement, ast.AnnAssign)
+            and isinstance(statement.target, ast.Name)
+            and statement.target.id != "model_config"
+        ]
+    raise SystemExit(f"{class_name} was not found in models.py")
+
+
 def adapter_instruments(adapters_dir: pathlib.Path) -> dict[str, list[str]]:
     emitted: dict[str, list[str]] = {}
     for path in sorted(adapters_dir.glob("*.py")):
@@ -96,6 +111,7 @@ def main() -> None:
     platforms_module = module_of(root / "platforms.py")
     instruments_module = module_of(root / "instruments.py")
     slugs_module = module_of(root / "slugs.py")
+    models_module = module_of(root / "models.py")
 
     reserved = assigned_value(slugs_module, "RESERVED_WORDS")
     static_pages = assigned_value(slugs_module, "STATIC_PAGE_SLUGS")
@@ -109,6 +125,8 @@ def main() -> None:
             entries(call, INSTRUMENT_FIELDS, {})
             for call in calls_in(assigned_value(instruments_module, "INSTRUMENTS"))
         ],
+        "platform_model_fields": model_fields(models_module, "Platform"),
+        "platform_profile_fields": model_fields(models_module, "PlatformProfile"),
         "adapters": adapter_instruments(root / "adapters"),
         "publish_gate_min_platforms": literal(
             assigned_value(instruments_module, "PUBLISH_GATE_MIN_PLATFORMS")

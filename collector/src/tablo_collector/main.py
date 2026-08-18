@@ -44,8 +44,10 @@ from .references.transport import HttpxReferenceTransport, RobotsCheckedTranspor
 from .retention import retention_pass
 from .robots import RobotsGate, robots_checked_fetch
 from .settings import (
+    PlatformProfileRow,
     PostgresSettingsGateway,
     chart_config_from_settings,
+    platforms_with_profiles,
     platforms_with_referral_overrides,
 )
 from .store import MultiStore
@@ -239,16 +241,30 @@ async def run() -> None:
 
         async def settings_sync_loop() -> None:
             listed_platforms = tuple(p for p in PLATFORMS if p.is_listed)
+            # ⚠️ Kept across rounds on purpose: a Postgres blip (or a machine
+            # where migration 021 has not run yet) must not blank the profile
+            # out of `tablo:listed` and make every platform page forget what
+            # we already know.
+            profile_rows: tuple[PlatformProfileRow, ...] = ()
             while True:
                 started = time.monotonic()
                 try:
                     settings_rows = await settings_gateway.list_platform_settings()
                     config = chart_config_from_settings(settings_rows, listed_platforms)
                     await store.save_chart_config(config)
-                    platform_registry.current = platforms_with_referral_overrides(
-                        settings_rows, PLATFORMS
+                    try:
+                        profile_rows = await settings_gateway.list_platform_profiles()
+                    except Exception:
+                        log.exception("Platform profiles unreadable — reusing the last sync")
+                    platform_registry.current = platforms_with_profiles(
+                        profile_rows,
+                        platforms_with_referral_overrides(settings_rows, PLATFORMS),
                     )
-                    log.info("Platform settings round: %s series in chart", len(config))
+                    log.info(
+                        "Platform settings round: %s series in chart, %s profiles",
+                        len(config),
+                        len(profile_rows),
+                    )
                 except Exception:
                     log.exception("Platform settings round failed")
                 elapsed = time.monotonic() - started

@@ -1,4 +1,5 @@
 import { toLatinNumerals } from "./fa-number";
+import { ogImageAlt, ogImageMeta, ogKeyForPath } from "./og";
 import { SITE_URL } from "./site";
 import { breadcrumbJsonLd, faqPageJsonLd, jsonLdString, type FaqItem } from "./structured-data";
 
@@ -118,7 +119,10 @@ export function toolPageHead(input: ToolPageSeo) {
       { property: "og:type", content: "website" },
       { property: "og:url", content: url },
       { property: "og:locale", content: "fa_IR" },
-      { name: "twitter:card", content: "summary" },
+      ...ogImageMeta({
+        key: ogKeyForPath(input.identity.path),
+        alt: ogImageAlt(input.identity.breadcrumbLabel),
+      }),
     ],
     links: [{ rel: "canonical", href: url }],
     scripts: [

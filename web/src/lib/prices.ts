@@ -1,3 +1,5 @@
+import type { PlatformProfile } from "./platform-profile";
+
 export type Side = "PRICE";
 export type FeeSource = "API" | "MANUAL" | "IMPLIED" | "UNKNOWN";
 export type DataPolicy = "ALLOWED" | "RESTRICTED" | "PERMISSION_PENDING" | "BLOCKED";
@@ -11,7 +13,16 @@ export interface ListedPlatform {
   name_en?: string | null;
   website_url?: string | null;
   legal_entity?: string | null;
+  founded_year_jalali?: number | null;
   delivery_note_fa?: string | null;
+  /**
+   * ⚠️ Absent from `REGISTRY_PLATFORMS` on purpose: the profile is owned by
+   * the admin panel and reaches this type only through the live
+   * `tablo:listed` payload. When Redis is down the static registry takes
+   * over and every profile field is simply missing, which the platform page
+   * renders as "not collected yet" rather than as an error.
+   */
+  profile?: PlatformProfile | null;
   /**
    * ⚠️ (non-negotiable requirement): these two fields are **never**
    * sorting inputs — groupRows/editorialPick only read price and the
@@ -51,7 +62,6 @@ export interface PlatformTerms {
   buy_enabled: boolean;
   sell_enabled: boolean;
   observed_at: string;
-  min_order_toman?: string | number | null;
 }
 
 export interface PlatformSnapshot {
@@ -101,9 +111,7 @@ export async function getListedPlatforms(): Promise<ListedPlatform[]> {
   return source().getListedPlatforms();
 }
 
-export async function getPlatformSnapshot(
-  platformSlug: string,
-): Promise<PlatformSnapshot | null> {
+export async function getPlatformSnapshot(platformSlug: string): Promise<PlatformSnapshot | null> {
   return source().getSnapshot(platformSlug);
 }
 

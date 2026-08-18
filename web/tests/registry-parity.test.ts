@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { emptyProfile } from "../src/lib/platform-profile";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { REGISTRY_INSTRUMENTS, REGISTRY_PLATFORMS } from "../src/lib/registry";
 import { RESERVED_WORDS, STATIC_PAGE_SLUGS } from "../src/lib/slugs";
@@ -15,6 +16,7 @@ interface CollectorPlatform {
   name_en: string | null;
   website_url: string | null;
   legal_entity: string | null;
+  founded_year_jalali: number | null;
   delivery_note_fa: string | null;
 }
 
@@ -30,6 +32,8 @@ interface CollectorInstrument {
 interface CollectorRegistry {
   platforms: CollectorPlatform[];
   instruments: CollectorInstrument[];
+  platform_model_fields: string[];
+  platform_profile_fields: string[];
   adapters: Record<string, string[]>;
   publish_gate_min_platforms: number;
   reserved_words: string[];
@@ -60,6 +64,7 @@ function asListedPlatform(platform: CollectorPlatform): ListedPlatform {
     name_en: platform.name_en,
     website_url: platform.website_url,
     legal_entity: platform.legal_entity,
+    founded_year_jalali: platform.founded_year_jalali,
     delivery_note_fa: platform.delivery_note_fa,
   };
 }
@@ -103,6 +108,39 @@ describe("the web's static registry matches the collector's code registry", () =
 
   it("instruments: same set and metadata, with the publish gate reconstructed", () => {
     expect(REGISTRY_INSTRUMENTS).toEqual(registry.instruments.map(asInstrumentListing));
+  });
+
+  /**
+   * ⚠️ This is the direction the field-by-field comparison above cannot see:
+   * a new field on the collector's `Platform` that nobody mirrors would sit
+   * there silently, exactly the way `min_order_toman` did. Adding a field to
+   * `Platform` therefore forces a choice — mirror it in the static registry,
+   * or name it here and say why it is not mirrored.
+   */
+  const NOT_MIRRORED_IN_THE_STATIC_REGISTRY = new Set([
+    "profile",
+    "referral_url",
+    "referral_param",
+  ]);
+
+  it("every field on the collector's Platform is either mirrored or explicitly excluded", () => {
+    const mirrored = new Set(Object.keys(listed.map(asListedPlatform)[0] ?? {}));
+    const unaccounted = registry.platform_model_fields.filter(
+      (field) => !mirrored.has(field) && !NOT_MIRRORED_IN_THE_STATIC_REGISTRY.has(field),
+    );
+    expect(unaccounted).toEqual([]);
+  });
+
+  it("the web's profile shape matches the collector's PlatformProfile field for field", () => {
+    expect([...registry.platform_profile_fields].sort()).toEqual(
+      Object.keys(emptyProfile()).sort(),
+    );
+  });
+
+  it("a profile field never reaches the static registry, so an outage cannot fake one", () => {
+    for (const platform of REGISTRY_PLATFORMS) {
+      expect(platform.profile).toBeUndefined();
+    }
   });
 
   it("reserved words and static pages match the collector in both directions", () => {

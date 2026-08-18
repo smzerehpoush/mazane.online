@@ -385,10 +385,25 @@ flowchart TD
 
 | Model | Fields | Special validation constraint |
 |---|---|---|
-| `Platform` | `slug, name_fa, data_policy, market_model=OTC, name_en?, website_url?, legal_entity?, delivery_note_fa?, referral_url?, referral_param?` | — |
+| `Platform` | `slug, name_fa, data_policy, market_model=OTC, name_en?, website_url?, legal_entity?, founded_year_jalali?, delivery_note_fa?, profile?, referral_url?, referral_param?` | — |
+| `PlatformProfile` | `payment_methods, kyc_level?, mobile_app?, delivery_cost_fa?, min_buy_toman?, min_sell_toman?, pros_fa, cons_fa, faq` | — |
 | `Quote` | `platform_slug, instrument, side=PRICE, price_toman: int, raw_value: Decimal, raw_scale: Decimal, fetched_at` | — |
-| `PlatformTerms` | `platform_slug, buy_fee_percent?, sell_fee_percent?, round_trip_percent?, fee_source, buy_enabled, sell_enabled, observed_at, min_order_toman?` | `_fees_match_source`: either all three fees are populated (API/MANUAL/IMPLIED), or all three are null (UNKNOWN) |
+| `PlatformTerms` | `platform_slug, buy_fee_percent?, sell_fee_percent?, round_trip_percent?, fee_source, buy_enabled, sell_enabled, observed_at` | `_fees_match_source`: either all three fees are populated (API/MANUAL/IMPLIED), or all three are null (UNKNOWN) |
 | `PlatformSnapshot` | `platform_slug, quotes: tuple[Quote,...], terms, fetched_at, suppressed=False` | `_one_price_per_instrument`: a repeated instrument in quotes is rejected |
+
+`Platform` has two very different halves. Everything except `profile` (and the
+referral pair) is registry code in `platforms.py`: immutable identity a dev
+edits and a reviewer checks. `profile` is never written there — the admin panel
+writes it to `platform_profiles`, the collector merges it onto the registry in
+the ~20 second settings sync, and it reaches the web through `tablo:listed`.
+Putting a commercial term in the registry means a deploy to fix a stale claim;
+putting an identity claim in the table means it silently disappears whenever
+Postgres is unreachable and the web falls back to its static registry.
+
+`PlatformTerms` carries only what an adapter can observe in a round. It used to
+carry `min_order_toman`, which no adapter ever set, no `insert` ever wrote and
+no `select` ever read; it is now `min_buy_toman`/`min_sell_toman` on
+`PlatformProfile`, where a human fills it in.
 
 All of these models have `model_config = ConfigDict(frozen=True)` — once a
 snapshot or quote is built, it can no longer be mutated; a change (like

@@ -62,7 +62,6 @@ export function makeSnapshot(opts: {
   instrument?: string;
   buyEnabled?: boolean;
   sellEnabled?: boolean;
-  minOrderToman?: string;
 }): PlatformSnapshot {
   const fetchedAt = opts.fetchedAt ?? new Date().toISOString();
   const feeSource = opts.feeSource ?? "API";
@@ -81,7 +80,6 @@ export function makeSnapshot(opts: {
       buy_enabled: opts.buyEnabled ?? true,
       sell_enabled: opts.sellEnabled ?? true,
       observed_at: opts.feeObservedAt ?? fetchedAt,
-      ...(opts.minOrderToman !== undefined ? { min_order_toman: opts.minOrderToman } : {}),
     },
     fetched_at: fetchedAt,
     suppressed: false,

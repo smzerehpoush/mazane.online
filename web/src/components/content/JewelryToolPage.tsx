@@ -92,7 +92,7 @@ export function JewelryToolPage({ data }: { data: JewelryToolData }) {
       }
       breakdown={
         <div className="space-y-3">
-          <JewelryResult breakdown={breakdown} />
+          <JewelryResult breakdown={breakdown} pricePerGram={data.pricePerGram} />
         </div>
       }
       interpretation={jewelryInterpretation(breakdown)}

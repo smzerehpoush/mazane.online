@@ -142,7 +142,9 @@ async def test_listed_payload_shape_carries_market_model() -> None:
             "name_en",
             "website_url",
             "legal_entity",
+            "founded_year_jalali",
             "delivery_note_fa",
+            "profile",
             "referral_url",
             "referral_param",
         }
@@ -157,3 +159,5 @@ async def test_listed_payload_shape_carries_market_model() -> None:
     assert by_slug["milli"].delivery_note_fa == "کارمزد تحویل فیزیکی ۳٪"
     assert by_slug["wallgold"].legal_entity is None
     assert by_slug["wallgold"].delivery_note_fa is None
+    assert all(p.profile is None for p in listed)
+    assert all(p.founded_year_jalali is None for p in listed)

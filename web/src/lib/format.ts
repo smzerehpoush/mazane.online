@@ -9,7 +9,12 @@
  * risk is lower than with numbers anyway (a post's publish date is fixed
  * and doesn't change every 30 seconds).
  */
-import { formatFaNumber, formatFaPercentFromFraction, formatFaPercentPoints } from "./fa-number";
+import {
+  formatFaNumber,
+  formatFaPercentFromFraction,
+  formatFaPercentPoints,
+  formatFaYear,
+} from "./fa-number";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("fa-IR", {
   dateStyle: "medium",
@@ -26,6 +31,10 @@ export const STALE_AFTER_MINUTES = 3;
 
 export function formatToman(priceToman: number): string {
   return formatFaNumber(priceToman);
+}
+
+export function formatYearFa(year: number): string {
+  return formatFaYear(year);
 }
 
 export function formatPercentFa(fraction: number): string {

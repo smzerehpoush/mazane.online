@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Sequence
 from datetime import datetime
@@ -7,7 +8,14 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
-from .models import Platform
+from .models import (
+    FaqItem,
+    KycLevel,
+    MobileApp,
+    PaymentMethod,
+    Platform,
+    PlatformProfile,
+)
 
 _COLOR_RE = re.compile(r"^#[0-9a-f]{6}$", re.IGNORECASE)
 
@@ -22,6 +30,35 @@ class PlatformSettingRow(BaseModel):
     chart_order: int | None
     referral_url: str | None
     updated_at: datetime
+
+
+class PlatformProfileRow(BaseModel):
+
+    model_config = ConfigDict(frozen=True)
+
+    slug: str
+    payment_methods: tuple[PaymentMethod, ...] = ()
+    kyc_level: KycLevel | None = None
+    mobile_app: MobileApp | None = None
+    delivery_cost_fa: str | None = None
+    min_buy_toman: int | None = None
+    min_sell_toman: int | None = None
+    pros_fa: tuple[str, ...] = ()
+    cons_fa: tuple[str, ...] = ()
+    faq: tuple[FaqItem, ...] = ()
+
+    def as_profile(self) -> PlatformProfile:
+        return PlatformProfile(
+            payment_methods=self.payment_methods,
+            kyc_level=self.kyc_level,
+            mobile_app=self.mobile_app,
+            delivery_cost_fa=self.delivery_cost_fa,
+            min_buy_toman=self.min_buy_toman,
+            min_sell_toman=self.min_sell_toman,
+            pros_fa=self.pros_fa,
+            cons_fa=self.cons_fa,
+            faq=self.faq,
+        )
 
 
 class ChartConfigEntry(BaseModel):
@@ -39,11 +76,32 @@ class SettingsGateway(Protocol):
     async def list_platform_settings(self) -> tuple[PlatformSettingRow, ...]:
         ...
 
+    async def list_platform_profiles(self) -> tuple[PlatformProfileRow, ...]:
+        ...
+
 
 _SELECT_SETTINGS = """
 select slug, in_chart, chart_color, chart_order, referral_url, updated_at
 from platform_settings
 """
+
+_SELECT_PROFILES = """
+select slug, payment_methods, kyc_level, mobile_app, delivery_cost_fa,
+       min_buy_toman, min_sell_toman, pros_fa, cons_fa, faq
+from platform_profiles
+"""
+
+
+def _faq_items(raw: Any) -> tuple[FaqItem, ...]:
+    if isinstance(raw, str):
+        raw = json.loads(raw)
+    if not isinstance(raw, list):
+        return ()
+    return tuple(
+        FaqItem(question_fa=item["question_fa"], answer_fa=item["answer_fa"])
+        for item in raw
+        if isinstance(item, dict) and item.get("question_fa") and item.get("answer_fa")
+    )
 
 
 class PostgresSettingsGateway:
@@ -61,6 +119,25 @@ class PostgresSettingsGateway:
                 chart_order=row["chart_order"],
                 referral_url=row["referral_url"],
                 updated_at=row["updated_at"],
+            )
+            for row in rows
+        )
+
+    async def list_platform_profiles(self) -> tuple[PlatformProfileRow, ...]:
+        async with self._pool.acquire() as conn:
+            rows = await conn.fetch(_SELECT_PROFILES)
+        return tuple(
+            PlatformProfileRow(
+                slug=row["slug"],
+                payment_methods=tuple(row["payment_methods"] or ()),
+                kyc_level=row["kyc_level"],
+                mobile_app=row["mobile_app"],
+                delivery_cost_fa=row["delivery_cost_fa"],
+                min_buy_toman=row["min_buy_toman"],
+                min_sell_toman=row["min_sell_toman"],
+                pros_fa=tuple(row["pros_fa"] or ()),
+                cons_fa=tuple(row["cons_fa"] or ()),
+                faq=_faq_items(row["faq"]),
             )
             for row in rows
         )
@@ -111,5 +188,22 @@ def platforms_with_referral_overrides(
         return tuple(platforms)
     return tuple(
         p.model_copy(update={"referral_url": overrides[p.slug]}) if p.slug in overrides else p
+        for p in platforms
+    )
+
+
+def platforms_with_profiles(
+    rows: Sequence[PlatformProfileRow],
+    platforms: Sequence[Platform],
+) -> tuple[Platform, ...]:
+    profiles = {
+        row.slug: profile
+        for row in rows
+        if not (profile := row.as_profile()).is_empty
+    }
+    if not profiles:
+        return tuple(platforms)
+    return tuple(
+        p.model_copy(update={"profile": profiles[p.slug]}) if p.slug in profiles else p
         for p in platforms
     )

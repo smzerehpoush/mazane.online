@@ -53,7 +53,6 @@ def _snapshot(
     fee_source: FeeSource,
     buy_enabled: bool,
     sell_enabled: bool,
-    min_order_toman: int | None = None,
     instrument: Instrument = Instrument.GOLD_18K,
     observed_at: datetime | None = None,
 ) -> PlatformSnapshot:
@@ -79,7 +78,6 @@ def _snapshot(
         buy_enabled=buy_enabled,
         sell_enabled=sell_enabled,
         observed_at=observed_at if observed_at is not None else fetched_at,
-        min_order_toman=min_order_toman,
     )
     return PlatformSnapshot(
         platform_slug=slug,
@@ -157,7 +155,6 @@ def known_fee_snapshot(
     fee_source: FeeSource,
     buy_enabled: bool = True,
     sell_enabled: bool = True,
-    min_order_toman: int | None = None,
     observed_at: datetime | None = None,
 ) -> PlatformSnapshot:
     return _snapshot(
@@ -170,7 +167,6 @@ def known_fee_snapshot(
         fee_source=fee_source,
         buy_enabled=buy_enabled,
         sell_enabled=sell_enabled,
-        min_order_toman=min_order_toman,
         observed_at=observed_at,
     )
 
@@ -181,7 +177,6 @@ def unknown_fee_snapshot(
     raw_price: Decimal,
     scale: Decimal,
     fetched_at: datetime,
-    min_order_toman: int | None = None,
 ) -> PlatformSnapshot:
     return _snapshot(
         slug=slug,
@@ -193,5 +188,4 @@ def unknown_fee_snapshot(
         fee_source=FeeSource.UNKNOWN,
         buy_enabled=True,
         sell_enabled=True,
-        min_order_toman=min_order_toman,
     )

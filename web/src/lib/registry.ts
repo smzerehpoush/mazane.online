@@ -9,6 +9,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Wallgold",
     website_url: "https://wallgold.ir",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -19,6 +20,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Talasea",
     website_url: "https://talasea.ir",
     legal_entity: "شرکت توسعه راهکار الوند ارسباران",
+    founded_year_jalali: null,
     delivery_note_fa: "تحویل فیزیکی با اجرت ساخت (نرخ اعلام عمومی نشده)",
   },
   {
@@ -29,6 +31,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Milli",
     website_url: "https://milli.gold",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: "کارمزد تحویل فیزیکی ۳٪",
   },
   {
@@ -39,6 +42,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Goldika",
     website_url: "https://goldika.ir",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -49,6 +53,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Technogold",
     website_url: "https://technogold.gold",
     legal_entity: "بازوی فینتک هلدینگ تکنولایف",
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -59,6 +64,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Tlyn",
     website_url: "https://taline.ir",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -69,6 +75,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Ecogold",
     website_url: "https://ecogold.ir",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -79,6 +86,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Zarafza",
     website_url: "https://zarafza.com",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -89,6 +97,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Baazar",
     website_url: "https://baazar.ir",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -99,6 +108,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Daric",
     website_url: "https://daric.gold",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -109,6 +119,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Melligold",
     website_url: "https://melligold.com",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -119,6 +130,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Digikala",
     website_url: "https://www.digikala.com/wealth/",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa:
       "تحویل فیزیکی طلا از ۵٫۴ گرم؛ کارمزد ضرب و تحویل ۴۰۰ میلی‌گرم به‌ازای هر شمش ۵ گرمی (عملاً حدود ۸٪)",
   },
@@ -130,6 +142,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Hamrahgold",
     website_url: "https://pwa.hamrahgold.com",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
   {
@@ -140,6 +153,7 @@ export const REGISTRY_PLATFORMS: readonly ListedPlatform[] = [
     name_en: "Invi",
     website_url: "https://invi.ir",
     legal_entity: null,
+    founded_year_jalali: null,
     delivery_note_fa: null,
   },
 ];

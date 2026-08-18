@@ -19,6 +19,7 @@ import type { PlatformHistory, PlatformHistoryByRange } from "@/lib/history";
 import type { Row } from "@/lib/rows";
 import { useLiveDashboard } from "@/lib/use-live-dashboard";
 import { hasViewData, type ViewCounts } from "@/lib/views";
+import { OG_HOME_KEY, ogImageAlt, ogImageMeta } from "@/lib/og";
 import { SITE_URL } from "@/lib/site";
 import {
   brand,
@@ -59,7 +60,10 @@ export function homeHead() {
       { property: "og:type", content: "website" },
       { property: "og:url", content: `${SITE_URL}/` },
       { property: "og:locale", content: "fa_IR" },
-      { name: "twitter:card", content: "summary" },
+      ...ogImageMeta({
+        key: OG_HOME_KEY,
+        alt: ogImageAlt("نرخ مرجع هر گرم طلای ۱۸ عیار"),
+      }),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/` }],
     scripts,

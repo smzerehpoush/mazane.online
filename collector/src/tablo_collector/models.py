@@ -37,6 +37,52 @@ class MarketModel(StrEnum):
     ORDER_BOOK = "ORDER_BOOK"
 
 
+class PaymentMethod(StrEnum):
+    GATEWAY = "GATEWAY"
+    CARD_TO_CARD = "CARD_TO_CARD"
+    DIRECT_DEBIT = "DIRECT_DEBIT"
+    WALLET = "WALLET"
+    IBAN_TRANSFER = "IBAN_TRANSFER"
+
+
+class KycLevel(StrEnum):
+    NONE = "NONE"
+    BASIC = "BASIC"
+    FULL = "FULL"
+
+
+class MobileApp(StrEnum):
+    WEB_ONLY = "WEB_ONLY"
+    ANDROID = "ANDROID"
+    IOS = "IOS"
+    BOTH = "BOTH"
+
+
+class FaqItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    question_fa: str
+    answer_fa: str
+
+
+class PlatformProfile(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    payment_methods: tuple[PaymentMethod, ...] = ()
+    kyc_level: KycLevel | None = None
+    mobile_app: MobileApp | None = None
+    delivery_cost_fa: str | None = None
+    min_buy_toman: int | None = None
+    min_sell_toman: int | None = None
+    pros_fa: tuple[str, ...] = ()
+    cons_fa: tuple[str, ...] = ()
+    faq: tuple[FaqItem, ...] = ()
+
+    @property
+    def is_empty(self) -> bool:
+        return self == PlatformProfile()
+
+
 class Platform(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -47,7 +93,12 @@ class Platform(BaseModel):
     name_en: str | None = None
     website_url: str | None = None
     legal_entity: str | None = None
+    founded_year_jalali: int | None = None
     delivery_note_fa: str | None = None
+    # ⚠️ `profile` is never written here in `platforms.py` — it is merged in
+    # from `platform_profiles` by the settings sync. A value hard-coded into
+    # the registry tuple would be silently overwritten on the next sync round.
+    profile: PlatformProfile | None = None
     referral_url: str | None = None
     # ⚠️ These two fields are never inputs to sorting or display order —
     # order comes only from price.
@@ -81,7 +132,6 @@ class PlatformTerms(BaseModel):
     buy_enabled: bool
     sell_enabled: bool
     observed_at: datetime
-    min_order_toman: int | None = None
 
     @model_validator(mode="after")
     def _fees_match_source(self) -> PlatformTerms:

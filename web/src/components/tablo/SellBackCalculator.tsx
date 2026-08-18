@@ -10,7 +10,9 @@ import {
   sellBackBreakdown,
   type SellBackBreakdown,
 } from "@/lib/sell-back";
+import type { ShareCard } from "@/lib/share-card";
 import { useCalcEvents } from "@/lib/use-calc-events";
+import { ShareResultButton } from "@/components/tablo/ShareResultButton";
 
 const LABELS = {
   weight: "وزن (گرم)",
@@ -39,6 +41,9 @@ const PURITY_NOTE =
 
 const NO_RATE_NOTE =
   "نرخ مرجع هر گرم طلای ۱۸ عیار در این لحظه در دسترس نیست، پس مبلغ محاسبه نمی‌شود. چند دقیقه‌ی دیگر دوباره امتحان کنید.";
+
+const SHARE_TITLE = "فروش طلای دست‌دوم";
+const SELL_BACK_PATH = "/mohasebe-forush-tala";
 
 export interface SellBackForm {
   initial: Record<string, string>;
@@ -170,6 +175,38 @@ export function SellBackInputs({
   );
 }
 
+export function sellBackShareCard(form: SellBackForm): ShareCard | null {
+  const { breakdown } = form;
+  if (breakdown === null) return null;
+  return {
+    title: SHARE_TITLE,
+    lines: [
+      {
+        label: LABELS.pureGold,
+        value: `${formatFaNumber(breakdown.pureGoldGrams, { maximumFractionDigits: 3 })} ${LABELS.gram}`,
+      },
+      { label: LABELS.goldValue, value: formatFaNumber(breakdown.goldValue) },
+      { label: LABELS.deductionAmount, value: formatFaNumber(breakdown.deduction) },
+      ...(breakdown.payoutSharePercent === null
+        ? []
+        : [
+            {
+              label: LABELS.share,
+              value: formatFaPercentPoints(breakdown.payoutSharePercent, {
+                maximumFractionDigits: 1,
+              }),
+            },
+          ]),
+    ],
+    total: { label: LABELS.payout, value: formatFaNumber(breakdown.payout) },
+    note:
+      form.pricePerGram === null
+        ? null
+        : `${LABELS.rate}: ${formatFaNumber(form.pricePerGram)} ${LABELS.toman}`,
+    pagePath: SELL_BACK_PATH,
+  };
+}
+
 export function SellBackResult({ form }: { form: SellBackForm }) {
   const { breakdown } = form;
   const share = breakdown?.payoutSharePercent ?? null;
@@ -231,6 +268,8 @@ export function SellBackResult({ form }: { form: SellBackForm }) {
           {CEILING_NOTE}
         </p>
       )}
+
+      <ShareResultButton card={sellBackShareCard(form)} />
     </section>
   );
 }

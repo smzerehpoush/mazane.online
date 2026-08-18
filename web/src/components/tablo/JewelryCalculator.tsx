@@ -9,7 +9,9 @@ import {
 } from "@/lib/calculator";
 import { formatFaNumber, formatFaPercentPoints } from "@/lib/fa-number";
 import { JEWELRY_TOOL_PATH } from "@/lib/jewelry-tool";
+import type { ShareCard } from "@/lib/share-card";
 import { useCalcEvents } from "@/lib/use-calc-events";
+import { ShareResultButton } from "@/components/tablo/ShareResultButton";
 
 export interface JewelryField {
   key: string;
@@ -33,6 +35,36 @@ const BREAKDOWN_LINES: readonly { key: MoneyLine; label: string }[] = [
 ];
 
 const EXTRA_COST_LABEL = "هزینه‌ی اضافه نسبت به طلای خام";
+const TOTAL_LABEL = "مبلغ نهایی (تومان)";
+const SHARE_TITLE = "فاکتور طلای نو";
+const RATE_NOTE_LABEL = "نرخ هر گرم طلای ۱۸ عیار";
+
+export function jewelryShareCard(
+  breakdown: JewelryBreakdown | null,
+  pricePerGram: number | null,
+): ShareCard | null {
+  if (breakdown === null) return null;
+  const lines = BREAKDOWN_LINES.map((line) => ({
+    label: line.label,
+    value: formatFaNumber(breakdown[line.key]),
+  }));
+  if (breakdown.extraCostPercent !== null) {
+    lines.push({
+      label: EXTRA_COST_LABEL,
+      value: formatFaPercentPoints(breakdown.extraCostPercent, { maximumFractionDigits: 1 }),
+    });
+  }
+  return {
+    title: SHARE_TITLE,
+    lines,
+    total: { label: TOTAL_LABEL, value: formatFaNumber(breakdown.total) },
+    note:
+      pricePerGram === null
+        ? null
+        : `${RATE_NOTE_LABEL}: ${formatFaNumber(pricePerGram)} تومان`,
+    pagePath: JEWELRY_TOOL_PATH,
+  };
+}
 
 export const JEWELRY_VAT_NOTE =
   "مالیات بر ارزش افزوده فقط روی اجرت و سود حساب می‌شود و اصل طلا معاف است: بند (ب) ماده (۲۶) قانون مالیات بر ارزش افزوده مصوب ۱۴۰۰. نرخ آن از سال ۱۴۰۴ ده درصد است؛ بند «خ» تبصره (۱) قانون بودجه.";
@@ -84,7 +116,13 @@ export function useJewelryCalculator(pricePerGram: number | null): JewelryCalcul
   };
 }
 
-export function JewelryResult({ breakdown }: { breakdown: JewelryBreakdown | null }) {
+export function JewelryResult({
+  breakdown,
+  pricePerGram = null,
+}: {
+  breakdown: JewelryBreakdown | null;
+  pricePerGram?: number | null;
+}) {
   const extraCostPercent = breakdown?.extraCostPercent ?? null;
 
   return (
@@ -107,7 +145,7 @@ export function JewelryResult({ breakdown }: { breakdown: JewelryBreakdown | nul
 
       <div className="rounded-[10px] bg-acbg p-4">
         <div className="flex items-center justify-between">
-          <span className="text-[12.5px] text-actx">مبلغ نهایی (تومان)</span>
+          <span className="text-[12.5px] text-actx">{TOTAL_LABEL}</span>
           <span data-calculator-total className="num text-xl font-semibold text-actx">
             {breakdown === null ? "—" : formatFaNumber(breakdown.total)}
           </span>
@@ -122,6 +160,8 @@ export function JewelryResult({ breakdown }: { breakdown: JewelryBreakdown | nul
           </div>
         )}
       </div>
+
+      <ShareResultButton card={jewelryShareCard(breakdown, pricePerGram)} />
     </>
   );
 }
@@ -156,7 +196,7 @@ export function JewelryCalculator({
           </label>
         ))}
 
-        <JewelryResult breakdown={breakdown} />
+        <JewelryResult breakdown={breakdown} pricePerGram={pricePerGram} />
       </div>
 
       {pricePerGram !== null && referenceName !== null && (

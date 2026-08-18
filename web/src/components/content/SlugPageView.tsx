@@ -13,6 +13,7 @@ import {
 } from "@/lib/gold-price";
 import type { PlatformHistoryByRange } from "@/lib/history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "@/lib/prices";
+import { ogImageAlt, ogImageMeta } from "@/lib/og";
 import type { ReferencePrice } from "@/lib/reference-price";
 import type { Row } from "@/lib/rows";
 import { SITE_URL } from "@/lib/site";
@@ -94,7 +95,7 @@ export function slugHead(data: SlugPageData | undefined) {
       meta: [{ title: "صفحه یافت نشد" }, { name: "robots", content: "noindex" }],
     };
   }
-  const [title, description, slug] =
+  const [title, description, slug, subject] =
     data.kind === "instrument"
       ? ([
           data.goldPrice === null
@@ -104,11 +105,13 @@ export function slugHead(data: SlugPageData | undefined) {
             ? `قیمت اعلامی ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران، همراه با کارمزد خرید و فروش هر سکو؛ کارمزد جدا از قیمت می‌آید، نه پخته در آن.`
             : GOLD_PRICE_DESCRIPTION,
           data.listing.slug,
+          data.listing.name_fa,
         ] as const)
       : ([
           `${data.platform.name_fa} — شرایط، کارمزد و قیمت‌ها — تابلو`,
           `شرایط تجاری ${data.platform.name_fa}: قیمت اعلامی لحظه‌ای پیش از کارمزد، کارمزد خرید و فروش با ذکر منبع، هویت حقوقی و تحویل فیزیکی.`,
           data.platform.slug,
+          data.platform.name_fa,
         ] as const);
 
   return {
@@ -118,6 +121,7 @@ export function slugHead(data: SlugPageData | undefined) {
       { property: "og:title", content: title },
       { property: "og:description", content: description },
       { property: "og:type", content: "website" },
+      ...ogImageMeta({ key: slug, alt: ogImageAlt(subject) }),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}/${slug}` }],
     scripts: slugJsonLdTags(data),

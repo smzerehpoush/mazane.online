@@ -38,6 +38,7 @@ import { Route as ApiRevalidateBlogRouteImport } from './routes/api/revalidate-b
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
 import { Route as BlogSlugRouteImport } from './routes/blog/$slug'
 import { Route as GoSlugRouteImport } from './routes/go/$slug'
+import { Route as OgKeyRouteImport } from './routes/og/$key'
 import { Route as AdminPostsIndexRouteImport } from './routes/admin/posts/index'
 import { Route as AdminPostsSlugRouteImport } from './routes/admin/posts/$slug'
 import { Route as AdminPostsNewRouteImport } from './routes/admin/posts/new'
@@ -192,6 +193,11 @@ const GoSlugRoute = GoSlugRouteImport.update({
   path: '/go/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OgKeyRoute = OgKeyRouteImport.update({
+  id: '/og/$key',
+  path: '/og/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminPostsIndexRoute = AdminPostsIndexRouteImport.update({
   id: '/posts/',
   path: '/posts/',
@@ -258,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/go/$slug': typeof GoSlugRoute
+  '/og/$key': typeof OgKeyRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/posts/$slug': typeof AdminPostsSlugRoute
@@ -295,6 +302,7 @@ export interface FileRoutesByTo {
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/go/$slug': typeof GoSlugRoute
+  '/og/$key': typeof OgKeyRoute
   '/admin': typeof AdminIndexRoute
   '/blog': typeof BlogIndexRoute
   '/admin/posts/$slug': typeof AdminPostsSlugRoute
@@ -334,6 +342,7 @@ export interface FileRoutesById {
   '/api/revalidate-blog': typeof ApiRevalidateBlogRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/go/$slug': typeof GoSlugRoute
+  '/og/$key': typeof OgKeyRoute
   '/admin/': typeof AdminIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/posts/$slug': typeof AdminPostsSlugRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/api/revalidate-blog'
     | '/blog/$slug'
     | '/go/$slug'
+    | '/og/$key'
     | '/admin/'
     | '/blog/'
     | '/admin/posts/$slug'
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/api/revalidate-blog'
     | '/blog/$slug'
     | '/go/$slug'
+    | '/og/$key'
     | '/admin'
     | '/blog'
     | '/admin/posts/$slug'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/api/revalidate-blog'
     | '/blog/$slug'
     | '/go/$slug'
+    | '/og/$key'
     | '/admin/'
     | '/blog/'
     | '/admin/posts/$slug'
@@ -485,6 +497,7 @@ export interface RootRouteChildren {
   ApiRevalidateBlogRoute: typeof ApiRevalidateBlogRoute
   BlogSlugRoute: typeof BlogSlugRoute
   GoSlugRoute: typeof GoSlugRoute
+  OgKeyRoute: typeof OgKeyRoute
   BlogIndexRoute: typeof BlogIndexRoute
 }
 
@@ -693,6 +706,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GoSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/og/$key': {
+      id: '/og/$key'
+      path: '/og/$key'
+      fullPath: '/og/$key'
+      preLoaderRoute: typeof OgKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/posts/': {
       id: '/admin/posts/'
       path: '/posts'
@@ -821,6 +841,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRevalidateBlogRoute: ApiRevalidateBlogRoute,
   BlogSlugRoute: BlogSlugRoute,
   GoSlugRoute: GoSlugRoute,
+  OgKeyRoute: OgKeyRoute,
   BlogIndexRoute: BlogIndexRoute,
 }
 export const routeTree = rootRouteImport

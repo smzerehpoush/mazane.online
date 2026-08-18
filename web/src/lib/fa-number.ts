@@ -140,6 +140,14 @@ export function formatFaNumber(value: number, options: FaNumberOptions = {}): st
   return sign + toPersianDigits(body);
 }
 
+export function formatFaYear(value: number): string {
+  if (!Number.isFinite(value)) {
+    console.warn(`formatFaYear: invalid year — ${String(value)}`);
+    return INVALID_PLACEHOLDER;
+  }
+  return toPersianDigits(String(Math.trunc(value)));
+}
+
 export function formatFaPercentFromFraction(
   fraction: number,
   options: FaNumberOptions = {},

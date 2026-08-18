@@ -4,6 +4,11 @@ from .models import DataPolicy, MarketModel, Platform
 
 # ⚠️ This tuple's order is the public listing order — a priceless row (unknown fee)
 # never sits above a priced row.
+# ⚠️ Only immutable identity facts belong here (legal entity, founding year).
+# Commercial terms a platform can change on its own — payment methods, KYC,
+# minimums, delivery cost, pros/cons, FAQ — live in the `platform_profiles`
+# table and are merged in by the settings sync; putting them here means the
+# owner needs a deploy to fix a stale claim.
 PLATFORMS: tuple[Platform, ...] = (
     Platform(
         slug="wallgold",
