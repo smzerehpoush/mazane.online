@@ -13,6 +13,7 @@ import asyncpg
 import httpx
 import redis.asyncio as aioredis
 import websockets
+from websockets.typing import Origin
 
 from .adapters.baazar import BaazarAdapter
 from .adapters.daric import (
@@ -85,11 +86,19 @@ def _daric_connector(client: httpx.AsyncClient) -> Any:
     return connect
 
 
+INVI_ORIGIN = Origin("https://invi.ir")
+
+
 def _invi_connector() -> Any:
+    # ⚠️ invi.ir's edge WAF (F5 ASM) 403s the WS upgrade without an Origin
+    # header matching the site itself — confirmed by curl handshake, not a
+    # guess: same UA, same IP, only the missing Origin differed between a
+    # 403 and a 101. A browser sends this automatically; a bare client does
+    # not, so it must be set explicitly here.
     @asynccontextmanager
     async def connect() -> AsyncIterator[AsyncIterator[str]]:
         async with websockets.connect(
-            INVI_WS_ENDPOINT, user_agent_header=USER_AGENT
+            INVI_WS_ENDPOINT, user_agent_header=USER_AGENT, origin=INVI_ORIGIN
         ) as connection:
             yield _text_messages(connection)
 
