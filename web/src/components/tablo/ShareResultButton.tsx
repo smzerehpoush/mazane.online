@@ -61,12 +61,22 @@ async function shareOrDownload(card: ShareCard, blob: Blob): Promise<void> {
     return;
   }
 
+  // ⚠️ The revoke is deferred and the anchor is really in the document: this
+  // is the desktop path (`canShare` with files is effectively mobile-only), and
+  // revoking the blob URL on the next line after `click()` cancels the download
+  // in some browsers before it has read the blob.
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = SHARE_FILE_NAME;
+  anchor.rel = "noopener";
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
   anchor.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => {
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  }, 60_000);
 }
 
 export function ShareResultButton({ card }: { card: ShareCard | null }) {

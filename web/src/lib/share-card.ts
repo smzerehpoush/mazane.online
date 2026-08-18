@@ -81,6 +81,28 @@ export interface ShareCardContext {
   direction: CanvasDirection;
   fillRect(x: number, y: number, width: number, height: number): void;
   fillText(text: string, x: number, y: number): void;
+  measureText(text: string): { width: number };
+}
+
+export const SHARE_CARD_ELLIPSIS = "…";
+export const SHARE_ROW_GAP = 28;
+
+/**
+ * ⚠️ Canvas neither wraps nor clips: text past the edge is simply painted off
+ * the bitmap, and a label and its amount grow toward each other with nothing
+ * to stop them overlapping. Every string on this card goes through here, so
+ * that a longer label added later degrades to an ellipsis instead of silently
+ * producing a corrupt image nobody notices until it is in a WhatsApp group.
+ */
+export function elideToWidth(ctx: ShareCardContext, text: string, maxWidth: number): string {
+  if (maxWidth <= 0) return "";
+  if (ctx.measureText(text).width <= maxWidth) return text;
+
+  for (let cut = text.length - 1; cut > 0; cut -= 1) {
+    const candidate = `${text.slice(0, cut).trimEnd()}${SHARE_CARD_ELLIPSIS}`;
+    if (ctx.measureText(candidate).width <= maxWidth) return candidate;
+  }
+  return SHARE_CARD_ELLIPSIS;
 }
 
 export function shareCardFont(weight: 400 | 700, size: number): string {
@@ -117,10 +139,12 @@ export function drawShareCard(ctx: ShareCardContext, card: ShareCard): number {
   ctx.font = shareCardFont(400, l.size.domain);
   ctx.fillText(OG_CARD_DOMAIN, left, l.headerTop + 12);
 
+  const contentWidth = l.width - l.padding * 2;
+
   ctx.textAlign = "right";
   ctx.fillStyle = OG_CARD_PALETTE.title;
   ctx.font = shareCardFont(700, l.size.title);
-  ctx.fillText(card.title, right, l.titleTop);
+  ctx.fillText(elideToWidth(ctx, card.title, contentWidth), right, l.titleTop);
 
   let cursor = l.titleTop + l.size.title + l.gapAfterTitle;
 
@@ -129,13 +153,19 @@ export function drawShareCard(ctx: ShareCardContext, card: ShareCard): number {
     ctx.fillRect(left, cursor - 1, l.width - l.padding * 2, 1);
 
     ctx.font = shareCardFont(400, l.size.row);
+    const valueWidth = ctx.measureText(line.value).width;
+
     ctx.textAlign = "right";
     ctx.fillStyle = OG_CARD_PALETTE.muted;
-    ctx.fillText(line.label, right, cursor + 22);
+    ctx.fillText(
+      elideToWidth(ctx, line.label, contentWidth - valueWidth - SHARE_ROW_GAP),
+      right,
+      cursor + 22,
+    );
 
     ctx.textAlign = "left";
     ctx.fillStyle = OG_CARD_PALETTE.title;
-    ctx.fillText(line.value, left, cursor + 22);
+    ctx.fillText(elideToWidth(ctx, line.value, contentWidth), left, cursor + 22);
 
     cursor += l.rowHeight;
   }
@@ -144,14 +174,16 @@ export function drawShareCard(ctx: ShareCardContext, card: ShareCard): number {
   ctx.fillStyle = OG_CARD_PALETTE.hairline;
   ctx.fillRect(left, cursor, l.width - l.padding * 2, l.totalHeight);
 
+  const totalWidth = contentWidth - 48;
+
   ctx.textAlign = "right";
   ctx.fillStyle = OG_CARD_PALETTE.muted;
   ctx.font = shareCardFont(400, l.size.totalLabel);
-  ctx.fillText(card.total.label, right - 24, cursor + 22);
+  ctx.fillText(elideToWidth(ctx, card.total.label, totalWidth), right - 24, cursor + 22);
 
   ctx.fillStyle = OG_CARD_PALETTE.price;
   ctx.font = shareCardFont(700, l.size.totalValue);
-  ctx.fillText(card.total.value, right - 24, cursor + 58);
+  ctx.fillText(elideToWidth(ctx, card.total.value, totalWidth), right - 24, cursor + 58);
 
   cursor += l.totalHeight + l.gapAfterTotal;
 
@@ -159,7 +191,7 @@ export function drawShareCard(ctx: ShareCardContext, card: ShareCard): number {
     ctx.textAlign = "right";
     ctx.fillStyle = OG_CARD_PALETTE.muted;
     ctx.font = shareCardFont(400, l.size.note);
-    ctx.fillText(card.note, right, cursor);
+    ctx.fillText(elideToWidth(ctx, card.note, contentWidth), right, cursor);
     cursor += l.noteHeight;
   }
 

@@ -15,6 +15,7 @@ import {
   SHARE_BUTTON_LABEL,
   SHARE_HINT,
   drawShareCard,
+  elideToWidth,
   shareCardHeight,
   shareCardWatermark,
   type ShareCard,
@@ -81,6 +82,14 @@ class Recorder implements ShareCardContext {
 
   fillText(text: string, x: number, y: number): void {
     this.calls.push({ ...this.snapshot("text", x, y), text });
+  }
+
+  // A stand-in for the browser's text metrics: proportional to the glyph count
+  // and the px size parsed out of the current font, which is enough to drive
+  // the elision logic deterministically in the node environment.
+  measureText(text: string): { width: number } {
+    const size = Number(/(\d+)px/.exec(this.font)?.[1] ?? "16");
+    return { width: text.length * size * 0.52 };
   }
 }
 
@@ -168,6 +177,40 @@ describe("the share card a visitor makes of their own result", () => {
     const recorder = draw(jewelryShareCard(BREAKDOWN, 10_000_000) as ShareCard);
     const fonts = recorder.calls.filter((call) => call.op === "text").map((call) => call.font);
     expect(fonts.every((font) => font.includes("Vazirmatn"))).toBe(true);
+  });
+
+  it("elides a label that would collide with its own amount", () => {
+    const recorder = new Recorder();
+    const long = "برچسبی که بی‌اندازه بلند است و هرگز نباید روی عدد کنار خودش سوار شود";
+    drawShareCard(recorder, {
+      title: "الف",
+      lines: [{ label: long, value: "۱۲۳٬۴۵۶٬۷۸۹" }],
+      total: { label: "ج", value: "۲" },
+      note: null,
+      pagePath: "/mohasebe-tala",
+    });
+    const drawn = texts(recorder);
+    expect(drawn).not.toContain(long);
+    expect(drawn.some((line) => line.endsWith("…"))).toBe(true);
+  });
+
+  it("elides an over-long title rather than painting it off the bitmap", () => {
+    const recorder = new Recorder();
+    const long = "ی".repeat(400);
+    drawShareCard(recorder, {
+      title: long,
+      lines: [],
+      total: { label: "ج", value: "۲" },
+      note: null,
+      pagePath: "/mohasebe-tala",
+    });
+    expect(texts(recorder)).not.toContain(long);
+  });
+
+  it("leaves text that already fits completely alone", () => {
+    const recorder = new Recorder();
+    expect(elideToWidth(recorder, "اجرت ساخت", 10_000)).toBe("اجرت ساخت");
+    expect(elideToWidth(recorder, "اجرت ساخت", 0)).toBe("");
   });
 
   it("grows with the number of lines instead of clipping them", () => {
