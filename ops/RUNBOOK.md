@@ -216,6 +216,17 @@ Based on `.env.example`. Notes:
   editorial pace the collector uses to express the draft queue's depth in days.
 - `TABLO_WEB_PORT` (default 3300) must not collide with Padelyar's ports —
   check on the server: `ss -ltn | grep 3300`.
+  ⚠️ **Two different port 3000s, easy to conflate.** The container always
+  listens on `3000` internally (Nitro's default, unrelated to this var) —
+  `docker exec tablo-web wget -qO- http://127.0.0.1:3000/` always targets
+  that. `TABLO_WEB_PORT` only sets what compose maps that `3000` **to on
+  the host** (`docker port tablo-web` shows the real mapping, e.g.
+  `3000/tcp -> 127.0.0.1:3300`). Any `curl` run on the host or over SSH —
+  including the ones in section 3 below — must hit the **host** port
+  (`.env`'s `TABLO_WEB_PORT`, 3300 unless changed), not 3000; hitting 3000
+  from outside the container gets connection-refused, not a 4xx/5xx, which
+  reads like the app is down when it's actually just the wrong port. This
+  exact confusion happened live during the 2026-08-18 deploy.
 - If the "no registry" path was chosen, set `TABLO_IMAGE_*` to the loaded
   tags (e.g. `tablo-web:v1`).
 - 👤 **Admin panel password (ticket 20).** The panel under `/admin` has only
@@ -369,6 +380,37 @@ added, initdb no longer runs it — do it by hand, in numeric order:
 docker compose -f compose.prod.yml exec postgres \
   psql -U mazane -d mazane -f /docker-entrypoint-initdb.d/013_xxx.sql
 ```
+
+**Exercised for real on 2026-08-18** (migrations 020 and 021, against a
+volume that had been running 7 days — the exact "already initialized"
+case above), so this is the tested procedure, not just the theory:
+
+1. **Back up first.** Cheap insurance even for an additive, non-destructive
+   migration:
+   ```bash
+   docker exec tablo-postgres-1 sh -c \
+     'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom -f /tmp/pre-deploy-backup.dump'
+   docker cp tablo-postgres-1:/tmp/pre-deploy-backup.dump \
+     /opt/tablo/pre-deploy-backup-$(date +%Y%m%d-%H%M).dump
+   ```
+   (`$POSTGRES_USER`/`$POSTGRES_DB` are resolved **inside** the container's
+   own shell, not the host's — the host process doesn't have them. Getting
+   this backwards is why a first attempt at this can silently produce no
+   file.)
+2. Copy the new migration files onto the server (`scp` into `/tmp`, then
+   `sudo cp` into `/opt/tablo/collector/migrations/` — that directory is
+   root-owned).
+3. Run each migration, in numeric order, **with `-T`** if this is scripted
+   over SSH rather than typed at an interactive terminal — `docker compose
+   exec` allocates a pseudo-TTY by default, which a non-interactive SSH
+   command has none of:
+   ```bash
+   docker compose -f compose.prod.yml exec -T postgres \
+     psql -U mazane -d mazane -f /docker-entrypoint-initdb.d/020_xxx.sql
+   ```
+   `ALTER TABLE`/`CREATE TABLE` echoed back plus `NOTICE:` lines for
+   constraints already covered by an earlier `ALTER TABLE ADD COLUMN … IF
+   NOT EXISTS`-style guard are the expected happy path, not a failure.
 
 ### Bringing up web and the collector
 
