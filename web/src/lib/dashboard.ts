@@ -133,6 +133,20 @@ export interface SummaryRange {
   low: SummaryPoint | null;
   changeFraction: number | null;
   changeDisplay: string | null;
+  /**
+   * ⚠️ A toman difference between two points of **the same named series**, not
+   * a price and not a cross-source figure — the same boundary `spreadDisplay`
+   * lives inside: difference allowed, average forbidden.
+   */
+  changeTomanDisplay: string | null;
+  /**
+   * ⚠️ Separate from `enabled` on purpose. `enabled` only means "there is at
+   * least one point"; this one is the resampler's verdict on whether the
+   * window is actually covered. A consumer that publishes a change figure
+   * must read this one, or two surviving points turn into a confident
+   * "monthly change".
+   */
+  hasEnoughCoverage: boolean;
   area: { line: string | null; area: string | null };
   enabled: boolean;
 }
@@ -155,11 +169,12 @@ const SUMMARY_HEIGHT = 108;
  * dates.
  */
 
-function summaryOf(
+export function summarizeHistoryRange(
   range: { key: HistoryRange; label: string },
   history: PlatformHistory | null,
 ): SummaryRange {
   const points = history?.points ?? [];
+  const hasEnoughCoverage = history?.has_enough_coverage !== false;
   const empty: SummaryRange = {
     key: range.key,
     label: range.label,
@@ -168,6 +183,8 @@ function summaryOf(
     low: null,
     changeFraction: null,
     changeDisplay: null,
+    changeTomanDisplay: null,
+    hasEnoughCoverage: false,
     area: { line: null, area: null },
     enabled: false,
   };
@@ -194,6 +211,8 @@ function summaryOf(
     low: { valueDisplay: formatFaNumber(lowPoint.value), atDisplay: formatFaClock(lowPoint.hour) },
     changeFraction,
     changeDisplay: formatSignedPercentFa(changeFraction),
+    changeTomanDisplay: formatFaNumber(last - first, { signDisplay: "exceptZero" }),
+    hasEnoughCoverage,
     area: seriesPaths(
       points.map((point) => point.value),
       { width: SUMMARY_WIDTH, height: SUMMARY_HEIGHT, padding: 6 },
@@ -305,7 +324,7 @@ export function buildDashboard(input: DashboardInput): DashboardView {
     summary: {
       referenceName: input.reference?.name ?? null,
       ranges: RATE_CARD_RANGES.map((range) =>
-        summaryOf(
+        summarizeHistoryRange(
           { key: range.key, label: HOME_SUMMARY_RANGE_LABELS[range.key] },
           input.referenceHistory[range.key],
         ),

@@ -249,6 +249,10 @@ Based on `.env.example`. Notes:
      the URL of every old image.
   Losing this storage only breaks new image uploads — saving post text and
   rendering existing posts are unaffected (completely separate paths).
+- 👤 **IndexNow (ticket 59).** `TABLO_INDEXNOW_KEY` is deliberately left
+  **empty** — the ping is then skipped and publishing behaves exactly as
+  before. Filling it in requires hosting a key file first; the three steps
+  are in section 14. Don't set it before that file is verified.
 
 ### 1.5 Files that must be on the server
 
@@ -553,6 +557,9 @@ again (the images stay on the server).
 - [ ] 8 👤 External monitoring active on `/` and `/robots.txt`
 - [ ] 9 First run of `verify-googlebot.py` done and a weekly schedule set up
 - [ ] 10 👤 Search Console TXT confirmed
+- [ ] 14 👤 IndexNow key generated, `<key>.txt` served by the edge, and
+      `TABLO_INDEXNOW_KEY` set — **still open**; until then the ping is
+      skipped and publishing is unaffected
 
 ---
 
@@ -570,3 +577,79 @@ deploy that publishes the platform.
 
 Every other listed platform is published on the basis of its own publicly
 available data, with no separate permission document.
+
+---
+
+## 14. 👤 IndexNow — NOT SET UP YET (ticket 59)
+
+IndexNow lets us tell Bing/Yandex (and any other participating engine) that a
+URL just changed, instead of waiting to be crawled. Web already does the
+submitting: every successful `POST /api/revalidate-blog` — the call the admin
+panel makes right after a post is published — also posts the listing and the
+post URL to `https://api.indexnow.org/indexnow`
+(`web/src/lib/server/indexnow.ts`).
+
+It is **inert until 👤 does the three steps below**. With no key the route
+reports `"indexnow": "skipped"` in its JSON response and makes no outbound
+request at all; publishing is unaffected either way, and a failed submission
+is logged and reported as `"indexnow": "failed"` — never a 5xx (hard rule 5).
+
+### The three steps
+
+1. **Generate a key.** Any self-chosen string of 8–128 characters from
+   `[A-Za-z0-9-]`:
+   ```bash
+   openssl rand -hex 32
+   ```
+   It is not a secret — it is published on our own site in step 2 — but it
+   must be ours and it must stay the same.
+
+2. **Host the key file.** IndexNow verifies ownership by fetching
+   `https://tablo.gold/<key>.txt`, which must return that exact key as plain
+   text (no trailing markup; a trailing newline is fine). The cheapest place
+   is the edge Caddy, next to the `tablo.gold` block in
+   `/opt/padelyar/deploy/Caddyfile` (see `ops/caddy-snippet.Caddyfile`) —
+   inside **both** the `http://` and the `https://` site blocks, above
+   `reverse_proxy`:
+   ```caddyfile
+   handle /<key>.txt {
+       respond "<key>" 200
+   }
+   ```
+   then `docker exec $CADDY caddy reload --config /etc/caddy/Caddyfile` and
+   check from outside:
+   ```bash
+   curl -s https://tablo.gold/<key>.txt   # must print exactly <key>
+   ```
+   ⚠️ If ArvanCloud is caching, purge that one path after any change — a
+   cached 404 on the key file makes every submission fail.
+
+3. **Set the variable.** `TABLO_INDEXNOW_KEY=<key>` in the server's .env,
+   then `docker compose -f /opt/tablo/compose.prod.yml up -d web`. The
+   variable is optional in `compose.prod.yml` (`${TABLO_INDEXNOW_KEY:-}`), so
+   a missing value never blocks a deploy.
+
+### Verifying
+
+```bash
+# From the server, with the real token — the same call the panel makes:
+curl -s -X POST http://127.0.0.1:3300/api/revalidate-blog \
+  -H "authorization: Bearer $TABLO_REVALIDATE_TOKEN" \
+  -H "content-type: application/json" -d "{}"
+```
+
+Expected once all three steps are done: `"indexnow":"submitted"`. Before
+them: `"indexnow":"skipped"` — which is the correct, healthy state until
+👤 finishes the setup. `"failed"` means the endpoint refused or was
+unreachable; the most common cause is the key file of step 2 not being
+readable at the URL above. The second candidate is egress — the web container
+needs outbound internet (the `internal` network is a plain bridge, not
+`internal: true`, so it has it by default):
+
+```bash
+docker exec tablo-web node -e "fetch('https://api.indexnow.org/').then(r=>console.log(r.status)).catch(e=>console.log('no egress:',e.message))"
+```
+
+⚠️ Do **not** set `TABLO_INDEXNOW_KEY` before step 2 is verified: a key
+without its file means every publish burns a rejected submission and logs an
+error for no gain.

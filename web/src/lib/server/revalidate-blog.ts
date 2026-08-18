@@ -5,13 +5,18 @@
  * `/sitemap.xml` build every request directly from Postgres. So
  * "revalidation" at the origin is **moot**, and the only remaining
  * staleness is the 60-second edge cache window (`s-maxage=60` in
- * `lib/seo/cache-headers.ts`), which expires on its own.
+ * `lib/seo/cache-headers.ts`), which expires on its own. What the route is
+ * still worth keeping for is the outward ping: it is the one place that
+ * knows a post just went live, so IndexNow is submitted from here — and that
+ * submission must never be able to fail the response (hard rule 5), which is
+ * why `submitToIndexNow` swallows everything and only reports an outcome.
  */
 import "@tanstack/react-start/server-only";
 
 import { createHash, timingSafeEqual } from "node:crypto";
 
 import { NO_STORE } from "../seo/cache-headers";
+import { submitToIndexNow } from "./indexnow";
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -59,6 +64,7 @@ export async function revalidateBlogResponse(request: Request): Promise<Response
     ...(slug === null ? [] : [`/blog/${slug}`]),
     "/sitemap.xml",
   ];
+  const indexnow = await submitToIndexNow(paths);
   return json(
     {
       revalidated: true,
@@ -66,6 +72,7 @@ export async function revalidateBlogResponse(request: Request): Promise<Response
       paths,
       origin_cache: "none",
       edge_max_age_seconds: 60,
+      indexnow,
     },
     200,
   );

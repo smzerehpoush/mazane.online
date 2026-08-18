@@ -5,17 +5,30 @@
 import { AssetPage, groupRows } from "@/components/content/AssetPage";
 import { Breadcrumbs } from "@/components/content/PageShell";
 import { PlatformPage } from "@/components/content/PlatformPage";
+import {
+  GOLD_PRICE_DESCRIPTION,
+  GOLD_PRICE_FAQ,
+  GOLD_PRICE_TITLE,
+  type GoldPriceView,
+} from "@/lib/gold-price";
 import type { PlatformHistoryByRange } from "@/lib/history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import type { ReferencePrice } from "@/lib/reference-price";
 import type { Row } from "@/lib/rows";
 import { SITE_URL } from "@/lib/site";
-import { assetProductJsonLd, breadcrumbJsonLd, platformWebPageJsonLd } from "@/lib/structured-data";
+import {
+  assetProductJsonLd,
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  platformWebPageJsonLd,
+} from "@/lib/structured-data";
+import { toolFaqForSchema } from "@/lib/tool-page";
 
 export interface InstrumentPageData {
   kind: "instrument";
   listing: InstrumentListing;
   rows: Row[];
+  goldPrice: GoldPriceView | null;
   generated_at: string;
 }
 
@@ -52,6 +65,12 @@ export function slugJsonLdTags(data: SlugPageData): HeadTag[] {
       },
     ];
     if (product !== null) tags.push({ type: "application/ld+json", children: product });
+    if (data.goldPrice !== null) {
+      tags.push({
+        type: "application/ld+json",
+        children: faqPageJsonLd(toolFaqForSchema(GOLD_PRICE_FAQ)),
+      });
+    }
     return tags;
   }
   return [
@@ -78,8 +97,12 @@ export function slugHead(data: SlugPageData | undefined) {
   const [title, description, slug] =
     data.kind === "instrument"
       ? ([
-          `قیمت ${data.listing.name_fa} در سکوهای آنلاین — تابلو`,
-          `قیمت اعلامی ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران، همراه با کارمزد خرید و فروش هر سکو؛ کارمزد جدا از قیمت می‌آید، نه پخته در آن.`,
+          data.goldPrice === null
+            ? `قیمت ${data.listing.name_fa} در سکوهای آنلاین — تابلو`
+            : GOLD_PRICE_TITLE,
+          data.goldPrice === null
+            ? `قیمت اعلامی ${data.listing.name_fa} (تومان بر ${data.listing.unit_fa}) در سکوهای آنلاین ایران، همراه با کارمزد خرید و فروش هر سکو؛ کارمزد جدا از قیمت می‌آید، نه پخته در آن.`
+            : GOLD_PRICE_DESCRIPTION,
           data.listing.slug,
         ] as const)
       : ([
@@ -108,7 +131,12 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
     return (
       <>
         <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: data.listing.name_fa }]} />
-        <AssetPage listing={data.listing} rows={data.rows} nowMs={nowMs} />
+        <AssetPage
+          listing={data.listing}
+          rows={data.rows}
+          nowMs={nowMs}
+          goldPrice={data.goldPrice}
+        />
       </>
     );
   }

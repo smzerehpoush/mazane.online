@@ -15,7 +15,7 @@ import type { SlugPageData } from "../src/components/content/SlugPageView";
 import { getPublishedPost, type BlogPost, type PublishedPost } from "../src/lib/blog";
 import { formatToman } from "../src/lib/format";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
-import { buildSitemapEntries } from "../src/lib/seo/sitemap";
+import { CONTENT_REVISED_ON, buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
 import { AboutPage, aboutHead } from "../src/routes/about";
@@ -504,7 +504,13 @@ describe("BreadcrumbList", () => {
 });
 
 describe("Removed types appear nowhere", () => {
-  it("FAQPage / HowTo / SearchAction / AggregateRating / seller Offer — absolutely absent", async () => {
+  /**
+   * ⚠️ FAQPage left this list for `/tala-18` only, and only because that page
+   * grew a real, visible FAQ (issue 73). The rule it still enforces everywhere
+   * is unchanged: schema may only describe what the page actually renders, so
+   * a page without a visible FAQ block must never ship FAQPage.
+   */
+  it("HowTo / SearchAction / AggregateRating / seller Offer — absolutely absent", async () => {
     seed(assetStore());
     seedBlog([PUBLISHED_POST]);
     const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
@@ -518,10 +524,26 @@ describe("Removed types appear nowhere", () => {
     ];
     for (const head of heads) {
       const raw = rawJsonLd(head);
-      for (const forbidden of ["FAQPage", "HowTo", "SearchAction", "AggregateRating"]) {
+      for (const forbidden of ["HowTo", "SearchAction", "AggregateRating"]) {
         expect(raw).not.toContain(forbidden);
       }
       expect(collectTypes(jsonLdBlocks(head)).has("Offer")).toBe(false);
+    }
+  });
+
+  it("FAQPage stays off every page without a visible FAQ block", async () => {
+    seed(assetStore());
+    seedBlog([PUBLISHED_POST]);
+    const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
+    const heads: HeadLike[] = [
+      homeHead(),
+      slugHead(await pageOf("wallgold")),
+      blogPostHead(post),
+      blogIndexHead(),
+      mazaneChistHead(),
+    ];
+    for (const head of heads) {
+      expect(rawJsonLd(head)).not.toContain("FAQPage");
     }
   });
 });
@@ -568,14 +590,15 @@ describe("The mazane-chist page — /mazane-chist", () => {
     expect(await slugPageData("mazane-chist")).toBeNull();
   });
 
-  it("Is in the sitemap — without lastmod", () => {
+  it("Is in the sitemap — with its declared content revision, not a price date", () => {
     const entry = buildSitemapEntries({
       posts: [],
       instruments: [],
       platforms: [],
     }).find((item) => item.path === "/mazane-chist");
     expect(entry).toBeDefined();
-    expect(entry?.lastModified).toBeUndefined();
+    expect(entry?.lastModified).toBe(CONTENT_REVISED_ON["/mazane-chist"]);
+    expect(entry?.lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
 
@@ -586,7 +609,7 @@ describe("Metadata and lastmod", () => {
     expect(head.meta).toContainEqual({ property: "og:locale", content: "fa_IR" });
   });
 
-  it("Only blog posts have lastmod — price fluctuation is never lastmod", async () => {
+  it("Price fluctuation is never lastmod — only a post carries a timestamp", async () => {
     seedBlog([PUBLISHED_POST]);
     const post = (await getPublishedPost(PUBLISHED_POST.slug)) as PublishedPost;
     const entries = buildSitemapEntries({
@@ -598,8 +621,10 @@ describe("Metadata and lastmod", () => {
     for (const entry of entries) {
       if (entry.path.startsWith("/blog/")) {
         expect(entry.lastModified).toBe(PUBLISHED_POST.updated_at);
-      } else {
-        expect(entry.lastModified, `${entry.path} نباید lastmod داشته باشد`).toBeUndefined();
+      } else if (entry.lastModified !== undefined) {
+        expect(entry.lastModified, `${entry.path} must be date-only`).toMatch(
+          /^\d{4}-\d{2}-\d{2}$/,
+        );
       }
     }
   });

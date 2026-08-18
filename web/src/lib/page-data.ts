@@ -3,6 +3,7 @@ import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
 import { calculateBubble } from "./bubble";
 import { buildCoinPrices } from "./coin-prices";
+import { buildGoldPriceView, GOLD_PRICE_INSTRUMENT, type GoldPriceView } from "./gold-price";
 import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
 import type { InstrumentListing, ListedPlatform, PlatformSnapshot } from "./prices";
 import type { ReferencePrice, ReferencePriceQuery } from "./reference-price";
@@ -130,6 +131,49 @@ export interface SlugReaders {
   getReferencePrice(query: ReferencePriceQuery): Promise<ReferencePrice | null>;
 }
 
+/**
+ * ⚠️ The try/catch is the page's 5xx guard, not decoration. `/tala-18` is the
+ * site's main price URL, and both reads behind this function hit Postgres; a
+ * throw here would turn a database outage into a 500 on the one page that
+ * must stay up. Null means "the headline block hides itself", never an error.
+ */
+async function readGoldPrice(
+  instrument: string,
+  read: Pick<SlugReaders, "getPlatformHistory" | "getReferencePrice">,
+): Promise<GoldPriceView | null> {
+  if (instrument !== GOLD_PRICE_INSTRUMENT) return null;
+  try {
+    const [referenceRanges, reference] = await Promise.all([
+      Promise.all(
+        RATE_CARD_RANGES.map((range) =>
+          read.getPlatformHistory({
+            platformSlugs: [UNION_RATE_REFERENCE_SLUG],
+            instrument: UNION_RATE_INSTRUMENT,
+            hours: range.hours,
+            kind: "REFERENCE",
+            ...(range.stepHours === undefined ? {} : { stepHours: range.stepHours }),
+          }),
+        ),
+      ),
+      read.getReferencePrice({
+        referenceSlug: UNION_RATE_REFERENCE_SLUG,
+        instrument: UNION_RATE_INSTRUMENT,
+      }),
+    ]);
+    const history: PlatformHistoryByRange = { DAILY: null, WEEKLY: null, MONTHLY: null };
+    RATE_CARD_RANGES.forEach((range, index) => {
+      history[range.key] = referenceRanges[index]?.[0] ?? null;
+    });
+    return buildGoldPriceView({ reference, history });
+  } catch (error) {
+    console.error("gold price readers unavailable; rendering the page without the headline", error);
+    return buildGoldPriceView({
+      reference: null,
+      history: { DAILY: null, WEEKLY: null, MONTHLY: null },
+    });
+  }
+}
+
 export async function assembleSlugPage(
   slug: string,
   read: SlugReaders,
@@ -139,11 +183,15 @@ export async function assembleSlugPage(
   const generatedAt = new Date().toISOString();
 
   if (resolved.kind === "instrument") {
-    const rows = await read.fetchRowsForPlatforms(resolved.listing.supporting_platform_slugs);
+    const [rows, goldPrice] = await Promise.all([
+      read.fetchRowsForPlatforms(resolved.listing.supporting_platform_slugs),
+      readGoldPrice(resolved.listing.instrument, read),
+    ]);
     return {
       kind: "instrument",
       listing: resolved.listing,
       rows: rows.map((row) => ({ ...row, platform: withoutReferral(row.platform) })),
+      goldPrice,
       generated_at: generatedAt,
     };
   }

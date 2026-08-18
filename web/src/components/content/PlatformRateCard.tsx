@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 
+import { RangeTabs } from "@/components/content/RangeTabs";
 import { Staleness } from "@/components/content/RowParts";
 import {
   formatDateTimeFa,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/live-update";
 import { priceToman, type Row } from "@/lib/rows";
 import { seriesPaths } from "@/lib/spline";
-import { fa, RATE_CARD_RANGES, type RateCardRangeConfig } from "@/lib/site-content";
+import { fa, RATE_CARD_RANGES } from "@/lib/site-content";
 
 const PRICE_LABEL = "قیمت اعلامی این سکو — پیش از کارمزد";
 const COMING_SOON_LABEL = "به‌زودی";
@@ -55,15 +56,6 @@ function computeEnabledRanges(history: PlatformHistoryByRange): Record<HistoryRa
   return enabled;
 }
 
-function nextEnabledIndex(start: number, direction: 1 | -1, enabled: readonly boolean[]): number {
-  const n = enabled.length;
-  for (let step = 1; step <= n; step++) {
-    const index = (start + direction * step + n * n) % n;
-    if (enabled[index] === true) return index;
-  }
-  return start;
-}
-
 function Stat({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-1 text-center">
@@ -92,45 +84,6 @@ function ChangeStat({ changeFraction }: { changeFraction: number }) {
   );
 }
 
-function RangeTab({
-  range,
-  active,
-  enabled,
-  onSelect,
-  onKeyDown,
-  tabRef,
-}: {
-  range: RateCardRangeConfig;
-  active: boolean;
-  enabled: boolean;
-  onSelect: () => void;
-  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
-  tabRef: (el: HTMLButtonElement | null) => void;
-}) {
-  return (
-    <button
-      ref={tabRef}
-      type="button"
-      role="tab"
-      aria-selected={active}
-      aria-disabled={!enabled}
-      disabled={!enabled}
-      tabIndex={active ? 0 : -1}
-      onClick={onSelect}
-      onKeyDown={onKeyDown}
-      className={`transition-smooth rounded-full px-3 py-1.5 text-xs font-medium ${
-        !enabled
-          ? "cursor-not-allowed text-muted-foreground/50"
-          : active
-            ? "bg-foreground text-background"
-            : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {enabled ? range.label : COMING_SOON_LABEL}
-    </button>
-  );
-}
-
 export function PlatformRateCard({
   row,
   history,
@@ -144,7 +97,6 @@ export function PlatformRateCard({
   useEffect(() => setMounted(true), []);
 
   const [activeRange, setActiveRange] = useState<HistoryRange>("DAILY");
-  const tabRefs = useRef<Partial<Record<HistoryRange, HTMLButtonElement | null>>>({});
 
   const [live, setLive] = useState(() => ({
     updatedAtIso: row.updatedAt,
@@ -213,30 +165,6 @@ export function PlatformRateCard({
 
   const label = PRICE_LABEL;
 
-  function selectRange(range: HistoryRange): void {
-    if (enabledRanges[range] !== true) return;
-    setActiveRange(range);
-  }
-
-  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>): void {
-    const order = RATE_CARD_RANGES.map((range) => range.key);
-    const enabledFlags = order.map((key) => enabledRanges[key] === true);
-    const currentIndex = order.indexOf(activeRange);
-
-    let targetIndex: number | null = null;
-    if (event.key === "ArrowRight") targetIndex = nextEnabledIndex(currentIndex, 1, enabledFlags);
-    else if (event.key === "ArrowLeft")
-      targetIndex = nextEnabledIndex(currentIndex, -1, enabledFlags);
-    else if (event.key === "Home") targetIndex = enabledFlags.indexOf(true);
-    else if (event.key === "End") targetIndex = enabledFlags.lastIndexOf(true);
-    if (targetIndex === null || targetIndex < 0) return;
-
-    event.preventDefault();
-    const targetRange = order[targetIndex] as HistoryRange;
-    setActiveRange(targetRange);
-    tabRefs.current[targetRange]?.focus();
-  }
-
   return (
     <section
       aria-labelledby="rate-card-heading"
@@ -247,25 +175,13 @@ export function PlatformRateCard({
           قیمت سکو
         </h2>
 
-        <div
-          role="tablist"
-          aria-label="بازه‌ی نمودار"
-          className="flex items-center gap-1 rounded-full bg-surface p-1"
-        >
-          {RATE_CARD_RANGES.map((range) => (
-            <RangeTab
-              key={range.key}
-              range={range}
-              active={activeRange === range.key}
-              enabled={enabledRanges[range.key] === true}
-              onSelect={() => selectRange(range.key)}
-              onKeyDown={handleTabKeyDown}
-              tabRef={(el) => {
-                tabRefs.current[range.key] = el;
-              }}
-            />
-          ))}
-        </div>
+        <RangeTabs
+          active={activeRange}
+          enabled={enabledRanges}
+          onSelect={setActiveRange}
+          ariaLabel="بازه‌ی نمودار"
+          disabledLabel={COMING_SOON_LABEL}
+        />
       </div>
 
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">

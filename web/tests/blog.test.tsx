@@ -292,7 +292,7 @@ describe("blog store unreachable (e.g. a build outside the server) — staleness
 });
 
 describe("blog sitemap", () => {
-  it("post lastmod = its own updated_at, not now(); other pages have no lastmod", async () => {
+  it("post lastmod = its own updated_at, not now(); the home page keeps a declared day", async () => {
     seedBlog(ALL_POSTS);
     const entries = buildSitemapEntries({
       posts: await listPublishedPosts(),
@@ -308,7 +308,9 @@ describe("blog sitemap", () => {
       entries.find((entry) => entry.path === `/blog/${PUBLISHED_OLD.slug}`)?.lastModified,
     ).toBe(PUBLISHED_OLD.updated_at);
 
-    expect(entries.find((entry) => entry.path === "/")?.lastModified).toBeUndefined();
+    expect(entries.find((entry) => entry.path === "/")?.lastModified).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/,
+    );
   });
 
   it("draft and retracted posts are not in the sitemap", async () => {

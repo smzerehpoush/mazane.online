@@ -1,19 +1,12 @@
+import { GoldPriceBody, GoldPriceCard } from "@/components/content/GoldPriceToday";
 import { Madde5Bar } from "@/components/content/LegalNotice";
 import { ClosedBadges, MarketModelBadge, Staleness } from "@/components/content/RowParts";
 import { formatPercentPointsFa, formatToman } from "@/lib/format";
+import { GOLD_PRICE_QUESTION, type GoldPriceView } from "@/lib/gold-price";
 import type { InstrumentListing } from "@/lib/prices";
-import {
-  buyFeePercent,
-  compareByPrice,
-  priceToman,
-  sellFeePercent,
-  type Row,
-} from "@/lib/rows";
+import { buyFeePercent, compareByPrice, priceToman, sellFeePercent, type Row } from "@/lib/rows";
 
-export function groupRows(
-  rows: Row[],
-  instrument: string,
-): { priced: Row[]; unpriced: Row[] } {
+export function groupRows(rows: Row[], instrument: string): { priced: Row[]; unpriced: Row[] } {
   const priced = rows
     .filter((row) => priceToman(row, instrument) !== null)
     .sort(compareByPrice(instrument));
@@ -49,15 +42,7 @@ function PlatformCell({ row }: { row: Row }) {
   );
 }
 
-function PricedRow({
-  row,
-  instrument,
-  nowMs,
-}: {
-  row: Row;
-  instrument: string;
-  nowMs: number;
-}) {
+function PricedRow({ row, instrument, nowMs }: { row: Row; instrument: string; nowMs: number }) {
   const price = priceToman(row, instrument);
   return (
     <tr
@@ -94,27 +79,46 @@ function UnpricedRow({ row, nowMs }: { row: Row; nowMs: number }) {
   );
 }
 
+const GOLD_PRICE_LEAD =
+  "نرخ هر گرم طلای ۱۸ عیار به گزارش tala.ir، تغییرش در ۲۴ ساعت، هفته و ماه گذشته، و عددی که هر سکوی آنلاین برای همان یک گرم اعلام کرده است.";
+
 export function AssetPage({
   listing,
   rows,
   nowMs,
+  goldPrice = null,
 }: {
   listing: InstrumentListing;
   rows: Row[];
   nowMs: number;
+  goldPrice?: GoldPriceView | null;
 }) {
   const { priced, unpriced } = groupRows(rows, listing.instrument);
 
   return (
     <>
       <header className="mb-6">
-        <h1 className="text-xl font-bold sm:text-2xl">قیمت {listing.name_fa}</h1>
+        <h1 className="text-xl font-bold sm:text-2xl">
+          {goldPrice === null ? `قیمت ${listing.name_fa}` : GOLD_PRICE_QUESTION}
+        </h1>
         <p className="mt-2 text-[13px] leading-7 text-muted-foreground">
-          قیمت اعلامی {listing.name_fa} در سکوهای آنلاین، همراه با کارمزد خرید و
-          فروش هر سکو — جدا از قیمت، نه پخته در آن.
-          {listing.currency === "TOMAN" ? ` (تومان بر ${listing.unit_fa})` : null}
+          {goldPrice === null ? (
+            <>
+              قیمت اعلامی {listing.name_fa} در سکوهای آنلاین، همراه با کارمزد خرید و فروش هر سکو —
+              جدا از قیمت، نه پخته در آن.
+              {listing.currency === "TOMAN" ? ` (تومان بر ${listing.unit_fa})` : null}
+            </>
+          ) : (
+            GOLD_PRICE_LEAD
+          )}
         </p>
       </header>
+
+      {goldPrice === null ? null : (
+        <div className="mb-6">
+          <GoldPriceCard view={goldPrice} nowMs={nowMs} />
+        </div>
+      )}
 
       <section aria-labelledby="asset-table-heading" className="glass-surface overflow-hidden">
         <div className="border-b border-border/70 px-4 py-4 sm:px-6">
@@ -176,12 +180,13 @@ export function AssetPage({
         )}
 
         <p className="page-lead border-t border-border/70 px-4 py-4 text-[11px] leading-6 text-muted-foreground sm:px-6">
-          ستون «قیمت» عدد اعلامی <strong>همان سکو</strong> است، پیش از کارمزد؛ سکویی
-          که خودش دو عدد جدا برای خرید و فروش می‌دهد، میانگین همان دو ثبت می‌شود.
-          کارمزد «—» یعنی سکو آن را اعلام نکرده، نه اینکه صفر است. تابلو هیچ
-          میانگین بین‌سکویی‌ای محاسبه یا منتشر نمی‌کند.
+          ستون «قیمت» عدد اعلامی <strong>همان سکو</strong> است، پیش از کارمزد؛ سکویی که خودش دو عدد
+          جدا برای خرید و فروش می‌دهد، میانگین همان دو ثبت می‌شود. کارمزد «—» یعنی سکو آن را اعلام
+          نکرده، نه اینکه صفر است. تابلو هیچ میانگین بین‌سکویی‌ای محاسبه یا منتشر نمی‌کند.
         </p>
       </section>
+
+      {goldPrice === null ? null : <GoldPriceBody />}
 
       <p className="mt-6 text-[12px]">
         <a href="/" className="transition-smooth text-primary hover:underline">

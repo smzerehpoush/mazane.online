@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PublishedPost } from "../src/lib/blog";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
+import { REGISTRY_INSTRUMENTS, REGISTRY_PLATFORMS } from "../src/lib/registry";
 import { adminHeadersFor, applyAdminHeaders } from "../src/lib/seo/admin-headers";
 import {
   HTML_EDGE_CACHE_CONTROL,
@@ -9,7 +10,7 @@ import {
   edgeCacheControlFor,
 } from "../src/lib/seo/cache-headers";
 import { renderRobotsTxt } from "../src/lib/seo/robots";
-import { buildSitemapEntries, renderSitemapXml } from "../src/lib/seo/sitemap";
+import { CONTENT_REVISED_ON, buildSitemapEntries, renderSitemapXml } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
 
 const POSTS: PublishedPost[] = [
@@ -104,16 +105,82 @@ describe("sitemap.xml", () => {
     expect(renderSitemapXml(entries())).not.toContain("/go/");
   });
 
-  it("lastmod only for blog posts, and from their own updated_at", () => {
-    const withLastmod = entries().filter((entry) => entry.lastModified !== undefined);
-    expect(withLastmod).toEqual([
-      { path: "/blog/maliyat-tala-1405", lastModified: "2026-08-03T11:30:00.000Z" },
-    ]);
+  it("a post's lastmod is its own updated_at, with the timestamp kept", () => {
+    const post = entries().find((entry) => entry.path === "/blog/maliyat-tala-1405");
+    expect(post?.lastModified).toBe("2026-08-03T11:30:00.000Z");
   });
 
-  it("the home page and price pages have no lastmod — a price fluctuating isn't a content change", () => {
-    const xml = renderSitemapXml([{ path: "/" }, { path: "/milli" }]);
-    expect(xml).not.toContain("<lastmod>");
+  it("a non-blog lastmod is always date-only — a time of day would be a price tick", () => {
+    for (const entry of entries()) {
+      if (entry.path.startsWith("/blog/")) continue;
+      if (entry.lastModified === undefined) continue;
+      expect(entry.lastModified, entry.path).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+  });
+
+  it("a non-blog lastmod is exactly the declared content revision, never anything live", () => {
+    for (const entry of entries()) {
+      if (entry.path.startsWith("/blog/")) continue;
+      if (entry.path === "/blog") continue;
+      expect(entry.lastModified, entry.path).toBe(CONTENT_REVISED_ON[entry.path]);
+    }
+  });
+
+  it("a page nobody declared a revision for gets no lastmod — an omitted lastmod is valid", () => {
+    const undeclared = buildSitemapEntries({
+      posts: [],
+      instruments: [],
+      platforms: [{ slug: "tazevared", name_fa: "تازه‌وارد", data_policy: "ALLOWED" }],
+    }).find((entry) => entry.path === "/tazevared");
+    expect(undeclared).toBeDefined();
+    expect(undeclared?.lastModified).toBeUndefined();
+    expect(renderSitemapXml([{ path: "/tazevared" }])).not.toContain("<lastmod>");
+  });
+
+  it("the blog index follows the newest published post, floored to the day", () => {
+    const index = entries().find((entry) => entry.path === "/blog");
+    expect(index?.lastModified).toBe(CONTENT_REVISED_ON["/blog"]);
+
+    const fresher = buildSitemapEntries({
+      posts: [{ ...POSTS[0]!, updated_at: "2030-01-02T18:45:00.000Z" }],
+      instruments: [],
+      platforms: [],
+    }).find((entry) => entry.path === "/blog");
+    expect(fresher?.lastModified).toBe("2030-01-02");
+  });
+
+  it("every static page declares a content revision date", () => {
+    const staticPaths = buildSitemapEntries({
+      posts: [],
+      instruments: [],
+      platforms: [],
+    }).map((entry) => entry.path);
+    for (const path of staticPaths) {
+      expect(
+        CONTENT_REVISED_ON[path],
+        `${path} has no entry in CONTENT_REVISED_ON (src/lib/seo/sitemap.ts) — add the day its copy was last edited`,
+      ).toBeDefined();
+    }
+  });
+
+  it("every registry platform and every published registry asset declares one too", () => {
+    for (const platform of REGISTRY_PLATFORMS) {
+      expect(CONTENT_REVISED_ON[`/${platform.slug}`], platform.slug).toBeDefined();
+    }
+    for (const listing of REGISTRY_INSTRUMENTS) {
+      if (!listing.published) continue;
+      expect(CONTENT_REVISED_ON[`/${listing.slug}`], listing.slug).toBeDefined();
+    }
+  });
+
+  it("every declared revision is a real, past, date-only day", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    for (const [path, day] of Object.entries(CONTENT_REVISED_ON)) {
+      expect(path.startsWith("/"), path).toBe(true);
+      expect(day, path).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Number.isNaN(Date.parse(`${day}T00:00:00Z`)), path).toBe(false);
+      expect(day <= today, `${path} claims a lastmod in the future`).toBe(true);
+    }
   });
 
   it("produces valid XML with absolute URLs", () => {

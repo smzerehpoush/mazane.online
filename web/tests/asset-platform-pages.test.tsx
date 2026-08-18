@@ -230,7 +230,8 @@ describe("asset page — /tala-18", () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
 
-    expect(html).toMatch(/<h1[^>]*>قیمت طلای ۱۸ عیار<\/h1>/);
+    expect(html).toMatch(/<h1[^>]*>قیمت طلا امروز چقدر است؟<\/h1>/);
+    expect(html).toContain("طلای ۱۸ عیار");
     const wallgold = rowOf(html, "wallgold");
     expect(wallgold).toContain("۱۸٬۶۱۱٬۰۰۰");
     expect(wallgold).toMatch(/data-fee[^>]*>۰٫۵٪/);
@@ -689,7 +690,7 @@ describe("the rate card's period tab bar — daily/weekly/monthly", () => {
 });
 
 describe("sitemap — only gate-passed pages", () => {
-  it("includes the published asset and platforms; the single-platform asset is absent; no lastmod", () => {
+  it("includes the published asset and platforms; the single-platform asset is absent; lastmod is a declared day, never a price tick", () => {
     const entries = buildSitemapEntries({
       posts: [],
       instruments: [TALA18, NOGHRE_SINGLE],
@@ -703,7 +704,9 @@ describe("sitemap — only gate-passed pages", () => {
     expect(paths).toContain("/talasea");
 
     for (const path of ["/tala-18", "/wallgold"]) {
-      expect(entries.find((entry) => entry.path === path)?.lastModified).toBeUndefined();
+      expect(entries.find((entry) => entry.path === path)?.lastModified, path).toMatch(
+        /^\d{4}-\d{2}-\d{2}$/,
+      );
     }
   });
 });

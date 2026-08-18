@@ -162,6 +162,9 @@ services:
       TABLO_ARVAN_S3_BUCKET: ${TABLO_ARVAN_S3_BUCKET:?TABLO_ARVAN_S3_BUCKET را در .env مقدار بدهید — رانبوک بند ۱.۴}
       TABLO_ARVAN_S3_ACCESS_KEY: ${TABLO_ARVAN_S3_ACCESS_KEY:?TABLO_ARVAN_S3_ACCESS_KEY را در .env مقدار بدهید — رانبوک بند ۱.۴}
       TABLO_ARVAN_S3_SECRET_KEY: ${TABLO_ARVAN_S3_SECRET_KEY:?TABLO_ARVAN_S3_SECRET_KEY را در .env مقدار بدهید — رانبوک بند ۱.۴}
+      # IndexNow (ticket 59) — optional on purpose: empty means the ping is
+      # skipped, never a startup failure. Runbook section 14.
+      TABLO_INDEXNOW_KEY: ${TABLO_INDEXNOW_KEY:-}
     # Host loopback only — for verification from the server itself (curl 127.0.0.1:3300).
     # Tablo doesn't bind to 80/443; real traffic comes from the edge Caddy on
     # the tablo-edge network, not through this port. (Caddy connecting to the
