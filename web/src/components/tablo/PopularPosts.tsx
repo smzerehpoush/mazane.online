@@ -1,3 +1,4 @@
+import { PostImage } from "@/components/content/PostImage";
 import type { PublishedPost } from "@/lib/blog";
 import { postExcerpt } from "./home-view";
 import { formatDateFa } from "@/lib/format";
@@ -21,11 +22,9 @@ export function PopularPosts({
           return (
             <article key={post.slug} className="glass-surface lift-hover flex flex-col p-5">
               {image !== null ? (
-                <img
-                  src={image.url}
-                  width={image.width}
-                  height={image.height}
-                  alt={image.alt}
+                <PostImage
+                  image={image}
+                  sizes="(min-width: 1024px) 421px, (min-width: 640px) 45vw, 100vw"
                   loading="lazy"
                   className="mb-4 aspect-video w-full rounded-xl object-cover"
                 />

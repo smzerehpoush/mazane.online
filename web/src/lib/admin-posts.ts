@@ -30,6 +30,7 @@ export interface PostImagePatch {
   image_alt: string;
   image_width: number;
   image_height: number;
+  image_srcset?: string | null;
 }
 
 export interface AdminPostsSource {
@@ -123,6 +124,7 @@ export async function createPost(input: CreatePostInput, now: string): Promise<W
     image_alt: null,
     image_width: null,
     image_height: null,
+    image_srcset: null,
   };
   await src.insertPost(post);
   return { ok: true, post };
@@ -186,6 +188,13 @@ export async function setPostImage(slug: string, image: PostImagePatch): Promise
   const existing = await src.getPost(slug);
   if (existing === null) return notFoundFailure();
 
-  await src.setImage(slug, image);
-  return { ok: true, post: { ...existing, ...image } };
+  /**
+   * ⚠️ `image_srcset` is written on every image change, `null` included:
+   * replacing a picture that had variants with one that has none must clear
+   * the old srcset, otherwise the page points at objects of the previous
+   * image.
+   */
+  const patch: PostImagePatch = { ...image, image_srcset: image.image_srcset ?? null };
+  await src.setImage(slug, patch);
+  return { ok: true, post: { ...existing, ...patch } };
 }

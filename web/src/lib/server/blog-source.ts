@@ -24,6 +24,7 @@ interface PostRow {
   image_alt: string | null;
   image_width: number | null;
   image_height: number | null;
+  image_srcset: string | null;
 }
 
 function toPost(row: PostRow): BlogPost {
@@ -38,12 +39,13 @@ function toPost(row: PostRow): BlogPost {
     image_alt: row.image_alt,
     image_width: row.image_width,
     image_height: row.image_height,
+    image_srcset: row.image_srcset,
   };
 }
 
 const COLUMNS =
   "slug, title_fa, body_md, status, published_at, updated_at, " +
-  "image_url, image_alt, image_width, image_height";
+  "image_url, image_alt, image_width, image_height, image_srcset";
 
 export function createPgBlogSource(): BlogSource {
   const pool = pgPool();

@@ -17,10 +17,12 @@ import {
   uploadImage as domainUpload,
   type ImageStore,
   type UploadedImage,
+  type UploadedImageVariant,
 } from "../images";
 import { enqueueImageJob } from "./image-queue";
 
 const MAX_WIDTH = 1600;
+const VARIANT_WIDTHS: readonly number[] = [160, 480, 800, 1200];
 const WEBP_QUALITY = 82;
 
 function requiredEnv(name: string): string {
@@ -47,28 +49,56 @@ function s3Client(): S3Client {
   return cachedClient;
 }
 
-async function processAndUpload(slug: string, bytes: Uint8Array): Promise<UploadedImage> {
-  const processed = await sharp(Buffer.from(bytes))
-    .resize({ width: MAX_WIDTH, withoutEnlargement: true })
-    .webp({ quality: WEBP_QUALITY })
-    // Without withMetadata(): EXIF/GPS is stripped by default (a privacy benefit).
-    .toBuffer({ resolveWithObject: true });
+type SharpInstance = ReturnType<typeof sharp>;
 
-  const hash = createHash("sha256").update(processed.data).digest("hex");
-  const objectKey = `posts/${slug}/${hash}.webp`;
+function encodeWebp(source: SharpInstance, width: number) {
+  return (
+    source
+      .clone()
+      .resize({ width, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      // Without withMetadata(): EXIF/GPS is stripped by default (a privacy benefit).
+      .toBuffer({ resolveWithObject: true })
+  );
+}
 
+async function putWebp(objectKey: string, body: Buffer): Promise<void> {
   await s3Client().send(
     new PutObjectCommand({
       Bucket: requiredEnv("TABLO_ARVAN_S3_BUCKET"),
       Key: objectKey,
-      Body: processed.data,
+      Body: body,
       ContentType: "image/webp",
       CacheControl: "public, max-age=31536000, immutable",
       ACL: "public-read",
     }),
   );
+}
 
-  return { objectKey, width: processed.info.width, height: processed.info.height };
+async function processAndUpload(slug: string, bytes: Uint8Array): Promise<UploadedImage> {
+  const source = sharp(Buffer.from(bytes));
+  const processed = await encodeWebp(source, MAX_WIDTH);
+
+  const hash = createHash("sha256").update(processed.data).digest("hex");
+  const objectKey = `posts/${slug}/${hash}.webp`;
+
+  await putWebp(objectKey, processed.data);
+
+  const variants: UploadedImageVariant[] = [];
+  for (const width of VARIANT_WIDTHS) {
+    if (width >= processed.info.width) continue;
+    const variant = await encodeWebp(source, width);
+    const variantKey = `posts/${slug}/${hash}-${variant.info.width}.webp`;
+    await putWebp(variantKey, variant.data);
+    variants.push({ objectKey: variantKey, width: variant.info.width });
+  }
+
+  return {
+    objectKey,
+    width: processed.info.width,
+    height: processed.info.height,
+    variants,
+  };
 }
 
 export function createS3ImageStore(): ImageStore {

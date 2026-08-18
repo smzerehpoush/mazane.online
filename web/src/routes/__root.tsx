@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 
+import { configuredImageOrigin, imagePreconnectLinks } from "@/lib/image-origin";
 import { SERVER_THEME, THEME_INIT_SCRIPT } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
@@ -74,8 +75,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+/**
+ * ⚠️ The image origin has to travel through the root loader; do **not** read
+ * the environment inside `head()`. `head()` is evaluated on the client too,
+ * where the variable does not exist — the link would then be present in the
+ * server HTML and absent on hydration, and React answers that mismatch by
+ * throwing the whole server render away and re-rendering on the client. The
+ * loader's value is serialized with the page, so both sides agree.
+ */
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  loader: () => ({ imageOrigin: configuredImageOrigin() }),
+  head: ({ loaderData }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
@@ -88,6 +98,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
     ],
     links: [
+      ...imagePreconnectLinks(loaderData?.imageOrigin ?? null),
       {
         rel: "stylesheet",
         href: appCss,

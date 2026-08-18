@@ -1,4 +1,5 @@
 import { Breadcrumbs } from "@/components/content/PageShell";
+import { PostImage } from "@/components/content/PostImage";
 import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
 import { ViewBeacon } from "@/components/content/ViewBeacon";
 import type { PublishedPost } from "@/lib/blog";
@@ -42,9 +43,7 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
 
       <header className="mb-6">
         <h1 className="text-xl font-bold sm:text-2xl">{BLOG_INDEX_TITLE}</h1>
-        <p className="mt-2 text-[13px] leading-7 text-muted-foreground">
-          {BLOG_INDEX_DESCRIPTION}
-        </p>
+        <p className="mt-2 text-[13px] leading-7 text-muted-foreground">{BLOG_INDEX_DESCRIPTION}</p>
       </header>
 
       {posts.length === 0 ? (
@@ -58,18 +57,13 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
             const text = (
               <>
                 <h2 className="text-[15px] leading-7 font-semibold sm:text-base">
-                  <a
-                    href={`/blog/${post.slug}`}
-                    className="transition-smooth hover:text-primary"
-                  >
+                  <a href={`/blog/${post.slug}`} className="transition-smooth hover:text-primary">
                     {post.title_fa}
                   </a>
                 </h2>
                 <p className="mt-2 text-[11px] text-muted-foreground">
                   انتشار:{" "}
-                  <time dateTime={post.published_at}>
-                    {formatDateFa(post.published_at)}
-                  </time>
+                  <time dateTime={post.published_at}>{formatDateFa(post.published_at)}</time>
                 </p>
               </>
             );
@@ -82,11 +76,9 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
                 >
                   {image !== null ? (
                     <>
-                      <img
-                        src={image.url}
-                        width={image.width}
-                        height={image.height}
-                        alt={image.alt}
+                      <PostImage
+                        image={image}
+                        sizes="(min-width: 640px) 80px, 64px"
                         loading="lazy"
                         className="size-16 shrink-0 rounded-xl object-cover sm:size-20"
                       />
@@ -188,8 +180,7 @@ export function BlogPostView({ post }: { post: PublishedPost }) {
       <article className="glass-surface px-5 py-7 sm:px-8 sm:py-9">
         <h1 className="text-xl leading-9 font-bold sm:text-2xl">{post.title_fa}</h1>
         <p className="mt-3 border-b border-border/70 pb-5 text-[11px] text-muted-foreground">
-          انتشار:{" "}
-          <time dateTime={post.published_at}>{formatDateFa(post.published_at)}</time>
+          انتشار: <time dateTime={post.published_at}>{formatDateFa(post.published_at)}</time>
           {post.updated_at !== post.published_at ? (
             <>
               {" — "}به‌روزرسانی:{" "}
@@ -198,12 +189,11 @@ export function BlogPostView({ post }: { post: PublishedPost }) {
           ) : null}
         </p>
         {image !== null ? (
-          <img
-            src={image.url}
-            width={image.width}
-            height={image.height}
-            alt={image.alt}
+          <PostImage
+            image={image}
+            sizes="(min-width: 820px) 692px, 100vw"
             loading="eager"
+            priority
             className="mt-6 w-full rounded-2xl"
           />
         ) : null}

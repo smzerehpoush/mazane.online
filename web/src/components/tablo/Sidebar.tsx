@@ -1,3 +1,4 @@
+import { PostImage } from "@/components/content/PostImage";
 import type { PublishedPost } from "@/lib/blog";
 import { formatDateFa } from "@/lib/format";
 import { postImageAsset } from "@/lib/images";
@@ -18,11 +19,9 @@ export function Sidebar({ posts }: { posts: PublishedPost[] }) {
                 }`}
               >
                 {image !== null ? (
-                  <img
-                    src={image.url}
-                    width={image.width}
-                    height={image.height}
-                    alt={image.alt}
+                  <PostImage
+                    image={image}
+                    sizes="(min-width: 640px) 80px, 64px"
                     loading="lazy"
                     className="transition-smooth size-16 shrink-0 rounded-2xl border border-border/70 object-cover shadow-soft group-hover:shadow-card sm:size-20"
                   />

@@ -175,6 +175,7 @@ describe("createPost", () => {
       image_alt: null,
       image_width: null,
       image_height: null,
+      image_srcset: null,
     });
     expect(fake.inserted).toHaveLength(1);
   });
@@ -379,7 +380,28 @@ describe("setPostImage", () => {
     expect(result.post.image_width).toBe(image.image_width);
     expect(result.post.image_height).toBe(image.image_height);
     expect(result.post.updated_at).toBe(original);
-    expect(fake.imageChanges).toEqual([{ slug: "akkas", patch: image }]);
+    expect(fake.imageChanges).toEqual([{ slug: "akkas", patch: { ...image, image_srcset: null } }]);
+  });
+
+  it("an image with no variants clears the srcset a previous image left behind", async () => {
+    const fake = seedFake(
+      post("akkas", { image_srcset: "https://s3.tablo.test/old-480.webp 480w" }),
+    );
+    const result = await setPostImage("akkas", image);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("unreachable");
+    expect(result.post.image_srcset).toBeNull();
+    expect(fake.imageChanges[0]?.patch.image_srcset).toBeNull();
+  });
+
+  it("a srcset on the patch is handed to the source and to the returned post", async () => {
+    const srcset = "https://s3.tablo.test/a-480.webp 480w, https://s3.tablo.test/a.webp 1600w";
+    const fake = seedFake(post("akkas"));
+    const result = await setPostImage("akkas", { ...image, image_srcset: srcset });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("unreachable");
+    expect(result.post.image_srcset).toBe(srcset);
+    expect(fake.imageChanges[0]?.patch.image_srcset).toBe(srcset);
   });
 
   it("saving post text (updatePost) never reaches setImage — separate paths", async () => {

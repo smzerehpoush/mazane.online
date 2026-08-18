@@ -11,6 +11,7 @@ export interface BlogPost {
   image_alt?: string | null;
   image_width?: number | null;
   image_height?: number | null;
+  image_srcset?: string | null;
 }
 
 export interface PublishedPost extends BlogPost {

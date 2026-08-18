@@ -264,6 +264,54 @@ describe("successful upload", () => {
   });
 });
 
+describe("responsive variants", () => {
+  it("the narrow copies and the full-size one become one ascending srcset", async () => {
+    const fake = seedFake(post("akkas"));
+    seedImageStore({
+      width: 1600,
+      height: 900,
+      variants: [
+        { objectKey: "posts/akkas/fake-hash-800.webp", width: 800 },
+        { objectKey: "posts/akkas/fake-hash-160.webp", width: 160 },
+      ],
+    });
+
+    const response = await adminPostImageUploadResponse(
+      authedRequest("akkas", form({ alt: "متن", fileBytes: SMALL_IMAGE })),
+      "akkas",
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { post: BlogPost };
+    expect(body.post.image_srcset).toBe(
+      `${PUBLIC_BASE}/posts/akkas/fake-hash-160.webp 160w, ` +
+        `${PUBLIC_BASE}/posts/akkas/fake-hash-800.webp 800w, ` +
+        `${PUBLIC_BASE}/posts/akkas/fake-hash.webp 1600w`,
+    );
+    expect(fake.imageChanges[0]?.patch.image_srcset).toBe(body.post.image_srcset);
+  });
+
+  /**
+   * ⚠️ A store that reports no variants — an image narrower than every
+   * variant width, or any upload predating ticket 78 — must produce a null
+   * srcset, never a one-entry one pointing at objects that do not exist.
+   */
+  it("a store that reports no variants ⟸ srcset null, the post still gets its image", async () => {
+    seedFake(post("akkas"));
+    seedImageStore({ width: 120, height: 90 });
+
+    const response = await adminPostImageUploadResponse(
+      authedRequest("akkas", form({ alt: "متن", fileBytes: SMALL_IMAGE })),
+      "akkas",
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { post: BlogPost };
+    expect(body.post.image_srcset).toBeNull();
+    expect(body.post.image_url).toBe(`${PUBLIC_BASE}/posts/akkas/fake-hash.webp`);
+  });
+});
+
 describe("image store outage — staleness for the upload, not for the post text", () => {
   it("returns 502", async () => {
     seedFake(post("akkas"));

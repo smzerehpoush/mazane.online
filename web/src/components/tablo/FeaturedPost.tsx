@@ -1,3 +1,4 @@
+import { PostImage } from "@/components/content/PostImage";
 import type { PublishedPost } from "@/lib/blog";
 import { formatDateFa } from "@/lib/format";
 import { postImageAsset } from "@/lib/images";
@@ -8,11 +9,9 @@ export function FeaturedPost({ post }: { post: PublishedPost }) {
   return (
     <section className="card-surface overflow-hidden" aria-labelledby="featured-post-heading">
       {image !== null ? (
-        <img
-          src={image.url}
-          width={image.width}
-          height={image.height}
-          alt={image.alt}
+        <PostImage
+          image={image}
+          sizes="(min-width: 1081px) 920px, 100vw"
           loading="lazy"
           className="aspect-[16/6] w-full object-cover"
         />

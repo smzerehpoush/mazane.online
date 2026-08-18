@@ -165,7 +165,7 @@ Eight final tables:
 | `platforms` | `slug` text PK; `name_fa` text; `data_policy` text (4 values: ALLOWED/RESTRICTED/PERMISSION_PENDING/BLOCKED); `is_listed` boolean; `market_model` text not null default `'OTC'` (`check in ('OTC','ORDER_BOOK')`) |
 | `reference_quotes` | `id` bigserial PK; `reference_slug`, `name_fa`, `source_url` text; `instrument` text (`check = 'GOLD_18K_TOMAN'`); `side` text (`check = 'PRICE'`); `value`, `raw_value`, `raw_scale` numeric; `fetched_at` timestamptz. Index `(reference_slug, fetched_at desc)` |
 | `hourly_rollups` | `id` bigserial PK; `kind` text (`check in ('PLATFORM','REFERENCE')`); `source_slug`, `instrument` text; `side` text (`check = 'PRICE'`, kept because it's part of the natural key); `hour_start` timestamptz; `open_value`, `close_value`, `min_value`, `max_value` numeric (`check min<=max`); `sample_count` integer (`check > 0`). Unique `(kind, source_slug, instrument, side, hour_start)`; index `(source_slug, instrument, hour_start desc)` |
-| `posts` | `slug` text PK (`check ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`); `title_fa`, `body_md` text; `status` text not null default `'draft'` (3 values: draft/published/retracted); `published_at` timestamptz nullable; `updated_at` timestamptz; `check (status='draft' or published_at is not null)`; `image_url`, `image_alt`, `image_width`, `image_height` (migration 016, all four nullable with a `check` requiring alt when there's an image). Partial index `(published_at desc) where status='published'` |
+| `posts` | `slug` text PK (`check ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`); `title_fa`, `body_md` text; `status` text not null default `'draft'` (3 values: draft/published/retracted); `published_at` timestamptz nullable; `updated_at` timestamptz; `check (status='draft' or published_at is not null)`; `image_url`, `image_alt`, `image_width`, `image_height` (migration 016, all four nullable with a `check` requiring alt when there's an image); `image_srcset` text nullable (migration 020, the ready-to-render `srcset` string, `check` requiring an `image_url` — null for every image uploaded before that migration, and no backfill was run). Partial index `(published_at desc) where status='published'` |
 | `post_views` | `slug` text PK (`references posts(slug) on delete cascade`); `views` bigint not null default 0 (`check >= 0`); `last_seen_at` timestamptz not null default now(). Index `(views desc)` — no personal data whatsoever |
 | `platform_settings` | `slug` text PK (`references platforms(slug)`); `in_chart` boolean not null default false; `chart_color` text (`check ~ '^#[0-9a-f]{6}$'`); `chart_order` int; `referral_url` text; `updated_at` timestamptz not null default now() |
 
@@ -283,7 +283,7 @@ npm test         # vitest run — 31 passing test files
 | `TABLO_DAILY_PUBLISH_CAP` | `2` (invalid value/less than 1 ⟸ falls back to 2 with a warning) | collector `content/queue.py` — only the divisor that turns the draft count into days of runway; it caps nothing, because nothing publishes automatically |
 | `TABLO_ADMIN_PASSWORD_HASH` | No default; its absence means fail-closed (login is always rejected) | web `admin-session.ts` |
 | `TABLO_ADMIN_SESSION_SECRET` | No default; its absence means fail-closed (session is always invalid) | web `admin-session.ts` |
-| `TABLO_ARVAN_S3_ENDPOINT` | Required (its absence ⟸ error, image upload fails with 502) | web `image-store.ts` |
+| `TABLO_ARVAN_S3_ENDPOINT` | Required (its absence ⟸ error, image upload fails with 502) | web `image-store.ts`; also `image-origin.ts`, which turns it into the `preconnect`/`dns-prefetch` origin in the root head — unset means no link is emitted, never a broken one |
 | `TABLO_ARVAN_S3_REGION` | `default` | web `image-store.ts` |
 | `TABLO_ARVAN_S3_BUCKET` | Required | web `image-store.ts` |
 | `TABLO_ARVAN_S3_ACCESS_KEY` | Required | web `image-store.ts` |
@@ -292,3 +292,53 @@ npm test         # vitest run — 31 passing test files
 
 A complete, annotated example lives in `.env.example` (repo root); the real
 `.env` is never committed.
+
+## 1.10 Core Web Vitals — how they are measured, and what CI guards
+
+Targets: **LCP ≤ 2.5s, INP < 200ms, CLS < 0.1**, all at the 75th percentile.
+
+### Where the numbers come from
+
+Field data, not a lab run. The audience is Iranian mobile, and a Lighthouse
+score produced on a GitHub runner describes that runner's CPU and network —
+it would move independently of what users experience, which is worse than
+having no number at all.
+
+Procedure, once a month and after any change to the home page or the post
+template:
+
+1. Search Console → **Core Web Vitals** → *Mobile*. Record the three p75
+   values and the URL-group counts (good / needs improvement / poor).
+2. Open the worst group, note the representative URL, and check whether the
+   regression is site-wide or one template.
+3. Write the four numbers (date, LCP, INP, CLS) plus the URL group into the
+   CWV baseline issue. Search Console's window is 28 days and it is not
+   retained anywhere else, so an unrecorded reading is a lost reading.
+4. Only after a field regression is confirmed, reach for a lab tool
+   (PageSpeed Insights on the representative URL) to *explain* it. Never to
+   declare victory.
+
+### What the repository guards on its own
+
+| Guard | Where | Catches |
+|---|---|---|
+| Home-page markup byte budget | `web/tests/perf-budget.test.tsx` | A component or field that quietly inflates the server-rendered HTML |
+| Loader-payload byte budget | same file | A field added to `HomePageData`, which is paid twice (markup + serialized loader data) |
+| Inlined history shape | same file | A change from 24 hourly points × 5 platforms, or from the 24/84/93 reference ranges |
+| Font caching and self-hosting | CI grep + the `/fonts/**` nitro route rule | An external font host, or the loss of `immutable` |
+| Image origin `preconnect` | `web/tests/image-delivery.test.tsx` | The root head losing the link, or reading the environment inside `head()` |
+| `srcset`/`sizes` on post images | same file | The single-1600px-for-everyone regression, and the reverse: a srcset invented for a pre-variant image |
+
+The budgets are regression fences measured against the fullest realistic home
+page, not a target. Raising one is allowed — but the commit that raises it
+should say what it bought.
+
+### Deliberately not built
+
+- **Lighthouse CI.** Wrong network, wrong CPU, minutes added to a CI that has
+  no lint step; flaky perf jobs get disabled, and a disabled job is worse than
+  an honest manual procedure.
+- **A `web-vitals` beacon.** It would add client JavaScript to the critical
+  path in the name of measuring the critical path, plus an ingest endpoint and
+  a store — to reproduce, worse, data that Search Console/CrUX already gives
+  for free.

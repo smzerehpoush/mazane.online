@@ -7,6 +7,7 @@
 import "@tanstack/react-start/server-only";
 
 import { isValidSlug } from "../admin-posts";
+import { buildSrcset, type UploadedImage } from "../images";
 import { json, notFound, unauthorized } from "./admin-http";
 import { getAdminPost, setPostImage } from "./admin-posts";
 import { hasValidSession } from "./admin-session";
@@ -65,7 +66,7 @@ export async function adminPostImageUploadResponse(
   const existing = await getAdminPost(slug);
   if (existing === null) return notFound();
 
-  let uploaded: { objectKey: string; width: number; height: number };
+  let uploaded: UploadedImage;
   try {
     uploaded = await uploadImage(slug, bytes, file.type || "application/octet-stream");
   } catch (error) {
@@ -73,11 +74,19 @@ export async function adminPostImageUploadResponse(
     return json({ error: "انبار عکس در دسترس نیست — دوباره تلاش کنید" }, 502);
   }
 
+  const imageUrl = publicImageUrl(uploaded.objectKey);
   const result = await setPostImage(slug, {
-    image_url: publicImageUrl(uploaded.objectKey),
+    image_url: imageUrl,
     image_alt: alt,
     image_width: uploaded.width,
     image_height: uploaded.height,
+    image_srcset: buildSrcset([
+      ...(uploaded.variants ?? []).map((variant) => ({
+        url: publicImageUrl(variant.objectKey),
+        width: variant.width,
+      })),
+      { url: imageUrl, width: uploaded.width },
+    ]),
   });
   if (!result.ok) return json({ error: result.error }, statusFor(result.kind));
   return json({ post: result.post }, 200);
