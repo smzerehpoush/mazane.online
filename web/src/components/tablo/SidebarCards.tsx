@@ -1,6 +1,7 @@
 import type { BubbleView } from "@/lib/bubble";
 import type { CoinPricesView } from "@/lib/coin-prices";
 import { JewelryCalculator } from "@/components/tablo/JewelryCalculator";
+import { BUBBLE_INPUT_MISSING_FA, COIN_PRICE_UNCOLLECTED_FA } from "@/lib/undisclosed";
 
 function BubbleValue({
   label,
@@ -57,7 +58,7 @@ export function BubbleGauge({ bubble }: { bubble: BubbleView | null }) {
             riskLevel,
           )}`}
         >
-          {bubble?.riskLabel ?? "نامشخص"}
+          {bubble?.riskLabel ?? BUBBLE_INPUT_MISSING_FA}
         </span>
       </div>
       <div className="mt-3.5 grid grid-cols-3 gap-2.5">
@@ -110,9 +111,13 @@ export function CoinPriceCard({ coins }: { coins: CoinPricesView }) {
             <span className="text-[12.5px] text-tx3">{coin.label}</span>
             <b
               data-coin-price={coin.key}
-              className="num inline-flex items-baseline gap-1 text-[14.5px] font-semibold text-foreground"
+              className={`inline-flex items-baseline gap-1 text-foreground ${
+                coin.priceDisplay === null
+                  ? "text-[11.5px] font-medium text-muted-foreground"
+                  : "num text-[14.5px] font-semibold"
+              }`}
             >
-              <span data-price-value>{coin.priceDisplay ?? "—"}</span>
+              <span data-price-value>{coin.priceDisplay ?? COIN_PRICE_UNCOLLECTED_FA}</span>
               <span
                 data-price-unit
                 className={`text-[9px] font-normal tracking-normal text-muted-foreground ${

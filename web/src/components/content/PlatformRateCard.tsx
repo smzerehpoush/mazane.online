@@ -13,6 +13,7 @@ import {
 import type { HistoryPoint, HistoryRange, PlatformHistoryByRange } from "@/lib/history";
 import {
   nextRateCardCountdown,
+  nextRateCardPrice,
   RATE_CARD_POLL_SECONDS,
   type LivePricesPayload,
 } from "@/lib/live-update";
@@ -21,7 +22,7 @@ import { seriesPaths } from "@/lib/spline";
 import { fa, RATE_CARD_RANGES } from "@/lib/site-content";
 
 const PRICE_LABEL = "قیمت اعلامی این سکو — پیش از کارمزد";
-const COMING_SOON_LABEL = "به‌زودی";
+const NOT_ENOUGH_HISTORY_LABEL = "داده‌ی کافی ثبت نشده";
 
 const EMPTY_HISTORY_MESSAGE: Record<HistoryRange, string> = {
   DAILY: "هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.",
@@ -98,25 +99,29 @@ export function PlatformRateCard({
 
   const [activeRange, setActiveRange] = useState<HistoryRange>("DAILY");
 
+  const price = priceToman(row, "GOLD_18K");
+  const serverPriceText = price === null ? "" : formatToman(price);
+
   const [live, setLive] = useState(() => ({
     updatedAtIso: row.updatedAt,
     nowMs,
     secondsRemaining: RATE_CARD_POLL_SECONDS,
+    priceText: serverPriceText,
   }));
 
   useEffect(() => {
     let cancelled = false;
     let updatedAtIso = row.updatedAt;
+    let priceText = serverPriceText;
     let secondsRemaining = RATE_CARD_POLL_SECONDS;
 
-    // ⚠️ This fetch only refreshes updated_at; the card's headline number never
-    // changes with it — /api/prices returns "effective buy", not "platform reference price".
-    async function refreshUpdatedAt(): Promise<void> {
+    async function refresh(): Promise<void> {
       try {
         const response = await fetch("/api/prices", { cache: "no-store" });
         if (!response.ok || cancelled) return;
         const payload = (await response.json()) as LivePricesPayload;
         const match = payload.rows.find((r) => r.platform_slug === row.platform.slug);
+        priceText = nextRateCardPrice(priceText, match);
         if (match !== undefined && match.updated_at !== null) {
           updatedAtIso = match.updated_at;
         }
@@ -131,8 +136,8 @@ export function PlatformRateCard({
       const staleNow = updatedAtIso === null || isStale(minutesSince(updatedAtIso, now));
       const next = nextRateCardCountdown(secondsRemaining, staleNow);
       secondsRemaining = next.secondsRemaining;
-      setLive({ updatedAtIso, nowMs: now, secondsRemaining });
-      if (next.shouldFetch) void refreshUpdatedAt();
+      setLive({ updatedAtIso, nowMs: now, secondsRemaining, priceText });
+      if (next.shouldFetch) void refresh();
     }
 
     const id = window.setInterval(tick, 1000);
@@ -140,9 +145,8 @@ export function PlatformRateCard({
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [row.platform.slug, row.updatedAt]);
+  }, [row.platform.slug, row.updatedAt, serverPriceText]);
 
-  const price = priceToman(row, "GOLD_18K");
   const enabledRanges = useMemo(() => computeEnabledRanges(history), [history]);
   const activeHistory = history[activeRange];
   const points = useMemo(() => activeHistory?.points ?? [], [activeHistory]);
@@ -180,14 +184,14 @@ export function PlatformRateCard({
           enabled={enabledRanges}
           onSelect={setActiveRange}
           ariaLabel="بازه‌ی نمودار"
-          disabledLabel={COMING_SOON_LABEL}
+          disabledLabel={NOT_ENOUGH_HISTORY_LABEL}
         />
       </div>
 
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
         <div className="shrink-0">
           <div data-rate-price className="text-3xl font-bold tabular-nums sm:text-4xl">
-            {formatToman(price)}
+            {live.priceText}
             <span className="ms-2 text-sm font-normal text-muted-foreground">تومان</span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{label}</p>

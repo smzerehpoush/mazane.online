@@ -9,7 +9,7 @@ import "@tanstack/react-start/server-only";
 import { isValidSlug } from "../admin-posts";
 import { buildSrcset, type UploadedImage } from "../images";
 import { json, notFound, unauthorized } from "./admin-http";
-import { getAdminPost, setPostImage } from "./admin-posts";
+import { clearPostImage, getAdminPost, setPostImage } from "./admin-posts";
 import { hasValidSession } from "./admin-session";
 import { publicImageUrl, uploadImage } from "./image-store";
 
@@ -92,6 +92,24 @@ export async function adminPostImageUploadResponse(
   return json({ post: result.post }, 200);
 }
 
+/**
+ * ⚠️ The object in the image store is deliberately left in place. Deleting it
+ * here would put an image-store outage back on a path that must only touch the
+ * database; the objects are content-hashed and immutable, so an orphan is
+ * harmless.
+ */
+export async function adminPostImageDeleteResponse(
+  request: Request,
+  slug: string,
+): Promise<Response> {
+  if (!requireSession(request)) return unauthorized();
+  if (!isValidSlug(slug)) return notFound();
+
+  const result = await clearPostImage(slug);
+  if (!result.ok) return json({ error: result.error }, statusFor(result.kind));
+  return json({ post: result.post }, 200);
+}
+
 export function adminPostImageMethodNotAllowed(): Response {
-  return json({ error: "فقط POST" }, 405, { Allow: "POST" });
+  return json({ error: "فقط POST و DELETE" }, 405, { Allow: "POST, DELETE" });
 }

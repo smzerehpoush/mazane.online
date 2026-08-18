@@ -5,10 +5,10 @@ import pytest
 
 from tablo_collector.content.gateway import ContentGateway, PostRow
 from tablo_collector.content.queue import (
-    DEFAULT_DAILY_PUBLISH_CAP,
+    DEFAULT_EDITORIAL_CADENCE_PER_DAY,
     QUEUE_ALERT_DAYS,
     check_queue_depth,
-    daily_publish_cap_from_env,
+    editorial_cadence_from_env,
     enqueue_draft,
 )
 from tablo_collector.content.retract import RetractOutcome, retract_post
@@ -119,7 +119,7 @@ async def test_queue_check_leaves_every_draft_a_draft() -> None:
     gateway = FakeContentGateway()
     slugs = await seed_drafts(gateway, 3)
 
-    depth = await check_queue_depth(gateway, daily_cap=2)
+    depth = await check_queue_depth(gateway, cadence_per_day=2)
 
     assert depth.drafts == 3
     for slug in slugs:
@@ -129,19 +129,19 @@ async def test_queue_check_leaves_every_draft_a_draft() -> None:
         assert post.published_at is None
 
 
-def test_daily_publish_cap_falls_back_to_the_default_on_a_bad_value(
+def test_editorial_cadence_falls_back_to_the_default_on_a_bad_value(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     monkeypatch.delenv("TABLO_DAILY_PUBLISH_CAP", raising=False)
-    assert daily_publish_cap_from_env() == DEFAULT_DAILY_PUBLISH_CAP
+    assert editorial_cadence_from_env() == DEFAULT_EDITORIAL_CADENCE_PER_DAY
 
     monkeypatch.setenv("TABLO_DAILY_PUBLISH_CAP", "7")
-    assert daily_publish_cap_from_env() == 7
+    assert editorial_cadence_from_env() == 7
 
     for bad in ("0", "-1", "roozi-do-ta"):
         monkeypatch.setenv("TABLO_DAILY_PUBLISH_CAP", bad)
         with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
-            assert daily_publish_cap_from_env() == DEFAULT_DAILY_PUBLISH_CAP
+            assert editorial_cadence_from_env() == DEFAULT_EDITORIAL_CADENCE_PER_DAY
     assert any(record.levelno == logging.WARNING for record in caplog.records)
 
 
@@ -152,7 +152,7 @@ async def test_queue_depth_below_five_days_logs_warning(
     await seed_drafts(gateway, 8)
 
     with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
-        depth = await check_queue_depth(gateway, daily_cap=2)
+        depth = await check_queue_depth(gateway, cadence_per_day=2)
 
     assert depth.drafts == 8
     assert depth.days == 4.0
@@ -166,7 +166,7 @@ async def test_queue_depth_at_or_above_threshold_is_quiet(
     await seed_drafts(gateway, 10)
 
     with caplog.at_level(logging.WARNING, logger="mazane.collector.content"):
-        depth = await check_queue_depth(gateway, daily_cap=2)
+        depth = await check_queue_depth(gateway, cadence_per_day=2)
 
     assert depth.days == QUEUE_ALERT_DAYS == 5
     assert not caplog.records

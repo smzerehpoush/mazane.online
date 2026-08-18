@@ -27,10 +27,6 @@ export function setDefaultReferencePriceSource(factory: ReferencePriceSourceFact
   defaultFactory = factory;
 }
 
-export function resetReferencePriceSource(): void {
-  activeSource = null;
-}
-
 function source(): ReferencePriceSource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {

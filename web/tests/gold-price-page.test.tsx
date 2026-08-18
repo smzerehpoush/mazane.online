@@ -3,7 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { SlugPageView, slugHead } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
-import { buildGoldPriceView, GOLD_PRICE_FAQ, GOLD_PRICE_TITLE } from "../src/lib/gold-price";
+import {
+  buildGoldPriceView,
+  GOLD_PRICE_FAQ,
+  GOLD_PRICE_TITLE,
+  REFERENCE_POLL_INTERVAL_SECONDS,
+} from "../src/lib/gold-price";
 import type { HistoryPoint, HistoryQuery, PlatformHistory } from "../src/lib/history";
 import { assembleSlugPage } from "../src/lib/page-data";
 import { listInstruments } from "../src/lib/catalog";
@@ -391,5 +396,31 @@ describe("/tala-18 — SEO body, FAQ and head", () => {
     expect(html).toMatch(/<h1[^>]*>قیمت نقره‌ی ۹۹۰<\/h1>/);
     expect(html).not.toContain("data-gold-price");
     expect(jsonLd(slugHead(data))).not.toContain("FAQPage");
+  });
+});
+
+describe("the cadence FAQ answer names the reference interval, not the platform one", () => {
+  it("REFERENCE_POLL_INTERVAL_SECONDS matches the collector's own constant, so the two cannot drift", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const mainPy = readFileSync(
+      fileURLToPath(
+        new URL("../../collector/src/tablo_collector/main.py", import.meta.url),
+      ),
+      "utf8",
+    );
+    const match = mainPy.match(/REFERENCE_POLL_INTERVAL_SECONDS\s*=\s*(\d+)/);
+    expect(match).not.toBeNull();
+    expect(REFERENCE_POLL_INTERVAL_SECONDS).toBe(Number(match?.[1]));
+  });
+
+  it("the FAQ answer quotes minutes derived from that constant, never the 30-second platform cadence", () => {
+    const answer = GOLD_PRICE_FAQ.find((item) =>
+      item.question.includes("هر چند وقت"),
+    )?.answer;
+    expect(answer).toContain(`${REFERENCE_POLL_INTERVAL_SECONDS / 60}`.replace(/\d/g, (d) =>
+      "۰۱۲۳۴۵۶۷۸۹"[Number(d)] as string,
+    ));
+    expect(answer).not.toContain("۳۰ ثانیه");
   });
 });

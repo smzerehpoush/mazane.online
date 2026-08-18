@@ -56,3 +56,4 @@ next-env.d.ts.bak
 .env
 .env.*
 !.env.example
+.claude/settings.local.json

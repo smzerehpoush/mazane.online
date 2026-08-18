@@ -7,6 +7,17 @@ import type { FaqItem } from "./structured-data";
 
 export const GOLD_PRICE_INSTRUMENT = "GOLD_18K";
 
+/**
+ * ⚠️ This is the **reference** poll cadence, not the 30-second platform poll
+ * (`POLL_INTERVAL_SECONDS` in `collector/src/tablo_collector/main.py`) — the
+ * headline number on this page is the tala.ir reference price, so quoting
+ * the platform cadence here would be a factual claim about the wrong number.
+ * Must stay equal to `REFERENCE_POLL_INTERVAL_SECONDS` in that same file;
+ * `tests/gold-price-page.test.tsx` asserts the two never drift apart.
+ */
+export const REFERENCE_POLL_INTERVAL_SECONDS = 120;
+export const REFERENCE_POLL_INTERVAL_MINUTES = REFERENCE_POLL_INTERVAL_SECONDS / 60;
+
 export const GOLD_PRICE_RANGE_LABELS: Readonly<Record<HistoryRange, string>> = {
   DAILY: "۲۴ ساعت گذشته",
   WEEKLY: "هفته‌ی گذشته",
@@ -159,7 +170,7 @@ export const GOLD_PRICE_FAQ: readonly FaqItem[] = [
   {
     question: "قیمت این صفحه هر چند وقت به‌روز می‌شود؟",
     answer:
-      "نرخ‌ها هر ۳۰ ثانیه یک بار خوانده می‌شوند و زمان ثبت هر عدد کنار خودش نوشته می‌شود. اگر خواندن قطع شود صفحه خطا نمی‌دهد؛ همان عدد قبلی با برچسب کهنگی می‌ماند تا معلوم باشد داده تازه نیست.",
+      `نرخ مرجع همین صفحه هر ${formatFaNumber(REFERENCE_POLL_INTERVAL_MINUTES)} دقیقه یک بار خوانده می‌شود و زمان ثبت هر عدد کنار خودش نوشته می‌شود. اگر خواندن قطع شود صفحه خطا نمی‌دهد؛ همان عدد قبلی با برچسب کهنگی می‌ماند تا معلوم باشد داده تازه نیست.`,
   },
   {
     question: "تابلو خودش طلا می‌فروشد؟",

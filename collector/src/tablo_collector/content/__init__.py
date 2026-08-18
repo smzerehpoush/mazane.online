@@ -13,10 +13,10 @@ from .gate import (
 )
 from .gateway import ContentGateway, PostgresContentGateway, PostRow
 from .queue import (
-    DEFAULT_DAILY_PUBLISH_CAP,
+    DEFAULT_EDITORIAL_CADENCE_PER_DAY,
     QueueDepth,
     check_queue_depth,
-    daily_publish_cap_from_env,
+    editorial_cadence_from_env,
     enqueue_draft,
 )
 from .retract import RetractOutcome, retract_post
@@ -25,7 +25,7 @@ from .revalidate import BlogRevalidator, HttpRevalidator, revalidator_from_env
 __all__ = [
     "BlogRevalidator",
     "ContentGateway",
-    "DEFAULT_DAILY_PUBLISH_CAP",
+    "DEFAULT_EDITORIAL_CADENCE_PER_DAY",
     "DataGapError",
     "DigitOutsideSlotError",
     "DraftRejected",
@@ -38,7 +38,7 @@ __all__ = [
     "SIMILARITY_THRESHOLD",
     "UnfilledSlotError",
     "check_queue_depth",
-    "daily_publish_cap_from_env",
+    "editorial_cadence_from_env",
     "enqueue_draft",
     "gate_draft",
     "has_data_gap",

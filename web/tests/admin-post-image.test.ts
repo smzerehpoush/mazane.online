@@ -10,6 +10,7 @@ import {
 import type { BlogPost, PostStatus } from "../src/lib/blog";
 import { resetImageStore } from "../src/lib/images";
 import {
+  adminPostImageDeleteResponse,
   adminPostImageMethodNotAllowed,
   adminPostImageUploadResponse,
 } from "../src/lib/server/admin-post-image";
@@ -24,6 +25,7 @@ const PUBLIC_BASE = `${S3_ENDPOINT}/${S3_BUCKET}`;
 class FakeAdminPostsSource implements AdminPostsSource {
   posts = new Map<string, BlogPost>();
   imageChanges: { slug: string; patch: PostImagePatch }[] = [];
+  imageClears: string[] = [];
 
   seed(post: BlogPost): void {
     this.posts.set(post.slug, post);
@@ -61,6 +63,20 @@ class FakeAdminPostsSource implements AdminPostsSource {
     this.imageChanges.push({ slug, patch });
     const existing = this.posts.get(slug);
     if (existing !== undefined) this.posts.set(slug, { ...existing, ...patch });
+  }
+
+  async clearImage(slug: string): Promise<void> {
+    this.imageClears.push(slug);
+    const existing = this.posts.get(slug);
+    if (existing === undefined) return;
+    this.posts.set(slug, {
+      ...existing,
+      image_url: null,
+      image_alt: null,
+      image_width: null,
+      image_height: null,
+      image_srcset: null,
+    });
   }
 }
 
@@ -113,6 +129,14 @@ function authedRequest(
 
 function anonRequest(slug: string, body: FormData): Request {
   return new Request(URL_FOR(slug), { method: "POST", body });
+}
+
+function deleteRequest(slug: string): Request {
+  const token = createSessionToken(SECRET, Date.now());
+  return new Request(URL_FOR(slug), {
+    method: "DELETE",
+    headers: { cookie: `${ADMIN_SESSION_COOKIE}=${token}` },
+  });
 }
 
 const SMALL_IMAGE = new Uint8Array([1, 2, 3, 4, 5]);
@@ -337,10 +361,99 @@ describe("image store outage — staleness for the upload, not for the post text
 });
 
 describe("other method", () => {
+  /**
+   * ⚠️ Rewritten when DELETE landed: the Allow header used to read "POST"
+   * and now advertises both methods the route really serves.
+   */
   it("405 with Allow header", () => {
     const response = adminPostImageMethodNotAllowed();
     expect(response.status).toBe(405);
-    expect(response.headers.get("allow")).toBe("POST");
+    expect(response.headers.get("allow")).toBe("POST, DELETE");
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("DELETE — clearing the featured image", () => {
+  const WITH_IMAGE: Partial<BlogPost> = {
+    image_url: `${PUBLIC_BASE}/posts/akkas/hash.webp`,
+    image_alt: "متن جایگزین",
+    image_width: 1200,
+    image_height: 800,
+    image_srcset: `${PUBLIC_BASE}/posts/akkas/hash-600.webp 600w`,
+  };
+
+  it("clears all five image columns in one write and returns the imageless post", async () => {
+    const fake = seedFake(post("akkas", WITH_IMAGE));
+    const response = await adminPostImageDeleteResponse(deleteRequest("akkas"), "akkas");
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { post: BlogPost };
+    expect(body.post.image_url).toBeNull();
+    expect(body.post.image_alt).toBeNull();
+    expect(body.post.image_width).toBeNull();
+    expect(body.post.image_height).toBeNull();
+    expect(body.post.image_srcset).toBeNull();
+    expect(fake.imageClears).toEqual(["akkas"]);
+  });
+
+  it("the post text is untouched — the delete only reaches clearImage", async () => {
+    const fake = seedFake(
+      post("akkas", { ...WITH_IMAGE, title_fa: "عنوان اصلی", body_md: "متن اصلی" }),
+    );
+    await adminPostImageDeleteResponse(deleteRequest("akkas"), "akkas");
+
+    expect(fake.imageChanges).toHaveLength(0);
+    expect(fake.posts.get("akkas")?.title_fa).toBe("عنوان اصلی");
+    expect(fake.posts.get("akkas")?.body_md).toBe("متن اصلی");
+    expect(fake.posts.get("akkas")?.updated_at).toBe("2026-08-01T00:00:00.000Z");
+  });
+
+  it("a post that has no image ⟸ still 200, idempotent", async () => {
+    seedFake(post("akkas"));
+    const first = await adminPostImageDeleteResponse(deleteRequest("akkas"), "akkas");
+    const second = await adminPostImageDeleteResponse(deleteRequest("akkas"), "akkas");
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    const body = (await second.json()) as { post: BlogPost };
+    expect(body.post.image_url).toBeNull();
+  });
+
+  it("the image store is never touched — the object is deliberately left behind", async () => {
+    seedFake(post("akkas", WITH_IMAGE));
+    const store = seedImageStore();
+    await adminPostImageDeleteResponse(deleteRequest("akkas"), "akkas");
+    expect(store.uploads).toHaveLength(0);
+  });
+
+  it("an image-store outage cannot break the delete", async () => {
+    seedFake(post("akkas", WITH_IMAGE));
+    seedBrokenImageStore();
+    const response = await adminPostImageDeleteResponse(deleteRequest("akkas"), "akkas");
+    expect(response.status).toBe(200);
+  });
+
+  it("no session ⟸ 401 and nothing is cleared", async () => {
+    const fake = seedFake(post("akkas", WITH_IMAGE));
+    const response = await adminPostImageDeleteResponse(
+      new Request(URL_FOR("akkas"), { method: "DELETE" }),
+      "akkas",
+    );
+    expect(response.status).toBe(401);
+    expect(fake.imageClears).toHaveLength(0);
+    expect(fake.posts.get("akkas")?.image_url).toBe(WITH_IMAGE.image_url);
+  });
+
+  it("a missing slug ⟸ 404", async () => {
+    seedFake();
+    const response = await adminPostImageDeleteResponse(deleteRequest("nist"), "nist");
+    expect(response.status).toBe(404);
+  });
+
+  it("a malformed slug ⟸ 404 before any read", async () => {
+    const fake = seedFake();
+    const response = await adminPostImageDeleteResponse(deleteRequest("Bad Slug"), "Bad Slug");
+    expect(response.status).toBe(404);
+    expect(fake.imageClears).toHaveLength(0);
   });
 });

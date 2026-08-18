@@ -6,6 +6,7 @@
 import "@tanstack/react-start/server-only";
 
 import {
+  clearPostImage as domainClearImage,
   createPost as domainCreate,
   getAdminPost as domainGetPost,
   listAllPosts as domainList,
@@ -130,6 +131,20 @@ export function createPgAdminPostsSource(): AdminPostsSource {
         ],
       );
     },
+
+    /**
+     * ⚠️ All five columns in one statement. Migration 020's check constraint
+     * (`image_srcset is null or image_url is not null`) rejects any partial
+     * clear that leaves a srcset behind a nulled image_url.
+     */
+    async clearImage(slug: string): Promise<void> {
+      await pool.query(
+        `update posts set image_url = null, image_alt = null, image_width = null,
+                image_height = null, image_srcset = null
+         where slug = $1`,
+        [slug],
+      );
+    },
   };
 }
 
@@ -185,4 +200,9 @@ export async function retractPost(slug: string): Promise<WriteResult> {
 export async function setPostImage(slug: string, image: PostImagePatch): Promise<WriteResult> {
   ensureDefaultSource();
   return domainSetImage(slug, image);
+}
+
+export async function clearPostImage(slug: string): Promise<WriteResult> {
+  ensureDefaultSource();
+  return domainClearImage(slug);
 }

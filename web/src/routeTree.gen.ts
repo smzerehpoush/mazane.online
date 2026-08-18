@@ -14,6 +14,7 @@ import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AbzarhaRouteImport } from './routes/abzarha'
 import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as KodamSakuRouteImport } from './routes/kodam-saku'
 import { Route as MazaneChistRouteImport } from './routes/mazane-chist'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as MohasebeForushTalaRouteImport } from './routes/mohasebe-forush-tala'
@@ -21,6 +22,7 @@ import { Route as MohasebeTalaRouteImport } from './routes/mohasebe-tala'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SekehRouteImport } from './routes/sekeh'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TabdilMazaneRouteImport } from './routes/tabdil-mazane'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminClicksRouteImport } from './routes/admin/clicks'
 import { Route as AdminLoginRouteImport } from './routes/admin/login'
@@ -72,6 +74,11 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KodamSakuRoute = KodamSakuRouteImport.update({
+  id: '/kodam-saku',
+  path: '/kodam-saku',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MazaneChistRoute = MazaneChistRouteImport.update({
   id: '/mazane-chist',
   path: '/mazane-chist',
@@ -105,6 +112,11 @@ const SekehRoute = SekehRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TabdilMazaneRoute = TabdilMazaneRouteImport.update({
+  id: '/tabdil-mazane',
+  path: '/tabdil-mazane',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -242,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/$slug': typeof SlugRoute
   '/about': typeof AboutRoute
   '/abzarha': typeof AbzarhaRoute
+  '/kodam-saku': typeof KodamSakuRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
   '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
@@ -249,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tabdil-mazane': typeof TabdilMazaneRoute
   '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
@@ -280,6 +294,7 @@ export interface FileRoutesByTo {
   '/$slug': typeof SlugRoute
   '/about': typeof AboutRoute
   '/abzarha': typeof AbzarhaRoute
+  '/kodam-saku': typeof KodamSakuRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
   '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
@@ -287,6 +302,7 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tabdil-mazane': typeof TabdilMazaneRoute
   '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
@@ -320,6 +336,7 @@ export interface FileRoutesById {
   '/$slug': typeof SlugRoute
   '/about': typeof AboutRoute
   '/abzarha': typeof AbzarhaRoute
+  '/kodam-saku': typeof KodamSakuRoute
   '/mazane-chist': typeof MazaneChistRoute
   '/methodology': typeof MethodologyRoute
   '/mohasebe-forush-tala': typeof MohasebeForushTalaRoute
@@ -327,6 +344,7 @@ export interface FileRoutesById {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sekeh': typeof SekehRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/tabdil-mazane': typeof TabdilMazaneRoute
   '/admin/clicks': typeof AdminClicksRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/platforms': typeof AdminPlatformsRoute
@@ -361,6 +379,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/about'
     | '/abzarha'
+    | '/kodam-saku'
     | '/mazane-chist'
     | '/methodology'
     | '/mohasebe-forush-tala'
@@ -368,6 +387,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
+    | '/tabdil-mazane'
     | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
@@ -399,6 +419,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/about'
     | '/abzarha'
+    | '/kodam-saku'
     | '/mazane-chist'
     | '/methodology'
     | '/mohasebe-forush-tala'
@@ -406,6 +427,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
+    | '/tabdil-mazane'
     | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
@@ -438,6 +460,7 @@ export interface FileRouteTypes {
     | '/$slug'
     | '/about'
     | '/abzarha'
+    | '/kodam-saku'
     | '/mazane-chist'
     | '/methodology'
     | '/mohasebe-forush-tala'
@@ -445,6 +468,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sekeh'
     | '/sitemap.xml'
+    | '/tabdil-mazane'
     | '/admin/clicks'
     | '/admin/login'
     | '/admin/platforms'
@@ -478,6 +502,7 @@ export interface RootRouteChildren {
   SlugRoute: typeof SlugRoute
   AboutRoute: typeof AboutRoute
   AbzarhaRoute: typeof AbzarhaRoute
+  KodamSakuRoute: typeof KodamSakuRoute
   MazaneChistRoute: typeof MazaneChistRoute
   MethodologyRoute: typeof MethodologyRoute
   MohasebeForushTalaRoute: typeof MohasebeForushTalaRoute
@@ -485,6 +510,7 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SekehRoute: typeof SekehRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TabdilMazaneRoute: typeof TabdilMazaneRoute
   ApiAdminCalcEventsRoute: typeof ApiAdminCalcEventsRoute
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
   ApiAdminLogoutRoute: typeof ApiAdminLogoutRoute
@@ -538,6 +564,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/kodam-saku': {
+      id: '/kodam-saku'
+      path: '/kodam-saku'
+      fullPath: '/kodam-saku'
+      preLoaderRoute: typeof KodamSakuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mazane-chist': {
       id: '/mazane-chist'
       path: '/mazane-chist'
@@ -585,6 +618,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tabdil-mazane': {
+      id: '/tabdil-mazane'
+      path: '/tabdil-mazane'
+      fullPath: '/tabdil-mazane'
+      preLoaderRoute: typeof TabdilMazaneRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -822,6 +862,7 @@ const rootRouteChildren: RootRouteChildren = {
   SlugRoute: SlugRoute,
   AboutRoute: AboutRoute,
   AbzarhaRoute: AbzarhaRoute,
+  KodamSakuRoute: KodamSakuRoute,
   MazaneChistRoute: MazaneChistRoute,
   MethodologyRoute: MethodologyRoute,
   MohasebeForushTalaRoute: MohasebeForushTalaRoute,
@@ -829,6 +870,7 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SekehRoute: SekehRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TabdilMazaneRoute: TabdilMazaneRoute,
   ApiAdminCalcEventsRoute: ApiAdminCalcEventsRoute,
   ApiAdminLoginRoute: ApiAdminLoginRoute,
   ApiAdminLogoutRoute: ApiAdminLogoutRoute,

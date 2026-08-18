@@ -25,10 +25,6 @@ export function setDefaultChartConfigSource(factory: ChartConfigSourceFactory): 
   defaultFactory = factory;
 }
 
-export function resetChartConfigSource(): void {
-  activeSource = null;
-}
-
 /**
  * ⚠️ Unlike `getPlatformSnapshot`, a missing registered source is also
  * **not an error**: config is a preference, not data, and the code's

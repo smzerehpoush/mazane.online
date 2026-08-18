@@ -63,6 +63,19 @@ class FakeAdminPostsSource implements AdminPostsSource {
     const existing = this.posts.get(slug);
     if (existing !== undefined) this.posts.set(slug, { ...existing, ...patch });
   }
+
+  async clearImage(slug: string): Promise<void> {
+    const existing = this.posts.get(slug);
+    if (existing === undefined) return;
+    this.posts.set(slug, {
+      ...existing,
+      image_url: null,
+      image_alt: null,
+      image_width: null,
+      image_height: null,
+      image_srcset: null,
+    });
+  }
 }
 
 function post(slug: string, opts: Partial<BlogPost> = {}): BlogPost {

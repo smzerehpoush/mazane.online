@@ -2,13 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { Breadcrumbs, PageShell } from "@/components/content/PageShell";
 import { RelatedLinksBlock } from "@/components/content/RelatedLinks";
+import type { BubbleView } from "@/lib/bubble";
 import { relatedLinksForPath } from "@/lib/clusters";
 import type { CoinPriceKey } from "@/lib/coin-prices";
 import { formatDateTimeFa } from "@/lib/format";
 import { OG_SEKEH_KEY, ogImageAlt, ogImageMeta } from "@/lib/og";
 import { loadSekehData, type SekehPageData } from "@/lib/sekeh-data";
 import { SITE_URL } from "@/lib/site";
+import { EMAMI_COIN_SPEC_CITATION } from "@/lib/site-content";
 import { breadcrumbJsonLd } from "@/lib/structured-data";
+import { COIN_PRICE_UNCOLLECTED_FA } from "@/lib/undisclosed";
 
 export const SEKEH_PATH = "/sekeh";
 
@@ -62,7 +65,11 @@ export const Route = createFileRoute("/sekeh")({
 
 function PriceText({ value }: { value: string | null }) {
   if (value === null) {
-    return <span className="text-[22px] font-semibold text-muted-foreground">—</span>;
+    return (
+      <span className="text-[15px] font-medium text-muted-foreground">
+        {COIN_PRICE_UNCOLLECTED_FA}
+      </span>
+    );
   }
   return (
     <span className="num inline-flex items-baseline gap-2 text-[30px] leading-tight font-semibold tracking-[-0.7px] text-primary sm:text-[38px]">
@@ -88,9 +95,11 @@ function CoinPriceBlock({ coin }: { coin: SekehPageData["coins"][number] }) {
             <h2 className="text-lg font-bold text-foreground">{coin.label}</h2>
             <p className="mt-1 text-[12px] text-muted-foreground">{explainer.tone}</p>
           </div>
-          <span className="rounded-full bg-gold-soft px-3 py-1 text-[11px] font-medium text-gold">
-            قیمت زنده
-          </span>
+          {coin.priceDisplay !== null && (
+            <span className="rounded-full bg-gold-soft px-3 py-1 text-[11px] font-medium text-gold">
+              قیمت زنده
+            </span>
+          )}
         </div>
         <div className="mt-5">
           <PriceText value={coin.priceDisplay} />
@@ -106,6 +115,75 @@ function CoinPriceBlock({ coin }: { coin: SekehPageData["coins"][number] }) {
         </p>
       </div>
     </article>
+  );
+}
+
+function coinRiskClassName(riskLevel: BubbleView["riskLevel"]): string {
+  if (riskLevel === "HIGH") return "bg-rdbg text-rdtx";
+  if (riskLevel === "MEDIUM") return "bg-ambg text-am";
+  return "bg-gnbg text-gntx";
+}
+
+function CoinBubbleFigure({ label, value, unit }: { label: string; value: string; unit: string }) {
+  return (
+    <div className="rounded-[14px] border border-border bg-surface px-3.5 py-3">
+      <p className="text-[11.5px] text-muted-foreground">{label}</p>
+      <p className="num mt-1.5 text-[17px] font-semibold text-foreground sm:text-[19px]">
+        {value}
+        <span className="ms-1.5 text-[11px] font-normal text-muted-foreground">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
+function CoinBubbleBlock({ bubble }: { bubble: BubbleView | null }) {
+  if (bubble === null) return null;
+
+  return (
+    <section data-coin-bubble className="card-surface mt-5 px-5 py-5 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-foreground">حباب سکه امامی</h2>
+        <span
+          data-coin-bubble-risk
+          className={`rounded-full px-2.5 py-1 text-[11.5px] font-medium ${coinRiskClassName(
+            bubble.riskLevel,
+          )}`}
+        >
+          {bubble.riskLabel}
+        </span>
+      </div>
+
+      <p className="mt-3 max-w-3xl text-[14px] leading-8 text-foreground/80">
+        ارزش طلای داخل سکه امامی از انس جهانی و نرخ دلار حساب می‌شود. فاصله‌ی قیمت بازار با همین عدد
+        چیزی است که به آن حباب می‌گویند؛ نه سود است، نه ضرر، فقط نشان می‌دهد بازار امروز چقدر بیشتر
+        از خود طلا برای سکه پول می‌دهد.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <CoinBubbleFigure label="ارزش طلای داخل سکه" value={bubble.intrinsicDisplay} unit="تومان" />
+        <CoinBubbleFigure label="مقدار حباب" value={bubble.bubbleDisplay} unit="تومان" />
+        <CoinBubbleFigure label="نسبت حباب" value={bubble.bubblePercentDisplay} unit="درصد" />
+      </div>
+
+      <p
+        className={`mt-3 rounded-[12px] px-3.5 py-2.5 text-[12.5px] ${coinRiskClassName(
+          bubble.riskLevel,
+        )}`}
+      >
+        {bubble.riskDescription}
+      </p>
+
+      <div className="mt-4 space-y-2 border-t border-border pt-4 text-[12px] leading-7 text-muted-foreground">
+        <p>
+          مبنای وزن: سکه امامی ۸٫۱۳۵۹۸ گرم با عیار ۹۰۰ در هزار است، یعنی ۷٫۳۲۲ گرم طلای خالص. مأخذ:{" "}
+          {EMAMI_COIN_SPEC_CITATION}.
+        </p>
+        <p>
+          برای نیم سکه و ربع سکه عددی نمی‌نویسیم. وزن ضربِ این دو قطع در منابع منتشرشده یکدست نیست و
+          تا وقتی مرجع روشنی نداشته باشیم، حبابشان را حدس نمی‌زنیم.
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -133,10 +211,12 @@ export function SekehPage({ data }: { data: SekehPageData }) {
           <div className="rounded-[26px] border border-gold/25 bg-gold-soft/60 p-5">
             <p className="text-[12px] text-muted-foreground">شاخص روی صفحه</p>
             <div className="mt-2">
-              {leadPrice === null ? "—" : <PriceText value={leadPrice.priceDisplay} />}
+              <PriceText value={leadPrice?.priceDisplay ?? null} />
             </div>
             <p className="mt-2 text-[12px] text-muted-foreground">
-              {leadPrice?.label ?? "قیمت سکه"} به‌عنوان اولین نرخ قابل نمایش
+              {leadPrice?.priceDisplay != null
+                ? `${leadPrice.label} به‌عنوان اولین نرخ قابل نمایش`
+                : "هنوز نرخی برای نمایش نداریم"}
             </p>
           </div>
         </div>
@@ -147,6 +227,8 @@ export function SekehPage({ data }: { data: SekehPageData }) {
           <CoinPriceBlock key={coin.key} coin={coin} />
         ))}
       </section>
+
+      <CoinBubbleBlock bubble={data.emamiBubble} />
 
       <section className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="card-surface px-5 py-5 sm:px-6">

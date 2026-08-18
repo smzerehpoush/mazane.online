@@ -35,7 +35,7 @@ from .adapters.tlyn import TlynAdapter
 from .adapters.wallgold import WallgoldAdapter
 from .adapters.zarafza import ZarafzaAdapter
 from .content.gateway import PostgresContentGateway
-from .content.queue import check_queue_depth, daily_publish_cap_from_env
+from .content.queue import check_queue_depth, editorial_cadence_from_env
 from .models import Platform
 from .pipeline import collect_round
 from .platforms import PLATFORMS
@@ -134,7 +134,7 @@ async def run() -> None:
     history_store = PostgresStore(pool)
     store = MultiStore(RedisStore(redis_client), history_store)
     content_gateway = PostgresContentGateway(pool)
-    daily_publish_cap = daily_publish_cap_from_env()
+    editorial_cadence_per_day = editorial_cadence_from_env()
     settings_gateway = PostgresSettingsGateway(pool)
     platform_registry = _PlatformRegistry(PLATFORMS)
 
@@ -226,13 +226,13 @@ async def run() -> None:
                 started = time.monotonic()
                 try:
                     depth = await check_queue_depth(
-                        content_gateway, daily_cap=daily_publish_cap
+                        content_gateway, cadence_per_day=editorial_cadence_per_day
                     )
                     log.info(
-                        "Content queue round: depth %.1f days (%s drafts ÷ cap %s); publishing is human-only via the admin panel",
+                        "Content queue round: depth %.1f days (%s drafts ÷ assumed pace %s); publishing is human-only via the admin panel",
                         depth.days,
                         depth.drafts,
-                        depth.daily_cap,
+                        depth.cadence_per_day,
                     )
                 except Exception:
                     log.exception("Content queue round failed")

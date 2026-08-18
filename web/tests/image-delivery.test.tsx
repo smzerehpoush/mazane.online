@@ -4,8 +4,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { BlogIndexView, BlogPostView } from "../src/components/content/BlogViews";
+import { BlogIndexView, BlogPostView, blogPostHead } from "../src/components/content/BlogViews";
 import { HomePage } from "../src/components/tablo/HomePage";
+import { clearPostImage, resetAdminPostsSource, setAdminPostsSource } from "../src/lib/admin-posts";
 import type { BlogPost, PublishedPost } from "../src/lib/blog";
 import { imageOriginOf, imagePreconnectLinks } from "../src/lib/image-origin";
 import { buildSrcset, postImageAsset } from "../src/lib/images";
@@ -147,6 +148,46 @@ describe("postImageAsset — images uploaded before variants existed", () => {
 
   it("a stored srcset reaches the asset unchanged", () => {
     expect(postImageAsset(post({ image_srcset: SRCSET }))?.srcset).toBe(SRCSET);
+  });
+});
+
+describe("after the admin deletes the featured image", () => {
+  async function deleteImageOf(seeded: PublishedPost): Promise<PublishedPost> {
+    const posts = new Map<string, BlogPost>([[seeded.slug, seeded]]);
+    setAdminPostsSource({
+      listPosts: async () => [...posts.values()],
+      getPost: async (slug) => posts.get(slug) ?? null,
+      insertPost: async () => undefined,
+      updatePost: async () => undefined,
+      setStatus: async () => undefined,
+      setImage: async () => undefined,
+      clearImage: async () => undefined,
+    });
+    const result = await clearPostImage(seeded.slug);
+    resetAdminPostsSource();
+    if (!result.ok) throw new Error("clearPostImage failed");
+    return result.post as PublishedPost;
+  }
+
+  it("the post page falls back to the no-image layout and drops og:image", async () => {
+    const cleared = await deleteImageOf(post({ image_srcset: SRCSET }));
+    expect(postImageAsset(cleared)).toBeNull();
+
+    const html = renderToStaticMarkup(<BlogPostView post={cleared} />);
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain(BASE);
+    expect(html).toContain(cleared.title_fa);
+
+    const head = blogPostHead(cleared);
+    expect(head.meta.some((tag) => "property" in tag && tag.property === "og:image")).toBe(false);
+    expect(JSON.stringify(head)).not.toContain(BASE);
+  });
+
+  it("the blog index drops the card image but keeps the card", async () => {
+    const cleared = await deleteImageOf(post({ image_srcset: SRCSET }));
+    const html = renderToStaticMarkup(<BlogIndexView posts={[cleared]} />);
+    expect(html).not.toContain("<img");
+    expect(html).toContain(cleared.title_fa);
   });
 });
 

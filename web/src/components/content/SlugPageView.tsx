@@ -5,6 +5,7 @@
 import { AssetPage, groupRows } from "@/components/content/AssetPage";
 import { Breadcrumbs } from "@/components/content/PageShell";
 import { PlatformPage } from "@/components/content/PlatformPage";
+import { DEFAULT_COMPARISON_VIEW, type ComparisonView } from "@/lib/comparison-table";
 import {
   GOLD_PRICE_DESCRIPTION,
   GOLD_PRICE_FAQ,
@@ -128,7 +129,15 @@ export function slugHead(data: SlugPageData | undefined) {
   };
 }
 
-export function SlugPageView({ data }: { data: SlugPageData }) {
+export function SlugPageView({
+  data,
+  view = DEFAULT_COMPARISON_VIEW,
+  onViewChange,
+}: {
+  data: SlugPageData;
+  view?: ComparisonView;
+  onViewChange?: ((next: ComparisonView) => void) | undefined;
+}) {
   const nowMs = Date.parse(data.generated_at);
 
   if (data.kind === "instrument") {
@@ -140,6 +149,8 @@ export function SlugPageView({ data }: { data: SlugPageData }) {
           rows={data.rows}
           nowMs={nowMs}
           goldPrice={data.goldPrice}
+          view={view}
+          onViewChange={onViewChange}
         />
       </>
     );

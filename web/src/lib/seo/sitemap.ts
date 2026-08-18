@@ -19,6 +19,8 @@ const STATIC_PATHS: readonly string[] = [
   "/abzarha",
   "/mohasebe-tala",
   "/mohasebe-forush-tala",
+  "/kodam-saku",
+  "/tabdil-mazane",
 ];
 
 /**
@@ -42,6 +44,8 @@ export const CONTENT_REVISED_ON: Readonly<Record<string, string>> = {
   "/abzarha": "2026-08-18",
   "/mohasebe-tala": "2026-08-18",
   "/mohasebe-forush-tala": "2026-08-18",
+  "/kodam-saku": "2026-08-18",
+  "/tabdil-mazane": "2026-08-18",
 
   "/tala-18": "2026-08-18",
 

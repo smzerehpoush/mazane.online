@@ -148,6 +148,11 @@ const CLUSTERS: Readonly<Record<ClusterId, ClusterDefinition>> = {
         label: "اگر طلای دست‌دومتان را بفروشید چقدر می‌گیرید",
       },
       {
+        kind: "tool",
+        href: "/tabdil-mazane",
+        label: "مظنه‌ای که شنیده‌اید را به نرخ گرم تبدیل کنید",
+      },
+      {
         kind: "guide",
         href: "/methodology",
         label: "تابلو نرخ‌ها را چطور می‌خواند و کی به‌روز می‌کند",
@@ -207,6 +212,11 @@ const CLUSTERS: Readonly<Record<ClusterId, ClusterDefinition>> = {
       "تحویل فیزیکی",
     ],
     picks: [
+      {
+        kind: "tool",
+        href: "/kodam-saku",
+        label: "با سه پرسش ببینید کدام سکو به اولویت شما نزدیک‌تر است",
+      },
       {
         kind: "guide",
         href: "/methodology",
@@ -269,6 +279,16 @@ const CLUSTERS: Readonly<Record<ClusterId, ClusterDefinition>> = {
         href: "/mazane-chist",
         label: "مظنه و مثقال، و نسبتشان با نرخ گرم",
       },
+      {
+        kind: "tool",
+        href: "/kodam-saku",
+        label: "انتخاب سکو بر پایه‌ی کارمزدی که برای شما مهم است",
+      },
+      {
+        kind: "tool",
+        href: "/tabdil-mazane",
+        label: "عدد بازار سنتی را به همین نرخ گرم برگردانید",
+      },
     ],
     prices: [
       { kind: "price", href: "/tala-18", label: "قیمت طلای ۱۸ عیار در سکوهای آنلاین" },
@@ -277,13 +297,20 @@ const CLUSTERS: Readonly<Record<ClusterId, ClusterDefinition>> = {
   },
 };
 
+/**
+ * ⚠️ Only paths that actually mount `RelatedLinksBlock` belong here — neither
+ * `/` (the home page's own layout, not the `PageShell`-based content
+ * template) nor `/methodology` (a plain info page, same as `/about` which was
+ * never added here) renders the block, so entries for them would be dead
+ * lookups no code path ever reaches.
+ */
 const PATH_CLUSTERS: Readonly<Record<string, ClusterId>> = {
-  "/": "platforms",
   "/mohasebe-tala": "jewelry",
   "/mohasebe-forush-tala": "sell-back",
   "/mazane-chist": "mazane",
+  "/tabdil-mazane": "mazane",
+  "/kodam-saku": "platforms",
   "/sekeh": "coin",
-  "/methodology": "gold-price",
   "/tala-18": "gold-price",
 };
 

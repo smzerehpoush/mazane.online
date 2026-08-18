@@ -8,6 +8,10 @@ import { SlugPageView } from "../src/components/content/SlugPageView";
 import type { SlugPageData } from "../src/components/content/SlugPageView";
 import { HomePage } from "../src/components/tablo/HomePage";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
+import { fetchRowsForPlatforms } from "../src/lib/rows";
+import { resolveSlug } from "../src/lib/slugs";
+import { assembleWizardData } from "../src/lib/wizard-data";
+import { WizardPage } from "../src/routes/kodam-saku";
 import {
   freshIso,
   homeData,
@@ -41,9 +45,7 @@ function assertOutboundLinkPolicy(
     if (/^https?:\/\//.test(href)) {
       const host = new URL(href).hostname;
       if (platformHosts.has(host)) {
-        throw new Error(
-          `Clause 6.4 violated: revenue link ${href} in "${pageName}" bypasses /go/`,
-        );
+        throw new Error(`Clause 6.4 violated: revenue link ${href} in "${pageName}" bypasses /go/`);
       }
       const rel = relTokens(tag);
       if (!rel.has("nofollow") || !rel.has("noopener")) {
@@ -186,6 +188,27 @@ describe("no revenue-generating outbound link is without sponsored, or outside /
     expect(html).not.toContain(REFERRAL_CODE);
   });
 
+  it("the wizard's recommendation leaves through /go/ like every other exit", async () => {
+    // ⚠️ One platform is given a cheaper buy fee on purpose: with every fee
+    // equal the wizard refuses to name anybody, and this test needs a page
+    // that actually carries a recommendation to check its exit link.
+    const store = seededStore();
+    store.snapshots["wallgold"] = makeSnapshot({
+      slug: "wallgold",
+      mid: 18611000,
+      fetchedAt: freshIso(),
+      buyFee: "0.2",
+    });
+    seed(store);
+    const data = await assembleWizardData({ resolveSlug, fetchRowsForPlatforms });
+    const html = renderToStaticMarkup(
+      <WizardPage data={data} search={{ amount: 10_000_000, delivery: "no", resale: "no" }} />,
+    );
+    const goLinks = assertOutboundLinkPolicy(html, PLATFORM_HOSTS, "ویزارد انتخاب سکو");
+    expect(goLinks).toBeGreaterThanOrEqual(1);
+    expect(html).not.toContain(REFERRAL_CODE);
+  });
+
   it("referral fields never enter the client payload at all (not just hidden from display)", async () => {
     const data = await homeData(seededStore());
     for (const row of data.rows) {
@@ -275,6 +298,11 @@ describe("sorting takes no input from referral fields", () => {
     // "referral_url must not feed into any sorting logic." This is an
     // existence guard: if referral ever enters tableView/bestView/groupRows
     // or the row layer, this test turns red here.
+    // ⚠️ This grep is a smoke alarm, not the lock. `const k = "refe" + "rral_url"`
+    // walks straight through it — verified. The real guard is the behavioural
+    // one in `ranking-neutrality.test.tsx`, whose flat-tie fixture kills every
+    // sabotage this grep misses. Keep both; never treat a green grep here as
+    // evidence that ordering is neutral.
     // ⚠️ Paths were updated with the TanStack rewrite; if a file moves, put
     // its new path here — this list must not be deleted.
     for (const file of [
@@ -287,6 +315,17 @@ describe("sorting takes no input from referral fields", () => {
       "src/components/tablo/SourceCards.tsx",
       "src/components/content/AssetPage.tsx",
       "src/lib/rows.ts",
+      // ⚠️ #62 moved the ordering of the asset table into these two: the
+      // sort/filter model and the controls that drive it. They are the most
+      // likely place for a "sponsored platforms first" flag to appear, so
+      // they are guarded at the source level like the rest.
+      "src/lib/comparison-table.ts",
+      "src/components/content/ComparisonControls.tsx",
+      // ⚠️ #63 added a component that answers «کدام سکو؟» with one platform's
+      // name. It is the single place where "sponsored platforms first" would
+      // pay best, so both the reasoning and the markup are guarded here.
+      "src/lib/wizard.ts",
+      "src/components/content/PlatformWizard.tsx",
     ]) {
       const source = readFileSync(join(__dirname, "..", file), "utf8");
       expect(source, `${file} نباید فیلد معرف بخواند`).not.toMatch(/referral/);

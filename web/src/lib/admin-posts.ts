@@ -46,6 +46,7 @@ export interface AdminPostsSource {
     patch: { status: PostStatus; published_at: string | null; updated_at: string },
   ): Promise<void>;
   setImage(slug: string, patch: PostImagePatch): Promise<void>;
+  clearImage(slug: string): Promise<void>;
 }
 
 export type AdminPostsFactory = () => AdminPostsSource;
@@ -197,4 +198,23 @@ export async function setPostImage(slug: string, image: PostImagePatch): Promise
   const patch: PostImagePatch = { ...image, image_srcset: image.image_srcset ?? null };
   await src.setImage(slug, patch);
   return { ok: true, post: { ...existing, ...patch } };
+}
+
+export async function clearPostImage(slug: string): Promise<WriteResult> {
+  const src = source();
+  const existing = await src.getPost(slug);
+  if (existing === null) return notFoundFailure();
+
+  await src.clearImage(slug);
+  return {
+    ok: true,
+    post: {
+      ...existing,
+      image_url: null,
+      image_alt: null,
+      image_width: null,
+      image_height: null,
+      image_srcset: null,
+    },
+  };
 }

@@ -56,21 +56,10 @@ function bubbleRisk(bubbleFraction: number): {
   };
 }
 
-export function calculateBubble(input: BubbleInputs): BubbleView | null {
-  if (
-    !validPositive(input.marketPriceToman) ||
-    !validPositive(input.ounceUsd) ||
-    !validPositive(input.usdToman)
-  ) {
-    return null;
-  }
-
-  const intrinsicToman = Math.round(
-    (input.ounceUsd * input.usdToman * GOLD_18K_PURITY) / TROY_OUNCE_GRAMS,
-  );
+function bubbleView(marketPriceToman: number, intrinsicToman: number): BubbleView | null {
   if (intrinsicToman <= 0) return null;
 
-  const bubbleToman = Math.round(input.marketPriceToman - intrinsicToman);
+  const bubbleToman = Math.round(marketPriceToman - intrinsicToman);
   const bubbleFraction = bubbleToman / intrinsicToman;
   const risk = bubbleRisk(bubbleFraction);
 
@@ -86,4 +75,42 @@ export function calculateBubble(input: BubbleInputs): BubbleView | null {
     }),
     ...risk,
   };
+}
+
+export function calculateBubble(input: BubbleInputs): BubbleView | null {
+  if (
+    !validPositive(input.marketPriceToman) ||
+    !validPositive(input.ounceUsd) ||
+    !validPositive(input.usdToman)
+  ) {
+    return null;
+  }
+
+  return bubbleView(
+    input.marketPriceToman,
+    Math.round((input.ounceUsd * input.usdToman * GOLD_18K_PURITY) / TROY_OUNCE_GRAMS),
+  );
+}
+
+export interface CoinBubbleInputs {
+  coinPriceToman: number | null;
+  pureGoldGrams: number | null;
+  ounceUsd: number | null;
+  usdToman: number | null;
+}
+
+export function calculateCoinBubble(input: CoinBubbleInputs): BubbleView | null {
+  if (
+    !validPositive(input.coinPriceToman) ||
+    !validPositive(input.pureGoldGrams) ||
+    !validPositive(input.ounceUsd) ||
+    !validPositive(input.usdToman)
+  ) {
+    return null;
+  }
+
+  return bubbleView(
+    input.coinPriceToman,
+    Math.round((input.ounceUsd * input.usdToman * input.pureGoldGrams) / TROY_OUNCE_GRAMS),
+  );
 }

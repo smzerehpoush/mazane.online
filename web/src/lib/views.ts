@@ -28,10 +28,6 @@ export function setDefaultViewCounter(factory: ViewCounterFactory): void {
   defaultFactory = factory;
 }
 
-export function resetViewCounter(): void {
-  activeSource = null;
-}
-
 function source(): ViewCounterSource | null {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) return null;

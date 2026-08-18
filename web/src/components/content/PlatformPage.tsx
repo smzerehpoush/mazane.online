@@ -28,12 +28,11 @@ import {
 import type { ListedPlatform, PlatformSnapshot } from "@/lib/prices";
 import type { ReferencePrice } from "@/lib/reference-price";
 import { priceToman, type Row } from "@/lib/rows";
+import { FEE_UNDISCLOSED_FA, FEES_UNDISCLOSED_FA } from "@/lib/undisclosed";
 
 const PRICE_EXPLANATION_FA =
   "این عدد قیمت اعلامی همین سکوست، پیش از کارمزد. آنچه می‌پردازید یا می‌گیرید، به کارمزد خرید و فروش زیر بستگی دارد.";
 
-const FEES_UNDISCLOSED_FA = "این سکو کارمزدش را عمومی اعلام نکرده است";
-const FEE_UNDISCLOSED_FA = "این سکو اعلام نکرده است";
 const LEGAL_ENTITY_UNKNOWN_FA = "هنوز نمی‌دانیم این سکو زیر نام کدام شرکت ثبت شده است";
 const DELIVERY_UNKNOWN_FA = "تحویل فیزیکی این سکو را هنوز بررسی نکرده‌ایم";
 

@@ -81,6 +81,11 @@ export function nextRowDomState(
   };
 }
 
+export function nextRateCardPrice(current: string, update: LivePriceRow | undefined): string {
+  if (update === undefined || update.price_display === null) return current;
+  return update.price_display;
+}
+
 export const RATE_CARD_POLL_SECONDS = 30;
 
 export interface RateCardCountdownTick {

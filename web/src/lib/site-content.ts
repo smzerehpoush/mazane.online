@@ -2,11 +2,16 @@ import { formatFaNumber } from "./fa-number";
 import type { HistoryRange } from "./history";
 import { TOOLS, TOOLS_HUB_PATH } from "./tools";
 
+/**
+ * ⚠️ `title` is the single source for the site's title tag; `__root.tsx`
+ * imports it rather than keeping its own literal, so the site-wide default
+ * and the home page's own title can never drift apart again.
+ */
 export const brand = {
   name: "تابلو",
-  title: "تابلو — مقایسه‌ی قیمت واقعی طلا",
+  title: "تابلو — مقایسه‌ی قیمت اعلامی طلا",
   description:
-    "قیمت لحظه‌ای طلا و سکه را در تابلو مقایسه کن؛ اختلاف قیمت، حباب، کارمزد و تازگی داده‌ها را یک‌جا ببین.",
+    "تابلو قیمت لحظه‌ای طلا و سکه را کنار هم می‌گذارد؛ اختلاف قیمت، حباب، کارمزد و تازگی داده‌ها را یک‌جا نشان می‌دهد.",
 } as const;
 
 export const nav = [
@@ -204,6 +209,19 @@ export const COIN_PRICE_INSTRUMENTS = [
   { key: "half", label: "نیم سکه", instrument: "SEKEH_HALF_TOMAN" },
   { key: "quarter", label: "ربع سکه", instrument: "SEKEH_QUARTER_TOMAN" },
 ] as const;
+
+/**
+ * ⚠️ Only سکه امامی gets a bubble. The ۱۳۷۰/۰۳/۱۹ cabinet decree that fixes a
+ * weight and a fineness covers یک بهار آزادی alone; published نیم/ربع weights
+ * disagree at the decimal with no citable decree behind any of them, and an
+ * uncited mint spec is the same class of claim as the unsourced سود فروشنده
+ * figure this site refuses to print. Do not add the other two from memory.
+ */
+export const EMAMI_COIN_WEIGHT_GRAMS = 8.13598;
+export const EMAMI_COIN_FINENESS = 0.9;
+export const EMAMI_COIN_PURE_GOLD_GRAMS = EMAMI_COIN_WEIGHT_GRAMS * EMAMI_COIN_FINENESS;
+export const EMAMI_COIN_SPEC_CITATION =
+  "تصویب‌نامه‌ی هیئت وزیران مورخ ۱۳۷۰/۰۳/۱۹، به استناد بند ۲ قانون اصلاح قانون ضرب مسکوک طلا (مصوب ۱۳۳۷)";
 
 /**
  * ⚠️ Comes from `lib/fa-number.ts`, not `Intl.NumberFormat` — same output,

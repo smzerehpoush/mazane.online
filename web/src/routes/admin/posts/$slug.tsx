@@ -1,13 +1,3 @@
-/**
- * ⚠️ Deliberately no "delete image" button: the server has no route to
- * clear image_url — `POST /api/admin-posts/$slug/image` only uploads or
- * replaces, and every other method (including DELETE) is rejected with 405
- * (`adminPostImageMethodNotAllowed` in `lib/server/admin-post-image.ts`; the
- * text-update form also only accepts title_fa/body_md). A button that always
- * fails is worse than no button at all — this is a real gap, not an
- * oversight; actually deleting needs a separate ticket to add the server
- * route.
- */
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
@@ -69,6 +59,8 @@ function AdminEditPostPage() {
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
   const [imageUploaded, setImageUploaded] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
+  const [imageDeleted, setImageDeleted] = useState(false);
+  const [imageDeleting, setImageDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,10 +202,38 @@ function AdminEditPostPage() {
       setImageAlt("");
       setImageInputKey((key) => key + 1);
       setImageUploaded(true);
+      setImageDeleted(false);
     } catch {
       setImageUploadError("ارتباط با سرور برقرار نشد.");
     } finally {
       setImageUploading(false);
+    }
+  }
+
+  async function onDeleteImage() {
+    if (!window.confirm("عکس شاخص این پست حذف شود؟ متن پست دست‌نخورده می‌ماند.")) return;
+    setImageDeleting(true);
+    setImageUploadError(null);
+    setImageUploaded(false);
+    setImageDeleted(false);
+    try {
+      const response = await fetch(`/api/admin-posts/${slug}/image`, { method: "DELETE" });
+      if (response.status === 401) {
+        await navigate({ to: "/admin/login" });
+        return;
+      }
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
+        setImageUploadError(body?.error ?? "حذف عکس با خطا مواجه شد.");
+        return;
+      }
+      const body = (await response.json()) as { post: BlogPost };
+      setPost(body.post);
+      setImageDeleted(true);
+    } catch {
+      setImageUploadError("ارتباط با سرور برقرار نشد.");
+    } finally {
+      setImageDeleting(false);
     }
   }
 
@@ -348,17 +368,31 @@ function AdminEditPostPage() {
                   <p className="text-sm text-destructive">{imageUploadError}</p>
                 )}
                 {imageUploaded && <p className="text-sm text-emerald-600">عکس بارگذاری شد.</p>}
+                {imageDeleted && <p className="text-sm text-emerald-600">عکس شاخص حذف شد.</p>}
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => void onUploadImage()}
-                  disabled={
-                    !canUploadPostImage({ file: imageFile, alt: imageAlt }) || imageUploading
-                  }
-                >
-                  {imageUploading ? "در حال بارگذاری…" : "بارگذاری عکس"}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void onUploadImage()}
+                    disabled={
+                      !canUploadPostImage({ file: imageFile, alt: imageAlt }) || imageUploading
+                    }
+                  >
+                    {imageUploading ? "در حال بارگذاری…" : "بارگذاری عکس"}
+                  </Button>
+                  {post.image_url !== null && post.image_url !== undefined && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      data-delete-post-image
+                      onClick={() => void onDeleteImage()}
+                      disabled={imageDeleting}
+                    >
+                      {imageDeleting ? "در حال حذف…" : "حذف عکس شاخص"}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {post.status === "published" && (

@@ -17,31 +17,37 @@ log = logging.getLogger("mazane.collector.content")
 
 QUEUE_TARGET_DAYS = 14
 QUEUE_ALERT_DAYS = 5
-DEFAULT_DAILY_PUBLISH_CAP = 2
+# ⚠️ Nothing auto-publishes any more (phase 1 removed that path); this is an
+# assumed editorial cadence, used only as the divisor that turns the draft
+# count into a "days of runway" estimate. The env var keeps its
+# `TABLO_DAILY_PUBLISH_CAP` name — that's a deploy-config value documented in
+# `ops/RUNBOOK.md` and `docs/01-overview.md` — but the Python symbols below
+# describe what the number actually does now, not what it used to do.
+DEFAULT_EDITORIAL_CADENCE_PER_DAY = 2
 
 
-def daily_publish_cap_from_env() -> int:
+def editorial_cadence_from_env() -> int:
     raw = os.environ.get("TABLO_DAILY_PUBLISH_CAP")
     if raw is None:
-        return DEFAULT_DAILY_PUBLISH_CAP
+        return DEFAULT_EDITORIAL_CADENCE_PER_DAY
     try:
-        cap = int(raw)
-        if cap < 1:
+        cadence = int(raw)
+        if cadence < 1:
             raise ValueError(raw)
     except ValueError:
         log.warning(
             "TABLO_DAILY_PUBLISH_CAP=%r is invalid — defaulting to %s",
             raw,
-            DEFAULT_DAILY_PUBLISH_CAP,
+            DEFAULT_EDITORIAL_CADENCE_PER_DAY,
         )
-        return DEFAULT_DAILY_PUBLISH_CAP
-    return cap
+        return DEFAULT_EDITORIAL_CADENCE_PER_DAY
+    return cadence
 
 
 class QueueDepth(NamedTuple):
 
     drafts: int
-    daily_cap: int
+    cadence_per_day: int
     days: float
 
 
@@ -72,20 +78,20 @@ async def enqueue_draft(
     log.info("draft %s queued", slug)
 
 
-async def check_queue_depth(gateway: ContentGateway, *, daily_cap: int) -> QueueDepth:
+async def check_queue_depth(gateway: ContentGateway, *, cadence_per_day: int) -> QueueDepth:
     drafts = await gateway.draft_count()
-    days = drafts / daily_cap
+    days = drafts / cadence_per_day
     if days < QUEUE_ALERT_DAYS:
         log.warning(
-            "content queue depth is %.1f days (%s drafts ÷ %s per-day cap) — "
+            "content queue depth is %.1f days (%s drafts ÷ %s assumed per-day pace) — "
             "below the %s-day threshold; target is %s days. Add manual drafts before the queue runs dry.",
             days,
             drafts,
-            daily_cap,
+            cadence_per_day,
             QUEUE_ALERT_DAYS,
             QUEUE_TARGET_DAYS,
         )
-    return QueueDepth(drafts, daily_cap, days)
+    return QueueDepth(drafts, cadence_per_day, days)
 
 
 async def _run_enqueue(slug: str, title_template: str, body_template: str) -> None:

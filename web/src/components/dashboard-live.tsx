@@ -25,6 +25,7 @@ import { useEffect, useRef } from "react";
 
 import type { BubbleRiskLevel } from "@/lib/bubble";
 import { nextRowDomState, type LiveDashboard } from "@/lib/live-update";
+import { BUBBLE_INPUT_MISSING_FA, COIN_PRICE_UNCOLLECTED_FA } from "@/lib/undisclosed";
 
 const FLASH_MS = 900;
 
@@ -40,15 +41,20 @@ function setPriceText(root: ParentNode, selector: string, value: string | null):
   if (element.textContent !== value) element.textContent = value;
 }
 
-function setTomanText(root: ParentNode, selector: string, value: string | null): void {
+function setTomanText(
+  root: ParentNode,
+  selector: string,
+  value: string | null,
+  fallback = "—",
+): void {
   const element = root.querySelector<HTMLElement>(selector);
   if (element === null) return;
   const valueElement = element.querySelector<HTMLElement>("[data-price-value]");
   if (valueElement === null) {
-    element.textContent = value ?? "—";
+    element.textContent = value ?? fallback;
     return;
   }
-  const nextValue = value ?? "—";
+  const nextValue = value ?? fallback;
   if (valueElement.textContent !== nextValue) valueElement.textContent = nextValue;
   const unitElement = element.querySelector<HTMLElement>("[data-price-unit]");
   if (unitElement !== null) unitElement.classList.toggle("hidden", value === null);
@@ -177,8 +183,8 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
     const riskLabel = document.querySelector<HTMLElement>("[data-bubble-risk-label]");
     if (riskLabel !== null) {
       setBubbleRiskClass(riskLabel, riskLevel);
-      if (riskLabel.textContent !== (data.bubble?.riskLabel ?? "نامشخص")) {
-        riskLabel.textContent = data.bubble?.riskLabel ?? "نامشخص";
+      if (riskLabel.textContent !== (data.bubble?.riskLabel ?? BUBBLE_INPUT_MISSING_FA)) {
+        riskLabel.textContent = data.bubble?.riskLabel ?? BUBBLE_INPUT_MISSING_FA;
       }
     }
     const statusPanel = document.querySelector<HTMLElement>("[data-bubble-status-panel]");
@@ -189,7 +195,12 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
       data.bubble === null ? "داده اونس یا دلار هنوز در دسترس نیست" : data.bubble.riskDescription,
     );
     for (const coin of data.coinPrices) {
-      setTomanText(document, `[data-coin-price="${CSS.escape(coin.key)}"]`, coin.priceDisplay);
+      setTomanText(
+        document,
+        `[data-coin-price="${CSS.escape(coin.key)}"]`,
+        coin.priceDisplay,
+        COIN_PRICE_UNCOLLECTED_FA,
+      );
     }
 
     // ⚠️ A reference outage hides the anchor instead of freezing it: a dashed

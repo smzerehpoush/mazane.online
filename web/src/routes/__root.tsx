@@ -10,6 +10,7 @@ import {
 import { type ReactNode } from "react";
 
 import { configuredImageOrigin, imagePreconnectLinks } from "@/lib/image-origin";
+import { brand } from "@/lib/site-content";
 import { SERVER_THEME, THEME_INIT_SCRIPT } from "@/lib/theme";
 import appCss from "../styles.css?url";
 
@@ -89,10 +90,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "تابلو — مقایسه‌ی قیمت واقعی طلا" },
+      { title: brand.title },
       {
         name: "description",
-        content: "مقایسه‌ی لحظه‌ای قیمت خرید و فروش طلای ۱۸ عیار در سکوهای ایرانی.",
+        content: "مقایسه‌ی لحظه‌ای قیمت اعلامی طلای ۱۸ عیار در سکوهای ایرانی، همراه با کارمزد هر سکو.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

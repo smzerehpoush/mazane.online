@@ -29,13 +29,24 @@ export const CALC_TOOL_JEWELRY = "jewelry";
 
 export const CALC_TOOL_SELLBACK = "sellback";
 
-export const CALC_TOOLS = [CALC_TOOL_JEWELRY, CALC_TOOL_SELLBACK] as const;
+export const CALC_TOOL_WIZARD = "wizard";
+
+export const CALC_TOOL_MAZANE = "mazane";
+
+export const CALC_TOOLS = [
+  CALC_TOOL_JEWELRY,
+  CALC_TOOL_SELLBACK,
+  CALC_TOOL_WIZARD,
+  CALC_TOOL_MAZANE,
+] as const;
 
 export type CalcTool = (typeof CALC_TOOLS)[number];
 
 export const CALC_TOOL_NAMES_FA: Readonly<Record<string, string>> = {
   [CALC_TOOL_JEWELRY]: "ماشین‌حساب طلای زینتی",
   [CALC_TOOL_SELLBACK]: "ماشین‌حساب فروش طلای دست‌دوم",
+  [CALC_TOOL_WIZARD]: "ویزارد انتخاب سکو",
+  [CALC_TOOL_MAZANE]: "مبدل مظنه و نرخ گرم",
 };
 
 /**
@@ -50,10 +61,21 @@ export const CALC_TOOL_NAMES_FA: Readonly<Record<string, string>> = {
  * is not the answer the visitor came for. `purity` is excluded because it
  * arrives pre-filled at 18k and a visitor who never touches it has still
  * answered the question.
+ *
+ * ⚠️ Every key here is checked with `parseCalculatorInput`, so only a **numeric**
+ * input may be listed. The wizard's other two answers are the words «بله»/«نه»
+ * and are deliberately absent: `buildWizardResult` refuses to return a
+ * recommendation until both are given, so `hasResult` already carries them.
+ *
+ * ⚠️ The مظنه converter has exactly one number to give — `amount`. Its
+ * direction switch is not listed because it arrives pre-selected and a visitor
+ * who never touches it has still asked the question the page exists for.
  */
 export const CALC_REQUIRED_INPUTS: Readonly<Record<CalcTool, readonly string[]>> = {
   [CALC_TOOL_JEWELRY]: ["weight", "wage"],
   [CALC_TOOL_SELLBACK]: ["weight", "deduction"],
+  [CALC_TOOL_WIZARD]: ["amount"],
+  [CALC_TOOL_MAZANE]: ["amount"],
 };
 
 /**

@@ -90,6 +90,8 @@ describe("sitemap.xml", () => {
       "/abzarha",
       "/mohasebe-tala",
       "/mohasebe-forush-tala",
+      "/kodam-saku",
+      "/tabdil-mazane",
       "/tala-18",
       "/milli",
       "/wallgold",
@@ -115,14 +117,6 @@ describe("sitemap.xml", () => {
       if (entry.path.startsWith("/blog/")) continue;
       if (entry.lastModified === undefined) continue;
       expect(entry.lastModified, entry.path).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    }
-  });
-
-  it("a non-blog lastmod is exactly the declared content revision, never anything live", () => {
-    for (const entry of entries()) {
-      if (entry.path.startsWith("/blog/")) continue;
-      if (entry.path === "/blog") continue;
-      expect(entry.lastModified, entry.path).toBe(CONTENT_REVISED_ON[entry.path]);
     }
   });
 

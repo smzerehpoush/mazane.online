@@ -37,10 +37,6 @@ export function setDefaultBlogSource(factory: BlogSourceFactory): void {
   defaultFactory = factory;
 }
 
-export function resetBlogSource(): void {
-  activeSource = null;
-}
-
 function source(): BlogSource {
   if (activeSource !== null) return activeSource;
   if (defaultFactory === null) {

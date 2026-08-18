@@ -10,6 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { HomePage } from "../src/components/tablo/HomePage";
 import {
   nextRateCardCountdown,
+  nextRateCardPrice,
   nextRowDomState,
   RATE_CARD_POLL_SECONDS,
   STALE_SUFFIX_FA,
@@ -183,6 +184,36 @@ describe("the rate card's live countdown — the pure function nextRateCardCount
       secondsRemaining: RATE_CARD_POLL_SECONDS,
       shouldFetch: false,
     });
+  });
+});
+
+describe("the rate card's headline number — the pure function nextRateCardPrice", () => {
+  const CURRENT = "۱۸٬۷۰۴٬۰۵۵";
+
+  it("a matching row's price_display replaces the rendered number", () => {
+    expect(
+      nextRateCardPrice(CURRENT, {
+        platform_slug: "wallgold",
+        price_toman: 18720000,
+        price_display: "۱۸٬۷۲۰٬۰۰۰",
+        updated_at: isoSecondsAgo(5),
+      }),
+    ).toBe("۱۸٬۷۲۰٬۰۰۰");
+  });
+
+  it("no matching row in the payload ⟸ the previous number stays", () => {
+    expect(nextRateCardPrice(CURRENT, undefined)).toBe(CURRENT);
+  });
+
+  it("source outage (a priceless row) ⟸ the previous number stays rather than blanking", () => {
+    expect(
+      nextRateCardPrice(CURRENT, {
+        platform_slug: "wallgold",
+        price_toman: null,
+        price_display: null,
+        updated_at: isoSecondsAgo(10 * 60),
+      }),
+    ).toBe(CURRENT);
   });
 });
 

@@ -54,10 +54,6 @@ export function isBuyOpen(row: Row): boolean {
   return row.snapshot !== null && row.snapshot.terms.buy_enabled;
 }
 
-export function isSellOpen(row: Row): boolean {
-  return row.snapshot !== null && row.snapshot.terms.sell_enabled;
-}
-
 /**
  * ⚠️ No monetization field is ever a sort input — a code-level guard in
  * `tests/sponsored-links.test.tsx` flags even their names red in this file.

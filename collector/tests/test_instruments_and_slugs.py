@@ -125,6 +125,8 @@ def test_static_page_slugs_are_registered() -> None:
         "mohasebe-tala",
         "mohasebe-forush-tala",
         "abzarha",
+        "kodam-saku",
+        "tabdil-mazane",
     )
     for slug in STATIC_PAGE_SLUGS:
         assert PUBLIC_SLUGS.kind_of(slug) is SlugKind.STATIC_PAGE

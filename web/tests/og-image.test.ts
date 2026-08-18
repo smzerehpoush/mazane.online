@@ -168,6 +168,7 @@ describe("which pages declare an image", () => {
     ["/sekeh", sekehHead(), "sekeh"],
     ["/mohasebe-tala", jewelryToolHead(), "mohasebe-tala"],
     ["/mohasebe-forush-tala", sellBackHead(), "mohasebe-forush-tala"],
+    ["/abzarha", toolsHubHead(), "abzarha"],
   ];
 
   for (const [name, head, key] of cases) {
@@ -180,8 +181,6 @@ describe("which pages declare an image", () => {
 
   it("pages without a rendered card stay on the small card", () => {
     expect(metaValue(blogIndexHead(), "og:image")).toBeUndefined();
-    expect(metaValue(toolsHubHead(), "og:image")).toBeUndefined();
-    expect(metaValue(toolsHubHead(), "twitter:card")).toBe("summary");
   });
 
   it("a missing slug page declares no image", () => {
@@ -402,6 +401,12 @@ describe("ogCardFor", () => {
   it("has a card for both tool pages", async () => {
     expect((await ogCardFor("mohasebe-tala"))?.title).toContain("اجرت");
     expect((await ogCardFor("mohasebe-forush-tala"))?.title).toContain("دست‌دوم");
+  });
+
+  it("has a card for the tools hub", async () => {
+    const card = await ogCardFor("abzarha");
+    expect(card?.title).toContain("ابزارهای تابلو");
+    expect(card?.footnote).toContain("tala.ir");
   });
 
   it("has no card for an unknown key", async () => {

@@ -25,6 +25,8 @@ export const STATIC_PAGE_SLUGS: ReadonlySet<string> = new Set([
   "mohasebe-tala",
   "mohasebe-forush-tala",
   "abzarha",
+  "kodam-saku",
+  "tabdil-mazane",
 ]);
 
 export type SlugResolution =

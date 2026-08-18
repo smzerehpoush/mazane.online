@@ -1,19 +1,9 @@
-import {
-  formatDateFa,
-  formatMinutesAgoFa,
-  isStale,
-  minutesSince,
-} from "@/lib/format";
+import { formatDateFa, formatMinutesAgoFa, isStale, minutesSince } from "@/lib/format";
 import { STALE_SUFFIX_FA } from "@/lib/live-update";
 import type { ListedPlatform, PlatformTerms } from "@/lib/prices";
+import { FEES_UNDISCLOSED_FA } from "@/lib/undisclosed";
 
-export function Staleness({
-  updatedAt,
-  nowMs,
-}: {
-  updatedAt: string | null;
-  nowMs: number;
-}) {
+export function Staleness({ updatedAt, nowMs }: { updatedAt: string | null; nowMs: number }) {
   if (updatedAt === null) {
     return <span>هنوز داده‌ای ثبت نشده است</span>;
   }
@@ -24,11 +14,7 @@ export function Staleness({
       <time dateTime={updatedAt} data-live="updated-at" suppressHydrationWarning>
         {formatMinutesAgoFa(minutes)}
       </time>
-      <strong
-        data-live="stale"
-        className="font-medium text-negative"
-        suppressHydrationWarning
-      >
+      <strong data-live="stale" className="font-medium text-negative" suppressHydrationWarning>
         {isStale(minutes) ? STALE_SUFFIX_FA : null}
       </strong>
     </span>
@@ -45,7 +31,7 @@ export function FeeSourceLabel({ terms }: { terms: PlatformTerms }) {
     );
   }
   if (terms.fee_source === "UNKNOWN") {
-    return <span>این سکو کارمزدش را عمومی اعلام نکرده است</span>;
+    return <span>{FEES_UNDISCLOSED_FA}</span>;
   }
   return <span>از API سکو</span>;
 }

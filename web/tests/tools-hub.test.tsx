@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { JewelryToolPage } from "../src/components/content/JewelryToolPage";
 import { HomePage } from "../src/components/tablo/HomePage";
 import { JEWELRY_TOOL_RELATED } from "../src/lib/jewelry-tool";
+import type { JewelryToolData } from "../src/lib/jewelry-tool";
 import { REGISTRY_INSTRUMENTS, REGISTRY_PLATFORMS } from "../src/lib/registry";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
 import { SITE_URL } from "../src/lib/site";
@@ -16,6 +18,17 @@ const KNOWN_ROUTES: ReadonlySet<string> = new Set(["/", "/blog", "/about"]);
 
 function hubHtml(): string {
   return renderToStaticMarkup(<ToolsHubPage />);
+}
+
+const JEWELRY_TOOL_DATA: JewelryToolData = {
+  pricePerGram: 10_000_000,
+  referenceName: "tala.ir",
+  readAt: "2026-08-18T09:12:00.000Z",
+  generated_at: "2026-08-18T09:12:30.000Z",
+};
+
+function toolPageHtml(): string {
+  return renderToStaticMarkup(<JewelryToolPage data={JEWELRY_TOOL_DATA} />);
 }
 
 async function homeHtml(): Promise<string> {
@@ -107,9 +120,10 @@ describe("header nav — the fifth item", () => {
   });
 
   it("the hub is reachable from the header of a tool page too, not only the home page", () => {
-    expect(hubHtml()).toContain('aria-label="ناوبری اصلی"');
+    const html = toolPageHtml();
+    expect(html).toContain('aria-label="ناوبری اصلی"');
     for (const item of nav) {
-      expect(hubHtml(), item.href).toContain(`href="${item.href}"`);
+      expect(html, item.href).toContain(`href="${item.href}"`);
     }
   });
 });

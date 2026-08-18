@@ -17,6 +17,8 @@ STATIC_PAGE_SLUGS: tuple[str, ...] = (
     "mohasebe-tala",
     "mohasebe-forush-tala",
     "abzarha",
+    "kodam-saku",
+    "tabdil-mazane",
 )
 
 _SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")

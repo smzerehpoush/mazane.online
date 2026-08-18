@@ -48,43 +48,40 @@ export function MazaneChist() {
         <h1 className="text-xl font-bold text-foreground sm:text-2xl">مظنه چیست؟</h1>
 
         <p className="mt-5">
-          <strong className="font-semibold text-foreground">مظنه</strong> در بازار طلای
-          ایران یعنی{" "}
-          <strong className="font-semibold text-foreground">
-            قیمت یک مثقال طلای آب‌شده
-          </strong>{" "}
-          — عددی که بازار سنتی طلا هر روز حول آن معامله می‌کند و مبنای قیمت‌گذاری بقیه‌ی
-          اجناس طلا است. یک مثقال بازاری ۴٫۶۰۸۳ گرم است و طلای آب‌شده معمولاً با عیار ۷۰۵
-          (حدود ۱۷ عیار) دادوستد می‌شود؛ طلافروش‌ها از همین مظنه، قیمت هر گرم طلای ۱۸
-          عیار را به دست می‌آورند.
+          <strong className="font-semibold text-foreground">مظنه</strong> در بازار طلای ایران یعنی{" "}
+          <strong className="font-semibold text-foreground">قیمت یک مثقال طلای آب‌شده</strong> —
+          عددی که بازار سنتی طلا هر روز حول آن معامله می‌کند و مبنای قیمت‌گذاری بقیه‌ی اجناس طلا
+          است. یک مثقال بازاری ۴٫۶۰۸۳ گرم است و طلای آب‌شده معمولاً با عیار ۷۰۵ (حدود ۱۷ عیار)
+          دادوستد می‌شود؛ طلافروش‌ها از همین مظنه، قیمت هر گرم طلای ۱۸ عیار را به دست می‌آورند.
+        </p>
+
+        <p className="mt-4">
+          اگر مظنه‌ای در بازار شنیده‌اید و می‌خواهید بدانید به نرخ گرم چقدر می‌شود،{" "}
+          <a href="/tabdil-mazane" className="transition-smooth text-primary hover:underline">
+            همین تبدیل را اینجا انجام دهید
+          </a>
+          . عدد ورودی از خودتان است و تابلو هیچ مظنه‌ای اعلام نمی‌کند.
         </p>
 
         <h2 className="mt-9 text-lg font-semibold text-foreground">
           مظنه یا مضنه؟ کدام املا درست است؟
         </h2>
         <p className="mt-3">
-          املای درست{" "}
-          <strong className="font-semibold text-foreground">«مظنه»</strong> است — از
-          ریشه‌ی عربی{" "}
-          <strong className="font-semibold text-foreground">مَظِنّة</strong> به معنای «جای
-          گمان»: نرخی که انتظار می‌رود معامله حول آن بسته شود.{" "}
-          <strong className="font-semibold text-foreground">«مضنه»</strong> غلط املایی
-          رایجِ همان واژه است (گاهی هم «مزنه» نوشته می‌شود) و در جست‌وجوها فراوان دیده
-          می‌شود؛ هر دو املا به همین مفهوم می‌رسند و اگر «مضنه طلا» را هم جست‌وجو کنید،
-          مقصد همین‌جاست.
+          املای درست <strong className="font-semibold text-foreground">«مظنه»</strong> است — از
+          ریشه‌ی عربی <strong className="font-semibold text-foreground">مَظِنّة</strong> به معنای
+          «جای گمان»: نرخی که انتظار می‌رود معامله حول آن بسته شود.{" "}
+          <strong className="font-semibold text-foreground">«مضنه»</strong> غلط املایی رایجِ همان
+          واژه است (گاهی هم «مزنه» نوشته می‌شود) و در جست‌وجوها فراوان دیده می‌شود؛ هر دو املا به
+          همین مفهوم می‌رسند و اگر «مضنه طلا» را هم جست‌وجو کنید، مقصد همین‌جاست.
         </p>
 
-        <h2 className="mt-9 text-lg font-semibold text-foreground">
-          مظنه در تابلو
-        </h2>
+        <h2 className="mt-9 text-lg font-semibold text-foreground">مظنه در تابلو</h2>
         <p className="mt-3">
-          تابلو خودش هیچ نرخ مظنه یا میانگین بازاری اعلام نمی‌کند؛ هر عدد این سایت
-          قیمت اعلامی یک سکوی مشخص در لحظه‌ی مشخص است. کاری که می‌کنیم مقایسه است:{" "}
-          <strong className="font-semibold text-foreground">
-            قیمت اعلامی هر گرم طلای ۱۸ عیار
-          </strong>{" "}
-          در سکوهای آنلاین، کنار هم و پیش از کارمزد. کارمزد خرید و فروش هر سکو را جدا
-          می‌آوریم، تا ببینید هر کدام روی همان قیمت چه چیزی برمی‌دارد.
+          تابلو خودش هیچ نرخ مظنه یا میانگین بازاری اعلام نمی‌کند؛ هر عدد این سایت قیمت اعلامی یک
+          سکوی مشخص در لحظه‌ی مشخص است. کاری که می‌کنیم مقایسه است:{" "}
+          <strong className="font-semibold text-foreground">قیمت اعلامی هر گرم طلای ۱۸ عیار</strong>{" "}
+          در سکوهای آنلاین، کنار هم و پیش از کارمزد. کارمزد خرید و فروش هر سکو را جدا می‌آوریم، تا
+          ببینید هر کدام روی همان قیمت چه چیزی برمی‌دارد.
         </p>
 
         <RelatedLinksBlock links={relatedLinksForPath(MAZANE_CHIST_PATH)} className="mt-9" />

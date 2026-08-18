@@ -1,8 +1,13 @@
 /**
  * ⚠️ Every field here is human-authored and arrives through the admin panel,
- * never through an adapter. Nothing in this module may ever become an input to
- * ordering, ranking or the wizard's recommendation — the platform page reads
- * it for display only.
+ * never through an adapter, so an operator who can type could otherwise
+ * reorder the comparison table. Exactly one field is allowed out of display,
+ * deliberately: `min_buy_toman` is the «حداقل خرید» sort column and the
+ * wizard's amount exclusion. It earns that because it is printed as its own
+ * visible number in the row it ranks, and because
+ * `tests/ranking-neutrality.test.tsx` varies it alongside referral ownership.
+ * Every other field in this module is display-only and must never become an
+ * input to ordering, ranking or the wizard's recommendation.
  */
 import { formatFaNumber } from "./fa-number";
 
@@ -80,21 +85,6 @@ export function emptyProfile(): PlatformProfile {
     cons_fa: [],
     faq: [],
   };
-}
-
-export function isEmptyProfile(profile: PlatformProfile | null | undefined): boolean {
-  if (profile === null || profile === undefined) return true;
-  return (
-    profile.payment_methods.length === 0 &&
-    profile.kyc_level === null &&
-    profile.mobile_app === null &&
-    profile.delivery_cost_fa === null &&
-    profile.min_buy_toman === null &&
-    profile.min_sell_toman === null &&
-    profile.pros_fa.length === 0 &&
-    profile.cons_fa.length === 0 &&
-    profile.faq.length === 0
-  );
 }
 
 function cleanText(value: string | null): string | null {

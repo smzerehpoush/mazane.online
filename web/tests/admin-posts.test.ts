@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  clearPostImage,
   createPost,
   getAdminPost,
   isValidSlug,
@@ -69,6 +70,22 @@ class FakeAdminPostsSource implements AdminPostsSource {
     this.imageChanges.push({ slug, patch });
     const existing = this.posts.get(slug);
     if (existing !== undefined) this.posts.set(slug, { ...existing, ...patch });
+  }
+
+  imageClears: string[] = [];
+
+  async clearImage(slug: string): Promise<void> {
+    this.imageClears.push(slug);
+    const existing = this.posts.get(slug);
+    if (existing === undefined) return;
+    this.posts.set(slug, {
+      ...existing,
+      image_url: null,
+      image_alt: null,
+      image_width: null,
+      image_height: null,
+      image_srcset: null,
+    });
   }
 }
 
@@ -411,6 +428,65 @@ describe("setPostImage", () => {
       { title_fa: "عنوان تازه", body_md: "متن تازه", meaningfulEdit: false },
       "2026-08-07T00:00:00.000Z",
     );
+    expect(fake.imageChanges).toHaveLength(0);
+  });
+});
+
+describe("clearPostImage", () => {
+  const withImage: Partial<BlogPost> = {
+    image_url: "https://s3.tablo.test/tablo-media/posts/akkas/deadbeef.webp",
+    image_alt: "نمودار قیمت طلا روی صفحه‌ی موبایل",
+    image_width: 1600,
+    image_height: 900,
+    image_srcset: "https://s3.tablo.test/tablo-media/posts/akkas/deadbeef-480.webp 480w",
+  };
+
+  it("nonexistent post ⟸ kind=not_found and nothing is cleared", async () => {
+    const fake = seedFake();
+    const result = await clearPostImage("nist");
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("unreachable");
+    expect(result.kind).toBe("not_found");
+    expect(fake.imageClears).toHaveLength(0);
+  });
+
+  it("success ⟸ all five image fields are null and updated_at stays untouched", async () => {
+    const original = "2026-08-01T00:00:00.000Z";
+    const fake = seedFake(
+      post("akkas", { ...withImage, status: "published", updated_at: original }),
+    );
+    const result = await clearPostImage("akkas");
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("unreachable");
+    expect(result.post.image_url).toBeNull();
+    expect(result.post.image_alt).toBeNull();
+    expect(result.post.image_width).toBeNull();
+    expect(result.post.image_height).toBeNull();
+    expect(result.post.image_srcset).toBeNull();
+    expect(result.post.updated_at).toBe(original);
+    expect(fake.imageClears).toEqual(["akkas"]);
+  });
+
+  /**
+   * ⚠️ The srcset must never survive a clear: migration 020's check constraint
+   * (`image_srcset is null or image_url is not null`) rejects that row outright.
+   */
+  it("a post whose only leftover is a srcset still ends up fully null", async () => {
+    const fake = seedFake(post("akkas", { image_srcset: "https://s3.tablo.test/a-480.webp 480w" }));
+    await clearPostImage("akkas");
+    expect(fake.posts.get("akkas")?.image_srcset).toBeNull();
+    expect(fake.posts.get("akkas")?.image_url).toBeNull();
+  });
+
+  it("clearing twice is idempotent", async () => {
+    seedFake(post("akkas", withImage));
+    expect((await clearPostImage("akkas")).ok).toBe(true);
+    expect((await clearPostImage("akkas")).ok).toBe(true);
+  });
+
+  it("clearing the image never routes through setImage", async () => {
+    const fake = seedFake(post("akkas", withImage));
+    await clearPostImage("akkas");
     expect(fake.imageChanges).toHaveLength(0);
   });
 });

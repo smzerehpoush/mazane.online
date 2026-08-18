@@ -23,8 +23,6 @@ export interface HistoryQuery {
 
 export type HistoryRange = "DAILY" | "WEEKLY" | "MONTHLY";
 
-export const HISTORY_RANGES: readonly HistoryRange[] = ["DAILY", "WEEKLY", "MONTHLY"];
-
 export type PlatformHistoryByRange = Record<HistoryRange, PlatformHistory | null>;
 
 export interface HistorySource {

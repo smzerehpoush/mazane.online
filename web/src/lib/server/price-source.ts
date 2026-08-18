@@ -22,9 +22,28 @@ import {
 } from "../rows";
 import { resolveSlug as readSlug, type SlugResolution } from "../slugs";
 
+/**
+ * ⚠️ `commandTimeout` is what keeps "staleness, not error" true in practice.
+ * `maxRetriesPerRequest` bounds retries, not wall time: with Redis unreachable
+ * every read sits in ioredis' offline queue across reconnect backoffs, and
+ * `/tala-18` and `/kodam-saku` measured a 12-second TTFB — still a 200, but any
+ * CDN or load balancer with a 5–10s origin read timeout turns that into exactly
+ * the 5xx the rule forbids. The timeout is applied before the command is queued,
+ * so it bounds the queued time too.
+ *
+ * ⚠️ One second, not more: a page walks three sequential waves of reads
+ * (instruments → listed → snapshots), so the budget multiplies by three before
+ * the reader sees anything. A healthy Redis answers in single-digit
+ * milliseconds, so this only ever fires on an outage — but it must stay well
+ * under a third of whatever read timeout sits in front of the origin.
+ */
+const REDIS_TIMEOUT_MS = 1000;
+
 export function createRedisPriceSource(): PriceSource {
   const redis = new Redis(process.env["TABLO_REDIS_URL"] ?? "redis://127.0.0.1:6379/0", {
     maxRetriesPerRequest: 1,
+    commandTimeout: REDIS_TIMEOUT_MS,
+    connectTimeout: REDIS_TIMEOUT_MS,
   });
 
   return {

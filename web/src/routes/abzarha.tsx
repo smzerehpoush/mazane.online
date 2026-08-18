@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Breadcrumbs, PageShell } from "@/components/content/PageShell";
+import { ogImageAlt, ogImageMeta, ogKeyForPath } from "@/lib/og";
 import { SITE_URL } from "@/lib/site";
 import { breadcrumbJsonLd } from "@/lib/structured-data";
 import { TOOLS, TOOLS_HUB_PATH } from "@/lib/tools";
@@ -8,7 +9,7 @@ import type { InternalLink } from "@/lib/tool-page";
 
 const TITLE = "ابزارهای محاسبه‌ی قیمت طلا — تابلو";
 const DESCRIPTION =
-  "ماشین‌حساب‌های تابلو برای خرید و فروش طلا: اجرت ساخت، سود فروشنده و مالیات طلای نو، و مبلغی که بابت طلای دست‌دوم می‌گیرید.";
+  "ابزارهای تابلو برای خرید و فروش طلا: اجرت ساخت، سود فروشنده و مالیات طلای نو، مبلغی که بابت طلای دست‌دوم می‌گیرید، و انتخاب سکو بر پایه‌ی کارمزد اعلامی.";
 const BREADCRUMB_LABEL = "ابزارها";
 
 const HEADING = "ابزارهای تابلو برای حساب کردن قیمت طلا";
@@ -44,7 +45,7 @@ export function toolsHubHead() {
       { property: "og:type", content: "website" },
       { property: "og:url", content: `${SITE_URL}${TOOLS_HUB_PATH}` },
       { property: "og:locale", content: "fa_IR" },
-      { name: "twitter:card", content: "summary" },
+      ...ogImageMeta({ key: ogKeyForPath(TOOLS_HUB_PATH), alt: ogImageAlt(HEADING) }),
     ],
     links: [{ rel: "canonical", href: `${SITE_URL}${TOOLS_HUB_PATH}` }],
     scripts: [

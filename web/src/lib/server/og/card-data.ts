@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only";
 
 import { formatFaClock } from "../../fa-number";
 import { formatToman } from "../../format";
-import { OG_HOME_KEY, OG_SEKEH_KEY } from "../../og";
+import { OG_HOME_KEY, OG_SEKEH_KEY, ogKeyForPath } from "../../og";
 import { ogFootnote, ogPriceLine, type OgCard } from "../../og-card";
 import type { InstrumentListing, ListedPlatform } from "../../prices";
 import { priceToman } from "../../rows";
@@ -13,7 +13,7 @@ import {
   UNION_RATE_REFERENCE_SLUG,
   hero,
 } from "../../site-content";
-import { TOOLS } from "../../tools";
+import { TOOLS, TOOLS_HUB_PATH } from "../../tools";
 import { fetchRowsForPlatforms, getInstruments, getListedPlatforms } from "../price-source";
 import { getReferencePrice } from "../reference-price-source";
 
@@ -26,6 +26,8 @@ const TOOL_EYEBROW = "ماشین‌حساب تابلو";
 const COMPARE_EYEBROW = "مقایسه‌ی نرخ سکوهای آنلاین";
 const SEKEH_EYEBROW = "سکه امامی";
 const SEKEH_TITLE = "قیمت سکه امامی، نیم سکه و ربع سکه";
+const HUB_TITLE = "ابزارهای تابلو برای حساب کردن قیمت طلا";
+const HUB_KEY = ogKeyForPath(TOOLS_HUB_PATH);
 
 interface PricePoint {
   display: string | null;
@@ -65,6 +67,16 @@ async function sekehCard(): Promise<OgCard> {
   const emami = COIN_PRICE_INSTRUMENTS.find((coin) => coin.key === EMAMI_COIN_KEY);
   const point = emami === undefined ? NO_PRICE : await referencePoint(emami.instrument);
   return cardOf(SEKEH_EYEBROW, SEKEH_TITLE, point, MARKET_REFERENCE_SOURCE_NAME);
+}
+
+async function hubCard(): Promise<OgCard> {
+  const point = await referencePoint(UNION_RATE_INSTRUMENT);
+  return cardOf(
+    `${TOOL_EYEBROW} · ${REFERENCE_EYEBROW}`,
+    HUB_TITLE,
+    point,
+    MARKET_REFERENCE_SOURCE_NAME,
+  );
 }
 
 async function toolCard(question: string): Promise<OgCard> {
@@ -114,6 +126,7 @@ async function platformCard(platform: ListedPlatform): Promise<OgCard> {
 export async function ogCardFor(key: string): Promise<OgCard | null> {
   if (key === OG_HOME_KEY) return homeCard();
   if (key === OG_SEKEH_KEY) return sekehCard();
+  if (key === HUB_KEY) return hubCard();
 
   const tool = TOOLS.find((entry) => entry.href === `/${key}`);
   if (tool !== undefined) return toolCard(tool.question);

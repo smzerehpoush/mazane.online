@@ -397,7 +397,9 @@ describe("the block is on every surface the funnel runs through", () => {
 
   it("the coin page carries the coin cluster", () => {
     const html = renderToStaticMarkup(
-      <SekehPage data={{ generated_at: "2026-08-15T20:17:15.475Z", coins: [] }} />,
+      <SekehPage
+        data={{ generated_at: "2026-08-15T20:17:15.475Z", coins: [], emamiBubble: null }}
+      />,
     );
     expect(renderedCluster(html)).toBe("coin");
     expect(renderedHrefs(html)).toContain("/tala-18");

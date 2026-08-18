@@ -96,6 +96,21 @@ describe("the web's static registry matches the collector's code registry", () =
     expect(REGISTRY_PLATFORMS).toEqual(listed.map(asListedPlatform));
   });
 
+  /**
+   * ⚠️ `/go/<slug>` resolves `referral_url ?? website_url`, but the wizard and
+   * the platform page decide whether to *show* an exit button from
+   * `website_url` alone — they have to, because `withoutReferral` strips the
+   * referral field before the row ever reaches them, and reading it there
+   * would be the exact monetization input the ordering rules forbid. That
+   * asymmetry is only harmless while every listed platform has a website: a
+   * platform with a referral link and no site would silently lose its button.
+   */
+  it("every listed platform has a website_url, so a stripped row can still decide it has an exit", () => {
+    for (const platform of REGISTRY_PLATFORMS) {
+      expect(platform.website_url, platform.slug).toEqual(expect.any(String));
+    }
+  });
+
   it("a platform outside ALLOWED never reaches the web's public listing", () => {
     const pending = registry.platforms
       .filter((p) => p.data_policy !== "ALLOWED")

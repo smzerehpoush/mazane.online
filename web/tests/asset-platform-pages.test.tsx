@@ -8,6 +8,7 @@ import type { PlatformHistory } from "../src/lib/history";
 import { formatDateFa, formatDateTimeFa } from "../src/lib/format";
 import type { InstrumentListing, ListedPlatform } from "../src/lib/prices";
 import { buildSitemapEntries } from "../src/lib/seo/sitemap";
+import { livePricesPayload } from "../src/lib/server/live-prices";
 import { SITE_URL } from "../src/lib/site";
 import { footerLinks } from "../src/lib/site-content";
 import { isReservedSlug, resolveSlug } from "../src/lib/slugs";
@@ -253,7 +254,13 @@ describe("asset page — /tala-18", () => {
     );
   });
 
-  it("the unknown-fee platform no longer has a separate group — only its fee column is empty", async () => {
+  /**
+   * ⚠️ Rewritten for #62: the fee cell used to print a bare «—». The phase-1
+   * honesty rule says an undisclosed fee gets the full sentence, so the three
+   * fee cells of a platform that published nothing are merged into one that
+   * says so. A dash here is now a regression, not the expected output.
+   */
+  it("the unknown-fee platform no longer has a separate group — its fee cells say so in a sentence", async () => {
     seed(assetStore());
     const html = await renderSlug("tala-18");
     expect(html).not.toContain("کارمزد نامشخص — فقط قیمت میانی");
@@ -263,7 +270,10 @@ describe("asset page — /tala-18", () => {
     const row = rowOf(html, "digikala");
     expect(row).toContain("۱۸٬۴۰۰٬۰۰۰");
     expect(row).not.toContain("قیمت میانی");
-    expect(row).toMatch(/data-fee[^>]*>—/);
+    expect(row).toContain("data-fee-undisclosed");
+    expect(row).toContain("این سکو کارمزدش را عمومی اعلام نکرده است");
+    expect(row).not.toMatch(/data-fee[^>]*>—/);
+    expect(row).not.toContain("نامشخص");
     expect(row).not.toMatch(/data-fee[^>]*>۰٪/);
   });
 
@@ -562,6 +572,18 @@ describe("the platform page's rate card — PlatformRateCard", () => {
     expect(html).toContain("هنوز سابقه‌ی روند ۲۴ ساعته‌ای برای این سکو ثبت نشده است.");
   });
 
+  it("the number the poll would place is bit-for-bit the number the server rendered", async () => {
+    seed(assetStore());
+    seedHistory([]);
+    const html = await renderSlug("talasea");
+    const payload = await livePricesPayload();
+    const match = payload.rows.find((r) => r.platform_slug === "talasea");
+    expect(match?.price_display).not.toBeNull();
+    expect(rateCardSection(html)).toMatch(
+      new RegExp(`data-rate-price[^>]*>${match?.price_display}<span`),
+    );
+  });
+
   it("a platform with no reference price (no snapshot) doesn't render the card at all", async () => {
     const store = assetStore();
     store.snapshots["talasea"] = null;
@@ -656,7 +678,7 @@ describe("the rate card's period tab bar — daily/weekly/monthly", () => {
             points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
             latest: 18400000,
             side_used: "PRICE",
-            has_enough_coverage: false, // کمتر از نیم پنجره — «به‌زودی»
+            has_enough_coverage: false, // کمتر از نیم پنجره — «داده‌ی کافی ثبت نشده»
           },
         ];
       }
@@ -668,10 +690,37 @@ describe("the rate card's period tab bar — daily/weekly/monthly", () => {
     expect(weeklyTab).not.toContain('disabled=""');
     expect(weeklyTab).toContain('aria-selected="false"');
 
-    const comingSoonTab = tabButton(html, "به‌زودی");
-    expect(comingSoonTab).toContain('disabled=""');
-    expect(comingSoonTab).toContain('aria-disabled="true"');
+    const notEnoughHistoryTab = tabButton(html, "داده‌ی کافی ثبت نشده");
+    expect(notEnoughHistoryTab).toContain('disabled=""');
+    expect(notEnoughHistoryTab).toContain('aria-disabled="true"');
     expect(html).not.toContain(">ماهانه<");
+  });
+
+  it('never promises «به‌زودی» — the archive simply doesn\'t reach back that far', async () => {
+    seed(assetStore());
+    seedHistoryByQuery((query) => {
+      if (query.stepHours === undefined) {
+        return [
+          {
+            platform_slug: "talasea",
+            points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+            latest: 18400000,
+            side_used: "PRICE",
+          },
+        ];
+      }
+      return [
+        {
+          platform_slug: "talasea",
+          points: [{ hour: "2026-08-06T09:00:00.000Z", value: 18400000 }],
+          latest: 18400000,
+          side_used: "PRICE",
+          has_enough_coverage: false,
+        },
+      ];
+    });
+    const html = await renderSlug("talasea");
+    expect(html).not.toContain("به‌زودی");
   });
 
   it("the three-stat region has aria-live — switching tabs announces the number to screen readers", async () => {
