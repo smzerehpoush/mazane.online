@@ -80,7 +80,7 @@ function UnionRateBar({ referencePrice }: { referencePrice: ReferencePrice | nul
   return (
     <p
       data-union-rate
-      className="glass-surface mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 text-[12px]"
+      className="card-surface mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 text-[12px]"
     >
       <span className="text-muted-foreground">نرخ اتحادیه (۱۸ عیار)</span>
       <span className="flex items-center gap-2 font-semibold tabular-nums">
@@ -113,7 +113,7 @@ function TermsSection({
   const anyFeeDisclosed = fees.some((fee) => fee.percent !== null);
 
   return (
-    <section aria-labelledby="terms-heading" className="glass-surface px-5 py-5 sm:px-6">
+    <section aria-labelledby="terms-heading" className="card-surface px-5 py-5 sm:px-6">
       <h2 id="terms-heading" className="text-base font-semibold sm:text-lg">
         قیمت امروز{dateLabel === null ? null : ` — ${dateLabel}`}
       </h2>
@@ -171,7 +171,7 @@ function ProfileSection({ platform }: { platform: ListedPlatform }) {
   if (!anythingKnown) return null;
 
   return (
-    <section aria-labelledby="profile-heading" className="glass-surface mt-6 px-5 py-5 sm:px-6">
+    <section aria-labelledby="profile-heading" className="card-surface mt-6 px-5 py-5 sm:px-6">
       <h2 id="profile-heading" className="text-base font-semibold sm:text-lg">
         شرایط و مشخصات
       </h2>
@@ -256,7 +256,7 @@ function ProsConsSection({ platform }: { platform: ListedPlatform }) {
   if (pros.length === 0 && cons.length === 0) return null;
 
   return (
-    <section aria-labelledby="pros-cons-heading" className="glass-surface mt-6 px-5 py-5 sm:px-6">
+    <section aria-labelledby="pros-cons-heading" className="card-surface mt-6 px-5 py-5 sm:px-6">
       <h2 id="pros-cons-heading" className="text-base font-semibold sm:text-lg">
         نقاط قوت و ضعف
       </h2>
@@ -274,10 +274,7 @@ function PlatformFaqSection({ platform }: { platform: ListedPlatform }) {
   if (faq.length === 0) return null;
 
   return (
-    <section
-      aria-labelledby="platform-faq-heading"
-      className="glass-surface mt-6 px-5 py-5 sm:px-6"
-    >
+    <section aria-labelledby="platform-faq-heading" className="card-surface mt-6 px-5 py-5 sm:px-6">
       <h2 id="platform-faq-heading" className="text-base font-semibold sm:text-lg">
         پرسش‌های پرتکرار درباره‌ی {platform.name_fa}
       </h2>
@@ -357,7 +354,7 @@ export function PlatformPage({
       <UnionRateBar referencePrice={referencePrice} />
 
       {snapshot === null ? (
-        <p className="glass-surface px-5 py-8 text-center text-sm text-muted-foreground">
+        <p className="card-surface px-5 py-8 text-center text-sm text-muted-foreground">
           قیمت در دسترس نیست
         </p>
       ) : (
@@ -366,7 +363,7 @@ export function PlatformPage({
 
       <PlatformCalculator row={row} hasOutbound={hasOutbound} />
 
-      <section aria-labelledby="identity-heading" className="glass-surface mt-6 px-5 py-5 sm:px-6">
+      <section aria-labelledby="identity-heading" className="card-surface mt-6 px-5 py-5 sm:px-6">
         <h2 id="identity-heading" className="text-base font-semibold sm:text-lg">
           هویت و تحویل فیزیکی
         </h2>
@@ -386,7 +383,7 @@ export function PlatformPage({
 
       <RelatedLinksBlock
         links={relatedLinksForPath(`/${platform.slug}`)}
-        className="glass-surface mt-6 px-5 py-5 sm:px-6"
+        className="card-surface mt-6 px-5 py-5 sm:px-6"
       />
 
       <p className="mt-6 text-[12px]">

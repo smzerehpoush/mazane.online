@@ -108,18 +108,18 @@ export function ShareResultButton({ card }: { card: ShareCard | null }) {
         onClick={() => {
           void onClick();
         }}
-        className="transition-smooth inline-flex min-h-11 items-center justify-center rounded-[12px] border border-gold/40 bg-gold-soft px-4 py-2.5 text-[13px] font-semibold text-gold hover:border-gold disabled:opacity-60"
+        className="transition-smooth inline-flex min-h-11 items-center justify-center rounded-[12px] border border-gold/40 bg-gold-soft px-4 py-2.5 text-body font-semibold text-gold hover:border-gold disabled:opacity-60"
       >
         {state === "busy" ? SHARE_BUSY_LABEL : SHARE_BUTTON_LABEL}
       </button>
 
       {state === "failed" && (
-        <p data-share-result-error className="mt-2 text-[11.5px] leading-5 text-rd">
+        <p data-share-result-error className="mt-2 text-meta text-rd">
           {SHARE_FAILED_LABEL}
         </p>
       )}
 
-      <p data-share-result-hint className="mt-2 text-[11px] leading-5 text-tx3">
+      <p data-share-result-hint className="mt-2 text-meta text-tx3">
         {SHARE_HINT}
       </p>
     </div>

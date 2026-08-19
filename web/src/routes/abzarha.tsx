@@ -70,7 +70,7 @@ export function ToolsHubPage() {
     <PageShell>
       <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: BREADCRUMB_LABEL }]} />
 
-      <article className="glass-surface px-5 py-7 sm:px-8 sm:py-9">
+      <article className="card-surface px-5 py-7 sm:px-8 sm:py-9">
         <p className="text-[12px] font-medium tracking-[0.18em] text-gold">{BREADCRUMB_LABEL}</p>
         <h1 className="mt-3 text-[28px] leading-[1.35] font-black text-foreground sm:text-[38px]">
           {HEADING}

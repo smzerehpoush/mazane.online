@@ -15,8 +15,8 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
   return (
     <section className="card-surface overflow-hidden px-5 py-4 sm:px-6">
       <div>
-        <h2 className="text-[15.5px] font-semibold">منابع قیمت</h2>
-        <p className="mt-0.5 text-[12.5px] text-muted-foreground">روند ۲۴ ساعت گذشته‌ی هر سکو</p>
+        <h2 className="text-title font-semibold">منابع قیمت</h2>
+        <p className="mt-0.5 text-meta text-muted-foreground">روند ۲۴ ساعت گذشته‌ی هر سکو</p>
       </div>
 
       <div className="mt-3.5 grid grid-cols-2 gap-[11px] sm:grid-cols-[repeat(auto-fit,minmax(130px,1fr))]">
@@ -36,12 +36,15 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
                 className="size-2 shrink-0 rounded-full"
                 style={{ backgroundColor: source.color }}
               />
-              <span className="truncate text-xs text-muted-foreground">{source.name}</span>
+              <span className="truncate text-meta text-muted-foreground">{source.name}</span>
             </span>
 
-            <div data-source-price className="num text-base font-semibold tracking-[-0.3px]">
+            <div
+              data-source-price
+              className="num text-title font-semibold tracking-[-0.3px] sm:text-number"
+            >
               {source.priceDisplay === null ? (
-                <span className="text-[12.5px] font-normal text-muted-foreground">
+                <span className="text-meta font-normal text-muted-foreground">
                   قیمت در دسترس نیست
                 </span>
               ) : (
@@ -62,7 +65,7 @@ export function SourceCards({ sources, nowMs }: { sources: RailSource[]; nowMs: 
              * `nowMs` comes from the server's `generated_at`, not
              * `Date.now`, so hydration doesn't diverge.
              */}
-            <div className="mb-1.5 text-[10px]">
+            <div className="mb-1.5 text-meta">
               <Staleness updatedAt={source.updatedAt} nowMs={nowMs} />
             </div>
 

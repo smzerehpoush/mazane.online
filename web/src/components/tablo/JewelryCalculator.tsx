@@ -59,9 +59,7 @@ export function jewelryShareCard(
     lines,
     total: { label: TOTAL_LABEL, value: formatFaNumber(breakdown.total) },
     note:
-      pricePerGram === null
-        ? null
-        : `${RATE_NOTE_LABEL}: ${formatFaNumber(pricePerGram)} تومان`,
+      pricePerGram === null ? null : `${RATE_NOTE_LABEL}: ${formatFaNumber(pricePerGram)} تومان`,
     pagePath: JEWELRY_TOOL_PATH,
   };
 }
@@ -130,7 +128,7 @@ export function JewelryResult({
       {breakdown !== null && (
         <dl
           data-calculator-breakdown
-          className="rounded-[10px] border border-line2 px-3.5 py-2.5 text-[12.5px]"
+          className="rounded-[10px] border border-line2 px-3.5 py-2.5 text-meta"
         >
           {BREAKDOWN_LINES.map((line) => (
             <div key={line.key} className="flex items-baseline justify-between gap-2 py-1">
@@ -145,7 +143,7 @@ export function JewelryResult({
 
       <div className="rounded-[10px] bg-acbg p-4">
         <div className="flex items-center justify-between">
-          <span className="text-[12.5px] text-actx">{TOTAL_LABEL}</span>
+          <span className="text-meta text-actx">{TOTAL_LABEL}</span>
           <span data-calculator-total className="num text-xl font-semibold text-actx">
             {breakdown === null ? "—" : formatFaNumber(breakdown.total)}
           </span>
@@ -153,8 +151,8 @@ export function JewelryResult({
 
         {extraCostPercent !== null && (
           <div className="mt-3 flex items-center justify-between gap-2 border-t border-actx/20 pt-2.5">
-            <span className="text-[12px] text-actx">{EXTRA_COST_LABEL}</span>
-            <span data-calculator-extra-cost className="num text-[15px] font-semibold text-actx">
+            <span className="text-meta text-actx">{EXTRA_COST_LABEL}</span>
+            <span data-calculator-extra-cost className="num text-body font-semibold text-actx">
               {formatFaPercentPoints(extraCostPercent, { maximumFractionDigits: 1 })}
             </span>
           </div>
@@ -177,13 +175,13 @@ export function JewelryCalculator({
 
   return (
     <section data-card="calculator" className="card-surface px-5 py-4 sm:px-6">
-      <h2 className="text-[15.5px] font-semibold">ماشین حساب طلای زینتی</h2>
+      <h2 className="text-title font-semibold">ماشین حساب طلای زینتی</h2>
 
       <div className="mt-3.5 space-y-2.5">
         {JEWELRY_FIELDS.map((field) => (
           <label
             key={field.key}
-            className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-[13px] focus-within:border-primary"
+            className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-body focus-within:border-primary"
           >
             <span className="shrink-0 text-tx3">{field.label}</span>
             <input
@@ -200,21 +198,21 @@ export function JewelryCalculator({
       </div>
 
       {pricePerGram !== null && referenceName !== null && (
-        <p className="mt-2.5 text-[11px] leading-5 text-tx3">
+        <p className="mt-2.5 text-meta text-tx3">
           بر پایه‌ی نرخ مرجع هر گرم طلای ۱۸ عیار در {referenceName}. اجرت روی قیمت طلا، سود روی
           مجموع طلا و اجرت، و مالیات روی اجرت و سود حساب می‌شود.
         </p>
       )}
 
-      <p data-calculator-source className="mt-2 text-[11px] leading-5 text-tx3">
+      <p data-calculator-source className="mt-2 text-meta text-tx3">
         {JEWELRY_VAT_NOTE}
       </p>
 
-      <p data-calculator-profit-note className="mt-2 text-[11px] leading-5 text-tx3">
+      <p data-calculator-profit-note className="mt-2 text-meta text-tx3">
         {JEWELRY_PROFIT_NOTE}
       </p>
 
-      <p className="mt-2.5 text-[11.5px] leading-5">
+      <p className="mt-2.5 text-meta">
         <a
           data-calculator-full-page
           href={JEWELRY_TOOL_PATH}

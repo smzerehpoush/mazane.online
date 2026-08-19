@@ -6,7 +6,7 @@ export function Madde5Bar() {
     <div
       data-legal-notice="madde-5"
       role="note"
-      className="rounded-2xl border-t-[3px] px-4 py-3 text-[11px] leading-6"
+      className="rounded-2xl border-t-[3px] px-4 py-3 text-meta"
       style={{
         borderTopColor: "color-mix(in oklab, var(--negative) 55%, transparent)",
         backgroundColor: "color-mix(in oklab, var(--negative-soft) 55%, var(--card))",

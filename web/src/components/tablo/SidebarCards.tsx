@@ -17,8 +17,8 @@ function BubbleValue({
 }) {
   return (
     <div className="rounded-[10px] bg-surface px-2 py-2.5 text-center">
-      <span className="text-[11px] text-tx3">{label}</span>
-      <b {...{ [attr]: true }} className="mt-0.5 block text-[14.5px] font-semibold text-foreground">
+      <span className="text-meta text-tx3">{label}</span>
+      <b {...{ [attr]: true }} className="mt-0.5 block text-body font-semibold text-foreground">
         {unit === "toman" ? (
           <span className="inline-flex items-baseline justify-center gap-1">
             <span data-price-value>{value ?? "—"}</span>
@@ -60,12 +60,10 @@ export function BubbleGauge({
   return (
     <section data-card="bubble" className="card-surface px-5 py-4 sm:px-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[15.5px] font-semibold">حباب سنج</h2>
+        <h2 className="text-title font-semibold">حباب سنج</h2>
         <span
           data-bubble-risk-label
-          className={`rounded-full px-2.5 py-1 text-[11.5px] font-medium ${riskClassName(
-            riskLevel,
-          )}`}
+          className={`rounded-full px-2.5 py-1 text-meta font-medium ${riskClassName(riskLevel)}`}
         >
           {bubble?.riskLabel ?? BUBBLE_INPUT_MISSING_FA}
         </span>
@@ -92,7 +90,7 @@ export function BubbleGauge({
       </div>
       <div
         data-bubble-status-panel
-        className={`mt-3 rounded-[10px] px-3 py-2.5 text-center text-[12.5px] ${riskClassName(
+        className={`mt-3 rounded-[10px] px-3 py-2.5 text-center text-meta ${riskClassName(
           riskLevel,
         )}`}
       >
@@ -102,7 +100,7 @@ export function BubbleGauge({
         </span>
       </div>
       {updatedAt !== null && nowMs !== null && (
-        <div data-bubble-staleness className="mt-2.5 text-[11px]">
+        <div data-bubble-staleness className="mt-2.5 text-meta">
           <Staleness updatedAt={updatedAt} nowMs={nowMs} />
         </div>
       )}
@@ -114,7 +112,7 @@ export function CoinPriceCard({ coins }: { coins: CoinPricesView }) {
   return (
     <section data-card="coin-prices" className="card-surface px-5 py-4 sm:px-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[15.5px] font-semibold">قیمت سکه</h2>
+        <h2 className="text-title font-semibold">قیمت سکه</h2>
       </div>
       <div className="mt-3.5 grid gap-2.5">
         {coins.map((coin) => (
@@ -122,13 +120,13 @@ export function CoinPriceCard({ coins }: { coins: CoinPricesView }) {
             key={coin.key}
             className="flex items-center justify-between gap-3 rounded-[10px] bg-surface px-3 py-2.5"
           >
-            <span className="text-[12.5px] text-tx3">{coin.label}</span>
+            <span className="text-meta text-tx3">{coin.label}</span>
             <b
               data-coin-price={coin.key}
               className={`inline-flex items-baseline gap-1 text-foreground ${
                 coin.priceDisplay === null
-                  ? "text-[11.5px] font-medium text-muted-foreground"
-                  : "num text-[14.5px] font-semibold"
+                  ? "text-meta font-medium text-muted-foreground"
+                  : "num text-body font-semibold"
               }`}
             >
               <span data-price-value>{coin.priceDisplay ?? COIN_PRICE_UNCOLLECTED_FA}</span>
@@ -147,7 +145,7 @@ export function CoinPriceCard({ coins }: { coins: CoinPricesView }) {
       <a
         href="/sekeh"
         data-coin-prices-link
-        className="transition-smooth mt-3 inline-flex min-h-11 items-center text-[12.5px] text-primary hover:underline"
+        className="transition-smooth mt-3 inline-flex min-h-11 items-center text-meta text-primary hover:underline"
       >
         صفحه‌ی کامل قیمت سکه ←
       </a>

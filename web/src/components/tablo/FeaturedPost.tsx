@@ -17,27 +17,25 @@ export function FeaturedPost({ post }: { post: PublishedPost }) {
         />
       ) : null}
       <div className="px-5 py-4 sm:px-6">
-        <span className="rounded-[20px] bg-acbg px-[7px] py-px text-[10.5px] text-actx">
+        <span className="rounded-[20px] bg-acbg px-[7px] py-px text-meta text-actx">
           مقاله ویژه
         </span>
-        <h2 id="featured-post-heading" className="mt-2 text-[15.5px] leading-7 font-semibold">
+        <h2 id="featured-post-heading" className="mt-2 text-title leading-7 font-semibold">
           <a href={`/blog/${post.slug}`} className="transition-smooth hover:text-primary">
             {post.title_fa}
           </a>
         </h2>
-        <p className="mt-1 text-[12.5px] leading-6 text-muted-foreground">
-          {postExcerpt(post.body_md)}
-        </p>
+        <p className="mt-1 text-body text-muted-foreground">{postExcerpt(post.body_md)}</p>
         <div className="mt-3 flex items-center justify-between gap-3">
           <a
             href={`/blog/${post.slug}`}
-            className="transition-smooth text-[12.5px] font-medium text-primary hover:underline"
+            className="transition-smooth text-meta font-medium text-primary hover:underline"
           >
             مطالعه مقاله ←
           </a>
           <time
             dateTime={post.published_at}
-            className="text-[11px] whitespace-nowrap text-muted-foreground"
+            className="text-meta whitespace-nowrap text-muted-foreground"
           >
             {formatDateFa(post.published_at)}
           </time>

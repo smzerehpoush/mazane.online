@@ -86,7 +86,7 @@ function CalculatorSection({
     <section
       aria-labelledby="calculator-heading"
       data-platform-calculator
-      className="glass-surface mt-6 px-5 py-5 sm:px-6"
+      className="card-surface mt-6 px-5 py-5 sm:px-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="calculator-heading" className="text-base font-semibold sm:text-lg">

@@ -170,10 +170,7 @@ export function PlatformRateCard({
   const label = PRICE_LABEL;
 
   return (
-    <section
-      aria-labelledby="rate-card-heading"
-      className="glass-surface rise-in px-5 py-5 sm:px-6"
-    >
+    <section aria-labelledby="rate-card-heading" className="card-surface rise-in px-5 py-5 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="rate-card-heading" className="text-base font-semibold sm:text-lg">
           قیمت سکو

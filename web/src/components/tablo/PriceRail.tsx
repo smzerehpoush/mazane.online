@@ -100,19 +100,19 @@ export function PriceRail({
     <section className="card-surface overflow-hidden">
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-4 sm:px-6">
         <div>
-          <h2 className="text-[15.5px] font-semibold">محور قیمت طلای ۱۸ عیار</h2>
-          <p className="mt-0.5 text-[12.5px] text-muted-foreground">
+          <h2 className="text-title font-semibold">محور قیمت طلای ۱۸ عیار</h2>
+          <p className="mt-0.5 text-meta text-muted-foreground">
             هرچه راست‌تر، گران‌تر · خط طلایی که تمام شود، قیمت‌ها تازه می‌شوند
           </p>
           {rail.referencePercent !== null && rail.referenceName !== null && (
-            <p data-rail-reference className="mt-0.5 text-[12.5px] text-muted-foreground">
+            <p data-rail-reference className="mt-0.5 text-meta text-muted-foreground">
               خط‌چین عمودی: نرخ مرجع {rail.referenceName}
             </p>
           )}
         </div>
         <div className="flex flex-col items-end gap-0.5">
           {updatedAt !== null && (
-            <span className="text-[10.5px] text-tx3">
+            <span className="text-meta text-tx3">
               آخرین به‌روزرسانی{" "}
               <time dateTime={updatedAt} data-rail-updated className="num">
                 {updatedAtDisplay}
@@ -126,7 +126,7 @@ export function PriceRail({
         <p
           data-rail-error
           role="status"
-          className="mx-5 mb-1 rounded-[10px] bg-ambg px-3 py-2 text-[11.5px] text-am sm:mx-6"
+          className="mx-5 mb-1 rounded-[10px] bg-ambg px-3 py-2 text-meta text-am sm:mx-6"
         >
           اتصال برقرار نیست — تلاش مجدد
         </p>
@@ -197,7 +197,7 @@ export function PriceRail({
                     data-rail-label
                     data-rail-label-position={source.stemLong ? "below" : "above"}
                     className={[
-                      "max-w-[74px] truncate rounded-full bg-card/85 px-1.5 text-[11px] whitespace-nowrap shadow-[0_0_0_1px_var(--color-border)] sm:max-w-[92px] sm:text-xs",
+                      "max-w-[74px] truncate rounded-full bg-card/85 px-1.5 text-meta whitespace-nowrap shadow-[0_0_0_1px_var(--color-border)] sm:max-w-[92px]",
                       source.stemLong
                         ? "mt-[5px]"
                         : "absolute top-[-27px] left-1/2 -translate-x-1/2",
@@ -212,7 +212,7 @@ export function PriceRail({
                   >
                     <span
                       data-rail-price
-                      className="num block text-[11.5px] whitespace-nowrap text-tx3"
+                      className="num block text-meta whitespace-nowrap text-tx3"
                     >
                       {source.priceDisplay !== null && (
                         <TomanPrice
@@ -234,7 +234,7 @@ export function PriceRail({
            * the right to agree with where the markers are. Swapping these
            * two would make the footnote contradict the rail itself.
            */}
-          <div className="mx-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border pt-3 pb-4 text-[11.5px] text-tx3 sm:mx-6">
+          <div className="mx-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border pt-3 pb-4 text-meta text-tx3 sm:mx-6">
             <span data-rail-max className="inline-flex items-baseline gap-1.5">
               بیشترین قیمت ·{" "}
               {rail.maxDisplay !== null && (
@@ -261,7 +261,7 @@ export function PriceRail({
           </div>
         </>
       ) : (
-        <p className="px-5 pb-5 text-xs leading-6 text-muted-foreground sm:px-6">
+        <p className="px-5 pb-5 text-body text-muted-foreground sm:px-6">
           برای رسم محور دست‌کم دو سکوی قیمت‌دار لازم است. قیمت‌های موجود در کارت‌های پایین در
           دسترس‌اند.
         </p>

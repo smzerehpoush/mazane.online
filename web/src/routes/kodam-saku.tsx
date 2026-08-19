@@ -87,7 +87,7 @@ export function WizardPage({
     <PageShell>
       <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: BREADCRUMB_LABEL }]} />
 
-      <article className="glass-surface px-5 py-6 sm:px-8 sm:py-8">
+      <article className="card-surface px-5 py-6 sm:px-8 sm:py-8">
         <p className="text-[12px] font-medium tracking-[0.18em] text-gold">راهنمای انتخاب</p>
         <h1 className="mt-3 text-[26px] leading-[1.4] font-black text-foreground sm:text-[34px]">
           {HEADING}
@@ -113,7 +113,7 @@ export function WizardPage({
 
       <RelatedLinksBlock
         links={relatedLinksForPath(WIZARD_PATH)}
-        className="glass-surface mt-6 px-5 py-5 sm:px-6"
+        className="card-surface mt-6 px-5 py-5 sm:px-6"
       />
 
       <Madde5Bar />

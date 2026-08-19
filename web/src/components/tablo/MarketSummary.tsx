@@ -74,7 +74,7 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
   return (
     <section className="card-surface px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <h2 className="text-[15.5px] font-semibold">خلاصه بازار</h2>
+        <h2 className="text-title font-semibold">خلاصه بازار</h2>
 
         <div
           role="tablist"
@@ -96,7 +96,7 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
               onClick={() => range.enabled && setActiveKey(range.key)}
               onKeyDown={onTabKeyDown}
               data-summary-tab={range.key}
-              className={`transition-smooth rounded-[9px] px-3.5 py-1.5 text-[12.5px] whitespace-nowrap ${
+              className={`transition-smooth rounded-[9px] px-3.5 py-1.5 text-meta whitespace-nowrap ${
                 !range.enabled
                   ? "cursor-not-allowed text-muted-foreground/50"
                   : range.key === activeKey
@@ -127,7 +127,7 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
         <div>
           <div
             data-summary-current
-            className="num text-[31px] leading-[1.25] font-semibold tracking-[-0.8px] text-primary"
+            className="num text-display font-semibold tracking-[-0.8px] text-primary"
           >
             {active.currentDisplay === null ? (
               "—"
@@ -139,9 +139,9 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
               />
             )}
           </div>
-          <div className="mt-0.5 text-[15px]">قیمت ۱ گرم طلای ۱۸ عیار</div>
+          <div className="mt-0.5 text-body">قیمت ۱ گرم طلای ۱۸ عیار</div>
           {/* ⚠️ Naming the owner of the number is mandatory — */}
-          <div data-summary-reference className="text-[12.5px] text-tx3">
+          <div data-summary-reference className="text-meta text-tx3">
             {summary.referenceName === null ? "—" : `مرجع: ${summary.referenceName}`}
           </div>
         </div>
@@ -182,7 +182,7 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
        */}
       <div className="mt-4.5 grid grid-cols-3 gap-2 border-t border-border pt-3.5">
         <div className="min-w-0">
-          <b data-summary-low className="num block text-[13px] font-semibold sm:text-[15.5px]">
+          <b data-summary-low className="num block text-body font-semibold sm:text-number">
             {active.low === null ? (
               "—"
             ) : (
@@ -193,13 +193,13 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
               />
             )}
           </b>
-          <span className="block text-[11px] text-tx3 sm:text-xs">
+          <span className="block text-meta text-tx3">
             پایین‌ترین
             {active.low === null ? "" : ` · ${active.low.atDisplay}`}
           </span>
         </div>
         <div className="min-w-0">
-          <b data-summary-high className="num block text-[13px] font-semibold sm:text-[15.5px]">
+          <b data-summary-high className="num block text-body font-semibold sm:text-number">
             {active.high === null ? (
               "—"
             ) : (
@@ -210,16 +210,16 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
               />
             )}
           </b>
-          <span className="block text-[11px] text-tx3 sm:text-xs">
+          <span className="block text-meta text-tx3">
             بالاترین
             {active.high === null ? "" : ` · ${active.high.atDisplay}`}
           </span>
         </div>
         <div className="min-w-0">
-          <b className="num block text-[13px] font-semibold sm:text-[15.5px]">
+          <b className="num block text-body font-semibold sm:text-number">
             <ChangeStat range={active} />
           </b>
-          <span className="block text-[11px] text-tx3 sm:text-xs">تغییرات</span>
+          <span className="block text-meta text-tx3">تغییرات</span>
         </div>
       </div>
     </section>

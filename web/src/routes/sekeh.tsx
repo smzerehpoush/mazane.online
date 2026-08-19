@@ -195,7 +195,7 @@ export function SekehPage({ data }: { data: SekehPageData }) {
     <PageShell wide>
       <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: "قیمت سکه" }]} />
 
-      <section className="glass-surface overflow-hidden px-5 py-7 sm:px-8 sm:py-9">
+      <section className="card-surface overflow-hidden px-5 py-7 sm:px-8 sm:py-9">
         <div className="grid gap-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,0.8fr)] lg:items-end">
           <div>
             <p className="text-[12px] font-medium tracking-[0.18em] text-gold">تابلوی سکه</p>

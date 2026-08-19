@@ -7,7 +7,7 @@ export function NotFoundPanel({
 }) {
   return (
     <>
-      <div className="glass-surface px-6 py-14 text-center">
+      <div className="card-surface px-6 py-14 text-center">
         <p className="text-5xl font-bold text-foreground/80">۴۰۴</p>
         <h1 className="mt-4 text-lg font-semibold">{title}</h1>
         <p className="mt-2 text-[13px] leading-7 text-muted-foreground">{note}</p>

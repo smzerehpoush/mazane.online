@@ -83,7 +83,7 @@ export function MazaneInputs({ form }: { form: MazaneForm }) {
   return (
     <section data-card="calculator" className="card-surface px-5 py-4 sm:px-6">
       <div className="space-y-2.5">
-        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-[13px] focus-within:border-primary">
+        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-body focus-within:border-primary">
           <span className="shrink-0 text-tx3">{LABELS.direction}</span>
           <select
             name="direction"
@@ -96,7 +96,7 @@ export function MazaneInputs({ form }: { form: MazaneForm }) {
           </select>
         </label>
 
-        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-[13px] focus-within:border-primary">
+        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-body focus-within:border-primary">
           <span className="shrink-0 text-tx3">
             {toGram ? LABELS.amountMazane : LABELS.amountGram}
           </span>
@@ -111,11 +111,11 @@ export function MazaneInputs({ form }: { form: MazaneForm }) {
         </label>
       </div>
 
-      <p data-calculator-own-number-note className="mt-3 text-[11px] leading-5 text-tx3">
+      <p data-calculator-own-number-note className="mt-3 text-meta text-tx3">
         {OWN_NUMBER_NOTE}
       </p>
 
-      <p data-calculator-convention-note className="mt-2 text-[11px] leading-5 text-tx3">
+      <p data-calculator-convention-note className="mt-2 text-meta text-tx3">
         {CONVENTION_NOTE}
       </p>
     </section>
@@ -154,7 +154,7 @@ export function MazaneResult({ form }: { form: MazaneForm }) {
       {form.result !== null && (
         <dl
           data-calculator-breakdown
-          className="rounded-[10px] border border-line2 px-3.5 py-2.5 text-[12.5px]"
+          className="rounded-[10px] border border-line2 px-3.5 py-2.5 text-meta"
         >
           <div className="flex items-baseline justify-between gap-2 py-1">
             <dt className="text-tx3">{LABELS.divisor}</dt>
@@ -173,7 +173,7 @@ export function MazaneResult({ form }: { form: MazaneForm }) {
 
       <div className="mt-2.5 rounded-[10px] bg-acbg p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[12.5px] text-actx">
+          <span className="text-meta text-actx">
             {toGram ? LABELS.resultGram : LABELS.resultMazane}
           </span>
           <span data-calculator-total className="num text-xl font-semibold text-actx">
@@ -183,13 +183,13 @@ export function MazaneResult({ form }: { form: MazaneForm }) {
       </div>
 
       {form.result === null && (
-        <p data-calculator-empty-note className="mt-2.5 text-[11px] leading-5 text-tx3">
+        <p data-calculator-empty-note className="mt-2.5 text-meta text-tx3">
           {EMPTY_NOTE}
         </p>
       )}
 
       {toGram && form.result !== null && (
-        <p data-calculator-handoff className="mt-2.5 text-[11px] leading-5 text-tx3">
+        <p data-calculator-handoff className="mt-2.5 text-meta text-tx3">
           حالا که نرخ گرم را دارید،{" "}
           <a href="/mohasebe-tala" className="transition-smooth text-primary hover:underline">
             اجرت و مالیات فاکتور طلای زینتی

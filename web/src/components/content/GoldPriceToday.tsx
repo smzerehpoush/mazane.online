@@ -111,7 +111,7 @@ export function GoldPriceCard({ view, nowMs }: { view: GoldPriceView; nowMs: num
   const active = view.ranges.find((range) => range.key === activeRange) ?? view.ranges[0];
 
   return (
-    <section aria-labelledby="gold-price-heading" className="glass-surface px-5 py-5 sm:px-6">
+    <section aria-labelledby="gold-price-heading" className="card-surface px-5 py-5 sm:px-6">
       <h2 id="gold-price-heading" className="sr-only">
         {GOLD_PRICE_LABELS.chartHeading}
       </h2>

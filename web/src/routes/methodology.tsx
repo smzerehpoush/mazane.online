@@ -62,7 +62,7 @@ export function MethodologyPage() {
     <PageShell>
       <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: "روش محاسبه قیمت‌ها" }]} />
 
-      <article className="glass-surface px-5 py-7 text-[15px] leading-8 text-foreground/90 sm:px-8 sm:py-9">
+      <article className="card-surface px-5 py-7 text-[15px] leading-8 text-foreground/90 sm:px-8 sm:py-9">
         <p className="text-[12px] font-medium tracking-[0.18em] text-gold">شفافیت داده</p>
         <h1 className="mt-3 text-[30px] leading-[1.35] font-black text-foreground sm:text-[40px]">
           روش محاسبه قیمت طلا و سکه در تابلو

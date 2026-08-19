@@ -9,7 +9,7 @@ export function Staleness({ updatedAt, nowMs }: { updatedAt: string | null; nowM
   }
   const minutes = minutesSince(updatedAt, nowMs);
   return (
-    <span className="text-[11px] text-muted-foreground">
+    <span className="text-meta text-muted-foreground">
       به‌روزرسانی:{" "}
       <time dateTime={updatedAt} data-live="updated-at" suppressHydrationWarning>
         {formatMinutesAgoFa(minutes)}
@@ -42,7 +42,7 @@ export function MarketModelBadge({ platform }: { platform: ListedPlatform }) {
     <span
       data-badge="order-book"
       title="قیمت این سکو از دفتر سفارش کاربران می‌آید؛ ممکن است نقدشوندگی محدود باشد و اسپردش با سکوهای فروشنده هم‌جنس نیست."
-      className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] text-muted-foreground"
+      className="rounded-full bg-surface-2 px-2 py-0.5 text-meta text-muted-foreground"
     >
       دفتر سفارش
     </span>
@@ -55,7 +55,7 @@ export function ClosedBadges({ terms }: { terms: PlatformTerms }) {
       {terms.buy_enabled ? null : (
         <strong
           data-badge="buy-closed"
-          className="rounded-full bg-negative-soft px-2 py-0.5 text-[10px] font-medium text-negative"
+          className="rounded-full bg-negative-soft px-2 py-0.5 text-meta font-medium text-negative"
         >
           خرید بسته است
         </strong>
@@ -63,7 +63,7 @@ export function ClosedBadges({ terms }: { terms: PlatformTerms }) {
       {terms.sell_enabled ? null : (
         <strong
           data-badge="sell-closed"
-          className="rounded-full bg-negative-soft px-2 py-0.5 text-[10px] font-medium text-negative"
+          className="rounded-full bg-negative-soft px-2 py-0.5 text-meta font-medium text-negative"
         >
           فروش بسته است
         </strong>

@@ -44,7 +44,7 @@ export function MazaneChist() {
     <PageShell>
       <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: "مظنه چیست" }]} />
 
-      <article className="glass-surface px-5 py-7 text-[15px] leading-8 text-foreground/90 sm:px-8 sm:py-9">
+      <article className="card-surface px-5 py-7 text-[15px] leading-8 text-foreground/90 sm:px-8 sm:py-9">
         <h1 className="text-xl font-bold text-foreground sm:text-2xl">مظنه چیست؟</h1>
 
         <p className="mt-5">

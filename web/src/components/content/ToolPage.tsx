@@ -191,7 +191,7 @@ export function ToolPage(props: ToolPageProps) {
         items={[{ label: "خانه", href: "/" }, { label: props.identity.breadcrumbLabel }]}
       />
 
-      <article className="glass-surface px-5 py-6 sm:px-8 sm:py-8">
+      <article className="card-surface px-5 py-6 sm:px-8 sm:py-8">
         <h1
           data-tool-part="question"
           className="text-[26px] leading-[1.4] font-black text-foreground sm:text-[34px]"

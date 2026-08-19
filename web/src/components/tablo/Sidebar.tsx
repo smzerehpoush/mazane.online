@@ -5,8 +5,8 @@ import { postImageAsset } from "@/lib/images";
 
 export function Sidebar({ posts }: { posts: PublishedPost[] }) {
   return (
-    <aside className="glass-surface p-6 sm:p-7">
-      <h2 className="text-sm font-semibold">تازه‌ترین نوشته‌ها</h2>
+    <aside className="card-surface p-6 sm:p-7">
+      <h2 className="text-title font-semibold">تازه‌ترین نوشته‌ها</h2>
       <ul className="mt-5 space-y-5">
         {posts.map((post, index) => {
           const image = postImageAsset(post);
@@ -36,8 +36,8 @@ export function Sidebar({ posts }: { posts: PublishedPost[] }) {
                   />
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] leading-6 font-medium">{post.title_fa}</span>
-                  <span className="mt-1.5 block text-[11px] text-muted-foreground">
+                  <span className="block text-body font-medium">{post.title_fa}</span>
+                  <span className="mt-1.5 block text-meta text-muted-foreground">
                     <time dateTime={post.published_at}>{formatDateFa(post.published_at)}</time>
                   </span>
                 </span>

@@ -47,7 +47,7 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
       </header>
 
       {posts.length === 0 ? (
-        <p className="glass-surface px-5 py-8 text-center text-sm text-muted-foreground">
+        <p className="card-surface px-5 py-8 text-center text-sm text-muted-foreground">
           هنوز پستی منتشر نشده است.
         </p>
       ) : (
@@ -70,7 +70,7 @@ export function BlogIndexView({ posts }: { posts: PublishedPost[] }) {
             return (
               <li key={post.slug}>
                 <article
-                  className={`glass-surface lift-hover px-5 py-5 sm:px-6 ${
+                  className={`card-surface lift-hover px-5 py-5 sm:px-6 ${
                     image !== null ? "flex items-center gap-4" : ""
                   }`}
                 >
@@ -177,7 +177,7 @@ export function BlogPostView({ post }: { post: PublishedPost }) {
         ]}
       />
 
-      <article className="glass-surface px-5 py-7 sm:px-8 sm:py-9">
+      <article className="card-surface px-5 py-7 sm:px-8 sm:py-9">
         <h1 className="text-xl leading-9 font-bold sm:text-2xl">{post.title_fa}</h1>
         <p className="mt-3 border-b border-border/70 pb-5 text-[11px] text-muted-foreground">
           انتشار: <time dateTime={post.published_at}>{formatDateFa(post.published_at)}</time>

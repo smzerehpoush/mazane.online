@@ -7,7 +7,7 @@ export function SiteHeader() {
       <a
         href={`#${MAIN_LANDMARK_ID}`}
         data-skip-link
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-4 focus:z-50 focus:rounded-full focus:border focus:border-primary focus:bg-background focus:px-4 focus:py-2 focus:text-[13px] focus:font-medium focus:text-primary"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:right-4 focus:z-50 focus:rounded-full focus:border focus:border-primary focus:bg-background focus:px-4 focus:py-2 focus:text-body focus:font-medium focus:text-primary"
       >
         {skipToContentLabel}
       </a>
@@ -16,7 +16,7 @@ export function SiteHeader() {
           <span className="grid size-10 place-items-center rounded-[14px] border border-gold/35 bg-surface shadow-soft">
             <img src="/tablo-logo-mark.png" alt="" className="size-8 object-contain" />
           </span>
-          <span className="whitespace-nowrap text-sm font-bold sm:text-base">{brand.name}</span>
+          <span className="whitespace-nowrap text-body font-bold sm:text-title">{brand.name}</span>
         </a>
         <nav
           aria-label="ناوبری اصلی"
@@ -26,7 +26,7 @@ export function SiteHeader() {
             <a
               key={item.label}
               href={item.href}
-              className="transition-smooth flex min-h-11 items-center justify-center rounded-full border border-border/60 bg-surface/70 px-2.5 py-2 text-center text-[12px] whitespace-nowrap text-muted-foreground hover:bg-surface-2 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none sm:min-h-9 sm:border-transparent sm:bg-transparent sm:px-3 sm:py-1.5 sm:text-xs"
+              className="transition-smooth flex min-h-11 items-center justify-center rounded-full border border-border/60 bg-surface/70 px-2.5 py-2 text-center text-meta whitespace-nowrap text-muted-foreground hover:bg-surface-2 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none sm:min-h-9 sm:border-transparent sm:bg-transparent sm:px-3 sm:py-1.5"
             >
               {item.label}
             </a>

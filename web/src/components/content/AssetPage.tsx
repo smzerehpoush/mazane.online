@@ -296,7 +296,7 @@ export function AssetPage({
         </div>
       )}
 
-      <section aria-labelledby="asset-table-heading" className="glass-surface overflow-hidden">
+      <section aria-labelledby="asset-table-heading" className="card-surface overflow-hidden">
         <div className="border-b border-border/70 px-4 py-4 sm:px-6">
           <h2 id="asset-table-heading" className="text-base font-semibold sm:text-lg">
             مقایسه‌ی سکوها
@@ -359,7 +359,7 @@ export function AssetPage({
 
       <RelatedLinksBlock
         links={relatedLinksForPath(`/${listing.slug}`)}
-        className="glass-surface mt-6 px-5 py-5 sm:px-6"
+        className="card-surface mt-6 px-5 py-5 sm:px-6"
       />
 
       <p className="mt-6 text-[12px]">

@@ -109,17 +109,15 @@ export function HomePage({ data }: { data: HomePageData }) {
       >
         <div className="grid items-start gap-4 min-[1081px]:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
           <div className="flex min-w-0 flex-col">
-            <h1 className="text-[26px] leading-[1.35] font-black tracking-[-0.4px] text-foreground sm:text-[36px]">
+            <h1 className="text-headline font-black tracking-[-0.4px] text-foreground sm:text-display">
               {hero.title}
             </h1>
-            <p className="mt-2.5 max-w-[68ch] text-[13.5px] leading-7 text-muted-foreground sm:text-[15px] sm:leading-8">
-              {hero.subtitle}
-            </p>
+            <p className="mt-2.5 max-w-[68ch] text-body text-muted-foreground ">{hero.subtitle}</p>
 
             <a
               href="/tala-18"
               data-home-reference-strip
-              className="transition-smooth mt-3 inline-flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-border bg-card px-4 py-2 text-[12.5px] text-muted-foreground hover:border-primary/40"
+              className="transition-smooth mt-3 inline-flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-border bg-card px-4 py-2 text-meta text-muted-foreground hover:border-primary/40"
             >
               <span>نرخ مرجع هر گرم طلای ۱۸ عیار:</span>
               {data.reference.priceToman === null ? (
@@ -130,7 +128,7 @@ export function HomePage({ data }: { data: HomePageData }) {
                   className="num inline-flex items-baseline gap-1 font-semibold text-foreground"
                 />
               )}
-              <span className="text-[11px]">مرجع: {data.reference.name}</span>
+              <span className="text-meta">مرجع: {data.reference.name}</span>
             </a>
 
             <nav
@@ -146,12 +144,8 @@ export function HomePage({ data }: { data: HomePageData }) {
                   className="transition-smooth flex min-h-11 items-center gap-3 rounded-[18px] border border-border bg-card px-4 py-3 hover:border-primary/40"
                 >
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-[14px] leading-6 font-bold text-foreground">
-                      {action.question}
-                    </span>
-                    <span className="mt-0.5 text-[12.5px] text-muted-foreground">
-                      {action.title}
-                    </span>
+                    <span className="text-body font-bold text-foreground">{action.question}</span>
+                    <span className="mt-0.5 text-meta text-muted-foreground">{action.title}</span>
                   </span>
                   <span aria-hidden className="shrink-0 text-muted-foreground">
                     ←
@@ -161,7 +155,7 @@ export function HomePage({ data }: { data: HomePageData }) {
               <a
                 href={homeActionsHubLink.href}
                 data-home-actions-hub
-                className="transition-smooth flex min-h-11 items-center px-4 text-[13px] text-primary hover:underline sm:col-span-2"
+                className="transition-smooth flex min-h-11 items-center px-4 text-body text-primary hover:underline sm:col-span-2"
               >
                 {homeActionsHubLink.label} ←
               </a>
@@ -172,36 +166,31 @@ export function HomePage({ data }: { data: HomePageData }) {
               aria-labelledby="home-buy-path-heading"
               className="mb-4 rounded-[18px] border border-gold/35 bg-gold-soft/40 px-4 py-4 sm:px-5"
             >
-              <h2
-                id="home-buy-path-heading"
-                className="text-[15.5px] font-semibold text-foreground"
-              >
+              <h2 id="home-buy-path-heading" className="text-title font-semibold text-foreground">
                 {homeBuyPath.heading}
               </h2>
               <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
-                  <p className="text-[14px] leading-6 font-bold text-foreground">
-                    {homeBuyPath.wizardTitle}
-                  </p>
-                  <p className="mt-1 max-w-[62ch] text-[12.5px] leading-6 text-muted-foreground">
+                  <p className="text-body font-bold text-foreground">{homeBuyPath.wizardTitle}</p>
+                  <p className="mt-1 max-w-[62ch] text-body text-muted-foreground">
                     {homeBuyPath.wizardBody}
                   </p>
                 </div>
                 <a
                   href={homeBuyPath.wizardHref}
                   data-home-wizard-cta
-                  className="transition-smooth inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"
+                  className="transition-smooth inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-body font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   {homeBuyPath.wizardCta}
                 </a>
               </div>
               <a
                 href={homeBuyPath.tableHref}
-                className="transition-smooth mt-3 inline-flex min-h-11 items-center text-[13px] text-primary hover:underline"
+                className="transition-smooth mt-3 inline-flex min-h-11 items-center text-body text-primary hover:underline"
               >
                 {homeBuyPath.tableLabel} ←
               </a>
-              <p className="mt-2 border-t border-gold/25 pt-2.5 text-[11.5px] leading-6 text-muted-foreground">
+              <p className="mt-2 border-t border-gold/25 pt-2.5 text-meta text-muted-foreground">
                 {homeBuyPath.disclosure}{" "}
                 <a href={homeBuyPath.disclosureHref} className="text-primary hover:underline">
                   {homeBuyPath.disclosureLinkLabel}
@@ -213,7 +202,7 @@ export function HomePage({ data }: { data: HomePageData }) {
           <MarketSummary summary={dashboard.summary} />
         </div>
 
-        <div className="mt-4 flex flex-col gap-4">
+        <div className="mt-12 flex flex-col gap-4 min-[1081px]:mt-16">
           <div className="hidden sm:block">
             <PriceRail
               rail={dashboard.rail}
@@ -253,13 +242,17 @@ export function HomePage({ data }: { data: HomePageData }) {
         </div>
 
         {hasPosts && (
-          <div className="mt-10">
+          <div className="mt-12 min-[1081px]:mt-16">
             <PopularPosts posts={morePosts} rankedByViews={rankedByViews} />
           </div>
         )}
 
-        <section data-home-trust aria-labelledby="home-trust-heading" className="mt-10">
-          <h2 id="home-trust-heading" className="text-lg font-semibold text-foreground">
+        <section
+          data-home-trust
+          aria-labelledby="home-trust-heading"
+          className="mt-12 min-[1081px]:mt-16"
+        >
+          <h2 id="home-trust-heading" className="text-title font-semibold text-foreground">
             {trustHeading}
           </h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -268,11 +261,11 @@ export function HomePage({ data }: { data: HomePageData }) {
                 key={item.question}
                 className="flex flex-col rounded-[18px] border border-border bg-card p-4"
               >
-                <h3 className="text-[14px] font-bold text-foreground">{item.question}</h3>
-                <p className="mt-2 text-[12.5px] leading-7 text-foreground/78">{item.answer}</p>
+                <h3 className="text-body font-bold text-foreground">{item.question}</h3>
+                <p className="mt-2 text-body text-foreground/78">{item.answer}</p>
                 <a
                   href={item.href}
-                  className="transition-smooth mt-3 text-[12.5px] text-primary hover:underline"
+                  className="transition-smooth mt-3 text-meta text-primary hover:underline"
                 >
                   {item.linkLabel}
                 </a>
@@ -288,13 +281,13 @@ export function HomePage({ data }: { data: HomePageData }) {
 
       <footer className="mt-8 border-t border-border">
         <div className="mx-auto w-full max-w-[1340px] px-4 py-6 sm:px-[22px]">
-          <p className="text-[11px] leading-6 text-muted-foreground">{legalNote}</p>
+          <p className="text-meta text-muted-foreground">{legalNote}</p>
           <nav aria-label="پیوندهای تابلو" className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
             {footerLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="transition-smooth text-[11.5px] text-muted-foreground hover:text-primary"
+                className="transition-smooth text-meta text-muted-foreground hover:text-primary"
               >
                 {link.label}
               </a>

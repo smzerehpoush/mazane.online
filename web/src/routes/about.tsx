@@ -67,7 +67,7 @@ export function AboutPage() {
     <PageShell>
       <Breadcrumbs items={[{ label: "خانه", href: "/" }, { label: "درباره تابلو" }]} />
 
-      <article className="glass-surface px-5 py-7 text-[15px] leading-8 text-foreground/90 sm:px-8 sm:py-9">
+      <article className="card-surface px-5 py-7 text-[15px] leading-8 text-foreground/90 sm:px-8 sm:py-9">
         <p className="text-[12px] font-medium tracking-[0.18em] text-gold">درباره تابلو</p>
         <h1 className="mt-3 text-[30px] leading-[1.35] font-black text-foreground sm:text-[40px]">
           تابلو برای مقایسه شفاف قیمت طلا ساخته شده است
@@ -101,10 +101,9 @@ export function AboutPage() {
 
         <h2 className="mt-9 text-lg font-semibold text-foreground">تابلو چطور درآمد دارد؟</h2>
         <p className="mt-3">
-          لینک‌های خروجی تابلو همگی از یک مسیر واحد رد می‌شوند، مسیر{" "}
-          <span dir="ltr">/go/</span>، و بعد به سایت خود سکو می‌رسند. برای بخشی از سکوها، اگر از
-          همین مسیر وارد شوید و آنجا ثبت‌نام یا خرید کنید، تابلو کمیسیون دریافت می‌کند. درآمد سایت
-          از همین‌جاست.
+          لینک‌های خروجی تابلو همگی از یک مسیر واحد رد می‌شوند، مسیر <span dir="ltr">/go/</span>، و
+          بعد به سایت خود سکو می‌رسند. برای بخشی از سکوها، اگر از همین مسیر وارد شوید و آنجا ثبت‌نام
+          یا خرید کنید، تابلو کمیسیون دریافت می‌کند. درآمد سایت از همین‌جاست.
         </p>
         <p className="mt-3">
           کمیسیون در ترتیب نمایش سکوها اثری ندارد. جای هر سکو روی محور قیمت و ترتیب سطرهای مقایسه

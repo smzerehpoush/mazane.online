@@ -93,7 +93,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: brand.title },
       {
         name: "description",
-        content: "مقایسه‌ی لحظه‌ای قیمت اعلامی طلای ۱۸ عیار در سکوهای ایرانی، همراه با کارمزد هر سکو.",
+        content:
+          "مقایسه‌ی لحظه‌ای قیمت اعلامی طلای ۱۸ عیار در سکوهای ایرانی، همراه با کارمزد هر سکو.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

@@ -109,7 +109,7 @@ export function SellBackInputs({
   return (
     <section data-card="calculator" className="card-surface px-5 py-4 sm:px-6">
       {form.pricePerGram !== null && (
-        <p data-calculator-rate className="mb-3 text-[12px] text-tx3">
+        <p data-calculator-rate className="mb-3 text-meta text-tx3">
           {`${LABELS.rate}: `}
           <span className="num font-semibold text-foreground">
             {formatFaNumber(form.pricePerGram)}
@@ -125,7 +125,7 @@ export function SellBackInputs({
       )}
 
       <div className="space-y-2.5">
-        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-[13px] focus-within:border-primary">
+        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-body focus-within:border-primary">
           <span className="shrink-0 text-tx3">{LABELS.weight}</span>
           <input
             name="weight"
@@ -137,7 +137,7 @@ export function SellBackInputs({
           />
         </label>
 
-        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-[13px] focus-within:border-primary">
+        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-body focus-within:border-primary">
           <span className="shrink-0 text-tx3">{LABELS.purity}</span>
           <select
             name="purity"
@@ -153,7 +153,7 @@ export function SellBackInputs({
           </select>
         </label>
 
-        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-[13px] focus-within:border-primary">
+        <label className="flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-body focus-within:border-primary">
           <span className="shrink-0 text-tx3">{LABELS.deduction}</span>
           <input
             name="deduction"
@@ -166,11 +166,11 @@ export function SellBackInputs({
         </label>
       </div>
 
-      <p data-calculator-deduction-note className="mt-3 text-[11px] leading-5 text-tx3">
+      <p data-calculator-deduction-note className="mt-3 text-meta text-tx3">
         {DEDUCTION_NOTE}
       </p>
 
-      <p className="mt-2 text-[11px] leading-5 text-tx3">{PURITY_NOTE}</p>
+      <p className="mt-2 text-meta text-tx3">{PURITY_NOTE}</p>
     </section>
   );
 }
@@ -216,7 +216,7 @@ export function SellBackResult({ form }: { form: SellBackForm }) {
       {breakdown !== null && (
         <dl
           data-calculator-breakdown
-          className="rounded-[10px] border border-line2 px-3.5 py-2.5 text-[12.5px]"
+          className="rounded-[10px] border border-line2 px-3.5 py-2.5 text-meta"
         >
           <div className="flex items-baseline justify-between gap-2 py-1">
             <dt className="text-tx3">{LABELS.pureGold}</dt>
@@ -241,7 +241,7 @@ export function SellBackResult({ form }: { form: SellBackForm }) {
 
       <div className="mt-2.5 rounded-[10px] bg-acbg p-4">
         <div className="flex items-center justify-between">
-          <span className="text-[12.5px] text-actx">{LABELS.payout}</span>
+          <span className="text-meta text-actx">{LABELS.payout}</span>
           <span data-calculator-total className="num text-xl font-semibold text-actx">
             {breakdown === null ? "—" : formatFaNumber(breakdown.payout)}
           </span>
@@ -249,8 +249,8 @@ export function SellBackResult({ form }: { form: SellBackForm }) {
 
         {share !== null && (
           <div className="mt-3 flex items-center justify-between gap-2 border-t border-actx/20 pt-2.5">
-            <span className="text-[12px] text-actx">{LABELS.share}</span>
-            <span data-calculator-share className="num text-[15px] font-semibold text-actx">
+            <span className="text-meta text-actx">{LABELS.share}</span>
+            <span data-calculator-share className="num text-body font-semibold text-actx">
               {formatFaPercentPoints(share, { maximumFractionDigits: 1 })}
             </span>
           </div>
@@ -258,13 +258,13 @@ export function SellBackResult({ form }: { form: SellBackForm }) {
       </div>
 
       {form.pricePerGram === null && (
-        <p data-calculator-no-rate className="mt-2.5 text-[11px] leading-5 text-tx3">
+        <p data-calculator-no-rate className="mt-2.5 text-meta text-tx3">
           {NO_RATE_NOTE}
         </p>
       )}
 
       {breakdown !== null && !form.deductionEntered && (
-        <p data-calculator-ceiling-note className="mt-2.5 text-[11px] leading-5 text-tx3">
+        <p data-calculator-ceiling-note className="mt-2.5 text-meta text-tx3">
           {CEILING_NOTE}
         </p>
       )}
