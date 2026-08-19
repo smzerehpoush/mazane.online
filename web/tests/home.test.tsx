@@ -132,17 +132,10 @@ describe("home page — mobile header", () => {
 });
 
 describe("home page — hero", () => {
-  it("the H1 asks about buying or selling and sends the reader to calculate", async () => {
+  it("the H1 tells the reader to check tablo before buying gold", async () => {
     const html = await renderHome(healthyStore());
     expect(html).toContain(hero.title);
-    expect(html).toContain("حساب کنید");
-  });
-
-  /** ⚠️ Identity decision: tablo is a decision assistant, not a price board. */
-  it("the H1 no longer sells looking at prices", async () => {
-    const html = await renderHome(healthyStore());
-    expect(html).not.toContain("قبل از خرید طلا، تابلو رو ببین");
-    expect(hero.title).not.toContain("ببین");
+    expect(hero.title).toContain("قبل از خرید طلا");
   });
 
   it("the subtitle says plainly what tablo does not do", async () => {

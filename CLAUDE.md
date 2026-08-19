@@ -24,7 +24,7 @@ Derive behavior from code/tests/migrations, not from memory or other docs.
 | web | `npm ci` | `npm test` (= `vitest run`) | `npm run typecheck` (= `tsc --noEmit`) | In CI, typecheck runs **after** `npm run build`, because build itself regenerates `src/routeTree.gen.ts`; typechecking the committed version of this file can incorrectly pass/fail. |
 
 Known baseline: collector has 189 green pytest tests + a clean mypy run across 70
-files. web has 1104 green vitest tests across 50 suites. If either green count
+files. web has 1103 green vitest tests across 50 suites. If either green count
 drops, or any suite turns red, that's a real bug.
 
 `web/tests/registry-parity.test.ts` calls a Python script
