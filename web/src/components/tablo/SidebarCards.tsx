@@ -1,6 +1,7 @@
 import type { BubbleView } from "@/lib/bubble";
 import type { CoinPricesView } from "@/lib/coin-prices";
 import { JewelryCalculator } from "@/components/tablo/JewelryCalculator";
+import { Staleness } from "@/components/content/RowParts";
 import { BUBBLE_INPUT_MISSING_FA, COIN_PRICE_UNCOLLECTED_FA } from "@/lib/undisclosed";
 
 function BubbleValue({
@@ -45,7 +46,15 @@ function riskClassName(riskLevel: BubbleView["riskLevel"] | null): string {
   return "bg-muted text-muted-foreground";
 }
 
-export function BubbleGauge({ bubble }: { bubble: BubbleView | null }) {
+export function BubbleGauge({
+  bubble,
+  updatedAt = null,
+  nowMs = null,
+}: {
+  bubble: BubbleView | null;
+  updatedAt?: string | null;
+  nowMs?: number | null;
+}) {
   const riskLevel = bubble?.riskLevel ?? null;
 
   return (
@@ -92,6 +101,11 @@ export function BubbleGauge({ bubble }: { bubble: BubbleView | null }) {
           {bubble === null ? "داده اونس یا دلار هنوز در دسترس نیست" : bubble.riskDescription}
         </span>
       </div>
+      {updatedAt !== null && nowMs !== null && (
+        <div data-bubble-staleness className="mt-2.5 text-[11px]">
+          <Staleness updatedAt={updatedAt} nowMs={nowMs} />
+        </div>
+      )}
     </section>
   );
 }
@@ -130,6 +144,13 @@ export function CoinPriceCard({ coins }: { coins: CoinPricesView }) {
           </div>
         ))}
       </div>
+      <a
+        href="/sekeh"
+        data-coin-prices-link
+        className="transition-smooth mt-3 inline-flex min-h-11 items-center text-[12.5px] text-primary hover:underline"
+      >
+        صفحه‌ی کامل قیمت سکه ←
+      </a>
     </section>
   );
 }

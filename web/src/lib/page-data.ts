@@ -1,7 +1,7 @@
 import type { HomePageData } from "@/components/tablo/HomePage";
 import type { SlugPageData } from "@/components/content/SlugPageView";
 import type { PublishedPost } from "./blog";
-import { calculateBubble } from "./bubble";
+import { calculateBubble, oldestReadAt } from "./bubble";
 import { buildCoinPrices } from "./coin-prices";
 import { buildGoldPriceView, GOLD_PRICE_INSTRUMENT, type GoldPriceView } from "./gold-price";
 import type { HistoryQuery, PlatformHistory, PlatformHistoryByRange } from "./history";
@@ -116,6 +116,7 @@ export async function assembleHomeData(read: HomeReaders): Promise<HomePageData>
       ounceUsd: bubbleReferences[1]?.value ?? null,
       usdToman: bubbleReferences[2]?.value ?? null,
     }),
+    bubbleUpdatedAt: oldestReadAt(bubbleReferences.map((reference) => reference?.read_at)),
     coinPrices: buildCoinPrices(coinReferences),
     generated_at: new Date().toISOString(),
   };

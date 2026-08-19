@@ -47,24 +47,55 @@ export const hero = {
 export interface HomeAction {
   href: string;
   title: string;
-  body: string;
+  question: string;
 }
 
 /**
  * ⚠️ The tool cards are derived from `TOOLS`, never written out here: a card
  * whose page hasn't shipped yet would be a link to a 404, and the home page
  * is the one place where nothing checks a hand-written href.
+ * `kodam-saku` is deliberately left out of this list: the wizard is the whole
+ * of the «از کجا بخرم؟» section right below, and a row here would render the
+ * same destination twice in one viewport.
  */
 export const homeActions: readonly HomeAction[] = [
-  ...TOOLS.map((tool) => ({ href: tool.href, title: tool.action, body: tool.summary })),
+  ...TOOLS.filter((tool) => tool.href !== "/kodam-saku").map((tool) => ({
+    href: tool.href,
+    title: tool.action,
+    question: tool.question,
+  })),
   {
     href: "/tala-18",
     title: "مقایسه‌ی سکوها",
-    body: "نرخ هر گرم طلای ۱۸ عیار در سکوهای مختلف کنار هم، همراه با کارمزد و زمان ثبت هر عدد.",
+    question: "نرخ اعلامی کدام سکو از همه پایین‌تر است؟",
   },
 ];
 
 export const homeActionsLabel = "ابزارهای تابلو";
+
+export const homeActionsHubLink = { href: TOOLS_HUB_PATH, label: "همه‌ی ابزارهای تابلو" } as const;
+
+/**
+ * ⚠️ Decision 2026-08-19: no comparison rows on the home page (the ef101f3
+ * removal stands). The buy-path section is the wizard invitation plus a link
+ * to the full table — title and body come from the `kodam-saku` entry in
+ * `TOOLS` so the copy can't drift from the wizard page itself.
+ */
+const WIZARD_TOOL = TOOLS.find((tool) => tool.href === "/kodam-saku");
+
+export const homeBuyPath = {
+  heading: "از کجا بخرم؟",
+  wizardTitle: WIZARD_TOOL?.question ?? "کدام سکو برای من؟",
+  wizardBody: WIZARD_TOOL?.summary ?? "",
+  wizardHref: "/kodam-saku",
+  wizardCta: "شروع: سه سؤال",
+  tableHref: "/tala-18",
+  tableLabel: "مقایسه‌ی کامل سکوها در یک جدول",
+  disclosure:
+    "تابلو از لینک معرفی بعضی سکوها کمیسیون می‌گیرد؛ این کمیسیون در ترتیب نمایش سکوها اثری ندارد.",
+  disclosureHref: "/about",
+  disclosureLinkLabel: "توضیح کامل درآمد تابلو",
+} as const;
 
 export interface TrustItem {
   question: string;

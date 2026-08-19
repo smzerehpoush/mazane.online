@@ -189,6 +189,36 @@ export function DashboardLive({ data }: { data: LiveDashboard | null }) {
     }
     const statusPanel = document.querySelector<HTMLElement>("[data-bubble-status-panel]");
     if (statusPanel !== null) setBubbleRiskClass(statusPanel, riskLevel);
+    const bubbleStaleness = document.querySelector<HTMLElement>("[data-bubble-staleness]");
+    if (bubbleStaleness !== null) {
+      const timeEl = bubbleStaleness.querySelector<HTMLElement>('[data-live="updated-at"]');
+      const staleEl = bubbleStaleness.querySelector<HTMLElement>('[data-live="stale"]');
+      if (timeEl !== null) {
+        const current = {
+          priceText: "",
+          updatedAtIso: timeEl.getAttribute("datetime"),
+          updatedText: timeEl.textContent ?? "",
+          staleText: staleEl?.textContent ?? "",
+        };
+        const next = nextRowDomState(
+          current,
+          {
+            platform_slug: "bubble",
+            price_toman: null,
+            price_display: null,
+            updated_at: data.bubble_updated_at,
+          },
+          nowMs,
+        );
+        if (next.updatedAtIso !== null && next.updatedAtIso !== current.updatedAtIso) {
+          timeEl.setAttribute("datetime", next.updatedAtIso);
+        }
+        if (next.updatedText !== current.updatedText) timeEl.textContent = next.updatedText;
+        if (staleEl !== null && next.staleText !== current.staleText) {
+          staleEl.textContent = next.staleText;
+        }
+      }
+    }
     setRequiredText(
       document,
       "[data-bubble-status]",

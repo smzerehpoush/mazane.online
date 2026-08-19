@@ -21,11 +21,16 @@ import { useLiveDashboard } from "@/lib/use-live-dashboard";
 import { hasViewData, type ViewCounts } from "@/lib/views";
 import { OG_HOME_KEY, ogImageAlt, ogImageMeta } from "@/lib/og";
 import { SITE_URL } from "@/lib/site";
+import { TomanPrice } from "@/components/tablo/TomanPrice";
+import { formatToman } from "@/lib/format";
 import {
   brand,
+  footerLinks,
   hero,
   homeActions,
+  homeActionsHubLink,
   homeActionsLabel,
+  homeBuyPath,
   legalNote,
   MAIN_LANDMARK_ID,
   trustHeading,
@@ -43,6 +48,7 @@ export interface HomePageData {
   viewCounts: ViewCounts;
   chartPlatforms: readonly ChartPlatformConfig[];
   bubble: BubbleView | null;
+  bubbleUpdatedAt: string | null;
   coinPrices: CoinPricesView;
   generated_at: string;
 }
@@ -101,46 +107,114 @@ export function HomePage({ data }: { data: HomePageData }) {
         tabIndex={-1}
         className="mx-auto w-full max-w-[1340px] px-4 pt-4.5 pb-8 outline-none sm:px-[22px]"
       >
-        <h1 className="text-[26px] leading-[1.35] font-black tracking-[-0.4px] text-foreground sm:text-[36px]">
-          {hero.title}
-        </h1>
-        <p className="mt-2.5 max-w-[68ch] text-[13.5px] leading-7 text-muted-foreground sm:text-[15px] sm:leading-8">
-          {hero.subtitle}
-        </p>
+        <div className="grid items-start gap-4 min-[1081px]:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+          <div className="flex min-w-0 flex-col">
+            <h1 className="text-[26px] leading-[1.35] font-black tracking-[-0.4px] text-foreground sm:text-[36px]">
+              {hero.title}
+            </h1>
+            <p className="mt-2.5 max-w-[68ch] text-[13.5px] leading-7 text-muted-foreground sm:text-[15px] sm:leading-8">
+              {hero.subtitle}
+            </p>
 
-        <nav
-          data-home-actions
-          aria-label={homeActionsLabel}
-          className="mt-4 mb-4 grid gap-3 sm:grid-cols-3"
-        >
-          {homeActions.map((action) => (
             <a
-              key={action.href}
-              href={action.href}
-              data-home-action={action.href}
-              className="transition-smooth flex min-h-11 flex-col rounded-[18px] border border-border bg-surface px-4 py-3.5 hover:border-primary/40"
+              href="/tala-18"
+              data-home-reference-strip
+              className="transition-smooth mt-3 inline-flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-border bg-card px-4 py-2 text-[12.5px] text-muted-foreground hover:border-primary/40"
             >
-              <span className="text-[14px] font-bold text-foreground">{action.title}</span>
-              <span className="mt-1.5 text-[12.5px] leading-6 text-muted-foreground">
-                {action.body}
-              </span>
+              <span>نرخ مرجع هر گرم طلای ۱۸ عیار:</span>
+              {data.reference.priceToman === null ? (
+                <span>فعلاً در دسترس نیست</span>
+              ) : (
+                <TomanPrice
+                  value={formatToman(data.reference.priceToman)}
+                  className="num inline-flex items-baseline gap-1 font-semibold text-foreground"
+                />
+              )}
+              <span className="text-[11px]">مرجع: {data.reference.name}</span>
             </a>
-          ))}
-        </nav>
 
-        <div className="grid items-start gap-4 min-[1081px]:grid-cols-[360px_minmax(0,1fr)]">
-          <div className="order-2 flex flex-col gap-4 min-[1081px]:order-1">
-            <BubbleGauge bubble={bubble} />
-            <CoinPriceCard coins={coinPrices} />
-            <JewelryCalculator
-              pricePerGram={data.reference.priceToman}
-              referenceName={data.reference.name}
-            />
-            {latestPosts.length > 0 && <Sidebar posts={latestPosts} />}
+            <nav
+              data-home-actions
+              aria-label={homeActionsLabel}
+              className="mt-4 mb-4 flex flex-col gap-2 sm:grid sm:grid-cols-2"
+            >
+              {homeActions.map((action) => (
+                <a
+                  key={action.href}
+                  href={action.href}
+                  data-home-action={action.href}
+                  className="transition-smooth flex min-h-11 items-center gap-3 rounded-[18px] border border-border bg-card px-4 py-3 hover:border-primary/40"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-[14px] leading-6 font-bold text-foreground">
+                      {action.question}
+                    </span>
+                    <span className="mt-0.5 text-[12.5px] text-muted-foreground">
+                      {action.title}
+                    </span>
+                  </span>
+                  <span aria-hidden className="shrink-0 text-muted-foreground">
+                    ←
+                  </span>
+                </a>
+              ))}
+              <a
+                href={homeActionsHubLink.href}
+                data-home-actions-hub
+                className="transition-smooth flex min-h-11 items-center px-4 text-[13px] text-primary hover:underline sm:col-span-2"
+              >
+                {homeActionsHubLink.label} ←
+              </a>
+            </nav>
+
+            <section
+              data-home-buy-path
+              aria-labelledby="home-buy-path-heading"
+              className="mb-4 rounded-[18px] border border-gold/35 bg-gold-soft/40 px-4 py-4 sm:px-5"
+            >
+              <h2
+                id="home-buy-path-heading"
+                className="text-[15.5px] font-semibold text-foreground"
+              >
+                {homeBuyPath.heading}
+              </h2>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[14px] leading-6 font-bold text-foreground">
+                    {homeBuyPath.wizardTitle}
+                  </p>
+                  <p className="mt-1 max-w-[62ch] text-[12.5px] leading-6 text-muted-foreground">
+                    {homeBuyPath.wizardBody}
+                  </p>
+                </div>
+                <a
+                  href={homeBuyPath.wizardHref}
+                  data-home-wizard-cta
+                  className="transition-smooth inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-primary px-5 py-2 text-[13px] font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  {homeBuyPath.wizardCta}
+                </a>
+              </div>
+              <a
+                href={homeBuyPath.tableHref}
+                className="transition-smooth mt-3 inline-flex min-h-11 items-center text-[13px] text-primary hover:underline"
+              >
+                {homeBuyPath.tableLabel} ←
+              </a>
+              <p className="mt-2 border-t border-gold/25 pt-2.5 text-[11.5px] leading-6 text-muted-foreground">
+                {homeBuyPath.disclosure}{" "}
+                <a href={homeBuyPath.disclosureHref} className="text-primary hover:underline">
+                  {homeBuyPath.disclosureLinkLabel}
+                </a>
+              </p>
+            </section>
           </div>
 
-          <div className="order-1 flex min-w-0 flex-col gap-4 min-[1081px]:order-2">
-            <MarketSummary summary={dashboard.summary} />
+          <MarketSummary summary={dashboard.summary} />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-4">
+          <div className="hidden sm:block">
             <PriceRail
               rail={dashboard.rail}
               updatedAt={live.data?.updated_at ?? dashboard.updatedAt}
@@ -148,8 +222,33 @@ export function HomePage({ data }: { data: HomePageData }) {
               tick={live.tick}
               failed={live.failed}
             />
-            <SourceCards sources={dashboard.rail.sources} nowMs={nowMs} />
+          </div>
+          <SourceCards sources={dashboard.rail.sources} nowMs={nowMs} />
+
+          <div className="grid items-start gap-4 sm:grid-cols-2 min-[1081px]:grid-cols-3">
+            <BubbleGauge
+              bubble={bubble}
+              updatedAt={live.data?.bubble_updated_at ?? data.bubbleUpdatedAt}
+              nowMs={nowMs}
+            />
+            <CoinPriceCard coins={coinPrices} />
+            {/*
+             * ⚠️ Hidden with CSS, not a conditional render: the inputs must
+             * be in the server HTML on every viewport so hydration sees one
+             * DOM. Decision 2026-08-19: the inline calculator is
+             * desktop-only; on mobile the «محاسبه‌ی طلای نو» row is the way in.
+             */}
+            <div className="hidden min-[1081px]:block">
+              <JewelryCalculator
+                pricePerGram={data.reference.priceToman}
+                referenceName={data.reference.name}
+              />
+            </div>
+          </div>
+
+          <div className="grid items-start gap-4 min-[1081px]:grid-cols-2">
             {featuredPost !== null && <FeaturedPost post={featuredPost} />}
+            {latestPosts.length > 0 && <Sidebar posts={latestPosts} />}
           </div>
         </div>
 
@@ -167,7 +266,7 @@ export function HomePage({ data }: { data: HomePageData }) {
             {trustItems.map((item) => (
               <div
                 key={item.question}
-                className="flex flex-col rounded-[18px] border border-border bg-surface p-4"
+                className="flex flex-col rounded-[18px] border border-border bg-card p-4"
               >
                 <h3 className="text-[14px] font-bold text-foreground">{item.question}</h3>
                 <p className="mt-2 text-[12.5px] leading-7 text-foreground/78">{item.answer}</p>
@@ -190,6 +289,17 @@ export function HomePage({ data }: { data: HomePageData }) {
       <footer className="mt-8 border-t border-border">
         <div className="mx-auto w-full max-w-[1340px] px-4 py-6 sm:px-[22px]">
           <p className="text-[11px] leading-6 text-muted-foreground">{legalNote}</p>
+          <nav aria-label="پیوندهای تابلو" className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+            {footerLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="transition-smooth text-[11.5px] text-muted-foreground hover:text-primary"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
           <AllPlatforms rows={data.rows} />
         </div>
       </footer>

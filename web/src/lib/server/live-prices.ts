@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 
-import { calculateBubble } from "../bubble";
+import { calculateBubble, oldestReadAt } from "../bubble";
 import { buildCoinPrices } from "../coin-prices";
 import { buildDashboard } from "../dashboard";
 import { formatToman } from "../format";
@@ -91,6 +91,11 @@ export async function livePricesPayload(): Promise<LivePricesPayload> {
         ounceUsd: ounceReference?.value ?? null,
         usdToman: usdReference?.value ?? null,
       }),
+      bubble_updated_at: oldestReadAt([
+        marketReference?.read_at,
+        ounceReference?.read_at,
+        usdReference?.read_at,
+      ]),
       coinPrices: buildCoinPrices(coinReferences),
       reference_percent: dashboard.rail.referencePercent,
       updated_at: dashboard.updatedAt,

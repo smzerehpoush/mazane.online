@@ -3,7 +3,7 @@ import { brand, MAIN_LANDMARK_ID, nav, skipToContentLabel } from "@/lib/site-con
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/70 backdrop-blur-xl">
+    <header className="z-50 border-b border-border/70 bg-background/70 backdrop-blur-xl sm:sticky sm:top-0">
       <a
         href={`#${MAIN_LANDMARK_ID}`}
         data-skip-link

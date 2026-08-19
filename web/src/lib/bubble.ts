@@ -77,6 +77,16 @@ function bubbleView(marketPriceToman: number, intrinsicToman: number): BubbleVie
   };
 }
 
+/**
+ * ⚠️ The gauge's freshness label must describe the **oldest** of its three
+ * inputs: a fresh dollar rate next to a week-old ounce still yields a
+ * week-old bubble.
+ */
+export function oldestReadAt(reads: ReadonlyArray<string | null | undefined>): string | null {
+  if (reads.some((iso) => iso === null || iso === undefined)) return null;
+  return [...(reads as string[])].sort()[0] ?? null;
+}
+
 export function calculateBubble(input: BubbleInputs): BubbleView | null {
   if (
     !validPositive(input.marketPriceToman) ||

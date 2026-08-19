@@ -31,6 +31,7 @@ export interface LiveDashboard {
   min_display: string | null;
   spread_display: string | null;
   bubble: BubbleView | null;
+  bubble_updated_at: string | null;
   coinPrices: CoinPricesView;
   reference_percent: number | null;
   updated_at: string | null;

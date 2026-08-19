@@ -233,8 +233,8 @@ export function PriceRail({
            * `justify-between` sits on the right. "Pricier" must come on
            * the right to agree with where the markers are. Swapping these
            * two would make the footnote contradict the rail itself.
-          */}
-          <div className="mx-5 flex items-center justify-between border-t border-border pt-3 pb-4 text-[11.5px] text-tx3 sm:mx-6">
+           */}
+          <div className="mx-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-border pt-3 pb-4 text-[11.5px] text-tx3 sm:mx-6">
             <span data-rail-max className="inline-flex items-baseline gap-1.5">
               بیشترین قیمت ·{" "}
               {rail.maxDisplay !== null && (

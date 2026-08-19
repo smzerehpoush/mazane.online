@@ -9,7 +9,7 @@ export function Staleness({ updatedAt, nowMs }: { updatedAt: string | null; nowM
   }
   const minutes = minutesSince(updatedAt, nowMs);
   return (
-    <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+    <span className="text-[11px] text-muted-foreground">
       به‌روزرسانی:{" "}
       <time dateTime={updatedAt} data-live="updated-at" suppressHydrationWarning>
         {formatMinutesAgoFa(minutes)}

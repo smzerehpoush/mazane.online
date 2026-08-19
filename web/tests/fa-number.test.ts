@@ -63,7 +63,7 @@ describe("digits and separators", () => {
 describe("rounding", () => {
   /**
    * ⚠️ A real regression: the first implementation was written with
-    * `toFixed` and gave "2.00" here, because 2.005 in binary is
+   * `toFixed` and gave "2.00" here, because 2.005 in binary is
    * 2.00499…. ICU rounds on the **short decimal representation**, not
    * the binary value. Any rewrite that turns this test red has
    * repeated the same mistake.
@@ -167,16 +167,20 @@ describe("consumers — the output must not have changed from before", () => {
     expect(formatPercentFa(0.31)).toBe(`۳۱${PERCENT}`);
   });
 
-  it("formatSignedPercentFa: the rate card's \"changes\" column", () => {
+  it('formatSignedPercentFa: the rate card\'s "changes" column', () => {
     expect(formatSignedPercentFa(0.0071)).toBe(`${LRM}+۰${DECIMAL}۷۱${PERCENT}`);
     expect(formatSignedPercentFa(-0.0012)).toBe(`${LRM}${MINUS}۰${DECIMAL}۱۲${PERCENT}`);
     expect(formatSignedPercentFa(0)).toBe(`۰${PERCENT}`);
   });
 
-  it("formatMinutesAgoFa: the staleness label", () => {
+  it("formatMinutesAgoFa: the staleness label steps from minutes to hours to days", () => {
     expect(formatMinutesAgoFa(0)).toBe("لحظاتی پیش");
     expect(formatMinutesAgoFa(3)).toBe("۳ دقیقه پیش");
-    expect(formatMinutesAgoFa(1500)).toBe(`۱${GROUP}۵۰۰ دقیقه پیش`);
+    expect(formatMinutesAgoFa(59)).toBe("۵۹ دقیقه پیش");
+    expect(formatMinutesAgoFa(60)).toBe("۱ ساعت پیش");
+    expect(formatMinutesAgoFa(1439)).toBe("۲۳ ساعت پیش");
+    expect(formatMinutesAgoFa(1500)).toBe("۱ روز پیش");
+    expect(formatMinutesAgoFa(10_690)).toBe("۷ روز پیش");
   });
 });
 
@@ -195,8 +199,8 @@ describe("determinism", () => {
 });
 
 /**
-  * ⚠️ Why this was needed too: `lib/dashboard.ts` built the "last
-  * update" label and the time of the market summary's high/low with
+ * ⚠️ Why this was needed too: `lib/dashboard.ts` built the "last
+ * update" label and the time of the market summary's high/low with
  * `Intl.DateTimeFormat`, and `buildDashboard` is called inside
  * `HomePage`'s render body — meaning it ran **both on the server and
  * during hydration**. The same ICU-divergence risk this file had closed

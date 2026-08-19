@@ -50,6 +50,7 @@ echo "==> [1/6] انتقال کد به سرور (${REMOTE_SRC_DIR})…"
 # The local .env holds real secrets — it must never end up anywhere but /opt/tablo/.env.
 rsync -az --delete \
   --exclude node_modules --exclude .output --exclude .git \
+  --exclude .claude \
   --exclude .venv --exclude __pycache__ --exclude web-crawler \
   --exclude '.env' --exclude '.env.*' --exclude '.DS_Store' \
   --exclude collector-dev.log \

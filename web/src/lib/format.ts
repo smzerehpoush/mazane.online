@@ -70,5 +70,7 @@ export function isStale(minutes: number): boolean {
 
 export function formatMinutesAgoFa(minutes: number): string {
   if (minutes < 1) return "لحظاتی پیش";
-  return `${formatFaNumber(minutes)} دقیقه پیش`;
+  if (minutes < 60) return `${formatFaNumber(minutes)} دقیقه پیش`;
+  if (minutes < 1440) return `${formatFaNumber(Math.floor(minutes / 60))} ساعت پیش`;
+  return `${formatFaNumber(Math.floor(minutes / 1440))} روز پیش`;
 }
