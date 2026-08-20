@@ -175,14 +175,17 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
       </div>
 
       {/*
-       * ⚠️ At 375px the three columns with eight-digit numbers overlapped.
-       * A smaller size and `gap` on mobile fix it without changing the
-       * three-column layout — the timestamp also moves below the number,
-       * not beside it.
+       * ⚠️ At 375px three columns of eight-digit numbers overlap, and
+       * shrinking the type was not enough — «۱۹٬۸۰۸٬۶۰۰ تومان» still ran
+       * into its neighbour. Below `sm` the three stats are rows instead:
+       * label on the right, number on the left, one per line. The
+       * three-column grid is untouched from `sm` up, and the DOM order
+       * stays number-then-label so the desktop stack needs no reordering —
+       * `flex-row-reverse` is what puts the label first on a phone.
        */}
-      <div className="mt-4.5 grid grid-cols-3 gap-2 border-t border-border pt-3.5">
-        <div className="min-w-0">
-          <b data-summary-low className="num block text-body font-semibold sm:text-number">
+      <div className="mt-4.5 grid grid-cols-1 divide-y divide-border border-t border-border sm:grid-cols-3 sm:gap-2 sm:divide-y-0 sm:pt-3.5">
+        <div className="flex min-w-0 flex-row-reverse items-baseline justify-between gap-3 py-2 sm:block sm:py-0">
+          <b data-summary-low className="num text-body font-semibold sm:block sm:text-number">
             {active.low === null ? (
               "—"
             ) : (
@@ -193,13 +196,13 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
               />
             )}
           </b>
-          <span className="block text-meta text-tx3">
+          <span className="text-meta whitespace-nowrap text-tx3 sm:block">
             پایین‌ترین
             {active.low === null ? "" : ` · ${active.low.atDisplay}`}
           </span>
         </div>
-        <div className="min-w-0">
-          <b data-summary-high className="num block text-body font-semibold sm:text-number">
+        <div className="flex min-w-0 flex-row-reverse items-baseline justify-between gap-3 py-2 sm:block sm:py-0">
+          <b data-summary-high className="num text-body font-semibold sm:block sm:text-number">
             {active.high === null ? (
               "—"
             ) : (
@@ -210,16 +213,16 @@ export function MarketSummary({ summary }: { summary: SummaryView }) {
               />
             )}
           </b>
-          <span className="block text-meta text-tx3">
+          <span className="text-meta whitespace-nowrap text-tx3 sm:block">
             بالاترین
             {active.high === null ? "" : ` · ${active.high.atDisplay}`}
           </span>
         </div>
-        <div className="min-w-0">
-          <b className="num block text-body font-semibold sm:text-number">
+        <div className="flex min-w-0 flex-row-reverse items-baseline justify-between gap-3 py-2 sm:block sm:py-0">
+          <b className="num text-body font-semibold sm:block sm:text-number">
             <ChangeStat range={active} />
           </b>
-          <span className="block text-meta text-tx3">تغییرات</span>
+          <span className="text-meta text-tx3 sm:block">تغییرات</span>
         </div>
       </div>
     </section>

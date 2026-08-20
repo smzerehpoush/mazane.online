@@ -4,6 +4,7 @@ import { FeaturedPost } from "@/components/tablo/FeaturedPost";
 import { JewelryCalculator } from "@/components/tablo/JewelryCalculator";
 import { Madde5Bar } from "@/components/tablo/LegalNotice";
 import { MarketSummary } from "@/components/tablo/MarketSummary";
+import { MobilePriceBar, PriceBarAnchor } from "@/components/tablo/MobilePriceBar";
 import { PopularPosts } from "@/components/tablo/PopularPosts";
 import { PriceRail } from "@/components/tablo/PriceRail";
 import { BubbleGauge, CoinPriceCard } from "@/components/tablo/SidebarCards";
@@ -38,6 +39,21 @@ import {
   type ChartPlatformConfig,
 } from "@/lib/site-content";
 import { organizationWebSiteJsonLd } from "@/lib/structured-data";
+import { ArrowLeftRight, Calculator, HandCoins, Scale } from "lucide-react";
+
+/**
+ * ⚠️ Keyed by href, with a fallback: `homeActions` is derived from `TOOLS`,
+ * so a tool that ships tomorrow gets a row here whether or not anyone
+ * remembers this map. An icon is decoration — the row's own words carry the
+ * meaning — which is why every icon is `aria-hidden` and none of them is
+ * allowed to be the only label.
+ */
+const ACTION_ICONS: Record<string, typeof Calculator> = {
+  "/mohasebe-tala": Calculator,
+  "/mohasebe-forush-tala": HandCoins,
+  "/tabdil-mazane": ArrowLeftRight,
+  "/tala-18": Scale,
+};
 
 export interface HomePageData {
   rows: Row[];
@@ -99,7 +115,7 @@ export function HomePage({ data }: { data: HomePageData }) {
   const coinPrices = live.data === null ? data.coinPrices : live.data.coinPrices;
 
   return (
-    <div className="relative min-h-screen bg-background">
+    <div className="safe-bottom-gap relative min-h-screen bg-background min-[1081px]:pb-0">
       <SiteHeader />
 
       <main
@@ -107,17 +123,33 @@ export function HomePage({ data }: { data: HomePageData }) {
         tabIndex={-1}
         className="mx-auto w-full max-w-[1340px] px-4 pt-4.5 pb-8 outline-none sm:px-[22px]"
       >
-        <div className="grid items-start gap-4 min-[1081px]:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+        {/*
+         * ⚠️ Three grid children, not two, and the order is the mobile
+         * order: heading → price → path. Below 1081px the grid is a single
+         * column, so the DOM order *is* the reading order, and the price
+         * card lands in the first screen instead of a screen and a half
+         * down. On desktop the summary is pinned to the second column
+         * across both rows, which puts the heading and the path back in one
+         * uninterrupted left column — `gap-y-0` there so the spacing inside
+         * that column stays the flex-column spacing it was.
+         */}
+        <div className="grid items-start gap-4 min-[1081px]:gap-y-0 min-[1081px]:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
           <div className="flex min-w-0 flex-col">
             <h1 className="text-headline font-black tracking-[-0.4px] text-foreground sm:text-display">
               {hero.title}
             </h1>
             <p className="mt-2.5 max-w-[68ch] text-body text-muted-foreground ">{hero.subtitle}</p>
 
+            {/*
+             * ⚠️ Desktop only, and deliberately so: on one column the strip
+             * would print the same number, from the same source, immediately
+             * above the card that prints it big. It survives on desktop
+             * because there the two sit in different columns.
+             */}
             <a
               href="/tala-18"
               data-home-reference-strip
-              className="transition-smooth mt-3 inline-flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-border bg-card px-4 py-2 text-meta text-muted-foreground hover:border-primary/40"
+              className="transition-smooth mt-3 hidden min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-border bg-card px-4 py-2 text-meta text-muted-foreground hover:border-primary/40 min-[1081px]:inline-flex"
             >
               <span>نرخ مرجع هر گرم طلای ۱۸ عیار:</span>
               {data.reference.priceToman === null ? (
@@ -130,28 +162,47 @@ export function HomePage({ data }: { data: HomePageData }) {
               )}
               <span className="text-meta">مرجع: {data.reference.name}</span>
             </a>
+          </div>
 
+          <div className="min-w-0 min-[1081px]:col-start-2 min-[1081px]:row-span-2 min-[1081px]:row-start-1">
+            <MarketSummary summary={dashboard.summary} />
+          </div>
+
+          <div className="flex min-w-0 flex-col min-[1081px]:col-start-1">
             <nav
               data-home-actions
               aria-label={homeActionsLabel}
-              className="mt-4 mb-4 flex flex-col gap-2 sm:grid sm:grid-cols-2"
+              className="mb-4 flex flex-col gap-2 sm:grid sm:grid-cols-2 min-[1081px]:mt-4"
             >
-              {homeActions.map((action) => (
-                <a
-                  key={action.href}
-                  href={action.href}
-                  data-home-action={action.href}
-                  className="transition-smooth flex min-h-11 items-center gap-3 rounded-[18px] border border-border bg-card px-4 py-3 hover:border-primary/40"
-                >
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="text-body font-bold text-foreground">{action.question}</span>
-                    <span className="mt-0.5 text-meta text-muted-foreground">{action.title}</span>
-                  </span>
-                  <span aria-hidden className="shrink-0 text-muted-foreground">
-                    ←
-                  </span>
-                </a>
-              ))}
+              {homeActions.map((action) => {
+                const Icon = ACTION_ICONS[action.href] ?? Scale;
+                return (
+                  <a
+                    key={action.href}
+                    href={action.href}
+                    data-home-action={action.href}
+                    className="transition-smooth flex min-h-11 items-center gap-3 rounded-[18px] border border-border bg-card px-3.5 py-2.5 hover:border-primary/40 sm:px-4 sm:py-3"
+                  >
+                    <span
+                      aria-hidden
+                      className="grid size-9 shrink-0 place-items-center rounded-[12px] border border-border/70 bg-surface text-primary"
+                    >
+                      <Icon className="size-[18px]" strokeWidth={1.75} />
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="text-body leading-snug font-bold text-foreground">
+                        {action.question}
+                      </span>
+                      <span className="mt-1 text-meta leading-snug text-muted-foreground">
+                        {action.title}
+                      </span>
+                    </span>
+                    <span aria-hidden className="shrink-0 text-muted-foreground">
+                      ←
+                    </span>
+                  </a>
+                );
+              })}
               <a
                 href={homeActionsHubLink.href}
                 data-home-actions-hub
@@ -197,9 +248,9 @@ export function HomePage({ data }: { data: HomePageData }) {
                 </a>
               </p>
             </section>
-          </div>
 
-          <MarketSummary summary={dashboard.summary} />
+            <PriceBarAnchor />
+          </div>
         </div>
 
         <div className="mt-12 flex flex-col gap-4 min-[1081px]:mt-16">
@@ -296,6 +347,8 @@ export function HomePage({ data }: { data: HomePageData }) {
           <AllPlatforms rows={data.rows} />
         </div>
       </footer>
+
+      <MobilePriceBar priceToman={data.reference.priceToman} referenceName={data.reference.name} />
 
       <DashboardLive data={live.data} />
     </div>

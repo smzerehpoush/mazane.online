@@ -11,7 +11,7 @@ export function SiteHeader() {
       >
         {skipToContentLabel}
       </a>
-      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:flex sm:justify-between sm:gap-4 sm:px-8 sm:py-3">
+      <div className="mx-auto grid w-full max-w-[1400px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 px-4 py-2 sm:flex sm:justify-between sm:gap-4 sm:px-8 sm:py-3">
         <a href="/" className="order-1 flex min-h-11 items-center gap-2.5">
           <span className="grid size-10 place-items-center rounded-[14px] border border-gold/35 bg-surface shadow-soft">
             <img src="/tablo-logo-mark.png" alt="" className="size-8 object-contain" />
@@ -20,7 +20,7 @@ export function SiteHeader() {
         </a>
         <nav
           aria-label="ناوبری اصلی"
-          className="order-3 col-span-2 grid min-w-0 grid-cols-3 gap-2 min-[500px]:grid-cols-5 sm:order-2 sm:col-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-1"
+          className="order-3 col-span-2 grid min-w-0 grid-cols-3 gap-1.5 min-[500px]:grid-cols-5 sm:order-2 sm:col-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-1"
         >
           {nav.map((item) => (
             <a

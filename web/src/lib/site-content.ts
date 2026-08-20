@@ -97,6 +97,22 @@ export const homeBuyPath = {
   disclosureLinkLabel: "توضیح کامل درآمد تابلو",
 } as const;
 
+/**
+ * ⚠️ The bar's action must stay an **internal** destination. It is a second
+ * showing of the same «از کجا بخرم؟» invitation, and the 2026-08-19 decision
+ * that keeps `/go/` links out of the buy-path section covers this copy of it
+ * too — a sponsored link that follows the reader down the page is a different
+ * promise from a card that sits still.
+ */
+export const homePriceBar = {
+  label: "نرخ مرجع هر گرم ۱۸ عیار",
+  unavailable: "فعلاً در دسترس نیست",
+  priceHref: "/tala-18",
+  cta: homeBuyPath.heading,
+  ctaHref: homeBuyPath.wizardHref,
+  ariaLabel: "نرخ مرجع و مسیر خرید",
+} as const;
+
 export interface TrustItem {
   question: string;
   answer: string;

@@ -900,3 +900,125 @@ describe("home page — each platform's staleness on its own card", () => {
     expect(cardOf(html, "talasea")).toContain("هنوز داده‌ای ثبت نشده است");
   });
 });
+
+/**
+ * ⚠️ This page's mobile layout changed on 2026-08-19. The desktop grid puts
+ * the price card in a second column beside the heading, so a desktop reader
+ * sees the number and the decision path at once; below 1081px that grid
+ * collapses to one column and the same DOM order pushed the number **1.44
+ * screens down** on a 375×812 phone — measured, not estimated. The order
+ * below is the fix, and these tests exist so the next refactor of the hero
+ * cannot quietly undo it.
+ */
+describe("home page — mobile order: the answer, then the path", () => {
+  it("the price card is rendered before the tool rows and before the buy path", async () => {
+    const html = await renderHome(healthyStore());
+    const summary = html.indexOf("خلاصه بازار");
+    const actions = html.indexOf("data-home-actions");
+    const buyPath = html.indexOf("data-home-buy-path");
+
+    expect(summary).toBeGreaterThan(-1);
+    expect(summary).toBeLessThan(actions);
+    expect(actions).toBeLessThan(buyPath);
+  });
+
+  /**
+   * ⚠️ The strip prints the same number, from the same source, as the card
+   * right under it. It earns its place only on desktop, where the two sit in
+   * different columns — on one column it is the same fact twice.
+   */
+  it("the reference strip is desktop-only, not a second copy of the number on a phone", async () => {
+    const html = await renderHome(healthyStore());
+    const strip = html.match(/<a[^>]*data-home-reference-strip[^>]*>/)?.[0] ?? "";
+
+    expect(strip).toContain("hidden");
+    expect(strip).toContain("min-[1081px]:inline-flex");
+  });
+
+  /**
+   * ⚠️ Three eight-digit numbers do not fit in three columns at 375px — they
+   * overlapped, and shrinking the type was not enough. They stack as rows
+   * below `sm`, so no `grid-cols-3` may be unconditional here.
+   */
+  it("the summary's low/high/change stack as rows on a phone", async () => {
+    const html = await renderHome(healthyStore());
+    const stats = html.match(/<div class="[^"]*divide-y[^"]*"[^>]*>/g) ?? [];
+    const classesOf = (tag: string): string[] =>
+      (tag.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+
+    expect(stats.length).toBe(1);
+    expect(classesOf(stats[0] as string)).toContain("sm:grid-cols-3");
+    expect(classesOf(stats[0] as string)).not.toContain("grid-cols-3");
+  });
+});
+
+describe("home page — the mobile price bar", () => {
+  /**
+   * ⚠️ Server-rendered on every viewport and hidden with a class, never
+   * mounted after the fact: a bar that appears only once JavaScript has run
+   * moves the page under the reader's thumb on the first scroll.
+   */
+  it("is in the server-rendered HTML, out of view and out of the tab order", async () => {
+    const html = await renderHome(healthyStore());
+    const bar = html.match(/<div[^>]*data-home-price-bar="true"[^>]*>/)?.[0] ?? "";
+
+    expect(bar).toContain("invisible");
+    expect(bar).toContain("translate-y-full");
+    expect(bar).toContain('data-shown="false"');
+    expect(bar).toContain("min-[1081px]:hidden");
+  });
+
+  it("carries the same reference number as the card it echoes", async () => {
+    const html = await renderHome(healthyStore(), {
+      referencePrices: [
+        {
+          reference_slug: "talair",
+          instrument: "GOLD_18K_TOMAN",
+          value: 18_560_000,
+          read_at: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+    });
+    const bar =
+      html.match(/<div[^>]*data-home-price-bar="true"[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? "";
+
+    expect(bar).toContain("۱۸٬۵۶۰٬۰۰۰");
+    expect(bar).toContain("tala.ir");
+  });
+
+  /** ⚠️ Staleness, not error: no reference reading ⟸ the bar says so, no 5xx. */
+  it("without a reference price it says so instead of printing a stale number", async () => {
+    const html = await renderHome(healthyStore());
+    const bar =
+      html.match(/<div[^>]*data-home-price-bar="true"[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? "";
+
+    expect(bar).toContain("فعلاً در دسترس نیست");
+  });
+
+  /**
+   * ⚠️ The bar's action is the second showing of «از کجا بخرم؟». The
+   * 2026-08-19 decision that keeps `/go/` links out of the buy-path section
+   * covers this copy of it too, and the anchor that reveals the bar sits
+   * **after** that section so the two invitations never share a screen.
+   */
+  it("re-offers the wizard through an internal link, only after the buy path is gone", async () => {
+    const html = await renderHome(healthyStore());
+    const cta = html.match(/<a[^>]*data-home-price-bar-cta[^>]*>/)?.[0] ?? "";
+
+    expect(cta).toContain('href="/kodam-saku"');
+    expect(cta).not.toContain("/go/");
+    expect(cta).toContain("min-h-11");
+    expect(html.indexOf("data-home-buy-path")).toBeLessThan(
+      html.indexOf("data-home-price-bar-anchor"),
+    );
+  });
+
+  /** ⚠️ Guard shared with the source cards: no percent figure is published. */
+  it("publishes no percentage of its own", async () => {
+    const html = await renderHome(healthyStore());
+    const bar =
+      html.match(/<div[^>]*data-home-price-bar="true"[\s\S]*?<\/div>\s*<\/div>/)?.[0] ?? "";
+
+    expect(bar).not.toContain("٪");
+  });
+});

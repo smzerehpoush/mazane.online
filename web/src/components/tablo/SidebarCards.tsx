@@ -16,9 +16,20 @@ function BubbleValue({
   attr: "data-bubble-intrinsic" | "data-bubble-amount" | "data-bubble-percent";
 }) {
   return (
-    <div className="rounded-[10px] bg-surface px-2 py-2.5 text-center">
+    /*
+     * ⚠️ Three columns of an eight-digit number do not survive a narrow
+     * phone: at 320px «۲۰٬۴۳۰٬۲۹۲ تومان» was clipped by its own cell. The
+     * card is only wide enough for the three-across reading in the desktop
+     * grid, so below 1081px each figure is a row — label on the right,
+     * number on the left — and the centred stack comes back with the
+     * columns.
+     */
+    <div className="flex items-baseline justify-between gap-2 rounded-[10px] bg-surface px-3 py-2.5 min-[1081px]:block min-[1081px]:px-2 min-[1081px]:text-center">
       <span className="text-meta text-tx3">{label}</span>
-      <b {...{ [attr]: true }} className="mt-0.5 block text-body font-semibold text-foreground">
+      <b
+        {...{ [attr]: true }}
+        className="text-body font-semibold text-foreground min-[1081px]:mt-0.5 min-[1081px]:block"
+      >
         {unit === "toman" ? (
           <span className="inline-flex items-baseline justify-center gap-1">
             <span data-price-value>{value ?? "—"}</span>
@@ -68,7 +79,7 @@ export function BubbleGauge({
           {bubble?.riskLabel ?? BUBBLE_INPUT_MISSING_FA}
         </span>
       </div>
-      <div className="mt-3.5 grid grid-cols-3 gap-2.5">
+      <div className="mt-3.5 grid gap-2 min-[1081px]:grid-cols-3 min-[1081px]:gap-2.5">
         <BubbleValue
           label="قیمت ذاتی"
           value={bubble?.intrinsicDisplay ?? null}

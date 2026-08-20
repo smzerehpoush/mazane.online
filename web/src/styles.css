@@ -339,6 +339,14 @@
   }
 }
 
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@utility safe-bottom-gap {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
 @utility card-surface {
   background-color: var(--color-card);
   border: 1px solid var(--color-border);

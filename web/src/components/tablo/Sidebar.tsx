@@ -5,13 +5,16 @@ import { postImageAsset } from "@/lib/images";
 
 export function Sidebar({ posts }: { posts: PublishedPost[] }) {
   return (
-    <aside className="card-surface p-6 sm:p-7">
+    <aside className="card-surface p-5 sm:p-7">
       <h2 className="text-title font-semibold">تازه‌ترین نوشته‌ها</h2>
-      <ul className="mt-5 space-y-5">
+      <ul className="mt-4 space-y-4 sm:mt-5 sm:space-y-5">
         {posts.map((post, index) => {
           const image = postImageAsset(post);
           return (
-            <li key={post.slug} className="border-b border-border/60 pb-5 last:border-0 last:pb-0">
+            <li
+              key={post.slug}
+              className="border-b border-border/60 pb-4 last:border-0 last:pb-0 sm:pb-5"
+            >
               <a
                 href={`/blog/${post.slug}`}
                 className={`transition-smooth group flex items-center gap-4 hover:text-primary ${
