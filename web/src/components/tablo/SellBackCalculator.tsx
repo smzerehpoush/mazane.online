@@ -33,7 +33,7 @@ const LABELS = {
 const DEDUCTION_NOTE =
   "برای درصدی که خریدار از ارزش طلا کم می‌کند نرخ‌نامه‌ای اعلام نشده است؛ این عدد از مغازه‌ای تا مغازه‌ی دیگر فرق می‌کند. رقمی را که به شما پیشنهاد شده وارد کنید.";
 
-const CEILING_NOTE =
+export const SELL_BACK_CEILING_NOTE =
   "تا وقتی درصد کسر را وارد نکنید، مبلغی که می‌بینید سقف است: ارزش خود طلا، بدون هیچ کسری.";
 
 const PURITY_NOTE =
@@ -265,7 +265,7 @@ export function SellBackResult({ form }: { form: SellBackForm }) {
 
       {breakdown !== null && !form.deductionEntered && (
         <p data-calculator-ceiling-note className="mt-2.5 text-meta text-tx3">
-          {CEILING_NOTE}
+          {SELL_BACK_CEILING_NOTE}
         </p>
       )}
 

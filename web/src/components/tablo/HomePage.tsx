@@ -11,6 +11,7 @@ import { BubbleGauge, CoinPriceCard } from "@/components/tablo/SidebarCards";
 import { Sidebar } from "@/components/tablo/Sidebar";
 import { SiteHeader } from "@/components/tablo/SiteHeader";
 import { SourceCards } from "@/components/tablo/SourceCards";
+import { cheapestView, ToolWidget } from "@/components/tablo/ToolWidgets";
 import { bottomPosts, sidebarPosts } from "@/components/tablo/home-view";
 import type { BubbleView } from "@/lib/bubble";
 import type { CoinPricesView } from "@/lib/coin-prices";
@@ -113,6 +114,7 @@ export function HomePage({ data }: { data: HomePageData }) {
   const hasPosts = data.posts.length > 0;
   const bubble = live.data === null ? data.bubble : live.data.bubble;
   const coinPrices = live.data === null ? data.coinPrices : live.data.coinPrices;
+  const cheapest = cheapestView(dashboard.rail.sources, live.data?.sources ?? null);
 
   return (
     <div className="safe-bottom-gap relative min-h-screen bg-background min-[1081px]:pb-0">
@@ -169,40 +171,20 @@ export function HomePage({ data }: { data: HomePageData }) {
           </div>
 
           <div className="flex min-w-0 flex-col min-[1081px]:col-start-1">
-            <nav
+            <section
               data-home-actions
               aria-label={homeActionsLabel}
-              className="mb-4 flex flex-col gap-2 sm:grid sm:grid-cols-2 min-[1081px]:mt-4"
+              className="mb-4 grid grid-cols-1 items-stretch gap-2.5 sm:grid-cols-2 min-[1081px]:mt-4"
             >
-              {homeActions.map((action) => {
-                const Icon = ACTION_ICONS[action.href] ?? Scale;
-                return (
-                  <a
-                    key={action.href}
-                    href={action.href}
-                    data-home-action={action.href}
-                    className="transition-smooth flex min-h-11 items-center gap-3 rounded-[18px] border border-border bg-card px-3.5 py-2.5 hover:border-primary/40 sm:px-4 sm:py-3"
-                  >
-                    <span
-                      aria-hidden
-                      className="grid size-9 shrink-0 place-items-center rounded-[12px] border border-border/70 bg-surface text-primary"
-                    >
-                      <Icon className="size-[18px]" strokeWidth={1.75} />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-body leading-snug font-bold text-foreground">
-                        {action.question}
-                      </span>
-                      <span className="mt-1 text-meta leading-snug text-muted-foreground">
-                        {action.title}
-                      </span>
-                    </span>
-                    <span aria-hidden className="shrink-0 text-muted-foreground">
-                      ←
-                    </span>
-                  </a>
-                );
-              })}
+              {homeActions.map((action) => (
+                <ToolWidget
+                  key={action.href}
+                  action={action}
+                  icon={ACTION_ICONS[action.href] ?? Scale}
+                  pricePerGram={data.reference.priceToman}
+                  cheapest={cheapest}
+                />
+              ))}
               <a
                 href={homeActionsHubLink.href}
                 data-home-actions-hub
@@ -210,7 +192,7 @@ export function HomePage({ data }: { data: HomePageData }) {
               >
                 {homeActionsHubLink.label} ←
               </a>
-            </nav>
+            </section>
 
             <section
               data-home-buy-path

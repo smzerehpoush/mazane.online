@@ -360,6 +360,87 @@
   transition-duration: 180ms;
 }
 
+/*
+ * ⚠️ These exist for byte count, not for taste. The home page's four tool
+ * widgets repeat the same class strings four times each in the server HTML,
+ * and `tests/perf-budget.test.tsx` measures exactly those bytes. Written out
+ * inline they cost ~2.5KB of first-response payload. Keep them as `@apply` of
+ * the real utilities so there is still one source of truth for the look.
+ */
+@utility widget-card {
+  @apply flex flex-col px-5 py-4;
+}
+
+@utility widget-head {
+  @apply flex items-center gap-3;
+}
+
+@utility widget-icon {
+  @apply grid size-9 shrink-0 place-items-center rounded-[12px] border border-border/70 bg-surface text-primary;
+}
+
+@utility widget-title {
+  @apply text-title leading-snug font-semibold text-foreground;
+}
+
+@utility widget-sub {
+  @apply mt-1 text-meta leading-snug text-tx3;
+}
+
+@utility widget-body {
+  @apply mt-3.5 flex flex-1 flex-col gap-2.5;
+}
+
+@utility widget-field {
+  @apply flex items-center justify-between gap-2 rounded-[10px] border border-line2 px-3.5 py-2.5 text-body focus-within:border-primary;
+
+  & > span {
+    @apply shrink-0 text-tx3;
+  }
+}
+
+@utility widget-input {
+  @apply num w-24 bg-transparent text-left outline-none;
+}
+
+@utility widget-row {
+  @apply flex items-baseline justify-between gap-2;
+}
+
+@utility widget-tile {
+  @apply rounded-[10px] bg-surface px-3.5 py-2.5;
+}
+
+@utility widget-total {
+  @apply mt-auto rounded-[10px] bg-acbg px-3.5 py-2.5;
+
+  & > span:first-child {
+    @apply text-meta text-actx;
+  }
+}
+
+@utility widget-value {
+  @apply num text-body font-semibold text-actx;
+
+  /* ⚠️ The flex row is the <TomanPrice> wrapper, not this span: without it
+     the number and «تومان» render with no gap between them. */
+  & > span {
+    @apply inline-flex items-baseline gap-1;
+  }
+}
+
+@utility widget-num {
+  @apply num inline-flex items-baseline gap-1 text-body font-semibold text-foreground;
+}
+
+@utility widget-num-accent {
+  @apply num inline-flex items-baseline gap-1 text-body font-semibold text-actx;
+}
+
+@utility widget-cta {
+  @apply transition-smooth mt-3 inline-flex min-h-11 items-center text-meta text-primary hover:underline;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
