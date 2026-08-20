@@ -48,9 +48,10 @@ START_TS=$(date +%s)
 echo "==> [1/6] انتقال کد به سرور (${REMOTE_SRC_DIR})…"
 # ⚠️ web-crawler/ is the client's proprietary code — it must never go to this server.
 # The local .env holds real secrets — it must never end up anywhere but /opt/tablo/.env.
+# drafts/ is local working notes — untracked, sometimes chmod 600, never part of a build.
 rsync -az --delete \
   --exclude node_modules --exclude .output --exclude .git \
-  --exclude .claude \
+  --exclude .claude --exclude drafts \
   --exclude .venv --exclude __pycache__ --exclude web-crawler \
   --exclude '.env' --exclude '.env.*' --exclude '.DS_Store' \
   --exclude collector-dev.log \
